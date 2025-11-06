@@ -97,7 +97,7 @@ class Tile:
         return self._rank < other._rank
 
     def __str__(self) -> str:
-        """字符串表示（例如：1m, 5p, 東）"""
+        """字符串表示（例如：1m, 5p, r5m 表示紅寶牌）"""
         suit_map = {
             Suit.MANZU: "m",
             Suit.PINZU: "p",
@@ -105,7 +105,7 @@ class Tile:
             Suit.JIHAI: "z",
         }
         if self._is_red:
-            return f"[{self._rank}{suit_map[self._suit]}]"
+            return f"r{self._rank}{suit_map[self._suit]}"
         return f"{self._rank}{suit_map[self._suit]}"
 
     def __repr__(self) -> str:

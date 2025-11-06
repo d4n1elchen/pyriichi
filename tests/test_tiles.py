@@ -97,12 +97,12 @@ class TestTile:
         assert result is NotImplemented
 
     def test_tile_str_red_dora(self):
-        """測試牌的字符串表示"""
+        """測試牌的字符串表示（標準格式：r5p）"""
         tile = Tile(Suit.PINZU, 5, is_red=True)
         tile_str = str(tile)
-        # 紅寶牌應該用 [] 標記
-        assert "[" in tile_str
-        assert "]" in tile_str
+        # 紅寶牌應該用 r 前綴（標準格式）
+        assert tile_str == "r5p"
+        assert tile_str.startswith("r")
         assert "5" in tile_str
         assert "p" in tile_str
 
