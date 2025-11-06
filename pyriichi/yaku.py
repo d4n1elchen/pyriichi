@@ -34,7 +34,13 @@ class YakuChecker:
     """役種判定器"""
 
     def check_all(
-        self, hand: Hand, winning_tile: Tile, winning_combination: List, game_state: GameState
+        self,
+        hand: Hand,
+        winning_tile: Tile,
+        winning_combination: List,
+        game_state: GameState,
+        is_tsumo: bool = False,
+        turns_after_riichi: int = -1,
     ) -> List[YakuResult]:
         """
         檢查所有符合的役種
@@ -79,9 +85,9 @@ class YakuChecker:
         # 基本役
         if result := self.check_riichi(hand, game_state):
             results.append(result)
-        if result := self.check_ippatsu(hand, game_state):
+        if result := self.check_ippatsu(hand, game_state, turns_after_riichi):
             results.append(result)
-        if result := self.check_menzen_tsumo(hand, game_state):
+        if result := self.check_menzen_tsumo(hand, game_state, is_tsumo):
             results.append(result)
         if result := self.check_tanyao(hand, winning_combination):
             results.append(result)
@@ -90,6 +96,8 @@ class YakuChecker:
         if result := self.check_iipeikou(hand, winning_combination):
             results.append(result)
         if result := self.check_toitoi(hand, winning_combination):
+            results.append(result)
+        if result := self.check_sankantsu(hand, winning_combination):
             results.append(result)
 
         # 役牌（可能有多個）
@@ -148,6 +156,10 @@ class YakuChecker:
             yakuman_results.append(result)
         if result := self.check_tsuuiisou(hand, winning_combination):
             yakuman_results.append(result)
+        if result := self.check_ryuuiisou(hand, winning_combination):
+            yakuman_results.append(result)
+        if result := self.check_chuuren_poutou(hand, all_tiles):
+            yakuman_results.append(result)
 
         # 如果有役滿，只返回役滿（役滿不與其他役種複合，但可以多個役滿複合）
         if yakuman_results:
@@ -164,18 +176,38 @@ class YakuChecker:
             return YakuResult("立直", "Riichi", "立直", 1, False)
         return None
 
-    def check_ippatsu(self, hand: Hand, game_state: GameState) -> Optional[YakuResult]:
-        """檢查一發"""
-        # TODO: 需要記錄立直後的回合數
+    def check_ippatsu(self, hand: Hand, game_state: GameState, turns_after_riichi: int = -1) -> Optional[YakuResult]:
+        """
+        檢查一發
+
+        一發：立直後一巡內和牌（立直後的第一個自己的回合）
+        """
+        if not hand.is_riichi:
+            return None
+
+        # 如果 turns_after_riichi 為 -1，表示未追蹤，無法判定
+        if turns_after_riichi < 0:
+            return None
+
+        # 一發：立直後一巡內和牌（turns_after_riichi == 0）
+        if turns_after_riichi == 0:
+            return YakuResult("一発", "Ippatsu", "一發", 1, False)
+
         return None
 
-    def check_menzen_tsumo(self, hand: Hand, game_state: GameState) -> Optional[YakuResult]:
-        """檢查門清自摸"""
-        # TODO: 需要知道是否為自摸
-        if hand.is_concealed:
-            # 實際判定需要檢查是否為自摸
-            pass
-        return None
+    def check_menzen_tsumo(self, hand: Hand, game_state: GameState, is_tsumo: bool = False) -> Optional[YakuResult]:
+        """
+        檢查門清自摸
+
+        門清自摸：門清狀態下自摸和牌
+        """
+        if not hand.is_concealed:
+            return None
+
+        if not is_tsumo:
+            return None
+
+        return YakuResult("門前清自摸和", "Menzen Tsumo", "門清自摸", 1, False)
 
     def check_tanyao(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
         """
@@ -298,6 +330,28 @@ class YakuChecker:
         # 必須有4個刻子和1個對子
         if triplets == 4 and pair is not None:
             return YakuResult("対々和", "Toitoi", "對對和", 2, False)
+
+        return None
+
+    def check_sankantsu(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
+        """
+        檢查三槓子
+
+        三槓子：有三組槓子
+        """
+        if not winning_combination:
+            return None
+
+        kan_count = 0
+        for meld in winning_combination:
+            if isinstance(meld, tuple) and len(meld) == 2:
+                meld_type, (suit, rank) = meld
+                if meld_type == "kan":
+                    kan_count += 1
+
+        # 三個槓子
+        if kan_count == 3:
+            return YakuResult("三槓子", "Sankantsu", "三槓子", 2, False)
 
         return None
 
@@ -951,3 +1005,112 @@ class YakuChecker:
                     return None
 
         return YakuResult("字一色", "Tsuuiisou", "字一色", 13, True)
+
+    def check_ryuuiisou(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
+        """
+        檢查綠一色
+
+        綠一色：全部由綠牌組成（2、3、4、6、8條、發）
+        """
+        if not winning_combination:
+            return None
+
+        # 綠牌：2、3、4、6、8條、發
+        green_tiles = [
+            (Suit.SOZU, 2),
+            (Suit.SOZU, 3),
+            (Suit.SOZU, 4),
+            (Suit.SOZU, 6),
+            (Suit.SOZU, 8),
+            (Suit.JIHAI, 6),  # 發
+        ]
+
+        # 檢查所有牌是否都是綠牌
+        for meld in winning_combination:
+            if isinstance(meld, tuple) and len(meld) == 2:
+                meld_type, (suit, rank) = meld
+                tile_key = (suit, rank)
+
+                # 檢查順子
+                if meld_type == "sequence":
+                    # 順子中的每張牌都必須是綠牌
+                    for i in range(3):
+                        seq_tile = (suit, rank + i)
+                        if seq_tile not in green_tiles:
+                            return None
+
+                # 檢查刻子、槓子、對子
+                elif meld_type in ["triplet", "kan", "pair"]:
+                    if tile_key not in green_tiles:
+                        return None
+
+        return YakuResult("綠一色", "Ryuuiisou", "綠一色", 13, True)
+
+    def check_chuuren_poutou(self, hand: Hand, all_tiles: List[Tile]) -> Optional[YakuResult]:
+        """
+        檢查九蓮寶燈
+
+        九蓮寶燈：同一種花色（萬、筒、條）有 1112345678999 + 任意一張相同花色
+        純正九蓮寶燈：九蓮寶燈且聽牌為九面聽
+        """
+        if not hand.is_concealed:
+            return None
+
+        if len(all_tiles) != 14:
+            return None
+
+        # 檢查是否為同一種數牌花色
+        suits = set()
+        for tile in all_tiles:
+            if tile.suit != Suit.JIHAI:  # 只檢查數牌
+                suits.add(tile.suit)
+            else:
+                return None  # 有字牌就不是九蓮寶燈
+
+        # 必須只有一種花色
+        if len(suits) != 1:
+            return None
+
+        suit = list(suits)[0]
+
+        # 統計該花色的牌數
+        counts = {}
+        for tile in all_tiles:
+            if tile.suit == suit:
+                counts[tile.rank] = counts.get(tile.rank, 0) + 1
+
+        # 檢查是否符合九蓮寶燈模式：1112345678999 + 任意一張
+        # 必須有：1（至少3張）、2（至少1張）、3（至少1張）、4（至少1張）、
+        #         5（至少1張）、6（至少1張）、7（至少1張）、8（至少1張）、9（至少3張）
+        required = {
+            1: 3,  # 至少3張
+            2: 1,
+            3: 1,
+            4: 1,
+            5: 1,
+            6: 1,
+            7: 1,
+            8: 1,
+            9: 3,  # 至少3張
+        }
+
+        # 檢查是否符合要求
+        for rank, min_count in required.items():
+            if rank not in counts or counts[rank] < min_count:
+                return None
+
+        # 檢查總數是否為14張（1-9各至少要求的數量，加上額外的1張）
+        total = sum(counts.values())
+        if total != 14:
+            return None
+
+        # 檢查是否為純正九蓮寶燈（聽牌為九面聽）
+        # 純正九蓮寶燈：1112345678999 + 任意一張，且該張牌是聽牌
+        # 簡化處理：如果多出的那張牌是1-9中的任意一張且數量為2，則為純正
+        # TODO: 需要更精確的判定
+        for rank in range(1, 10):
+            if counts.get(rank, 0) == 4:
+                # 有4張相同的牌，可能是純正九蓮寶燈
+                return YakuResult("純正九蓮寶燈", "Junsei Chuuren Poutou", "純正九蓮寶燈", 26, True)
+
+        return YakuResult("九蓮寶燈", "Chuuren Poutou", "九蓮寶燈", 13, True)

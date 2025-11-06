@@ -199,7 +199,10 @@ class RuleEngine:
         winning_combination = combinations[0]
 
         # 檢查役種
-        yaku_results = self._yaku_checker.check_all(hand, winning_tile, winning_combination, self._game_state)
+        is_tsumo = player == self._current_player
+        # TODO: 追蹤立直後的回合數（目前先設為 -1 表示未追蹤）
+        turns_after_riichi = -1
+        yaku_results = self._yaku_checker.check_all(hand, winning_tile, winning_combination, self._game_state, is_tsumo, turns_after_riichi)
 
         if not yaku_results:
             return None  # 沒有役不能和牌

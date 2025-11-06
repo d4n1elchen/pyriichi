@@ -305,7 +305,19 @@ class TestYakuChecker:
         winning_tile = Tile(Suit.MANZU, 7)
         combinations = hand.get_winning_combinations(winning_tile)
 
-        results = self.checker.check_all(hand, winning_tile, combinations[0] if combinations else [], self.game_state)
+        if combinations:
+            results = self.checker.check_all(
+                hand,
+                winning_tile,
+                combinations[0] if combinations else [],
+                self.game_state,
+                is_tsumo=False,
+                turns_after_riichi=-1,
+            )
+        else:
+            results = self.checker.check_all(
+                hand, winning_tile, [], self.game_state, is_tsumo=False, turns_after_riichi=-1
+            )
         # 檢查是否有七對子
         has_chiitoitsu = any(r.name == "七対子" for r in results)
         assert has_chiitoitsu
@@ -507,7 +519,9 @@ class TestYakuChecker:
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
-            results = self.checker.check_all(hand, winning_tile, combinations[0], self.game_state)
+            results = self.checker.check_all(
+                hand, winning_tile, combinations[0], self.game_state, is_tsumo=False, turns_after_riichi=-1
+            )
             yakuman = [r for r in results if r.is_yakuman]
             assert len(yakuman) > 0
             assert yakuman[0].name == "大三元"
@@ -540,7 +554,9 @@ class TestYakuChecker:
             # 檢查組合中是否有4個刻子
             triplets = sum(1 for m in combinations[0] if isinstance(m, tuple) and len(m) == 2 and m[0] == "triplet")
             if triplets == 4:
-                results = self.checker.check_all(hand, winning_tile, combinations[0], self.game_state)
+                results = self.checker.check_all(
+                    hand, winning_tile, combinations[0], self.game_state, is_tsumo=False, turns_after_riichi=-1
+                )
                 yakuman = [r for r in results if r.is_yakuman]
                 # 四暗刻可能需要單騎聽，這裡先檢查是否有役滿
                 if yakuman:
@@ -575,7 +591,12 @@ class TestYakuChecker:
 
         if combinations:
             results = self.checker.check_all(
-                hand, winning_tile, combinations[0] if combinations else [], self.game_state
+                hand,
+                winning_tile,
+                combinations[0] if combinations else [],
+                self.game_state,
+                is_tsumo=False,
+                turns_after_riichi=-1,
             )
             yakuman = [r for r in results if r.is_yakuman]
             assert len(yakuman) > 0
@@ -606,7 +627,9 @@ class TestYakuChecker:
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
-            results = self.checker.check_all(hand, winning_tile, combinations[0], self.game_state)
+            results = self.checker.check_all(
+                hand, winning_tile, combinations[0], self.game_state, is_tsumo=False, turns_after_riichi=-1
+            )
             yakuman = [r for r in results if r.is_yakuman]
             assert len(yakuman) > 0
             # 檢查是否有字一色（可能同時有四暗刻，但字一色應該存在）
@@ -623,6 +646,186 @@ class TestYakuChecker:
                 assert result is not None
                 assert result.name == "字一色"
                 assert result.han == 13
+
+    def test_menzen_tsumo(self):
+        """測試門清自摸"""
+        # 門清自摸：門清狀態下自摸和牌
+        tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+            Tile(Suit.PINZU, 5),
+            Tile(Suit.PINZU, 6),
+            Tile(Suit.PINZU, 7),
+            Tile(Suit.PINZU, 8),
+            Tile(Suit.SOZU, 4),
+        ]
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.SOZU, 4)
+        combinations = hand.get_winning_combinations(winning_tile)
+
+        if combinations:
+            # 測試自摸情況
+            results = self.checker.check_all(
+                hand, winning_tile, combinations[0], self.game_state, is_tsumo=True, turns_after_riichi=-1
+            )
+            menzen_tsumo = [r for r in results if r.name == "門前清自摸和"]
+            assert len(menzen_tsumo) > 0
+            assert menzen_tsumo[0].han == 1
+
+            # 測試榮和情況（不應該有門清自摸）
+            results = self.checker.check_all(
+                hand, winning_tile, combinations[0], self.game_state, is_tsumo=False, turns_after_riichi=-1
+            )
+            menzen_tsumo = [r for r in results if r.name == "門前清自摸和"]
+            assert len(menzen_tsumo) == 0
+
+    def test_ippatsu(self):
+        """測試一發"""
+        # 一發：立直後一巡內和牌
+        tiles = [
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+            Tile(Suit.PINZU, 5),
+            Tile(Suit.PINZU, 6),
+            Tile(Suit.PINZU, 7),
+            Tile(Suit.PINZU, 8),
+            Tile(Suit.SOZU, 4),
+        ]
+        hand = Hand(tiles)
+        hand.set_riichi(True)
+        winning_tile = Tile(Suit.SOZU, 4)
+        combinations = hand.get_winning_combinations(winning_tile)
+
+        if combinations:
+            # 測試立直後一巡內和牌（turns_after_riichi == 0）
+            results = self.checker.check_all(
+                hand, winning_tile, combinations[0], self.game_state, is_tsumo=False, turns_after_riichi=0
+            )
+            ippatsu = [r for r in results if r.name == "一発"]
+            assert len(ippatsu) > 0
+            assert ippatsu[0].han == 1
+
+            # 測試立直後超過一巡（turns_after_riichi > 0）
+            results = self.checker.check_all(
+                hand, winning_tile, combinations[0], self.game_state, is_tsumo=False, turns_after_riichi=1
+            )
+            ippatsu = [r for r in results if r.name == "一発"]
+            assert len(ippatsu) == 0
+
+    def test_ryuuiisou(self):
+        """測試綠一色役滿"""
+        # 綠一色：全部由綠牌組成（2、3、4、6、8條、發）
+        tiles = [
+            Tile(Suit.SOZU, 2),
+            Tile(Suit.SOZU, 3),
+            Tile(Suit.SOZU, 4),
+            Tile(Suit.SOZU, 2),
+            Tile(Suit.SOZU, 3),
+            Tile(Suit.SOZU, 4),
+            Tile(Suit.SOZU, 6),
+            Tile(Suit.SOZU, 6),
+            Tile(Suit.SOZU, 6),
+            Tile(Suit.SOZU, 8),
+            Tile(Suit.SOZU, 8),
+            Tile(Suit.SOZU, 8),
+            Tile(Suit.JIHAI, 6),
+        ]
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.JIHAI, 6)
+        combinations = hand.get_winning_combinations(winning_tile)
+
+        if combinations:
+            results = self.checker.check_all(
+                hand, winning_tile, combinations[0], self.game_state, is_tsumo=False, turns_after_riichi=-1
+            )
+            yakuman = [r for r in results if r.is_yakuman]
+            assert len(yakuman) > 0
+            ryuuiisou = [r for r in yakuman if r.name == "綠一色"]
+            if ryuuiisou:
+                assert ryuuiisou[0].han == 13
+            else:
+                # 檢查判定方法
+                result = self.checker.check_ryuuiisou(hand, combinations[0])
+                assert result is not None
+                assert result.name == "綠一色"
+                assert result.han == 13
+
+    def test_chuuren_poutou(self):
+        """測試九蓮寶燈役滿"""
+        # 九蓮寶燈：1112345678999 + 任意一張
+        tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.MANZU, 9),
+        ]
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.MANZU, 1)
+        all_tiles = hand.tiles + [winning_tile]
+
+        result = self.checker.check_chuuren_poutou(hand, all_tiles)
+        assert result is not None
+        assert result.name in ["九蓮寶燈", "純正九蓮寶燈"]
+        assert result.han >= 13
+
+    def test_sankantsu(self):
+        """測試三槓子"""
+        # 三槓子：三個槓子
+        # 注意：這裡測試判定邏輯，實際遊戲中需要通過 Meld 來實現槓子
+        tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),  # 第一個槓子
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 2),  # 第二個槓子
+            Tile(Suit.SOZU, 3),
+            Tile(Suit.SOZU, 3),
+            Tile(Suit.SOZU, 3),
+            Tile(Suit.SOZU, 3),  # 第三個槓子
+            Tile(Suit.JIHAI, 1),
+        ]
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.JIHAI, 1)
+        combinations = hand.get_winning_combinations(winning_tile)
+
+        # 注意：實際的 winning_combination 可能不會包含 'kan' 類型
+        # 因為 get_winning_combinations 返回的是標準和牌組合
+        # 三槓子需要通過 Hand 的 melds 來實現
+        # 這裡測試判定邏輯
+        combo_with_kan = [
+            ("kan", (Suit.MANZU, 1)),
+            ("kan", (Suit.PINZU, 2)),
+            ("kan", (Suit.SOZU, 3)),
+            ("pair", (Suit.JIHAI, 1)),
+        ]
+        result = self.checker.check_sankantsu(hand, combo_with_kan)
+        assert result is not None
+        assert result.name == "三槓子"
+        assert result.han == 2
 
     def test_check_all(self):
         """測試檢查所有役種"""
@@ -648,7 +851,9 @@ class TestYakuChecker:
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
-            results = self.checker.check_all(hand, winning_tile, combinations[0], self.game_state)
+            results = self.checker.check_all(
+                hand, winning_tile, combinations[0], self.game_state, is_tsumo=False, turns_after_riichi=-1
+            )
             assert len(results) > 0
             # 檢查是否有立直
             has_riichi = any(r.name == "立直" for r in results)

@@ -59,7 +59,7 @@ class TestScoreCalculator:
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
-            yaku_results = self.yaku_checker.check_all(hand, winning_tile, combinations[0], self.game_state)
+            yaku_results = self.yaku_checker.check_all(hand, winning_tile, combinations[0], self.game_state, is_tsumo=False, turns_after_riichi=-1)
             fu = self.calculator.calculate_fu(
                 hand, winning_tile, combinations[0], yaku_results, self.game_state, False
             )
@@ -97,7 +97,7 @@ class TestScoreCalculator:
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
-            yaku_results = self.yaku_checker.check_all(hand, winning_tile, combinations[0], self.game_state)
+            yaku_results = self.yaku_checker.check_all(hand, winning_tile, combinations[0], self.game_state, is_tsumo=False, turns_after_riichi=-1)
             score_result = self.calculator.calculate(
                 hand, winning_tile, combinations[0],
                 yaku_results, 0, self.game_state, False
@@ -148,7 +148,7 @@ class TestScoreCalculator:
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
-            yaku_results = self.yaku_checker.check_all(hand, winning_tile, combinations[0], self.game_state)
+            yaku_results = self.yaku_checker.check_all(hand, winning_tile, combinations[0], self.game_state, is_tsumo=False, turns_after_riichi=-1)
             score_result = self.calculator.calculate(
                 hand, winning_tile, combinations[0],
                 yaku_results, 0, self.game_state, False
