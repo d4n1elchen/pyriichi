@@ -92,11 +92,13 @@ class Hand:
         self._discards: List[Tile] = []
         self._is_riichi = False
         self._riichi_turn: Optional[int] = None
+        self._tile_counts_cache: Optional[dict] = None  # 緩存牌計數結果
 
     def add_tile(self, tile: Tile) -> None:
         """添加一張牌（摸牌）"""
         self._tiles.append(tile)
         self._tiles.sort()
+        self._tile_counts_cache = None  # 清除緩存
 
     def discard(self, tile: Tile) -> bool:
         """
@@ -111,6 +113,7 @@ class Hand:
         try:
             self._tiles.remove(tile)
             self._discards.append(tile)
+            self._tile_counts_cache = None  # 清除緩存
             return True
         except ValueError:
             return False
@@ -180,6 +183,7 @@ class Hand:
         all_tiles = sequence + [tile]
         meld = Meld(MeldType.CHI, all_tiles, called_tile=tile)
         self._melds.append(meld)
+        self._tile_counts_cache = None  # 清除緩存
         return meld
 
     def can_pon(self, tile: Tile) -> bool:
@@ -226,6 +230,7 @@ class Hand:
         meld_tiles = tiles_to_remove + [tile]
         meld = Meld(MeldType.PON, meld_tiles, called_tile=tile)
         self._melds.append(meld)
+        self._tile_counts_cache = None  # 清除緩存
         return meld
 
     def can_kan(self, tile: Optional[Tile] = None) -> List[Meld]:
@@ -314,6 +319,7 @@ class Hand:
                             self._tiles.remove(t)
 
         self._melds.append(meld)
+        self._tile_counts_cache = None  # 清除緩存
         return meld
 
     @property
@@ -352,20 +358,31 @@ class Hand:
         self._is_riichi = is_riichi
         self._riichi_turn = turn
 
-    def _get_tile_counts(self, tiles: List[Tile]) -> dict:
+    def _get_tile_counts(self, tiles: Optional[List[Tile]] = None) -> dict:
         """
         獲取牌的計數字典
 
         Args:
-            tiles: 牌列表
+            tiles: 牌列表（如果為 None，則使用當前手牌並使用緩存）
 
         Returns:
             牌計數字典 {(suit, rank): count}
         """
+        # 如果使用當前手牌且緩存存在，直接返回緩存
+        if tiles is None:
+            if self._tile_counts_cache is not None:
+                return self._tile_counts_cache
+            tiles = self._tiles
+
         counts = {}
         for tile in tiles:
             key = (tile.suit, tile.rank)
             counts[key] = counts.get(key, 0) + 1
+
+        # 如果使用當前手牌，更新緩存
+        if tiles is self._tiles:
+            self._tile_counts_cache = counts
+
         return counts
 
     def _remove_triplet(self, counts: dict, suit, rank: int) -> bool:
@@ -468,7 +485,7 @@ class Hand:
 
     def _find_melds(self, counts: dict, current_melds: List[Tuple], pair: Tuple) -> List[List[Tuple]]:
         """
-        遞迴尋找所有可能的面子組合
+        遞迴尋找所有可能的面子組合（優化版本：使用回溯減少字典複製）
 
         Args:
             counts: 剩餘牌的計數字典
@@ -495,25 +512,35 @@ class Hand:
 
         results = []
 
-        # 嘗試所有可能的刻子
+        # 嘗試所有可能的刻子（使用回溯，減少字典複製）
         for (suit, rank), count in list(counts.items()):
             if count >= 3:
-                new_counts = counts.copy()
-                if self._remove_triplet(new_counts, suit, rank):
+                # 原地修改並回溯
+                if self._remove_triplet(counts, suit, rank):
                     new_melds = current_melds + [("triplet", (suit, rank))]
-                    result = self._find_melds(new_counts, new_melds, pair)
+                    result = self._find_melds(counts, new_melds, pair)
                     if result:
                         results.extend(result)
+                    # 回溯：恢復計數
+                    counts[(suit, rank)] += 3
 
-        # 嘗試所有可能的順子（僅對數牌）
+        # 嘗試所有可能的順子（僅對數牌，使用回溯）
         for suit in [Suit.MANZU, Suit.PINZU, Suit.SOZU]:
             for rank in range(1, 8):  # 順子最多到 7（7-8-9）
-                new_counts = counts.copy()
-                if self._remove_sequence(new_counts, suit, rank):
-                    new_melds = current_melds + [("sequence", (suit, rank))]
-                    result = self._find_melds(new_counts, new_melds, pair)
-                    if result:
-                        results.extend(result)
+                # 檢查是否可以組成順子（快速檢查）
+                can_form_sequence = all(counts.get((suit, rank + i), 0) > 0 for i in range(3))
+                if can_form_sequence:
+                    # 記錄原始值以便回溯
+                    original_values = {(suit, rank + i): counts.get((suit, rank + i), 0) for i in range(3)}
+                    # 原地修改並回溯
+                    if self._remove_sequence(counts, suit, rank):
+                        new_melds = current_melds + [("sequence", (suit, rank))]
+                        result = self._find_melds(counts, new_melds, pair)
+                        if result:
+                            results.extend(result)
+                        # 回溯：恢復計數
+                        for i in range(3):
+                            counts[(suit, rank + i)] = original_values[(suit, rank + i)]
 
         return results
 
@@ -594,7 +621,7 @@ class Hand:
 
     def is_tenpai(self) -> bool:
         """
-        是否聽牌
+        是否聽牌（優化版本：只檢查可能相關的牌）
 
         Returns:
             是否聽牌
@@ -602,25 +629,52 @@ class Hand:
         if len(self._tiles) != 13:
             return False
 
-        # 嘗試添加每一種可能的牌
+        # 獲取當前手牌的計數，只檢查可能相關的牌
+        counts = self._get_tile_counts()
+
+        # 優化：只檢查與手牌相關的牌（相鄰或相同）
         from pyriichi.tiles import Suit
 
-        for suit in Suit:
-            if suit == Suit.JIHAI:
-                max_rank = 7
-            else:
-                max_rank = 9
+        # 收集所有可能的聽牌候選（與手牌相關的牌）
+        candidates = set()
 
-            for rank in range(1, max_rank + 1):
-                test_tile = Tile(suit, rank)
-                if self.is_winning_hand(test_tile):
-                    return True
+        for tile in self._tiles:
+            suit, rank = tile.suit, tile.rank
+            # 添加相同牌
+            candidates.add((suit, rank))
+            # 如果是數牌，添加相鄰牌
+            if suit != Suit.JIHAI:
+                if rank > 1:
+                    candidates.add((suit, rank - 1))
+                if rank < 9:
+                    candidates.add((suit, rank + 1))
+                # 對於順子，還需要檢查更遠的牌
+                if rank > 2:
+                    candidates.add((suit, rank - 2))
+                if rank < 8:
+                    candidates.add((suit, rank + 2))
+
+        # 如果候選太少，回退到檢查所有牌
+        if len(candidates) < 10:
+            for suit in Suit:
+                if suit == Suit.JIHAI:
+                    max_rank = 7
+                else:
+                    max_rank = 9
+                for rank in range(1, max_rank + 1):
+                    candidates.add((suit, rank))
+
+        # 只檢查候選牌
+        for suit, rank in candidates:
+            test_tile = Tile(suit, rank)
+            if self.is_winning_hand(test_tile):
+                return True
 
         return False
 
     def get_waiting_tiles(self) -> List[Tile]:
         """
-        獲取聽牌列表
+        獲取聽牌列表（優化版本：只檢查可能相關的牌）
 
         Returns:
             所有可以和的牌列表
@@ -628,19 +682,47 @@ class Hand:
         if len(self._tiles) != 13:
             return []
 
-        waiting_tiles = []
+        # 獲取當前手牌的計數，只檢查可能相關的牌
+        counts = self._get_tile_counts()
+
+        # 優化：只檢查與手牌相關的牌（相鄰或相同）
         from pyriichi.tiles import Suit
 
-        for suit in Suit:
-            if suit == Suit.JIHAI:
-                max_rank = 7
-            else:
-                max_rank = 9
+        # 收集所有可能的聽牌候選（與手牌相關的牌）
+        candidates = set()
 
-            for rank in range(1, max_rank + 1):
-                test_tile = Tile(suit, rank)
-                if self.is_winning_hand(test_tile):
-                    waiting_tiles.append(test_tile)
+        for tile in self._tiles:
+            suit, rank = tile.suit, tile.rank
+            # 添加相同牌
+            candidates.add((suit, rank))
+            # 如果是數牌，添加相鄰牌
+            if suit != Suit.JIHAI:
+                if rank > 1:
+                    candidates.add((suit, rank - 1))
+                if rank < 9:
+                    candidates.add((suit, rank + 1))
+                # 對於順子，還需要檢查更遠的牌
+                if rank > 2:
+                    candidates.add((suit, rank - 2))
+                if rank < 8:
+                    candidates.add((suit, rank + 2))
+
+        # 如果候選太少，回退到檢查所有牌（確保不遺漏）
+        if len(candidates) < 10:
+            for suit in Suit:
+                if suit == Suit.JIHAI:
+                    max_rank = 7
+                else:
+                    max_rank = 9
+                for rank in range(1, max_rank + 1):
+                    candidates.add((suit, rank))
+
+        waiting_tiles = []
+        # 只檢查候選牌
+        for suit, rank in candidates:
+            test_tile = Tile(suit, rank)
+            if self.is_winning_hand(test_tile):
+                waiting_tiles.append(test_tile)
 
         return waiting_tiles
 
