@@ -51,6 +51,14 @@ class YakuChecker:
         # 檢查特殊和牌型（七對子、國士無雙）
         all_tiles = hand.tiles + [winning_tile] if len(hand.tiles) == 13 else hand.tiles
 
+        # 國士無雙判定（優先檢查，因為是役滿）
+        if result := self.check_kokushi_musou(hand, all_tiles):
+            results = [result]
+            # 國士無雙可以與立直複合
+            if hand.is_riichi:
+                results.insert(0, YakuResult("立直", "Riichi", "立直", 1, False))
+            return results
+
         # 七對子判定
         if hand.is_concealed and len(all_tiles) == 14:
             counts = {}
@@ -122,7 +130,31 @@ class YakuChecker:
         if result := self.check_honroutou(hand, winning_combination):
             results.append(result)
 
-        # TODO: 添加更多役種檢查（役滿等）
+        # 役滿檢查（優先檢查，因為役滿會覆蓋其他役種）
+        # 注意：某些役滿可以同時存在（如四暗刻+字一色）
+        yakuman_results = []
+        if result := self.check_daisangen(hand, winning_combination):
+            yakuman_results.append(result)
+        if result := self.check_suukantsu(hand, winning_combination):
+            yakuman_results.append(result)
+        if result := self.check_suuankou(hand, winning_combination):
+            yakuman_results.append(result)
+        # 國士無雙已在前面檢查，這裡跳過
+        if result := self.check_shousuushi(hand, winning_combination):
+            yakuman_results.append(result)
+        if result := self.check_daisuushi(hand, winning_combination):
+            yakuman_results.append(result)
+        if result := self.check_chinroutou(hand, winning_combination):
+            yakuman_results.append(result)
+        if result := self.check_tsuuiisou(hand, winning_combination):
+            yakuman_results.append(result)
+
+        # 如果有役滿，只返回役滿（役滿不與其他役種複合，但可以多個役滿複合）
+        if yakuman_results:
+            # 役滿可以與立直複合
+            if hand.is_riichi:
+                yakuman_results.insert(0, YakuResult("立直", "Riichi", "立直", 1, False))
+            return yakuman_results
 
         return results
 
@@ -680,3 +712,242 @@ class YakuChecker:
                     return None
 
         return YakuResult("混老頭", "Honroutou", "混老頭", 2, False)
+
+    def check_daisangen(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
+        """
+        檢查大三元
+
+        大三元：有三組三元牌刻子（白、發、中）
+        """
+        if not winning_combination:
+            return None
+
+        sangen = [5, 6, 7]  # 白、發、中
+        sangen_triplets = []
+
+        for meld in winning_combination:
+            if isinstance(meld, tuple) and len(meld) == 2:
+                meld_type, (suit, rank) = meld
+                if suit == Suit.JIHAI and rank in sangen:
+                    if meld_type in ["triplet", "kan"]:
+                        sangen_triplets.append(rank)
+
+        # 三個三元牌刻子
+        if len(sangen_triplets) == 3:
+            return YakuResult("大三元", "Daisangen", "大三元", 13, True)
+
+        return None
+
+    def check_suukantsu(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
+        """
+        檢查四槓子
+
+        四槓子：有四組槓子
+        """
+        if not winning_combination:
+            return None
+
+        kan_count = 0
+        for meld in winning_combination:
+            if isinstance(meld, tuple) and len(meld) == 2:
+                meld_type, (suit, rank) = meld
+                if meld_type == "kan":
+                    kan_count += 1
+
+        # 四個槓子
+        if kan_count == 4:
+            return YakuResult("四槓子", "Suukantsu", "四槓子", 13, True)
+
+        return None
+
+    def check_suuankou(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
+        """
+        檢查四暗刻
+
+        四暗刻：門清狀態下，有四組暗刻（或四暗刻單騎）
+        """
+        if not hand.is_concealed:
+            return None
+
+        if not winning_combination:
+            return None
+
+        # 統計刻子（在門清狀態下，所有刻子都是暗刻）
+        triplets = 0
+        for meld in winning_combination:
+            if isinstance(meld, tuple) and len(meld) == 2:
+                meld_type, (suit, rank) = meld
+                if meld_type == "triplet":
+                    triplets += 1
+
+        # 四個暗刻
+        if triplets == 4:
+            return YakuResult("四暗刻", "Suuankou", "四暗刻", 13, True)
+
+        return None
+
+    def check_kokushi_musou(self, hand: Hand, all_tiles: List[Tile]) -> Optional[YakuResult]:
+        """
+        檢查國士無雙
+
+        國士無雙：13種幺九牌各一張，再有一張幺九牌（13面聽）
+        國士無雙十三面：13種幺九牌各一張，再有一張幺九牌，且該牌為聽牌
+        """
+        if not hand.is_concealed:
+            return None
+
+        if len(all_tiles) != 14:
+            return None
+
+        # 需要的13種幺九牌
+        required_tiles = [
+            (Suit.MANZU, 1),
+            (Suit.MANZU, 9),
+            (Suit.PINZU, 1),
+            (Suit.PINZU, 9),
+            (Suit.SOZU, 1),
+            (Suit.SOZU, 9),
+            (Suit.JIHAI, 1),
+            (Suit.JIHAI, 2),
+            (Suit.JIHAI, 3),
+            (Suit.JIHAI, 4),
+            (Suit.JIHAI, 5),
+            (Suit.JIHAI, 6),
+            (Suit.JIHAI, 7),
+        ]
+
+        # 統計每種牌
+        counts = {}
+        for tile in all_tiles:
+            key = (tile.suit, tile.rank)
+            counts[key] = counts.get(key, 0) + 1
+
+        # 檢查是否包含所有需要的牌
+        has_all = True
+        for req in required_tiles:
+            if req not in counts or counts[req] == 0:
+                has_all = False
+                break
+
+        if not has_all:
+            return None
+
+        # 檢查是否只有一張重複
+        pairs = 0
+        for key, count in counts.items():
+            if key in required_tiles and count == 2:
+                pairs += 1
+            elif key not in required_tiles:
+                return None  # 有非幺九牌
+
+        # 必須有一張重複（且只有一張重複）
+        if pairs == 1:
+            # 檢查是否為十三面聽（重複的牌是聽牌）
+            # 這裡簡化處理，如果重複的牌是聽牌，則為十三面
+            # TODO: 需要更精確的判定
+            return YakuResult("國士無雙", "Kokushi Musou", "國士無雙", 13, True)
+
+        return None
+
+    def check_shousuushi(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
+        """
+        檢查小四喜
+
+        小四喜：有三組風牌刻子，一個風牌對子
+        """
+        if not winning_combination:
+            return None
+
+        kaze = [1, 2, 3, 4]  # 東、南、西、北
+        kaze_triplets = []
+        kaze_pair = None
+
+        for meld in winning_combination:
+            if isinstance(meld, tuple) and len(meld) == 2:
+                meld_type, (suit, rank) = meld
+                if suit == Suit.JIHAI and rank in kaze:
+                    if meld_type in ["triplet", "kan"]:
+                        kaze_triplets.append(rank)
+                    elif meld_type == "pair":
+                        kaze_pair = rank
+
+        # 三個風牌刻子 + 一個風牌對子
+        if len(kaze_triplets) == 3 and kaze_pair is not None:
+            return YakuResult("小四喜", "Shousuushi", "小四喜", 13, True)
+
+        return None
+
+    def check_daisuushi(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
+        """
+        檢查大四喜
+
+        大四喜：有四組風牌刻子
+        """
+        if not winning_combination:
+            return None
+
+        kaze = [1, 2, 3, 4]  # 東、南、西、北
+        kaze_triplets = []
+
+        for meld in winning_combination:
+            if isinstance(meld, tuple) and len(meld) == 2:
+                meld_type, (suit, rank) = meld
+                if suit == Suit.JIHAI and rank in kaze:
+                    if meld_type in ["triplet", "kan"]:
+                        kaze_triplets.append(rank)
+
+        # 四個風牌刻子
+        if len(kaze_triplets) == 4:
+            return YakuResult("大四喜", "Daisuushi", "大四喜", 13, True)
+
+        return None
+
+    def check_chinroutou(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
+        """
+        檢查清老頭
+
+        清老頭：全部由幺九牌刻子組成（無字牌）
+        """
+        if not winning_combination:
+            return None
+
+        # 檢查所有牌是否都是幺九牌刻子（無字牌）
+        for meld in winning_combination:
+            if isinstance(meld, tuple) and len(meld) == 2:
+                meld_type, (suit, rank) = meld
+                tile = Tile(suit, rank)
+
+                # 有字牌就不是清老頭
+                if tile.is_honor:
+                    return None
+
+                # 必須是刻子或對子，且是幺九牌
+                if meld_type in ["triplet", "kan", "pair"]:
+                    if not tile.is_terminal:
+                        return None
+                elif meld_type == "sequence":
+                    # 清老頭不能有順子
+                    return None
+
+        return YakuResult("清老頭", "Chinroutou", "清老頭", 13, True)
+
+    def check_tsuuiisou(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
+        """
+        檢查字一色
+
+        字一色：全部由字牌組成
+        """
+        if not winning_combination:
+            return None
+
+        # 檢查所有牌是否都是字牌
+        for meld in winning_combination:
+            if isinstance(meld, tuple) and len(meld) == 2:
+                meld_type, (suit, rank) = meld
+                tile = Tile(suit, rank)
+
+                # 有數牌就不是字一色
+                if not tile.is_honor:
+                    return None
+
+        return YakuResult("字一色", "Tsuuiisou", "字一色", 13, True)
