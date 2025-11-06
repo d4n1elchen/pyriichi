@@ -53,34 +53,34 @@ class ScoreResult:
     def calculate_payments(self, game_state: GameState) -> None:
         """
         計算支付方式
-        
+
         自摸支付：
         - 莊家自摸：每個閒家支付 base_payment + honba，總共獲得 3 * (base_payment + honba)
         - 閒家自摸：莊家支付 2 * (base_payment + honba)，其他閒家支付 base_payment + honba，總共獲得 2 * (base_payment + honba) + (base_payment + honba) * 2
-        
+
         榮和支付：
         - 支付者支付全部 total_points（包含本場）
-        
+
         本場獎勵：
         - 每個本場 +300 點（自摸時每人支付，榮和時放銃者支付）
-        
+
         供託分配：
         - 所有供託棒給和牌者
         """
         # 計算本場獎勵
         self.honba_bonus = game_state.honba * 300
-        
+
         # 計算供託分配
         self.riichi_sticks_bonus = game_state.riichi_sticks * 1000
-        
+
         # 基本點數（不含本場和供託）
         base_payment = self.total_points
-        
+
         if self.is_tsumo:
             # 自摸支付
             # 每人需要支付：base_payment + honba_bonus
             payment_per_person = base_payment + self.honba_bonus
-            
+
             if self.payment_to == game_state.dealer:
                 # 莊家自摸：每個閒家支付 payment_per_person
                 self.dealer_payment = payment_per_person  # 每個閒家支付
