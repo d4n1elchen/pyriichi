@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyriichi"
+dynamic = ["version"]
+description = "A complete implementation of Japanese Mahjong (Riichi Mahjong) rules engine"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "PyRiichi Contributors"}
+]
+keywords = ["mahjong", "riichi", "japanese", "game", "engine"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Games/Entertainment :: Board Games",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/pyriichi"
+Documentation = "https://github.com/yourusername/pyriichi#readme"
+"Bug Reports" = "https://github.com/yourusername/pyriichi/issues"
+Source = "https://github.com/yourusername/pyriichi"
+
+[tool.setuptools]
+packages = ["pyriichi"]
+
+[tool.setuptools.dynamic]
+version = {attr = "pyriichi.__version__"}
+
+[tool.setuptools.package-data]
+"*" = ["*.md", "*.txt"]
