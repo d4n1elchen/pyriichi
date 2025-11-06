@@ -6,8 +6,9 @@ PyRiichi 基本使用示例
 
 from pyriichi import (
     TileSet, Hand, RuleEngine, GameAction,
-    parse_tiles, format_tiles
+    parse_tiles, format_tiles, YakuChecker, ScoreCalculator, GameState
 )
+from pyriichi.tiles import Tile, Suit
 
 
 def example_tile_operations():
@@ -41,7 +42,6 @@ def example_hand_operations():
     print(f"初始手牌: {format_tiles(hand.tiles)}")
 
     # 摸牌
-    from pyriichi.tiles import Tile, Suit
     new_tile = Tile(Suit.MANZU, 5)
     hand.add_tile(new_tile)
     print(f"摸到 {new_tile} 後: {format_tiles(hand.tiles)}")
@@ -93,11 +93,74 @@ def example_game_flow():
     print()
 
 
+def example_winning_hand_and_scoring():
+    """示例：和牌判定、役種檢查和得分計算"""
+    print("=== 和牌判定與得分計算示例 ===")
+
+    # 創建一個和牌型手牌（斷么九）
+    # 123m 456p 789s 234m 55p（和牌牌5p）
+    tiles = parse_tiles("1m2m3m4p5p6p7s8s9s2m3m4m5p")
+    hand = Hand(tiles)
+    winning_tile = Tile(Suit.PINZU, 5)
+
+    # 1. 檢查是否和牌
+    is_winning = hand.is_winning_hand(winning_tile)
+    print(f"是否和牌: {is_winning}")
+
+    if is_winning:
+        # 2. 獲取和牌組合
+        winning_combinations = hand.get_winning_combinations(winning_tile)
+        print(f"和牌組合數量: {len(winning_combinations)}")
+
+        if winning_combinations:
+            # 注意：get_winning_combinations 返回 List[Tuple]，需要轉換為 List
+            winning_combination = list(winning_combinations[0])
+
+            # 3. 檢查役種
+            game_state = GameState(num_players=4)
+            yaku_checker = YakuChecker()
+            yaku_results = yaku_checker.check_all(
+                hand=hand,
+                winning_tile=winning_tile,
+                winning_combination=winning_combination,
+                game_state=game_state,
+                is_tsumo=True,
+                player_position=0,
+            )
+
+            print(f"\n役種檢查結果:")
+            for yaku in yaku_results:
+                print(f"  - {yaku.name}: {yaku.han} 翻")
+
+            # 4. 計算得分
+            score_calculator = ScoreCalculator()
+            score_result = score_calculator.calculate(
+                hand=hand,
+                winning_tile=winning_tile,
+                winning_combination=winning_combination,
+                yaku_results=yaku_results,
+                dora_count=0,  # 無寶牌
+                game_state=game_state,
+                is_tsumo=True,
+                player_position=0,
+            )
+
+            print(f"\n得分計算結果:")
+            print(f"  翻數: {score_result.han}")
+            print(f"  符數: {score_result.fu}")
+            print(f"  總點數: {score_result.total_points}")
+            print(f"  是否役滿: {score_result.is_yakuman}")
+            print(f"  是否自摸: {score_result.is_tsumo}")
+
+    print()
+
+
 if __name__ == "__main__":
     print("PyRiichi 基本使用示例\n")
 
     example_tile_operations()
     example_hand_operations()
     example_game_flow()
+    example_winning_hand_and_scoring()
 
     print("示例完成！")
