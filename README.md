@@ -55,6 +55,31 @@ print(f"玩家 {current_player} 的手牌: {hand.tiles}")
 
 ### 牌的表示和操作
 
+#### 字串表示法
+
+PyRiichi 使用簡潔的字串格式來表示麻將牌，方便輸入和顯示：
+
+**基本格式**：`數字 + 花色字母`
+
+- **萬子（MANZU）**：使用 `m` 表示
+  - `1m` = 一萬, `2m` = 二萬, ..., `9m` = 九萬
+  
+- **筒子（PINZU）**：使用 `p` 表示
+  - `1p` = 一筒, `2p` = 二筒, ..., `9p` = 九筒
+  
+- **條子（SOZU）**：使用 `s` 表示
+  - `1s` = 一條, `2s` = 二條, ..., `9s` = 九條
+  
+- **字牌（JIHAI）**：使用 `z` 表示
+  - `1z` = 東, `2z` = 南, `3z` = 西, `4z` = 北
+  - `5z` = 白, `6z` = 發, `7z` = 中
+
+**紅寶牌表示**：使用 `]` 標記紅寶牌
+- `5p]` = 紅五筒（紅寶牌）
+- `5s]` = 紅五條（紅寶牌）
+- `5m]` = 紅五萬（紅寶牌）
+
+**示例**：
 ```python
 from pyriichi import Tile, Suit, TileSet, parse_tiles, format_tiles
 
@@ -66,11 +91,24 @@ print(tile)  # 輸出: 1m
 tiles = parse_tiles("1m2m3m4p5p6p7s8s9s")
 print(format_tiles(tiles))  # 輸出: 1m2m3m4p5p6p7s8s9s
 
+# 解析包含紅寶牌的牌（輸入用 ] 標記，輸出用 [ ] 括號）
+red_tiles = parse_tiles("5p]6p7p")  # 紅五筒、六筒、七筒
+print(format_tiles(red_tiles))  # 輸出: [5p]6p7p
+
+# 解析字牌
+honor_tiles = parse_tiles("1z2z3z5z6z7z")  # 東南西北白發中
+print(format_tiles(honor_tiles))  # 輸出: 1z2z3z5z6z7z
+
 # 創建和洗牌
 tile_set = TileSet()
 tile_set.shuffle()
 hands = tile_set.deal()  # 發牌給 4 個玩家
 ```
+
+**注意事項**：
+- 字串中可以包含空格或其他字符，`parse_tiles()` 會自動跳過無效字符
+- 多張牌可以連續寫在一起，例如：`"1m2m3m"` 表示三張萬子
+- 使用 `format_tiles()` 可以將牌列表轉換回字串格式
 
 ### 遊戲流程控制
 
@@ -171,9 +209,9 @@ winning_tile = Tile(Suit.PINZU, 5)
 winning_combinations = hand.get_winning_combinations(winning_tile)
 if winning_combinations:
     winning_combination = list(winning_combinations[0])  # 轉換為 List
-    
+
     game_state = GameState(num_players=4)
-    
+
     # 檢查所有役種
     yaku_results = yaku_checker.check_all(
         hand=hand,
@@ -183,7 +221,7 @@ if winning_combinations:
         is_tsumo=True,
         player_position=0,
     )
-    
+
     for result in yaku_results:
         print(f"{result.name}: {result.han} 翻")
 
@@ -211,9 +249,9 @@ winning_tile = Tile(Suit.PINZU, 5)
 winning_combinations = hand.get_winning_combinations(winning_tile)
 if winning_combinations:
     winning_combination = list(winning_combinations[0])  # 轉換為 List
-    
+
     game_state = GameState(num_players=4)
-    
+
     # 先檢查役種
     yaku_results = yaku_checker.check_all(
         hand=hand,
@@ -223,10 +261,10 @@ if winning_combinations:
         is_tsumo=True,
         player_position=0,
     )
-    
+
     dora_count = 0  # 寶牌數量
     is_tsumo = True  # 是否自摸
-    
+
     # 計算得分
     score_result = score_calculator.calculate(
         hand=hand,
@@ -238,7 +276,7 @@ if winning_combinations:
         is_tsumo=is_tsumo,
         player_position=0,
     )
-    
+
     print(f"翻數: {score_result.han}")
     print(f"符數: {score_result.fu}")
     print(f"總點數: {score_result.total_points}")
