@@ -1188,9 +1188,7 @@ class TestScoreCalculator:
         if combinations:
             yaku_results = []
             # 計算符數
-            fu = self.calculator.calculate_fu(
-                hand, winning_tile, combinations[0], yaku_results, self.game_state, False
-            )
+            fu = self.calculator.calculate_fu(hand, winning_tile, combinations[0], yaku_results, self.game_state, False)
             # 檢查聽牌類型
             waiting_type = self.calculator._determine_waiting_type(winning_tile, combinations[0])
             # 如果判定為雙碰聽（shabo），不應該增加符數
