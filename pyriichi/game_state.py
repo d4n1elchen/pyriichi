@@ -6,6 +6,7 @@
 
 from enum import Enum
 from typing import List, Optional
+from pyriichi.rules_config import RulesetConfig
 
 
 class Wind(Enum):
@@ -20,13 +21,19 @@ class Wind(Enum):
 class GameState:
     """遊戲狀態管理器"""
 
-    def __init__(self, initial_scores: Optional[List[int]] = None, num_players: int = 4):
+    def __init__(
+        self,
+        initial_scores: Optional[List[int]] = None,
+        num_players: int = 4,
+        ruleset: Optional[RulesetConfig] = None,
+    ):
         """
         初始化遊戲狀態
 
         Args:
             initial_scores: 初始點數列表（默認每人 25000）
             num_players: 玩家數量
+            ruleset: 規則配置（默認使用標準競技規則）
         """
         if initial_scores is None:
             initial_scores = [25000] * num_players
@@ -38,6 +45,7 @@ class GameState:
         self._honba = 0
         self._riichi_sticks = 0
         self._num_players = num_players
+        self._ruleset = ruleset if ruleset is not None else RulesetConfig.standard()
 
     @property
     def round_wind(self) -> Wind:
@@ -101,6 +109,11 @@ class GameState:
     def clear_riichi_sticks(self) -> None:
         """清除供託棒"""
         self._riichi_sticks = 0
+
+    @property
+    def ruleset(self) -> RulesetConfig:
+        """規則配置"""
+        return self._ruleset
 
     def update_score(self, player: int, points: int) -> None:
         """更新玩家點數"""

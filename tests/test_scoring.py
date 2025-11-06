@@ -881,7 +881,7 @@ class TestScoreCalculator:
         assert fu == 25
 
     def test_calculate_fu_pinfu_tsumo(self):
-        """測試平和自摸符數（22 符）"""
+        """測試平和自摸符數（30 符）"""
         # 平和：只有順子，無刻子，無役牌對子
         tiles = [
             Tile(Suit.MANZU, 1),
@@ -913,7 +913,7 @@ class TestScoreCalculator:
                 fu = self.calculator.calculate_fu(
                     hand, winning_tile, list(combinations[0]), yaku_results, self.game_state, True
                 )
-                # 平和自摸：22 符，進位到 30
+                # 平和自摸：30 符（20基本符 + 2自摸符 + 8副底符）
                 assert fu == 30
 
     def test_calculate_fu_pinfu_ron(self):

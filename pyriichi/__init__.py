@@ -13,6 +13,7 @@ from pyriichi.game_state import GameState, Wind
 from pyriichi.rules import RuleEngine, GameAction, GamePhase
 from pyriichi.yaku import YakuChecker, YakuResult
 from pyriichi.scoring import ScoreCalculator, ScoreResult
+from pyriichi.rules_config import RulesetConfig
 
 # Convenience functions
 from pyriichi.utils import parse_tiles, format_tiles, is_winning_hand
@@ -34,6 +35,7 @@ __all__ = [
     "YakuResult",
     "ScoreCalculator",
     "ScoreResult",
+    "RulesetConfig",
     # Utility functions
     "parse_tiles",
     "format_tiles",

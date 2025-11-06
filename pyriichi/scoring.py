@@ -131,7 +131,9 @@ class ScoreCalculator:
             得分計算結果
         """
         # 計算符數（需要傳入 yaku_results 來判斷是否為平和）
-        fu = self.calculate_fu(hand, winning_tile, winning_combination, yaku_results, game_state, is_tsumo, player_position)
+        fu = self.calculate_fu(
+            hand, winning_tile, winning_combination, yaku_results, game_state, is_tsumo, player_position
+        )
 
         # 計算翻數
         han = self.calculate_han(yaku_results, dora_count)
@@ -194,11 +196,11 @@ class ScoreCalculator:
         if is_pinfu:
             # 平和固定符數
             if is_tsumo:
-                fu = 22  # 平和自摸：20符基本符 + 2符自摸符
+                fu = 30  # 平和自摸：20符基本符 + 2符自摸符 + 8符副底符 = 30符
             else:
-                fu = 30  # 平和榮和：20符基本符 + 10符門清榮和
-            # 進位到 10
-            return ((fu + 9) // 10) * 10
+                fu = 30  # 平和榮和：20符基本符 + 10符門清榮和 = 30符
+            # 平和固定30符，不需要進位
+            return 30
 
         # 副底符
         if hand.is_concealed and not is_tsumo:

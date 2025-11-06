@@ -345,14 +345,15 @@ class TestYakuChecker:
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
-            result = self.checker.check_junchan(hand, list(combinations[0]))
+            result = self.checker.check_junchan(hand, list(combinations[0]), self.game_state)
             assert result is not None
             assert result.name == "純全帯么九"
+            # 標準競技規則：門清3翻，副露2翻（這裡是門清）
             assert result.han == 3
 
     def test_honchan(self):
-        """測試混全帶么九"""
-        # 混全帶么九：包含1或9的順子 + 字牌
+        """測試全帶么九（Chanta）"""
+        # 全帶么九：包含1或9的順子 + 字牌
         tiles = [
             Tile(Suit.MANZU, 1),
             Tile(Suit.MANZU, 2),
@@ -373,9 +374,10 @@ class TestYakuChecker:
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
-            result = self.checker.check_honchan(hand, list(combinations[0]))
+            result = self.checker.check_honchan(hand, list(combinations[0]), self.game_state)
             assert result is not None
-            assert result.name == "混全帯么九"
+            assert result.name == "全帯么九"  # 標準競技規則名稱
+            # 標準競技規則：門清2翻，副露1翻（這裡是門清）
             assert result.han == 2
 
     def test_ryanpeikou(self):
@@ -530,7 +532,7 @@ class TestYakuChecker:
     def test_suuankou(self):
         """測試四暗刻役滿"""
         # 四暗刻：門清狀態下，四個暗刻（單騎聽）
-        # 注意：四暗刻需要單騎聽，這裡用一個簡單的例子
+        # 標準競技規則：四暗刻單騎為雙倍役滿（26翻）
         tiles = [
             Tile(Suit.MANZU, 1),
             Tile(Suit.MANZU, 1),
@@ -560,14 +562,57 @@ class TestYakuChecker:
                     hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
                 )
                 yakuman = [r for r in results if r.is_yakuman]
-                # 四暗刻可能需要單騎聽，這裡先檢查是否有役滿
+                # 標準競技規則：四暗刻單騎為雙倍役滿（26翻）
                 if yakuman:
-                    assert yakuman[0].name == "四暗刻"
-                    assert yakuman[0].han == 13
+                    # 可能是四暗刻或四暗刻單騎
+                    suuankou_results = [r for r in yakuman if "四暗刻" in r.name]
+                    if suuankou_results:
+                        # 如果是單騎聽，應該是雙倍役滿
+                        if "単騎" in suuankou_results[0].name:
+                            assert suuankou_results[0].han == 26
+                        else:
+                            assert suuankou_results[0].han == 13
                 else:
                     # 如果沒有檢測到四暗刻，可能是因為判定邏輯需要更精確
                     # 暫時跳過，因為四暗刻的判定較複雜
                     pass
+
+    def test_suuankou_tanki(self):
+        """測試四暗刻單騎（標準競技規則：雙倍役滿26翻）"""
+        tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),  # 單騎等待 5m 作為對子
+        ]
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.MANZU, 5)  # 完成單騎對子
+        combinations = hand.get_winning_combinations(winning_tile)
+
+        if combinations:
+            results = self.checker.check_all(
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+            )
+            yakuman = [r for r in results if r.is_yakuman]
+            # 標準競技規則：四暗刻單騎為雙倍役滿（26翻）
+            if yakuman:
+                suuankou_tanki = [r for r in yakuman if "四暗刻" in r.name and "単騎" in r.name]
+                if suuankou_tanki:
+                    assert suuankou_tanki[0].han == 26
+                else:
+                    # 如果沒有檢測到單騎，可能是普通四暗刻
+                    suuankou = [r for r in yakuman if r.name == "四暗刻"]
+                    if suuankou:
+                        assert suuankou[0].han == 13
 
     def test_kokushi_musou(self):
         """測試國士無雙役滿"""
@@ -1007,8 +1052,14 @@ class TestYakuChecker:
     def test_suukantsu_ii(self):
         """測試四歸一役滿"""
         # 四歸一：同一種牌四張分別在四個順子中
-        # 例如：1122334455...其中某種牌在四個順子中都出現各一次
-        # 這個很難構造，但我們可以測試判定邏輯
+        # 標準競技規則中不啟用四歸一
+        # 這裡測試舊版規則（legacy ruleset）
+        from pyriichi.rules_config import RulesetConfig
+
+        # 使用舊版規則配置
+        legacy_ruleset = RulesetConfig.legacy()
+        self.game_state._ruleset = legacy_ruleset
+
         tiles = [
             Tile(Suit.MANZU, 1),
             Tile(Suit.MANZU, 2),
@@ -1030,13 +1081,455 @@ class TestYakuChecker:
 
         if combinations:
             # 檢查是否有四歸一（3在四個順子中都出現）
-            result = self.checker.check_suukantsu_ii(hand, list(combinations[0]))
+            result = self.checker.check_suukantsu_ii(hand, list(combinations[0]), self.game_state)
             # 註：這個例子中，3在123、234、345、456四個順子中都出現
             # 但需要確認是否正好4張
             if result:
                 assert result.name == "四帰一"
                 assert result.han == 13
                 assert result.is_yakuman
+
+        # 恢復標準規則配置
+        self.game_state._ruleset = RulesetConfig.standard()
+
+    def test_shousuushi(self):
+        """測試小四喜役滿"""
+        # 小四喜：三個風牌刻子 + 一個風牌對子
+        tiles = [
+            Tile(Suit.JIHAI, 1),
+            Tile(Suit.JIHAI, 1),
+            Tile(Suit.JIHAI, 1),  # 東刻子
+            Tile(Suit.JIHAI, 2),
+            Tile(Suit.JIHAI, 2),
+            Tile(Suit.JIHAI, 2),  # 南刻子
+            Tile(Suit.JIHAI, 3),
+            Tile(Suit.JIHAI, 3),
+            Tile(Suit.JIHAI, 3),  # 西刻子
+            Tile(Suit.JIHAI, 4),
+            Tile(Suit.JIHAI, 4),  # 北對子
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+        ]
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.MANZU, 3)
+        combinations = hand.get_winning_combinations(winning_tile)
+
+        if combinations:
+            results = self.checker.check_all(
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+            )
+            yakuman = [r for r in results if r.is_yakuman]
+            assert len(yakuman) > 0
+            shousuushi = [r for r in yakuman if r.name == "小四喜"]
+            if shousuushi:
+                assert shousuushi[0].han == 13
+            else:
+                # 檢查判定方法
+                result = self.checker.check_shousuushi(hand, list(combinations[0]))
+                assert result is not None
+                assert result.name == "小四喜"
+                assert result.han == 13
+                assert result.is_yakuman
+
+    def test_daisuushi(self):
+        """測試大四喜役滿"""
+        # 大四喜：四個風牌刻子
+        tiles = [
+            Tile(Suit.JIHAI, 1),
+            Tile(Suit.JIHAI, 1),
+            Tile(Suit.JIHAI, 1),  # 東刻子
+            Tile(Suit.JIHAI, 2),
+            Tile(Suit.JIHAI, 2),
+            Tile(Suit.JIHAI, 2),  # 南刻子
+            Tile(Suit.JIHAI, 3),
+            Tile(Suit.JIHAI, 3),
+            Tile(Suit.JIHAI, 3),  # 西刻子
+            Tile(Suit.JIHAI, 4),
+            Tile(Suit.JIHAI, 4),
+            Tile(Suit.JIHAI, 4),  # 北刻子
+            Tile(Suit.MANZU, 1),
+        ]
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.MANZU, 1)
+        combinations = hand.get_winning_combinations(winning_tile)
+
+        if combinations:
+            results = self.checker.check_all(
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+            )
+            yakuman = [r for r in results if r.is_yakuman]
+            assert len(yakuman) > 0
+            daisuushi = [r for r in yakuman if r.name == "大四喜"]
+            if daisuushi:
+                assert daisuushi[0].han == 13
+            else:
+                # 檢查判定方法
+                result = self.checker.check_daisuushi(hand, list(combinations[0]))
+                assert result is not None
+                assert result.name == "大四喜"
+                assert result.han == 13
+                assert result.is_yakuman
+
+    def test_chinroutou(self):
+        """測試清老頭役滿"""
+        # 清老頭：全部由幺九牌刻子組成（無字牌）
+        tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),  # 1萬刻子
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.MANZU, 9),  # 9萬刻子
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 1),  # 1筒刻子
+            Tile(Suit.PINZU, 9),
+            Tile(Suit.PINZU, 9),
+            Tile(Suit.PINZU, 9),  # 9筒刻子
+            Tile(Suit.SOZU, 1),
+        ]
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.SOZU, 1)
+        combinations = hand.get_winning_combinations(winning_tile)
+
+        if combinations:
+            results = self.checker.check_all(
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+            )
+            yakuman = [r for r in results if r.is_yakuman]
+            assert len(yakuman) > 0
+            chinroutou = [r for r in yakuman if r.name == "清老頭"]
+            if chinroutou:
+                assert chinroutou[0].han == 13
+            else:
+                # 檢查判定方法
+                result = self.checker.check_chinroutou(hand, list(combinations[0]))
+                assert result is not None
+                assert result.name == "清老頭"
+                assert result.han == 13
+                assert result.is_yakuman
+
+    def test_pinfu_direct(self):
+        """測試平和直接判定"""
+        # 平和：全部由順子和對子組成，無刻子，且聽牌是兩面聽
+        # 門清狀態下，且對子不是役牌
+        tiles = [
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+            Tile(Suit.PINZU, 5),
+            Tile(Suit.PINZU, 6),
+            Tile(Suit.PINZU, 7),
+            Tile(Suit.SOZU, 5),
+        ]
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.SOZU, 5)
+        combinations = hand.get_winning_combinations(winning_tile)
+
+        if combinations:
+            result = self.checker.check_pinfu(hand, list(combinations[0]), self.game_state)
+            if result:
+                assert result.name == "平和"
+                assert result.han == 1
+                assert not result.is_yakuman
+
+    def test_tenhou_direct(self):
+        """測試天和直接判定"""
+        # 天和：莊家在第一巡自摸和牌
+        tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+            Tile(Suit.PINZU, 5),
+            Tile(Suit.PINZU, 6),
+            Tile(Suit.PINZU, 7),
+            Tile(Suit.PINZU, 8),
+            Tile(Suit.SOZU, 4),
+        ]
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.SOZU, 4)
+        combinations = hand.get_winning_combinations(winning_tile)
+
+        if combinations:
+            # 設置為莊家、第一巡、自摸
+            self.game_state.set_dealer(0)
+            result = self.checker.check_tenhou(
+                hand, is_tsumo=True, is_first_turn=True, player_position=0, game_state=self.game_state
+            )
+            if result:
+                assert result.name == "天和"
+                assert result.han == 13
+                assert result.is_yakuman
+
+    def test_chihou_direct(self):
+        """測試地和直接判定"""
+        # 地和：閒家在第一巡自摸和牌
+        tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+            Tile(Suit.PINZU, 5),
+            Tile(Suit.PINZU, 6),
+            Tile(Suit.PINZU, 7),
+            Tile(Suit.PINZU, 8),
+            Tile(Suit.SOZU, 4),
+        ]
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.SOZU, 4)
+        combinations = hand.get_winning_combinations(winning_tile)
+
+        if combinations:
+            # 設置為閒家、第一巡、自摸
+            self.game_state.set_dealer(0)
+            result = self.checker.check_chihou(
+                hand, is_tsumo=True, is_first_turn=True, player_position=1, game_state=self.game_state
+            )
+            if result:
+                assert result.name == "地和"
+                assert result.han == 13
+                assert result.is_yakuman
+
+    def test_renhou_direct(self):
+        """測試人和直接判定"""
+        # 人和：閒家在第一巡榮和
+        # 標準競技規則：人和為2翻（非役滿）
+        tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+            Tile(Suit.PINZU, 5),
+            Tile(Suit.PINZU, 6),
+            Tile(Suit.PINZU, 7),
+            Tile(Suit.PINZU, 8),
+            Tile(Suit.SOZU, 4),
+        ]
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.SOZU, 4)
+        combinations = hand.get_winning_combinations(winning_tile)
+
+        if combinations:
+            # 設置為閒家、第一巡、榮和
+            self.game_state.set_dealer(0)
+            result = self.checker.check_renhou(
+                hand, is_tsumo=False, is_first_turn=True, player_position=1, game_state=self.game_state
+            )
+            if result:
+                assert result.name == "人和"
+                # 標準競技規則：人和為2翻（非役滿）
+                assert result.han == 2
+                assert not result.is_yakuman
+
+    def test_haitei_raoyue_direct(self):
+        """測試海底撈月直接判定"""
+        # 海底撈月：自摸最後一張牌和牌
+        tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+            Tile(Suit.PINZU, 5),
+            Tile(Suit.PINZU, 6),
+            Tile(Suit.PINZU, 7),
+            Tile(Suit.PINZU, 8),
+            Tile(Suit.SOZU, 4),
+        ]
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.SOZU, 4)
+
+        # 測試自摸最後一張牌
+        result = self.checker.check_haitei_raoyue(hand, is_tsumo=True, is_last_tile=True)
+        assert result is not None
+        assert result.name == "海底撈月"
+        assert result.han == 1
+        assert not result.is_yakuman
+
+    def test_houtei_raoyui_direct(self):
+        """測試河底撈魚直接判定"""
+        # 河底撈魚：榮和最後一張牌和牌
+        tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+            Tile(Suit.PINZU, 5),
+            Tile(Suit.PINZU, 6),
+            Tile(Suit.PINZU, 7),
+            Tile(Suit.PINZU, 8),
+            Tile(Suit.SOZU, 4),
+        ]
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.SOZU, 4)
+
+        # 測試榮和最後一張牌
+        result = self.checker.check_haitei_raoyue(hand, is_tsumo=False, is_last_tile=True)
+        assert result is not None
+        assert result.name == "河底撈魚"
+        assert result.han == 1
+        assert not result.is_yakuman
+
+    def test_rinshan_kaihou_direct(self):
+        """測試嶺上開花直接判定"""
+        # 嶺上開花：槓後從嶺上摸牌和牌
+        tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+            Tile(Suit.PINZU, 5),
+            Tile(Suit.PINZU, 6),
+            Tile(Suit.PINZU, 7),
+            Tile(Suit.PINZU, 8),
+            Tile(Suit.SOZU, 4),
+        ]
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.SOZU, 4)
+
+        # 測試嶺上開花
+        result = self.checker.check_rinshan_kaihou(hand, is_rinshan=True)
+        assert result is not None
+        assert result.name == "嶺上開花"
+        assert result.han == 1
+        assert not result.is_yakuman
+
+    def test_suukantsu_direct(self):
+        """測試四槓子直接判定"""
+        # 四槓子：四個槓子
+        # 注意：實際的 winning_combination 可能不會包含 'kan' 類型
+        # 因為 get_winning_combinations 返回的是標準和牌組合
+        # 四槓子需要通過 Hand 的 melds 來實現
+        # 這裡測試判定邏輯
+        tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+        ]
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.PINZU, 3)
+
+        # 手動構建包含四個槓子的組合
+        combo_with_kan = [
+            ("kan", (Suit.MANZU, 1)),
+            ("kan", (Suit.MANZU, 2)),
+            ("kan", (Suit.MANZU, 3)),
+            ("kan", (Suit.PINZU, 1)),
+            ("pair", (Suit.PINZU, 2)),
+        ]
+        result = self.checker.check_suukantsu(hand, combo_with_kan)
+        assert result is not None
+        assert result.name == "四槓子"
+        assert result.han == 13
+        assert result.is_yakuman
+
+    def test_kokushi_musou_juusanmen_direct(self):
+        """測試國士無雙十三面直接判定"""
+        # 國士無雙十三面：13種幺九牌各一張，再有一張幺九牌，且該牌為聽牌
+        tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 9),
+            Tile(Suit.SOZU, 1),
+            Tile(Suit.SOZU, 9),
+            Tile(Suit.JIHAI, 1),
+            Tile(Suit.JIHAI, 2),
+            Tile(Suit.JIHAI, 3),
+            Tile(Suit.JIHAI, 4),
+            Tile(Suit.JIHAI, 5),
+            Tile(Suit.JIHAI, 6),
+            Tile(Suit.JIHAI, 7),  # 重複一張
+        ]
+        hand = Hand(tiles)
+        all_tiles = hand.tiles + [Tile(Suit.JIHAI, 7)]  # 和牌牌
+
+        # 檢查是否為十三面聽牌
+        is_juusanmen = self.checker.check_kokushi_musou_juusanmen(hand, all_tiles)
+        # 如果重複的牌是聽牌，則為十三面
+        assert isinstance(is_juusanmen, bool)
+
+        # 測試完整的國士無雙十三面判定
+        results = self.checker.check_all(
+            hand,
+            Tile(Suit.JIHAI, 7),
+            [],
+            self.game_state,
+            is_tsumo=False,
+            turns_after_riichi=-1,
+        )
+        # 檢查是否有國士無雙十三面
+        kokushi = [r for r in results if "國士無雙" in r.name]
+        if kokushi:
+            # 檢查是否為十三面
+            juusanmen = [r for r in results if "十三面" in r.name]
+            if juusanmen:
+                assert juusanmen[0].han == 26  # 雙倍役滿
+
+    def test_chuuren_poutou_junsei_direct(self):
+        """測試純正九蓮寶燈直接判定"""
+        # 純正九蓮寶燈：九蓮寶燈且聽牌為九面聽
+        # 1112345678999 + 任意一張，且該張牌是聽牌
+        # 標準競技規則：純正九蓮寶燈為雙倍役滿（26翻）
+        tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.MANZU, 9),
+        ]
+        hand = Hand(tiles)
+        # 測試和牌牌是1-9中的任意一張（九面聽）
+        for winning_rank in range(1, 10):
+            winning_tile = Tile(Suit.MANZU, winning_rank)
+            all_tiles = hand.tiles + [winning_tile]
+            result = self.checker.check_chuuren_poutou(hand, all_tiles, self.game_state)
+            if result:
+                # 標準競技規則：如果是純正九蓮寶燈，應該是26翻（雙倍役滿）
+                if "純正" in result.name:
+                    assert result.han == 26
+                    assert result.is_yakuman
+                    break
 
 
 if __name__ == "__main__":

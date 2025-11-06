@@ -15,6 +15,7 @@ from pyriichi import (
     ScoreCalculator,
     GameState,
     Wind,
+    RulesetConfig,
 )
 from pyriichi.tiles import Tile, Suit
 
@@ -125,6 +126,7 @@ def example_winning_hand_and_scoring():
             winning_combination = list(winning_combinations[0])
 
             # 3. 檢查役種
+            # 默認使用標準競技規則（RulesetConfig.standard()）
             game_state = GameState(num_players=4)
             game_state.set_round(Wind.EAST, 1)  # 東一局
             game_state.set_dealer(0)  # 玩家 0 為莊家
@@ -233,6 +235,99 @@ def example_meld_operations():
     print()
 
 
+def example_ruleset_configuration():
+    """示例：規則配置"""
+    print("=== 規則配置示例 ===")
+
+    # 1. 使用默認標準競技規則
+    print("1. 默認標準競技規則：")
+    game_state_standard = GameState(num_players=4)
+    print(f"   - 人和: {game_state_standard.ruleset.renhou_policy} (2翻)")
+    print(f"   - 平和需要兩面聽: {game_state_standard.ruleset.pinfu_require_ryanmen}")
+    print(f"   - 全帶么九（門清）: {game_state_standard.ruleset.chanta_closed_han}翻")
+    print(f"   - 全帶么九（副露）: {game_state_standard.ruleset.chanta_open_han}翻")
+    print(
+        f"   - 四暗刻單騎: {'雙倍役滿' if game_state_standard.ruleset.suuankou_tanki_is_double_yakuman else '單倍役滿'}"
+    )
+    print(f"   - 四歸一: {'啟用' if game_state_standard.ruleset.suukantsu_ii_enabled else '不啟用'}")
+
+    # 2. 使用舊版規則
+    print("\n2. 舊版規則：")
+    legacy_ruleset = RulesetConfig.legacy()
+    game_state_legacy = GameState(num_players=4, ruleset=legacy_ruleset)
+    print(f"   - 人和: {game_state_legacy.ruleset.renhou_policy} (役滿)")
+    print(f"   - 平和需要兩面聽: {game_state_legacy.ruleset.pinfu_require_ryanmen}")
+    print(f"   - 全帶么九（門清）: {game_state_legacy.ruleset.chanta_closed_han}翻")
+    print(f"   - 全帶么九（副露）: {game_state_legacy.ruleset.chanta_open_han}翻")
+    print(
+        f"   - 四暗刻單騎: {'雙倍役滿' if game_state_legacy.ruleset.suuankou_tanki_is_double_yakuman else '單倍役滿'}"
+    )
+    print(f"   - 四歸一: {'啟用' if game_state_legacy.ruleset.suukantsu_ii_enabled else '不啟用'}")
+
+    # 3. 自定義規則配置
+    print("\n3. 自定義規則配置：")
+    custom_ruleset = RulesetConfig(
+        renhou_policy="yakuman",  # 人和為役滿
+        pinfu_require_ryanmen=False,  # 平和不檢查兩面聽
+        chanta_enabled=True,
+        chanta_closed_han=2,
+        chanta_open_han=1,
+        junchan_closed_han=3,
+        junchan_open_han=2,
+        suukantsu_ii_enabled=False,
+        suuankou_tanki_is_double_yakuman=True,
+        chuuren_pure_double=True,
+    )
+    game_state_custom = GameState(num_players=4, ruleset=custom_ruleset)
+    print(f"   - 人和: {game_state_custom.ruleset.renhou_policy}")
+    print(f"   - 平和需要兩面聽: {game_state_custom.ruleset.pinfu_require_ryanmen}")
+
+    # 4. 演示規則配置對役種判定的影響
+    print("\n4. 規則配置對役種判定的影響：")
+    tiles = parse_tiles("1m2m3m4p5p6p7s8s9s2m3m4m5p")
+    hand = Hand(tiles)
+    winning_tile = Tile(Suit.PINZU, 5)
+    combinations = hand.get_winning_combinations(winning_tile)
+
+    if combinations:
+        winning_combination = list(combinations[0])
+        yaku_checker = YakuChecker()
+
+        # 使用標準規則（人和為2翻）
+        game_state_standard.set_round(Wind.EAST, 1)
+        game_state_standard.set_dealer(0)
+        results_standard = yaku_checker.check_all(
+            hand=hand,
+            winning_tile=winning_tile,
+            winning_combination=winning_combination,
+            game_state=game_state_standard,
+            is_tsumo=False,
+            is_first_turn=True,
+            player_position=1,  # 閒家
+        )
+        renhou_standard = [r for r in results_standard if r.name == "人和"]
+        if renhou_standard:
+            print(f"   標準規則 - 人和: {renhou_standard[0].han}翻 (非役滿)")
+
+        # 使用舊版規則（人和為役滿）
+        game_state_legacy.set_round(Wind.EAST, 1)
+        game_state_legacy.set_dealer(0)
+        results_legacy = yaku_checker.check_all(
+            hand=hand,
+            winning_tile=winning_tile,
+            winning_combination=winning_combination,
+            game_state=game_state_legacy,
+            is_tsumo=False,
+            is_first_turn=True,
+            player_position=1,  # 閒家
+        )
+        renhou_legacy = [r for r in results_legacy if r.name == "人和"]
+        if renhou_legacy:
+            print(f"   舊版規則 - 人和: {renhou_legacy[0].han}翻 (役滿)")
+
+    print()
+
+
 if __name__ == "__main__":
     print("PyRiichi 基本使用示例\n")
 
@@ -242,5 +337,6 @@ if __name__ == "__main__":
     example_winning_hand_and_scoring()
     example_tenpai()
     example_meld_operations()
+    example_ruleset_configuration()
 
     print("示例完成！")
