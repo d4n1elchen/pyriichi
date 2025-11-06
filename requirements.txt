@@ -1,0 +1,14 @@
+# PyRiichi - Python Japanese Mahjong Engine
+# Core dependencies
+
+# Testing framework
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# Code quality
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.0.0
+
+# Type hints (for Python < 3.9)
+typing-extensions>=4.0.0; python_version < "3.9"

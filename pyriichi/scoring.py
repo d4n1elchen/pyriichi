@@ -1,0 +1,236 @@
+"""
+得分計算系統 - ScoreCalculator implementation
+
+提供符數、翻數和點數計算功能。
+"""
+
+from typing import List, Optional, Tuple
+from dataclasses import dataclass
+from pyriichi.hand import Hand
+from pyriichi.tiles import Tile, Suit
+from pyriichi.game_state import GameState
+from pyriichi.yaku import YakuResult
+
+
+@dataclass
+class ScoreResult:
+    """得分計算結果"""
+
+    han: int  # 翻數
+    fu: int  # 符數
+    base_points: int  # 基本點
+    total_points: int  # 總點數（自摸時為每人支付）
+    payment_from: int  # 支付者位置（榮和時）
+    payment_to: int  # 獲得者位置
+    is_yakuman: bool  # 是否役滿
+    yakuman_count: int  # 役滿倍數
+
+    def __post_init__(self):
+        """計算最終得分"""
+        if self.is_yakuman:
+            self.total_points = 8000 * self.yakuman_count
+        elif self.han >= 13:
+            self.total_points = 8000  # 役滿
+        elif self.han >= 11:
+            self.total_points = 6000  # 三倍滿
+        elif self.han >= 8:
+            self.total_points = 4000  # 倍滿
+        elif self.han >= 6:
+            self.total_points = 3000  # 跳滿
+        elif self.han >= 5 or (self.han == 4 and self.fu >= 40):
+            self.total_points = 2000  # 滿貫
+        else:
+            # 基本點計算
+            base = self.fu * (2 ** (self.han + 2))
+            self.base_points = base
+            self.total_points = (base + 9) // 10 * 10  # 進位到 10
+
+
+class ScoreCalculator:
+    """得分計算器"""
+
+    def calculate(
+        self,
+        hand: Hand,
+        winning_tile: Tile,
+        winning_combination: List,
+        yaku_results: List[YakuResult],
+        dora_count: int,
+        game_state: GameState,
+        is_tsumo: bool,
+    ) -> ScoreResult:
+        """
+        計算得分
+
+        Args:
+            hand: 手牌
+            winning_tile: 和牌牌
+            winning_combination: 和牌組合
+            yaku_results: 役種列表
+            dora_count: 寶牌數量
+            game_state: 遊戲狀態
+            is_tsumo: 是否自摸
+
+        Returns:
+            得分計算結果
+        """
+        # 計算符數（需要傳入 yaku_results 來判斷是否為平和）
+        fu = self.calculate_fu(hand, winning_tile, winning_combination, yaku_results, game_state, is_tsumo)
+
+        # 計算翻數
+        han = self.calculate_han(yaku_results, dora_count)
+
+        # 檢查是否役滿
+        is_yakuman = any(r.is_yakuman for r in yaku_results)
+        yakuman_count = sum(1 for r in yaku_results if r.is_yakuman)
+
+        # 創建結果對象
+        result = ScoreResult(
+            han=han,
+            fu=fu,
+            base_points=0,
+            total_points=0,
+            payment_from=0,
+            payment_to=0,
+            is_yakuman=is_yakuman,
+            yakuman_count=yakuman_count,
+        )
+
+        return result
+
+    def calculate_fu(
+        self,
+        hand: Hand,
+        winning_tile: Tile,
+        winning_combination: List,
+        yaku_results: List[YakuResult],
+        game_state: GameState,
+        is_tsumo: bool,
+    ) -> int:
+        """
+        計算符數
+
+        Args:
+            hand: 手牌
+            winning_tile: 和牌牌
+            winning_combination: 和牌組合
+            game_state: 遊戲狀態
+            is_tsumo: 是否自摸
+
+        Returns:
+            符數
+        """
+        if not winning_combination:
+            # 七對子固定 25 符（實際上是無符，但這裡返回 25）
+            return 25
+
+        fu = 20  # 基本符
+
+        # 檢查是否為平和（平和固定 20 符，無其他符）
+        is_pinfu = any(r.name == "平和" for r in yaku_results) if yaku_results else False
+
+        if is_pinfu:
+            # 平和固定 20 符（如果是自摸，+2 符）
+            if is_tsumo:
+                fu = 22  # 平和自摸
+            else:
+                fu = 20  # 平和榮和
+            # 進位到 10
+            return ((fu + 9) // 10) * 10
+
+        # 副底符
+        if hand.is_concealed and not is_tsumo:
+            fu += 10  # 門清榮和
+        elif hand.is_concealed and is_tsumo:
+            fu += 2  # 門清自摸
+        elif not hand.is_concealed and is_tsumo:
+            fu += 2  # 非門清自摸
+
+        # 面子符
+        for meld in winning_combination:
+            if isinstance(meld, tuple) and len(meld) == 2:
+                meld_type, (suit, rank) = meld
+                tile = Tile(suit, rank)
+
+                if meld_type == "triplet":
+                    # 刻子符
+                    if tile.is_terminal or tile.is_honor:
+                        # 幺九刻子
+                        if hand.is_concealed:
+                            fu += 8  # 暗刻
+                        else:
+                            fu += 4  # 明刻
+                    else:
+                        # 中張刻子
+                        if hand.is_concealed:
+                            fu += 4  # 暗刻
+                        else:
+                            fu += 2  # 明刻
+
+                elif meld_type == "kan":
+                    # 槓子符（需要判斷是明槓還是暗槓）
+                    # TODO: 需要從 Meld 中獲取是否為暗槓
+                    if tile.is_terminal or tile.is_honor:
+                        # 幺九槓子
+                        if hand.is_concealed:
+                            fu += 32  # 暗槓
+                        else:
+                            fu += 16  # 明槓
+                    else:
+                        # 中張槓子
+                        if hand.is_concealed:
+                            fu += 16  # 暗槓
+                        else:
+                            fu += 8  # 明槓
+
+        # 雀頭符
+        pair = None
+        for meld in winning_combination:
+            if isinstance(meld, tuple) and len(meld) == 2:
+                meld_type, (suit, rank) = meld
+                if meld_type == "pair":
+                    pair = (suit, rank)
+                    break
+
+        if pair:
+            suit, rank = pair
+            pair_tile = Tile(suit, rank)
+
+            # 役牌對子 +2 符
+            if suit == Suit.JIHAI:
+                # 三元牌
+                if rank in [5, 6, 7]:  # 白、發、中
+                    fu += 2
+                # 場風
+                round_wind = game_state.round_wind
+                if (
+                    (rank == 1 and round_wind.value == "e")
+                    or (rank == 2 and round_wind.value == "s")
+                    or (rank == 3 and round_wind.value == "w")
+                    or (rank == 4 and round_wind.value == "n")
+                ):
+                    fu += 2
+                # 自風（TODO: 需要根據玩家位置）
+
+        # 聽牌符
+        # 簡化處理：如果不是兩面聽，則為 +2 符
+        # TODO: 實現更精確的聽牌類型判定
+        # 暫時跳過，因為需要更複雜的邏輯
+
+        # 進位到 10
+        return ((fu + 9) // 10) * 10
+
+    def calculate_han(self, yaku_results: List[YakuResult], dora_count: int) -> int:
+        """
+        計算翻數
+
+        Args:
+            yaku_results: 役種列表
+            dora_count: 寶牌數量
+
+        Returns:
+            翻數
+        """
+        han = sum(r.han for r in yaku_results)
+        han += dora_count
+        return han
