@@ -5,8 +5,8 @@
 """
 
 from enum import Enum
-from typing import List, Optional, Dict, Any
-from pyriichi.tiles import Tile, TileSet
+from typing import List, Optional, Dict, Any, Tuple
+from pyriichi.tiles import Tile, TileSet, Suit
 from pyriichi.hand import Hand
 from pyriichi.game_state import GameState
 from pyriichi.yaku import YakuChecker
@@ -61,6 +61,14 @@ class RuleEngine:
         self._last_discarded_tile: Optional[Tile] = None
         self._last_discarded_player: Optional[int] = None
 
+        # 狀態追蹤
+        self._riichi_turns: Dict[int, int] = {}  # {player_id: turns_after_riichi}
+        self._is_first_round: bool = True  # 是否為第一巡
+        self._discard_history: List[Tuple[int, Tile]] = []  # [(player, tile), ...] 捨牌歷史
+        self._kan_count: int = 0  # 槓的總次數
+        self._turn_count: int = 0  # 回合數
+        self._is_first_turn_after_deal: bool = True  # 發牌後是否為第一回合
+
     def start_game(self) -> None:
         """開始新遊戲"""
         self._game_state = GameState(num_players=self._num_players)
@@ -75,6 +83,14 @@ class RuleEngine:
         self._last_discarded_tile = None
         self._last_discarded_player = None
 
+        # 重置狀態追蹤
+        self._riichi_turns = {}
+        self._is_first_round = True
+        self._discard_history = []
+        self._kan_count = 0
+        self._turn_count = 0
+        self._is_first_turn_after_deal = True
+
     def deal(self) -> Dict[int, List[Tile]]:
         """
         發牌
@@ -85,10 +101,13 @@ class RuleEngine:
         if self._phase != GamePhase.DEALING:
             raise ValueError("只能在發牌階段發牌")
 
+        if not self._tile_set:
+            raise ValueError("牌組未初始化")
         hands_tiles = self._tile_set.deal(num_players=self._num_players)
         self._hands = [Hand(tiles) for tiles in hands_tiles]
 
         self._phase = GamePhase.PLAYING
+        self._is_first_turn_after_deal = True
 
         return {i: hand.tiles for i, hand in enumerate(self._hands)}
 
@@ -148,26 +167,59 @@ class RuleEngine:
         result = {}
 
         if action == GameAction.DRAW:
+            if not self._tile_set:
+                raise ValueError("牌組未初始化")
             drawn_tile = self._tile_set.draw()
             if drawn_tile:
                 self._hands[player].add_tile(drawn_tile)
                 result["drawn_tile"] = drawn_tile
+                # 檢查是否為最後一張牌（海底撈月）
+                if self._tile_set.is_exhausted():
+                    result["is_last_tile"] = True
             else:
                 # 流局
                 self._phase = GamePhase.DRAW
                 result["draw"] = True
 
         elif action == GameAction.DISCARD:
+            if tile is None:
+                raise ValueError("打牌動作必須指定牌")
+            if not self._tile_set:
+                raise ValueError("牌組未初始化")
             if self._hands[player].discard(tile):
                 self._last_discarded_tile = tile
                 self._last_discarded_player = player
+                # 記錄捨牌歷史（用於四風連打判定）
+                self._discard_history.append((player, tile))
+                # 只保留前四張捨牌
+                if len(self._discard_history) > 4:
+                    self._discard_history.pop(0)
+
+                # 更新立直後回合數
+                # 立直後，每當其他玩家行動時，立直玩家的回合數增加
+                for p in list(self._riichi_turns.keys()):
+                    if p != player:
+                        self._riichi_turns[p] += 1
+                # 如果立直玩家自己打牌，也增加回合數（但這表示已經過了一巡）
+                if player in self._riichi_turns:
+                    self._riichi_turns[player] += 1
+
+                # 檢查是否為最後一張牌（河底撈魚）
+                if self._tile_set.is_exhausted():
+                    result["is_last_tile"] = True
+
                 self._current_player = (player + 1) % self._num_players
+                self._turn_count += 1
+                self._is_first_turn_after_deal = False
+                self._is_first_round = False
                 result["discarded"] = True
 
         elif action == GameAction.RICHI:
             self._hands[player].set_riichi(True)
             self._game_state.add_riichi_stick()
             self._game_state.update_score(player, -1000)
+            # 記錄立直回合數
+            self._riichi_turns[player] = 0
             result["riichi"] = True
 
         # TODO: 實現其他動作
@@ -196,13 +248,27 @@ class RuleEngine:
             return None
 
         # 使用第一個組合進行役種判定
-        winning_combination = combinations[0]
+        winning_combination = list(combinations[0]) if combinations[0] else []
 
         # 檢查役種
         is_tsumo = player == self._current_player
-        # TODO: 追蹤立直後的回合數（目前先設為 -1 表示未追蹤）
-        turns_after_riichi = -1
-        yaku_results = self._yaku_checker.check_all(hand, winning_tile, winning_combination, self._game_state, is_tsumo, turns_after_riichi)
+        # 獲取立直後的回合數
+        turns_after_riichi = self._riichi_turns.get(player, -1)
+        # 檢查是否為第一巡
+        is_first_turn = self._is_first_turn_after_deal
+        # 檢查是否為最後一張牌（需要檢查牌山狀態）
+        is_last_tile = self._tile_set.is_exhausted() if self._tile_set else False
+        yaku_results = self._yaku_checker.check_all(
+            hand,
+            winning_tile,
+            winning_combination,
+            self._game_state,
+            is_tsumo,
+            turns_after_riichi,
+            is_first_turn,
+            is_last_tile,
+            player,
+        )
 
         if not yaku_results:
             return None  # 沒有役不能和牌
@@ -232,10 +298,18 @@ class RuleEngine:
         檢查是否流局
 
         Returns:
-            流局類型（"exhausted", "kyuushu", "suufon_renda", "suucha_riichi"），否則返回 None
+            流局類型（"exhausted", "kyuushu", "suufon_renda", "suucha_riichi", "suukantsu"），否則返回 None
         """
+        # 檢查四風連打（優先檢查，因為可以在第一巡發生）
+        if self.check_suufon_renda():
+            return "suufon_renda"
+
+        # 檢查四槓散了（四個槓之後流局）
+        if self._kan_count >= 4:
+            return "suukantsu"
+
         # 牌山耗盡流局
-        if self._tile_set.is_exhausted():
+        if self._tile_set and self._tile_set.is_exhausted():
             return "exhausted"
 
         # 檢查是否所有玩家都聽牌（全員聽牌流局）
@@ -260,12 +334,18 @@ class RuleEngine:
         """
         檢查是否九種九牌（九種幺九牌）
 
+        條件：第一巡且手牌有9種或以上不同種類的幺九牌
+
         Args:
             player: 玩家位置
 
         Returns:
             是否為九種九牌
         """
+        # 必須是第一巡
+        if not self._is_first_turn_after_deal:
+            return False
+
         hand = self._hands[player]
         if len(hand.tiles) != 13:
             return False
@@ -286,9 +366,23 @@ class RuleEngine:
         Returns:
             是否為四風連打
         """
-        # TODO: 需要記錄前四張捨牌
-        # 這裡簡化處理，實際需要檢查前四張捨牌是否都是同一風牌
-        return False
+        # 必須有至少4張捨牌歷史
+        if len(self._discard_history) < 4:
+            return False
+
+        # 檢查前四張捨牌是否都是同一風牌
+        first_tile = self._discard_history[0][1]
+
+        # 必須是風牌（字牌 rank 1-4）
+        if first_tile.suit != Suit.JIHAI or not (1 <= first_tile.rank <= 4):
+            return False
+
+        # 檢查前四張是否都是同一風牌
+        for _, tile in self._discard_history[:4]:
+            if tile.suit != Suit.JIHAI or tile.rank != first_tile.rank:
+                return False
+
+        return True
 
     def check_flow_mangan(self, player: int) -> bool:
         """
@@ -416,7 +510,14 @@ class RuleEngine:
                             self._game_state.update_score(j, -1000)
 
         # 處理九種九牌（第一巡）
-        # TODO: 需要記錄是否為第一巡
+        # 檢查九種九牌在第一巡時可以流局
+        if self._is_first_turn_after_deal:
+            for i in range(self._num_players):
+                if self.check_kyuushu_kyuuhai(i):
+                    result["kyuushu_kyuuhai"] = True
+                    result["kyuushu_kyuuhai_player"] = i
+                    # 九種九牌流局時，莊家連莊
+                    break
 
         # 處理全員聽牌流局
         if draw_type == "suucha_riichi":

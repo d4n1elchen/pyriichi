@@ -41,6 +41,9 @@ class YakuChecker:
         game_state: GameState,
         is_tsumo: bool = False,
         turns_after_riichi: int = -1,
+        is_first_turn: bool = False,
+        is_last_tile: bool = False,
+        player_position: int = 0,
     ) -> List[YakuResult]:
         """
         檢查所有符合的役種
@@ -57,10 +60,22 @@ class YakuChecker:
         # 檢查特殊和牌型（七對子、國士無雙）
         all_tiles = hand.tiles + [winning_tile] if len(hand.tiles) == 13 else hand.tiles
 
+        # 天和、地和、人和判定（優先檢查，因為是役滿）
+        if result := self.check_tenhou(hand, is_tsumo, is_first_turn, player_position, game_state):
+            return [result]
+        if result := self.check_chihou(hand, is_tsumo, is_first_turn, player_position, game_state):
+            return [result]
+        if result := self.check_renhou(hand, is_tsumo, is_first_turn, player_position, game_state):
+            return [result]
+
         # 國士無雙判定（優先檢查，因為是役滿）
         if result := self.check_kokushi_musou(hand, all_tiles):
             results = [result]
-            # 國士無雙可以與立直複合
+            # 檢查是否為十三面聽牌
+            if self.check_kokushi_musou_juusanmen(hand, all_tiles):
+                # 十三面聽牌是雙倍役滿（26翻），但這裡先標記為役滿
+                results[0] = YakuResult("國士無雙十三面", "Kokushi Musou Juusanmen", "國士無雙十三面", 26, True)
+            # 國士無雙可以與立直複合（但天和、地和、人和不能與立直複合）
             if hand.is_riichi:
                 results.insert(0, YakuResult("立直", "Riichi", "立直", 1, False))
             return results
@@ -89,6 +104,9 @@ class YakuChecker:
             results.append(result)
         if result := self.check_menzen_tsumo(hand, game_state, is_tsumo):
             results.append(result)
+        # 海底撈月/河底撈魚
+        if result := self.check_haitei_raoyue(hand, is_tsumo, is_last_tile):
+            results.append(result)
         if result := self.check_tanyao(hand, winning_combination):
             results.append(result)
         if result := self.check_pinfu(hand, winning_combination, game_state):
@@ -101,7 +119,7 @@ class YakuChecker:
             results.append(result)
 
         # 役牌（可能有多個）
-        yakuhai_results = self.check_yakuhai(hand, winning_combination, game_state)
+        yakuhai_results = self.check_yakuhai(hand, winning_combination, game_state, player_position)
         results.extend(yakuhai_results)
 
         # 特殊役（2-3翻）
@@ -328,7 +346,9 @@ class YakuChecker:
 
         return YakuResult("斷么九", "Tanyao", "斷么九", 1, False)
 
-    def check_pinfu(self, hand: Hand, winning_combination: List, game_state: Optional[GameState] = None) -> Optional[YakuResult]:
+    def check_pinfu(
+        self, hand: Hand, winning_combination: List, game_state: Optional[GameState] = None
+    ) -> Optional[YakuResult]:
         """
         檢查平和
 
@@ -367,16 +387,18 @@ class YakuChecker:
             sangen = [5, 6, 7]  # 白、發、中
             if pair_rank in sangen:
                 return None  # 三元牌對子，不能是平和
-            
+
             # 檢查是否是場風（需要game_state）
             if game_state is not None:
                 round_wind = game_state.round_wind
-                if (pair_rank == 1 and round_wind.value == "e") or \
-                   (pair_rank == 2 and round_wind.value == "s") or \
-                   (pair_rank == 3 and round_wind.value == "w") or \
-                   (pair_rank == 4 and round_wind.value == "n"):
+                if (
+                    (pair_rank == 1 and round_wind.value == "e")
+                    or (pair_rank == 2 and round_wind.value == "s")
+                    or (pair_rank == 3 and round_wind.value == "w")
+                    or (pair_rank == 4 and round_wind.value == "n")
+                ):
                     return None  # 場風對子，不能是平和
-            
+
             # 檢查是否是自風（需要玩家位置，這裡先跳過）
             # TODO: 需要完善玩家位置邏輯來檢查自風
 
@@ -464,7 +486,9 @@ class YakuChecker:
 
         return None
 
-    def check_yakuhai(self, hand: Hand, winning_combination: List, game_state: GameState) -> List[YakuResult]:
+    def check_yakuhai(
+        self, hand: Hand, winning_combination: List, game_state: GameState, player_position: int = 0
+    ) -> List[YakuResult]:
         """
         檢查役牌（場風、自風、三元牌刻子）
 
@@ -506,7 +530,17 @@ class YakuChecker:
                             results.append(YakuResult("場風北", "Pei", "場風北", 1, False))
 
                         # 自風（需要根據玩家位置）
-                        # TODO: 完善自風判定
+                        # 自風：與玩家位置對應的風牌刻子
+                        if player_position < len(game_state.player_winds):
+                            player_wind = game_state.player_winds[player_position]
+                            if rank == 1 and player_wind.value == "e":  # 東
+                                results.append(YakuResult("自風東", "Ton", "自風東", 1, False))
+                            elif rank == 2 and player_wind.value == "s":  # 南
+                                results.append(YakuResult("自風南", "Nan", "自風南", 1, False))
+                            elif rank == 3 and player_wind.value == "w":  # 西
+                                results.append(YakuResult("自風西", "Shaa", "自風西", 1, False))
+                            elif rank == 4 and player_wind.value == "n":  # 北
+                                results.append(YakuResult("自風北", "Pei", "自風北", 1, False))
 
         return results
 
@@ -1227,17 +1261,17 @@ class YakuChecker:
     def check_suukantsu_ii(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
         """
         檢查四歸一
-        
+
         四歸一：同一種牌四張分別在四個順子中
         例如：1122334455...其中某種牌在四個順子中都出現各一次
         """
         if not winning_combination:
             return None
-        
+
         # 統計所有順子中的牌
         sequences = []
         tile_to_sequences = {}  # 記錄每張牌出現在哪些順子中
-        
+
         for i, meld in enumerate(winning_combination):
             if isinstance(meld, tuple) and len(meld) == 2:
                 meld_type, (suit, rank) = meld
@@ -1251,11 +1285,11 @@ class YakuChecker:
                             tile_to_sequences[tile_key] = []
                         tile_to_sequences[tile_key].append(i)
                     sequences.append(seq_tiles)
-        
+
         # 必須有4個順子
         if len(sequences) != 4:
             return None
-        
+
         # 檢查是否有某種牌在四個順子中都出現
         for tile_key, seq_indices in tile_to_sequences.items():
             # 如果這種牌在四個不同的順子中都出現
@@ -1276,9 +1310,172 @@ class YakuChecker:
                         elif meld_type == "pair":
                             if (meld_suit, meld_rank) == tile_key:
                                 total_count += 2
-                
+
                 # 四歸一要求：某種牌正好4張，且這4張分別在四個順子中
                 if total_count == 4:
                     return YakuResult("四帰一", "Suukantsu II", "四歸一", 13, True)
-        
+
         return None
+
+    def check_tenhou(
+        self, hand: Hand, is_tsumo: bool, is_first_turn: bool, player_position: int, game_state: GameState
+    ) -> Optional[YakuResult]:
+        """
+        檢查天和
+
+        天和：莊家在第一巡自摸和牌
+        條件：
+        1. 莊家（player_position == dealer）
+        2. 第一巡（is_first_turn）
+        3. 自摸（is_tsumo）
+        4. 門清（hand.is_concealed）
+        """
+        # 必須是莊家
+        if player_position != game_state.dealer:
+            return None
+
+        # 必須是第一巡
+        if not is_first_turn:
+            return None
+
+        # 必須是自摸
+        if not is_tsumo:
+            return None
+
+        # 必須是門清
+        if not hand.is_concealed:
+            return None
+
+        return YakuResult("天和", "Tenhou", "天和", 13, True)
+
+    def check_chihou(
+        self, hand: Hand, is_tsumo: bool, is_first_turn: bool, player_position: int, game_state: GameState
+    ) -> Optional[YakuResult]:
+        """
+        檢查地和
+
+        地和：閒家在第一巡自摸和牌
+        條件：
+        1. 閒家（player_position != dealer）
+        2. 第一巡（is_first_turn）
+        3. 自摸（is_tsumo）
+        4. 門清（hand.is_concealed）
+        """
+        # 必須是閒家
+        if player_position == game_state.dealer:
+            return None
+
+        # 必須是第一巡
+        if not is_first_turn:
+            return None
+
+        # 必須是自摸
+        if not is_tsumo:
+            return None
+
+        # 必須是門清
+        if not hand.is_concealed:
+            return None
+
+        return YakuResult("地和", "Chihou", "地和", 13, True)
+
+    def check_renhou(
+        self, hand: Hand, is_tsumo: bool, is_first_turn: bool, player_position: int, game_state: GameState
+    ) -> Optional[YakuResult]:
+        """
+        檢查人和
+
+        人和：閒家在第一巡榮和
+        條件：
+        1. 閒家（player_position != dealer）
+        2. 第一巡（is_first_turn）
+        3. 榮和（not is_tsumo）
+        4. 門清（hand.is_concealed）
+
+        註：有些規則中人和不算役滿，只算2翻，這裡按役滿處理
+        """
+        # 必須是閒家
+        if player_position == game_state.dealer:
+            return None
+
+        # 必須是第一巡
+        if not is_first_turn:
+            return None
+
+        # 必須是榮和
+        if is_tsumo:
+            return None
+
+        # 必須是門清
+        if not hand.is_concealed:
+            return None
+
+        return YakuResult("人和", "Renhou", "人和", 13, True)
+
+    def check_haitei_raoyue(self, hand: Hand, is_tsumo: bool, is_last_tile: bool) -> Optional[YakuResult]:
+        """
+        檢查海底撈月/河底撈魚
+
+        海底撈月：自摸最後一張牌和牌（1翻）
+        河底撈魚：榮和最後一張牌和牌（1翻）
+        """
+        if not is_last_tile:
+            return None
+
+        if is_tsumo:
+            return YakuResult("海底撈月", "Haitei Raoyue", "海底撈月", 1, False)
+        else:
+            return YakuResult("河底撈魚", "Houtei Raoyui", "河底撈魚", 1, False)
+
+    def check_kokushi_musou_juusanmen(self, hand: Hand, all_tiles: List[Tile]) -> bool:
+        """
+        檢查國士無雙十三面
+
+        國士無雙十三面：13種幺九牌各一張，再有一張幺九牌，且該牌為聽牌
+        實際上，如果重複的牌正好是13種中的任意一種，且該牌可以是聽牌，則為十三面
+        """
+        if not hand.is_concealed:
+            return False
+
+        if len(all_tiles) != 14:
+            return False
+
+        # 需要的13種幺九牌
+        required_tiles = [
+            (Suit.MANZU, 1),
+            (Suit.MANZU, 9),
+            (Suit.PINZU, 1),
+            (Suit.PINZU, 9),
+            (Suit.SOZU, 1),
+            (Suit.SOZU, 9),
+            (Suit.JIHAI, 1),
+            (Suit.JIHAI, 2),
+            (Suit.JIHAI, 3),
+            (Suit.JIHAI, 4),
+            (Suit.JIHAI, 5),
+            (Suit.JIHAI, 6),
+            (Suit.JIHAI, 7),
+        ]
+
+        # 統計每種牌
+        counts = {}
+        for tile in all_tiles:
+            key = (tile.suit, tile.rank)
+            counts[key] = counts.get(key, 0) + 1
+
+        # 檢查是否包含所有需要的牌，且每種牌至少1張
+        for req in required_tiles:
+            if req not in counts or counts[req] == 0:
+                return False
+
+        # 檢查是否只有一張重複，且重複的牌是13種中的一種
+        pairs = 0
+        for key, count in counts.items():
+            if key in required_tiles and count == 2:
+                pairs += 1
+            elif key not in required_tiles:
+                return False  # 有非幺九牌
+
+        # 必須有且只有一張重複，且該重複牌是13種中的一種
+        # 在這種情況下，任何一張幺九牌都可以和，所以是十三面聽牌
+        return pairs == 1

@@ -1008,16 +1008,24 @@ class TestYakuChecker:
         # 例如：1122334455...其中某種牌在四個順子中都出現各一次
         # 這個很難構造，但我們可以測試判定邏輯
         tiles = [
-            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3), Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 3), Tile(Suit.MANZU, 4), Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 4), Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
             Tile(Suit.JIHAI, 1),
         ]
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 1)
         combinations = hand.get_winning_combinations(winning_tile)
-        
+
         if combinations:
             # 檢查是否有四歸一（3在四個順子中都出現）
             result = self.checker.check_suukantsu_ii(hand, combinations[0])
