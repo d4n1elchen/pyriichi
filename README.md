@@ -127,7 +127,11 @@ if hand.is_tenpai():
 winning_tile = Tile(Suit.MANZU, 1)
 if hand.is_winning_hand(winning_tile):
     combinations = hand.get_winning_combinations(winning_tile)
-    print("和牌組合:", combinations)
+    print(f"和牌組合數量: {len(combinations)}")
+    if combinations:
+        # 注意：get_winning_combinations 返回 List[Tuple]，需要轉換為 List
+        winning_combination = list(combinations[0])
+        print("第一個和牌組合:", winning_combination)
 ```
 
 ### 鳴牌操作
@@ -154,21 +158,34 @@ if hand.can_chi(tile, from_player=0):  # 0 表示上家
 ### 役種判定
 
 ```python
-from pyriichi import YakuChecker, Hand, GameState
+from pyriichi import YakuChecker, Hand, GameState, parse_tiles
+from pyriichi.tiles import Tile, Suit
 
 yaku_checker = YakuChecker()
-hand = Hand([...])
-winning_tile = Tile(Suit.MANZU, 1)
-winning_combination = (...)  # 和牌組合
-game_state = GameState()
+# 創建一個和牌型手牌
+tiles = parse_tiles("1m2m3m4p5p6p7s8s9s2m3m4m5p")
+hand = Hand(tiles)
+winning_tile = Tile(Suit.PINZU, 5)
 
-# 檢查所有役種
-yaku_results = yaku_checker.check_all(
-    hand, winning_tile, winning_combination, game_state
-)
-
-for result in yaku_results:
-    print(f"{result.name}: {result.han} 翻")
+# 獲取和牌組合（注意：需要轉換為 List）
+winning_combinations = hand.get_winning_combinations(winning_tile)
+if winning_combinations:
+    winning_combination = list(winning_combinations[0])  # 轉換為 List
+    
+    game_state = GameState(num_players=4)
+    
+    # 檢查所有役種
+    yaku_results = yaku_checker.check_all(
+        hand=hand,
+        winning_tile=winning_tile,
+        winning_combination=winning_combination,
+        game_state=game_state,
+        is_tsumo=True,
+        player_position=0,
+    )
+    
+    for result in yaku_results:
+        print(f"{result.name}: {result.han} 翻")
 
 # 檢查特定役種
 riichi_result = yaku_checker.check_riichi(hand, game_state)
@@ -179,27 +196,53 @@ if riichi_result:
 ### 得分計算
 
 ```python
-from pyriichi import ScoreCalculator, Hand, GameState
+from pyriichi import ScoreCalculator, YakuChecker, Hand, GameState, parse_tiles
+from pyriichi.tiles import Tile, Suit
 
 score_calculator = ScoreCalculator()
-hand = Hand([...])
-winning_tile = Tile(Suit.MANZU, 1)
-winning_combination = (...)
-yaku_results = [...]  # 役種列表
-dora_count = 2  # 寶牌數量
-game_state = GameState()
-is_tsumo = True  # 是否自摸
+yaku_checker = YakuChecker()
 
-# 計算得分
-score_result = score_calculator.calculate(
-    hand, winning_tile, winning_combination,
-    yaku_results, dora_count, game_state, is_tsumo
-)
+# 創建一個和牌型手牌
+tiles = parse_tiles("1m2m3m4p5p6p7s8s9s2m3m4m5p")
+hand = Hand(tiles)
+winning_tile = Tile(Suit.PINZU, 5)
 
-print(f"翻數: {score_result.han}")
-print(f"符數: {score_result.fu}")
-print(f"總點數: {score_result.total_points}")
-print(f"是否役滿: {score_result.is_yakuman}")
+# 獲取和牌組合（注意：需要轉換為 List）
+winning_combinations = hand.get_winning_combinations(winning_tile)
+if winning_combinations:
+    winning_combination = list(winning_combinations[0])  # 轉換為 List
+    
+    game_state = GameState(num_players=4)
+    
+    # 先檢查役種
+    yaku_results = yaku_checker.check_all(
+        hand=hand,
+        winning_tile=winning_tile,
+        winning_combination=winning_combination,
+        game_state=game_state,
+        is_tsumo=True,
+        player_position=0,
+    )
+    
+    dora_count = 0  # 寶牌數量
+    is_tsumo = True  # 是否自摸
+    
+    # 計算得分
+    score_result = score_calculator.calculate(
+        hand=hand,
+        winning_tile=winning_tile,
+        winning_combination=winning_combination,
+        yaku_results=yaku_results,
+        dora_count=dora_count,
+        game_state=game_state,
+        is_tsumo=is_tsumo,
+        player_position=0,
+    )
+    
+    print(f"翻數: {score_result.han}")
+    print(f"符數: {score_result.fu}")
+    print(f"總點數: {score_result.total_points}")
+    print(f"是否役滿: {score_result.is_yakuman}")
 ```
 
 ### 遊戲狀態管理
@@ -314,16 +357,22 @@ print("遊戲結束")
 - ✅ 手牌基本操作（摸牌、打牌）
 - ✅ 遊戲流程控制（發牌、回合管理）
 - ✅ 遊戲狀態管理（局數、風、點數）
+- ✅ 和牌判定算法（支援標準型和特殊型）
+- ✅ 聽牌判定
+- ✅ 吃、碰、槓操作
+- ✅ 役種判定系統（包含所有標準役種和役滿）
+- ✅ 得分計算系統（符數、翻數、點數計算）
+- ✅ 流局處理（九種九牌等）
 - ✅ 基礎 API 架構
 
-### 開發中功能
+### 注意事項
 
-- 🚧 和牌判定算法
-- 🚧 聽牌判定
-- 🚧 吃、碰、槓操作
-- 🚧 役種判定系統
-- 🚧 得分計算系統
-- 🚧 流局處理
+- `get_winning_combinations()` 返回 `List[Tuple]`，在使用時需要轉換為 `List`：
+  ```python
+  combinations = hand.get_winning_combinations(winning_tile)
+  if combinations:
+      winning_combination = list(combinations[0])  # 轉換為 List
+  ```
 
 ## 文檔
 
