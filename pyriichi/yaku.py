@@ -91,7 +91,7 @@ class YakuChecker:
             results.append(result)
         if result := self.check_tanyao(hand, winning_combination):
             results.append(result)
-        if result := self.check_pinfu(hand, winning_combination):
+        if result := self.check_pinfu(hand, winning_combination, game_state):
             results.append(result)
         if result := self.check_iipeikou(hand, winning_combination):
             results.append(result)
@@ -159,6 +159,10 @@ class YakuChecker:
         if result := self.check_ryuuiisou(hand, winning_combination):
             yakuman_results.append(result)
         if result := self.check_chuuren_poutou(hand, all_tiles):
+            yakuman_results.append(result)
+        if result := self.check_suukantsu(hand, winning_combination):
+            yakuman_results.append(result)
+        if result := self.check_suukantsu_ii(hand, winning_combination):
             yakuman_results.append(result)
 
         # 如果有役滿，只返回役滿（役滿不與其他役種複合，但可以多個役滿複合）
@@ -324,7 +328,7 @@ class YakuChecker:
 
         return YakuResult("斷么九", "Tanyao", "斷么九", 1, False)
 
-    def check_pinfu(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
+    def check_pinfu(self, hand: Hand, winning_combination: List, game_state: Optional[GameState] = None) -> Optional[YakuResult]:
         """
         檢查平和
 
@@ -356,7 +360,26 @@ class YakuChecker:
         if sequences != 4 or pair is None:
             return None
 
-        # 對子不能是役牌（這裡簡化處理，實際需要檢查場風、自風、三元牌）
+        # 對子不能是役牌（檢查場風、自風、三元牌）
+        pair_suit, pair_rank = pair
+        if pair_suit == Suit.JIHAI:
+            # 檢查是否是三元牌
+            sangen = [5, 6, 7]  # 白、發、中
+            if pair_rank in sangen:
+                return None  # 三元牌對子，不能是平和
+            
+            # 檢查是否是場風（需要game_state）
+            if game_state is not None:
+                round_wind = game_state.round_wind
+                if (pair_rank == 1 and round_wind.value == "e") or \
+                   (pair_rank == 2 and round_wind.value == "s") or \
+                   (pair_rank == 3 and round_wind.value == "w") or \
+                   (pair_rank == 4 and round_wind.value == "n"):
+                    return None  # 場風對子，不能是平和
+            
+            # 檢查是否是自風（需要玩家位置，這裡先跳過）
+            # TODO: 需要完善玩家位置邏輯來檢查自風
+
         # TODO: 需要檢查聽牌類型（兩面聽）
 
         return YakuResult("平和", "Pinfu", "平和", 1, False)
@@ -1200,3 +1223,62 @@ class YakuChecker:
                 return YakuResult("純正九蓮寶燈", "Junsei Chuuren Poutou", "純正九蓮寶燈", 26, True)
 
         return YakuResult("九蓮寶燈", "Chuuren Poutou", "九蓮寶燈", 13, True)
+
+    def check_suukantsu_ii(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
+        """
+        檢查四歸一
+        
+        四歸一：同一種牌四張分別在四個順子中
+        例如：1122334455...其中某種牌在四個順子中都出現各一次
+        """
+        if not winning_combination:
+            return None
+        
+        # 統計所有順子中的牌
+        sequences = []
+        tile_to_sequences = {}  # 記錄每張牌出現在哪些順子中
+        
+        for i, meld in enumerate(winning_combination):
+            if isinstance(meld, tuple) and len(meld) == 2:
+                meld_type, (suit, rank) = meld
+                if meld_type == "sequence":
+                    # 記錄順子中的所有牌
+                    seq_tiles = []
+                    for offset in range(3):
+                        tile_key = (suit, rank + offset)
+                        seq_tiles.append(tile_key)
+                        if tile_key not in tile_to_sequences:
+                            tile_to_sequences[tile_key] = []
+                        tile_to_sequences[tile_key].append(i)
+                    sequences.append(seq_tiles)
+        
+        # 必須有4個順子
+        if len(sequences) != 4:
+            return None
+        
+        # 檢查是否有某種牌在四個順子中都出現
+        for tile_key, seq_indices in tile_to_sequences.items():
+            # 如果這種牌在四個不同的順子中都出現
+            if len(set(seq_indices)) == 4:
+                # 檢查這種牌是否正好有4張（在四個順子中各出現一次）
+                # 統計這種牌的總數
+                total_count = 0
+                for meld in winning_combination:
+                    if isinstance(meld, tuple) and len(meld) == 2:
+                        meld_type, (meld_suit, meld_rank) = meld
+                        if meld_type == "sequence":
+                            for offset in range(3):
+                                if (meld_suit, meld_rank + offset) == tile_key:
+                                    total_count += 1
+                        elif meld_type in ["triplet", "kan"]:
+                            if (meld_suit, meld_rank) == tile_key:
+                                total_count += 3 if meld_type == "triplet" else 4
+                        elif meld_type == "pair":
+                            if (meld_suit, meld_rank) == tile_key:
+                                total_count += 2
+                
+                # 四歸一要求：某種牌正好4張，且這4張分別在四個順子中
+                if total_count == 4:
+                    return YakuResult("四帰一", "Suukantsu II", "四歸一", 13, True)
+        
+        return None

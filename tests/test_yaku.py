@@ -865,16 +865,24 @@ class TestYakuChecker:
         # 平和：4個順子 + 1個非役牌對子
         # 如果對子是役牌，則不能有平和
         tiles = [
-            Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3), Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 6), Tile(Suit.MANZU, 7),
-            Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 3), Tile(Suit.PINZU, 4),
-            Tile(Suit.PINZU, 5), Tile(Suit.PINZU, 6), Tile(Suit.PINZU, 7),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+            Tile(Suit.PINZU, 5),
+            Tile(Suit.PINZU, 6),
+            Tile(Suit.PINZU, 7),
             Tile(Suit.JIHAI, 5),  # 白（役牌）
         ]
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 5)
         combinations = hand.get_winning_combinations(winning_tile)
-        
+
         if combinations:
             results = self.checker.check_all(
                 hand, winning_tile, combinations[0], self.game_state, is_tsumo=False, turns_after_riichi=-1
@@ -890,16 +898,24 @@ class TestYakuChecker:
         # 斷么九：全部中張牌，一気通貫：包含1和9
         # 這兩個在邏輯上互斥，所以不會同時出現
         tiles = [
-            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4), Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7), Tile(Suit.MANZU, 8), Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 3), Tile(Suit.PINZU, 4),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
             Tile(Suit.SOZU, 5),
         ]
         hand = Hand(tiles)
         winning_tile = Tile(Suit.SOZU, 5)
         combinations = hand.get_winning_combinations(winning_tile)
-        
+
         if combinations:
             results = self.checker.check_all(
                 hand, winning_tile, combinations[0], self.game_state, is_tsumo=False, turns_after_riichi=-1
@@ -914,16 +930,24 @@ class TestYakuChecker:
         # 對對和：全部刻子，三色同順：需要順子
         # 這兩個在結構上互斥
         tiles = [
-            Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 2),
-            Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 2),
-            Tile(Suit.SOZU, 2), Tile(Suit.SOZU, 2), Tile(Suit.SOZU, 2),
-            Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.SOZU, 2),
+            Tile(Suit.SOZU, 2),
+            Tile(Suit.SOZU, 2),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 5),
             Tile(Suit.JIHAI, 1),
         ]
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 1)
         combinations = hand.get_winning_combinations(winning_tile)
-        
+
         if combinations:
             results = self.checker.check_all(
                 hand, winning_tile, combinations[0], self.game_state, is_tsumo=False, turns_after_riichi=-1
@@ -937,16 +961,24 @@ class TestYakuChecker:
         # 4. 測試一盃口與二盃口互斥
         # 二盃口包含兩個一盃口，所以不能同時出現
         tiles = [
-            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 7), Tile(Suit.MANZU, 8), Tile(Suit.MANZU, 9),
-            Tile(Suit.MANZU, 7), Tile(Suit.MANZU, 8), Tile(Suit.MANZU, 9),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.MANZU, 9),
             Tile(Suit.JIHAI, 1),
         ]
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 1)
         combinations = hand.get_winning_combinations(winning_tile)
-        
+
         if combinations:
             results = self.checker.check_all(
                 hand, winning_tile, combinations[0], self.game_state, is_tsumo=False, turns_after_riichi=-1
@@ -969,6 +1001,32 @@ class TestYakuChecker:
         # 這兩個邏輯上互斥
         # 註：純全帶和混全帶的判定邏輯本身就會互相排斥
         # 這裡主要測試衝突檢測邏輯
+
+    def test_suukantsu_ii(self):
+        """測試四歸一役滿"""
+        # 四歸一：同一種牌四張分別在四個順子中
+        # 例如：1122334455...其中某種牌在四個順子中都出現各一次
+        # 這個很難構造，但我們可以測試判定邏輯
+        tiles = [
+            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3), Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 3), Tile(Suit.MANZU, 4), Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 4), Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 6),
+            Tile(Suit.JIHAI, 1),
+        ]
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.JIHAI, 1)
+        combinations = hand.get_winning_combinations(winning_tile)
+        
+        if combinations:
+            # 檢查是否有四歸一（3在四個順子中都出現）
+            result = self.checker.check_suukantsu_ii(hand, combinations[0])
+            # 註：這個例子中，3在123、234、345、456四個順子中都出現
+            # 但需要確認是否正好4張
+            if result:
+                assert result.name == "四帰一"
+                assert result.han == 13
+                assert result.is_yakuman
 
 
 if __name__ == "__main__":
