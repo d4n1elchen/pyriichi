@@ -11,17 +11,17 @@ from pyriichi.tiles import Tile, Suit
 
 class MeldType(Enum):
     """副露類型"""
-    CHI = "chi"      # 吃
-    PON = "pon"     # 碰
-    KAN = "kan"     # 明槓
-    ANKAN = "ankan" # 暗槓
+
+    CHI = "chi"  # 吃
+    PON = "pon"  # 碰
+    KAN = "kan"  # 明槓
+    ANKAN = "ankan"  # 暗槓
 
 
 class Meld:
     """副露（明刻、明順、明槓、暗槓）"""
 
-    def __init__(self, meld_type: MeldType, tiles: List[Tile],
-                 called_tile: Optional[Tile] = None):
+    def __init__(self, meld_type: MeldType, tiles: List[Tile], called_tile: Optional[Tile] = None):
         """
         初始化副露
 
@@ -238,16 +238,46 @@ class Hand:
         Returns:
             可以槓的組合列表
         """
-        # TODO: 實現槓的判定邏輯
-        return []
+        results = []
 
-    def kan(self, tile: Optional[Tile], kan_tiles: List[Tile]) -> Meld:
+        if tile is None:
+            # 暗槓：檢查手牌中是否有四張相同的牌
+            tile_counts = self._get_tile_counts(self._tiles)
+            for (suit, rank), count in tile_counts.items():
+                if count == 4:
+                    # 找到四張相同的牌
+                    kan_tiles = [t for t in self._tiles if t.suit == suit and t.rank == rank]
+                    results.append(Meld(MeldType.ANKAN, kan_tiles))
+        else:
+            # 明槓：檢查是否可以加槓（之前碰過，現在摸到第四張）
+            # 檢查是否有碰過這張牌
+            for meld in self._melds:
+                if meld.meld_type == MeldType.PON and meld.called_tile == tile:
+                    # 可以加槓
+                    kan_tiles = meld.tiles + [tile]
+                    results.append(Meld(MeldType.KAN, kan_tiles, called_tile=tile))
+                    break
+
+            # 明槓：手牌中有三張相同牌，碰別人打出的第四張
+            count = self._tiles.count(tile)
+            if count >= 3:
+                # 找到三張相同的牌
+                kan_tiles = []
+                for t in self._tiles:
+                    if t == tile and len(kan_tiles) < 3:
+                        kan_tiles.append(t)
+                kan_tiles.append(tile)  # 加上被槓的牌
+                results.append(Meld(MeldType.KAN, kan_tiles, called_tile=tile))
+
+        return results
+
+    def kan(self, tile: Optional[Tile], kan_tiles: Optional[List[Tile]] = None) -> Meld:
         """
         執行槓操作
 
         Args:
             tile: 被槓的牌（明槓時需要，暗槓時為 None）
-            kan_tiles: 手牌中的三張/四張牌
+            kan_tiles: 手牌中的牌（可選，如果不提供則自動查找）
 
         Returns:
             創建的 Meld 對象
@@ -255,8 +285,36 @@ class Hand:
         Raises:
             ValueError: 如果不能槓
         """
-        # TODO: 實現槓的執行邏輯
-        raise NotImplementedError("槓功能待實現")
+        possible_kan = self.can_kan(tile)
+        if not possible_kan:
+            raise ValueError("不能槓這張牌")
+
+        # 使用第一個可能的槓組合
+        meld = possible_kan[0]
+
+        if meld.meld_type == MeldType.ANKAN:
+            # 暗槓：從手牌中移除四張牌
+            for t in meld.tiles:
+                self._tiles.remove(t)
+        elif meld.meld_type == MeldType.KAN:
+            # 明槓：檢查是否為加槓（升級已有的碰為槓）
+            if tile is not None:
+                for existing_meld in self._melds:
+                    if existing_meld.meld_type == MeldType.PON and existing_meld.called_tile == tile:
+                        # 加槓：移除舊的碰，添加新的槓
+                        self._melds.remove(existing_meld)
+                        # 從手牌中移除新摸到的牌
+                        if tile in self._tiles:
+                            self._tiles.remove(tile)
+                        break
+                else:
+                    # 普通明槓：從手牌中移除三張牌
+                    for t in meld.tiles:
+                        if t != tile and t in self._tiles:
+                            self._tiles.remove(t)
+
+        self._melds.append(meld)
+        return meld
 
     @property
     def tiles(self) -> List[Tile]:
@@ -498,11 +556,19 @@ class Hand:
 
         # 國士無雙需要的13種幺九牌
         required_tiles = [
-            (Suit.MANZU, 1), (Suit.MANZU, 9),
-            (Suit.PINZU, 1), (Suit.PINZU, 9),
-            (Suit.SOZU, 1), (Suit.SOZU, 9),
-            (Suit.JIHAI, 1), (Suit.JIHAI, 2), (Suit.JIHAI, 3), (Suit.JIHAI, 4),
-            (Suit.JIHAI, 5), (Suit.JIHAI, 6), (Suit.JIHAI, 7),
+            (Suit.MANZU, 1),
+            (Suit.MANZU, 9),
+            (Suit.PINZU, 1),
+            (Suit.PINZU, 9),
+            (Suit.SOZU, 1),
+            (Suit.SOZU, 9),
+            (Suit.JIHAI, 1),
+            (Suit.JIHAI, 2),
+            (Suit.JIHAI, 3),
+            (Suit.JIHAI, 4),
+            (Suit.JIHAI, 5),
+            (Suit.JIHAI, 6),
+            (Suit.JIHAI, 7),
         ]
 
         counts = self._get_tile_counts(tiles)
@@ -538,6 +604,7 @@ class Hand:
 
         # 嘗試添加每一種可能的牌
         from pyriichi.tiles import Suit
+
         for suit in Suit:
             if suit == Suit.JIHAI:
                 max_rank = 7

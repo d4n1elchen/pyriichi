@@ -44,6 +44,7 @@ class YakuChecker:
         is_first_turn: bool = False,
         is_last_tile: bool = False,
         player_position: int = 0,
+        is_rinshan: bool = False,
     ) -> List[YakuResult]:
         """
         檢查所有符合的役種
@@ -106,6 +107,9 @@ class YakuChecker:
             results.append(result)
         # 海底撈月/河底撈魚
         if result := self.check_haitei_raoyue(hand, is_tsumo, is_last_tile):
+            results.append(result)
+        # 嶺上開花
+        if result := self.check_rinshan_kaihou(hand, is_rinshan):
             results.append(result)
         if result := self.check_tanyao(hand, winning_combination):
             results.append(result)
@@ -1426,6 +1430,17 @@ class YakuChecker:
             return YakuResult("海底撈月", "Haitei Raoyue", "海底撈月", 1, False)
         else:
             return YakuResult("河底撈魚", "Houtei Raoyui", "河底撈魚", 1, False)
+
+    def check_rinshan_kaihou(self, hand: Hand, is_rinshan: bool) -> Optional[YakuResult]:
+        """
+        檢查嶺上開花
+
+        嶺上開花：槓後從嶺上摸牌和牌（1翻）
+        """
+        if not is_rinshan:
+            return None
+
+        return YakuResult("嶺上開花", "Rinshan Kaihou", "嶺上開花", 1, False)
 
     def check_kokushi_musou_juusanmen(self, hand: Hand, all_tiles: List[Tile]) -> bool:
         """

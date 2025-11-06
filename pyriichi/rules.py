@@ -68,6 +68,8 @@ class RuleEngine:
         self._kan_count: int = 0  # 槓的總次數
         self._turn_count: int = 0  # 回合數
         self._is_first_turn_after_deal: bool = True  # 發牌後是否為第一回合
+        self._pending_kan_tile: Optional[Tuple[int, Tile]] = None  # (player, tile) 待處理的槓牌，用於搶槓判定
+        self._winning_players: List[int] = []  # 多人和牌時的玩家列表（用於三家和了）
 
     def start_game(self) -> None:
         """開始新遊戲"""
@@ -90,6 +92,8 @@ class RuleEngine:
         self._kan_count = 0
         self._turn_count = 0
         self._is_first_turn_after_deal = True
+        self._pending_kan_tile = None
+        self._winning_players = []
 
     def deal(self) -> Dict[int, List[Tile]]:
         """
@@ -145,7 +149,16 @@ class RuleEngine:
             hand = self._hands[player]
             return hand.is_concealed and not hand.is_riichi and hand.is_tenpai()
 
-        # TODO: 實現其他動作的檢查
+        if action == GameAction.KAN:
+            if tile is None:
+                return False
+            hand = self._hands[player]
+            return len(hand.can_kan(tile)) > 0
+
+        if action == GameAction.ANKAN:
+            hand = self._hands[player]
+            return len(hand.can_kan(None)) > 0
+
         return False
 
     def execute_action(self, player: int, action: GameAction, tile: Optional[Tile] = None, **kwargs) -> Dict[str, Any]:
@@ -222,17 +235,83 @@ class RuleEngine:
             self._riichi_turns[player] = 0
             result["riichi"] = True
 
-        # TODO: 實現其他動作
+        elif action == GameAction.KAN:
+            # 明槓：檢查是否有其他玩家可以搶槓
+            if tile is None:
+                raise ValueError("明槓必須指定被槓的牌")
+
+            # 先檢查是否有其他玩家可以搶槓和
+            self._pending_kan_tile = (player, tile)
+            chankan_winners = self._check_chankan(player, tile)
+
+            if chankan_winners:
+                # 有玩家搶槓，不執行槓，轉為和牌處理
+                result["chankan"] = True
+                result["winners"] = chankan_winners
+                self._pending_kan_tile = None
+                return result
+
+            # 執行明槓
+            meld = self._hands[player].kan(tile)
+            self._kan_count += 1
+
+            # 從嶺上摸牌（嶺上開花）
+            if self._tile_set:
+                rinshan_tile = self._tile_set.draw_wall_tile()
+                if rinshan_tile:
+                    self._hands[player].add_tile(rinshan_tile)
+                    result["rinshan_tile"] = rinshan_tile
+                    result["kan"] = True
+                    self._pending_kan_tile = None
+
+                    # 檢查嶺上開花（槓後摸牌和牌）
+                    rinshan_win = self.check_rinshan_win(player, rinshan_tile)
+                    if rinshan_win:
+                        result["rinshan_win"] = rinshan_win
+                        self._phase = GamePhase.WINNING
+                else:
+                    # 王牌區耗盡，流局
+                    self._phase = GamePhase.DRAW
+                    result["draw"] = True
+                    result["draw_reason"] = "wall_exhausted"
+
+        elif action == GameAction.ANKAN:
+            # 暗槓
+            meld = self._hands[player].kan(None)
+            self._kan_count += 1
+
+            # 從嶺上摸牌（嶺上開花）
+            if self._tile_set:
+                rinshan_tile = self._tile_set.draw_wall_tile()
+                if rinshan_tile:
+                    self._hands[player].add_tile(rinshan_tile)
+                    result["rinshan_tile"] = rinshan_tile
+                    result["ankan"] = True
+
+                    # 檢查嶺上開花（槓後摸牌和牌）
+                    rinshan_win = self.check_rinshan_win(player, rinshan_tile)
+                    if rinshan_win:
+                        result["rinshan_win"] = rinshan_win
+                        self._phase = GamePhase.WINNING
+                else:
+                    # 王牌區耗盡，流局
+                    self._phase = GamePhase.DRAW
+                    result["draw"] = True
+                    result["draw_reason"] = "wall_exhausted"
 
         return result
 
-    def check_win(self, player: int, winning_tile: Tile) -> Optional[Dict[str, Any]]:
+    def check_win(
+        self, player: int, winning_tile: Tile, is_chankan: bool = False, is_rinshan: bool = False
+    ) -> Optional[Dict[str, Any]]:
         """
         檢查是否可以和牌
 
         Args:
             player: 玩家位置
             winning_tile: 和牌牌
+            is_chankan: 是否為搶槓和
+            is_rinshan: 是否為嶺上開花
 
         Returns:
             和牌結果（包含役種、得分等），如果不能和則返回 None
@@ -251,7 +330,7 @@ class RuleEngine:
         winning_combination = list(combinations[0]) if combinations[0] else []
 
         # 檢查役種
-        is_tsumo = player == self._current_player
+        is_tsumo = player == self._current_player or is_rinshan
         # 獲取立直後的回合數
         turns_after_riichi = self._riichi_turns.get(player, -1)
         # 檢查是否為第一巡
@@ -268,6 +347,7 @@ class RuleEngine:
             is_first_turn,
             is_last_tile,
             player,
+            is_rinshan,
         )
 
         if not yaku_results:
@@ -275,7 +355,6 @@ class RuleEngine:
 
         # 計算寶牌數量
         dora_count = self._count_dora(player, winning_tile, winning_combination)
-        is_tsumo = player == self._current_player
 
         score_result = self._score_calculator.calculate(
             hand, winning_tile, winning_combination, yaku_results, dora_count, self._game_state, is_tsumo
@@ -285,8 +364,12 @@ class RuleEngine:
         # 如果是榮和，設置支付者
         if not is_tsumo and self._last_discarded_player is not None:
             score_result.payment_from = self._last_discarded_player
+        elif is_chankan and self._pending_kan_tile:
+            # 搶槓和：支付者為槓牌玩家
+            kan_player, _ = self._pending_kan_tile
+            score_result.payment_from = kan_player
 
-        return {
+        result = {
             "win": True,
             "player": player,
             "yaku": yaku_results,
@@ -296,16 +379,27 @@ class RuleEngine:
             "score_result": score_result,
         }
 
+        if is_chankan:
+            result["chankan"] = True
+        if is_rinshan:
+            result["rinshan"] = True
+
+        return result
+
     def check_draw(self) -> Optional[str]:
         """
         檢查是否流局
 
         Returns:
-            流局類型（"exhausted", "kyuushu", "suufon_renda", "suucha_riichi", "suukantsu"），否則返回 None
+            流局類型（"exhausted", "kyuushu", "suufon_renda", "suucha_riichi", "suukantsu", "sancha_ron"），否則返回 None
         """
         # 檢查四風連打（優先檢查，因為可以在第一巡發生）
         if self.check_suufon_renda():
             return "suufon_renda"
+
+        # 檢查三家和了（多人和牌流局）
+        if self.check_sancha_ron():
+            return "sancha_ron"
 
         # 檢查四槓散了（四個槓之後流局）
         if self._kan_count >= 4:
@@ -596,3 +690,63 @@ class RuleEngine:
             ura_dora_tiles.append(self._tile_set.get_dora(ura_indicator))
 
         return ura_dora_tiles
+
+    def _check_chankan(self, kan_player: int, kan_tile: Tile) -> List[int]:
+        """
+        檢查搶槓（其他玩家是否可以榮和槓牌）
+
+        Args:
+            kan_player: 執行槓的玩家
+            kan_tile: 被槓的牌
+
+        Returns:
+            可以搶槓和牌的玩家列表
+        """
+        winners = []
+        for player in range(self._num_players):
+            if player == kan_player:
+                continue  # 不能搶自己的槓
+
+            # 檢查是否可以和這張牌
+            win_result = self.check_win(player, kan_tile, is_chankan=True)
+            if win_result:
+                winners.append(player)
+
+        return winners
+
+    def check_sancha_ron(self) -> bool:
+        """
+        檢查是否三家和了（多人和牌流局）
+
+        當多個玩家同時可以榮和同一張牌時，如果有三個或以上玩家和牌，則為三家和了（流局）
+
+        Returns:
+            是否為三家和了
+        """
+        if self._last_discarded_tile is None or self._last_discarded_player is None:
+            return False
+
+        # 檢查有多少玩家可以榮和這張牌
+        winning_players = []
+        for player in range(self._num_players):
+            if player == self._last_discarded_player:
+                continue  # 不能榮和自己的牌
+
+            if self.check_win(player, self._last_discarded_tile):
+                winning_players.append(player)
+
+        # 如果三個或以上玩家和牌，則為三家和了
+        return len(winning_players) >= 3
+
+    def check_rinshan_win(self, player: int, rinshan_tile: Tile) -> Optional[Dict[str, Any]]:
+        """
+        檢查嶺上開花（槓後摸牌和牌）
+
+        Args:
+            player: 玩家位置
+            rinshan_tile: 從嶺上摸到的牌
+
+        Returns:
+            和牌結果，如果不能和則返回 None
+        """
+        return self.check_win(player, rinshan_tile, is_rinshan=True)

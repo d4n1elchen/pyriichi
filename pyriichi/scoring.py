@@ -272,12 +272,81 @@ class ScoreCalculator:
                 # 自風（TODO: 需要根據玩家位置）
 
         # 聽牌符
-        # 簡化處理：如果不是兩面聽，則為 +2 符
-        # TODO: 實現更精確的聽牌類型判定
-        # 暫時跳過，因為需要更複雜的邏輯
+        waiting_type = self._determine_waiting_type(winning_tile, winning_combination)
+        if waiting_type in ["tanki", "penchan", "kanchan"]:  # 單騎、邊張、嵌張
+            fu += 2
+        # 兩面聽和雙碰聽不增加符數
 
         # 進位到 10
         return ((fu + 9) // 10) * 10
+
+    def _determine_waiting_type(self, winning_tile: Tile, winning_combination: List) -> str:
+        """
+        判斷聽牌類型
+
+        Args:
+            winning_tile: 和牌牌
+            winning_combination: 和牌組合
+
+        Returns:
+            聽牌類型：'ryanmen'（兩面）、'penchan'（邊張）、'kanchan'（嵌張）、'tanki'（單騎）、'shabo'（雙碰）
+        """
+        if not winning_combination:
+            return "ryanmen"  # 默認為兩面聽
+
+        # 檢查是否為單騎聽（winning_tile 是對子的一部分）
+        for meld in winning_combination:
+            if isinstance(meld, tuple) and len(meld) == 2:
+                meld_type, (suit, rank) = meld
+                if meld_type == "pair":
+                    if winning_tile.suit == suit and winning_tile.rank == rank:
+                        return "tanki"  # 單騎聽
+
+        # 檢查是否為順子聽（兩面、邊張、嵌張）
+        for meld in winning_combination:
+            if isinstance(meld, tuple) and len(meld) == 2:
+                meld_type, (suit, rank) = meld
+                if meld_type == "sequence":
+                    # 順子的牌範圍
+                    seq_ranks = [rank, rank + 1, rank + 2]
+                    if winning_tile.suit == suit and winning_tile.rank in seq_ranks:
+                        # 判斷聽牌位置
+                        if winning_tile.rank == rank:
+                            # 聽順子的第一張（邊張）
+                            if rank == 1:
+                                return "penchan"  # 1-2-3 聽 1（邊張）
+                            return "kanchan"  # 其他情況可能是嵌張
+                        elif winning_tile.rank == rank + 1:
+                            # 聽順子的中間張（嵌張）
+                            return "kanchan"
+                        elif winning_tile.rank == rank + 2:
+                            # 聽順子的最後一張（邊張）
+                            if rank == 7:
+                                return "penchan"  # 7-8-9 聽 9（邊張）
+                            return "kanchan"  # 其他情況可能是嵌張
+
+        # 檢查是否為雙碰聽（winning_tile 可以是兩個對子中的任一個）
+        # 這需要檢查手牌結構，但這裡簡化處理
+        # 如果 winning_tile 不在任何順子中，可能是雙碰聽
+        in_sequence = False
+        for meld in winning_combination:
+            if isinstance(meld, tuple) and len(meld) == 2:
+                meld_type, (suit, rank) = meld
+                if meld_type == "sequence":
+                    seq_ranks = [rank, rank + 1, rank + 2]
+                    if winning_tile.suit == suit and winning_tile.rank in seq_ranks:
+                        in_sequence = True
+                        break
+
+        if not in_sequence:
+            # 可能是雙碰聽，但需要檢查是否有兩個對子
+            # 簡化處理：如果不是順子聽且不是單騎聽，可能是雙碰聽
+            # 但實際上需要更複雜的邏輯來判斷
+            # 這裡先返回兩面聽（最常見的情況）
+            return "ryanmen"
+
+        # 默認為兩面聽
+        return "ryanmen"
 
     def calculate_han(self, yaku_results: List[YakuResult], dora_count: int) -> int:
         """

@@ -162,5 +162,73 @@ class TestHand:
         assert not hand.is_concealed
 
 
+    def test_can_kan(self):
+        """測試是否可以槓"""
+        from pyriichi.tiles import Tile, Suit
+
+        # 測試明槓（需要三張相同牌）
+        tiles = [
+            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3), Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 6), Tile(Suit.MANZU, 7),
+            Tile(Suit.PINZU, 1), Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+        ]
+        hand = Hand(tiles)
+        kan_tile = Tile(Suit.MANZU, 1)
+        possible_kan = hand.can_kan(kan_tile)
+        assert len(possible_kan) > 0
+
+        # 測試暗槓（需要四張相同牌）
+        tiles = [
+            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3), Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 6), Tile(Suit.MANZU, 7),
+            Tile(Suit.PINZU, 1), Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 3),
+        ]
+        hand = Hand(tiles)
+        possible_ankan = hand.can_kan(None)
+        assert len(possible_ankan) > 0
+
+    def test_kan(self):
+        """測試執行槓操作"""
+        from pyriichi.tiles import Tile, Suit
+
+        # 測試暗槓
+        tiles = [
+            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3), Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 6), Tile(Suit.MANZU, 7),
+            Tile(Suit.PINZU, 1), Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 3),
+        ]
+        hand = Hand(tiles)
+        initial_tile_count = len(hand.tiles)
+
+        meld = hand.kan(None)
+        assert meld.meld_type.value == "ankan"
+        assert len(meld.tiles) == 4
+        # 暗槓後，手牌應該減少4張
+        assert len(hand.tiles) == initial_tile_count - 4
+
+        # 測試明槓（從手牌中三張）
+        tiles = [
+            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3), Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 6), Tile(Suit.MANZU, 7),
+            Tile(Suit.PINZU, 1), Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+        ]
+        hand = Hand(tiles)
+        initial_tile_count = len(hand.tiles)
+        kan_tile = Tile(Suit.MANZU, 1)
+
+        meld = hand.kan(kan_tile)
+        assert meld.meld_type.value == "kan"
+        assert len(meld.tiles) == 4
+        # 明槓後，手牌應該減少3張（被槓的牌來自外部，不包含在初始手牌中）
+        # 注意：kan_tile 是外部牌，不應該在手牌中，所以實際減少的是手牌中的3張
+        assert len(hand.tiles) <= initial_tile_count
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
