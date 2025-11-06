@@ -190,6 +190,36 @@ class TestHand:
         possible_ankan = hand.can_kan(None)
         assert len(possible_ankan) > 0
 
+    def test_meld_invalid_chi(self):
+        """測試無效的吃操作（覆蓋 37 行）"""
+        from pyriichi.hand import Meld, MeldType
+        from pyriichi.tiles import Tile, Suit
+
+        # 吃必須是 3 張牌
+        with pytest.raises(ValueError, match="吃必須是 3 張牌"):
+            Meld(MeldType.CHI, [Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 2)])  # 只有 2 張
+
+    def test_meld_invalid_pon(self):
+        """測試無效的碰操作（覆蓋 39 行）"""
+        from pyriichi.hand import Meld, MeldType
+        from pyriichi.tiles import Tile, Suit
+
+        # 碰必須是 3 張牌
+        with pytest.raises(ValueError, match="碰必須是 3 張牌"):
+            Meld(MeldType.PON, [Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 1)])  # 只有 2 張
+
+    def test_meld_invalid_kan(self):
+        """測試無效的槓操作（覆蓋 41 行）"""
+        from pyriichi.hand import Meld, MeldType
+        from pyriichi.tiles import Tile, Suit
+
+        # 槓必須是 4 張牌
+        with pytest.raises(ValueError, match="槓必須是 4 張牌"):
+            Meld(MeldType.KAN, [Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 1)])  # 只有 3 張
+
+        with pytest.raises(ValueError, match="槓必須是 4 張牌"):
+            Meld(MeldType.ANKAN, [Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 1)])  # 只有 2 張
+
     def test_kan(self):
         """測試執行槓操作"""
         from pyriichi.tiles import Tile, Suit
