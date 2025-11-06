@@ -5,8 +5,15 @@ PyRiichi 基本使用示例
 """
 
 from pyriichi import (
-    TileSet, Hand, RuleEngine, GameAction,
-    parse_tiles, format_tiles, YakuChecker, ScoreCalculator, GameState
+    TileSet,
+    Hand,
+    RuleEngine,
+    GameAction,
+    parse_tiles,
+    format_tiles,
+    YakuChecker,
+    ScoreCalculator,
+    GameState,
 )
 from pyriichi.tiles import Tile, Suit
 

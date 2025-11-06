@@ -21,16 +21,35 @@ def parse_tiles(tile_string: str) -> List[Tile]:
     Example:
         >>> parse_tiles("1m2m3m4p5p6p")
         [Tile(MANZU, 1), Tile(MANZU, 2), Tile(MANZU, 3), ...]
+        >>> parse_tiles("[5p]6p7p")  # 紅寶牌用 [ ] 括號包裹
+        [Tile(PINZU, 5, red=True), Tile(PINZU, 6), Tile(PINZU, 7)]
     """
     tiles = []
     i = 0
     while i < len(tile_string):
-        if tile_string[i].isdigit():
+        # 檢查是否為紅寶牌（用 [ ] 括號包裹）
+        if tile_string[i] == "[":
+            # 解析括號內的牌
+            i += 1  # 跳過 [
+            if i < len(tile_string) and tile_string[i].isdigit():
+                rank = int(tile_string[i])
+                i += 1
+                if i < len(tile_string):
+                    suit = tile_string[i]
+                    i += 1
+                    # 檢查是否有 ]
+                    if i < len(tile_string) and tile_string[i] == "]":
+                        tiles.append(create_tile(suit, rank, is_red=True))
+                        i += 1  # 跳過 ]
+                    else:
+                        # 沒有 ]，按普通牌處理
+                        tiles.append(create_tile(suit, rank, is_red=False))
+        elif tile_string[i].isdigit():
             rank = int(tile_string[i])
             i += 1
             if i < len(tile_string):
                 suit = tile_string[i]
-                # 檢查是否為紅寶牌（用 [] 標記）
+                # 檢查是否為舊格式的紅寶牌（用 ] 標記，向後兼容）
                 is_red = False
                 if i + 1 < len(tile_string) and tile_string[i + 1] == "]":
                     is_red = True

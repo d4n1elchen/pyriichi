@@ -20,23 +20,32 @@ class TestUtils:
         assert tiles[3].rank == 4
 
     def test_parse_tiles_red_dora(self):
-        """測試解析紅寶牌（用 ] 標記）"""
-        # 測試紅寶牌解析：格式為 "5p]" 表示紅寶牌
-        tiles = parse_tiles("5p]")
+        """測試解析紅寶牌（用 [ ] 括號包裹）"""
+        # 測試新格式：用 [ ] 括號包裹
+        tiles = parse_tiles("[5p]")
         assert len(tiles) == 1
-        # 檢查是否正確解析了紅寶牌標記
         assert tiles[0].is_red == True
+        
+        # 測試舊格式（向後兼容）：用 ] 標記
+        tiles_old = parse_tiles("5p]")
+        assert len(tiles_old) == 1
+        assert tiles_old[0].is_red == True
 
     def test_parse_tiles_with_red_dora(self):
         """測試包含紅寶牌的牌字符串"""
-        # 測試類似 "5p]6p7p" 的格式
-        tiles = parse_tiles("5p]6p7p")
+        # 測試新格式：[5p]6p7p
+        tiles = parse_tiles("[5p]6p7p")
         assert len(tiles) == 3
-        # 第一張應該是紅寶牌
         assert tiles[0].is_red == True
-        # 其他不是紅寶牌
         assert tiles[1].is_red == False
         assert tiles[2].is_red == False
+        
+        # 測試舊格式（向後兼容）：5p]6p7p
+        tiles_old = parse_tiles("5p]6p7p")
+        assert len(tiles_old) == 3
+        assert tiles_old[0].is_red == True
+        assert tiles_old[1].is_red == False
+        assert tiles_old[2].is_red == False
 
     def test_parse_tiles_invalid_char(self):
         """測試解析無效字符（跳過）"""
