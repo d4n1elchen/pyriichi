@@ -44,7 +44,7 @@ class TestCompleteWinFlow:
         yaku_results = yaku_checker.check_all(
             hand=hand,
             winning_tile=winning_tile,
-            winning_combination=winning_combinations[0],
+            winning_combination=list(winning_combinations[0]),
             game_state=game_state,
             is_tsumo=True,
             player_position=0,
@@ -59,7 +59,7 @@ class TestCompleteWinFlow:
         score_result = score_calculator.calculate(
             hand=hand,
             winning_tile=winning_tile,
-            winning_combination=winning_combinations[0],
+            winning_combination=list(winning_combinations[0]),
             yaku_results=yaku_results,
             dora_count=0,  # 無寶牌
             game_state=game_state,
@@ -92,7 +92,7 @@ class TestCompleteWinFlow:
         yaku_results = yaku_checker.check_all(
             hand=hand,
             winning_tile=winning_tile,
-            winning_combination=winning_combinations[0],
+            winning_combination=list(winning_combinations[0]),
             game_state=game_state,
             is_tsumo=False,
             player_position=1,
@@ -103,7 +103,7 @@ class TestCompleteWinFlow:
         score_result = score_calculator.calculate(
             hand=hand,
             winning_tile=winning_tile,
-            winning_combination=winning_combinations[0],
+            winning_combination=list(winning_combinations[0]),
             yaku_results=yaku_results,
             dora_count=0,  # 無寶牌
             game_state=game_state,
@@ -286,7 +286,7 @@ class TestMultiModuleIntegration:
         yaku_results = yaku_checker.check_all(
             hand=hand,
             winning_tile=winning_tile,
-            winning_combination=winning_combinations[0],
+            winning_combination=list(winning_combinations[0]),
             game_state=game_state,
             is_tsumo=True,
             player_position=0,
@@ -297,7 +297,7 @@ class TestMultiModuleIntegration:
         score_result = score_calculator.calculate(
             hand=hand,
             winning_tile=winning_tile,
-            winning_combination=winning_combinations[0],
+            winning_combination=list(winning_combinations[0]),
             yaku_results=yaku_results,
             dora_count=0,  # 無寶牌
             game_state=game_state,
@@ -381,7 +381,7 @@ class TestRealWorldScenarios:
         yaku_results = yaku_checker.check_all(
             hand=hand,
             winning_tile=winning_tile,
-            winning_combination=winning_combinations[0],
+            winning_combination=list(winning_combinations[0]),
             game_state=game_state,
             is_tsumo=True,
             player_position=0,
@@ -391,7 +391,7 @@ class TestRealWorldScenarios:
         score_result = score_calculator.calculate(
             hand=hand,
             winning_tile=winning_tile,
-            winning_combination=winning_combinations[0],
+            winning_combination=list(winning_combinations[0]),
             yaku_results=yaku_results,
             dora_count=0,  # 無寶牌
             game_state=game_state,
@@ -418,7 +418,7 @@ class TestRealWorldScenarios:
         yaku_results = yaku_checker.check_all(
             hand=hand,
             winning_tile=winning_tile,
-            winning_combination=winning_combinations[0],
+            winning_combination=list(winning_combinations[0]),
             game_state=game_state,
             is_tsumo=False,
             player_position=1,
@@ -428,7 +428,7 @@ class TestRealWorldScenarios:
         score_result = score_calculator.calculate(
             hand=hand,
             winning_tile=winning_tile,
-            winning_combination=winning_combinations[0],
+            winning_combination=list(winning_combinations[0]),
             yaku_results=yaku_results,
             dora_count=0,  # 無寶牌
             game_state=game_state,
