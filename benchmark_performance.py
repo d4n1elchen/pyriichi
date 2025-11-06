@@ -46,13 +46,7 @@ def benchmark_winning_hand_detection():
         min_time = min(times)
         max_time = max(times)
 
-        results.append({
-            'name': name,
-            'avg': avg_time,
-            'median': median_time,
-            'min': min_time,
-            'max': max_time
-        })
+        results.append({"name": name, "avg": avg_time, "median": median_time, "min": min_time, "max": max_time})
 
         print(f"\n{name}:")
         print(f"  平均: {avg_time:.4f} ms")
@@ -99,13 +93,7 @@ def benchmark_tenpai_detection():
         min_time = min(times)
         max_time = max(times)
 
-        results.append({
-            'name': name,
-            'avg': avg_time,
-            'median': median_time,
-            'min': min_time,
-            'max': max_time
-        })
+        results.append({"name": name, "avg": avg_time, "median": median_time, "min": min_time, "max": max_time})
 
         print(f"\n{name}:")
         print(f"  平均: {avg_time:.4f} ms")
@@ -150,13 +138,7 @@ def benchmark_waiting_tiles():
         min_time = min(times)
         max_time = max(times)
 
-        results.append({
-            'name': name,
-            'avg': avg_time,
-            'median': median_time,
-            'min': min_time,
-            'max': max_time
-        })
+        results.append({"name": name, "avg": avg_time, "median": median_time, "min": min_time, "max": max_time})
 
         print(f"\n{name}:")
         print(f"  平均: {avg_time:.4f} ms")
