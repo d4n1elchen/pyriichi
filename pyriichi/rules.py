@@ -282,6 +282,9 @@ class RuleEngine:
         )
 
         score_result.payment_to = player
+        # 如果是榮和，設置支付者
+        if not is_tsumo and self._last_discarded_player is not None:
+            score_result.payment_from = self._last_discarded_player
 
         return {
             "win": True,
