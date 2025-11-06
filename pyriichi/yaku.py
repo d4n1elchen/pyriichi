@@ -168,7 +168,93 @@ class YakuChecker:
                 yakuman_results.insert(0, YakuResult("立直", "Riichi", "立直", 1, False))
             return yakuman_results
 
+        # 役種衝突檢測和過濾
+        results = self._filter_conflicting_yaku(results, winning_combination, game_state)
+
         return results
+
+    def _filter_conflicting_yaku(
+        self, results: List[YakuResult], winning_combination: List, game_state: GameState
+    ) -> List[YakuResult]:
+        """
+        過濾衝突的役種
+
+        Args:
+            results: 役種結果列表
+            winning_combination: 和牌組合
+            game_state: 遊戲狀態
+
+        Returns:
+            過濾後的役種列表
+        """
+        filtered = []
+        yaku_names = {r.name for r in results}
+
+        for result in results:
+            should_include = True
+
+            # 1. 平和與役牌衝突
+            if result.name == "平和":
+                # 檢查是否有役牌
+                yakuhai_names = {"白", "發", "中", "場風東", "場風南", "場風西", "場風北"}
+                if yaku_names & yakuhai_names:
+                    should_include = False
+
+            # 2. 斷么九與包含幺九的役種衝突
+            if result.name == "斷么九":
+                # 包含幺九的役種
+                terminal_yaku = {
+                    "一気通貫",  # 包含1和9的順子
+                    "純全帯么九",
+                    "混全帯么九",
+                    "混老頭",
+                    "清老頭",
+                }
+                if yaku_names & terminal_yaku:
+                    should_include = False
+
+            # 3. 對對和與順子役種衝突
+            if result.name == "対々和":
+                # 需要順子的役種
+                sequence_yaku = {
+                    "三色同順",
+                    "一気通貫",
+                    "一盃口",
+                    "二盃口",
+                }
+                if yaku_names & sequence_yaku:
+                    should_include = False
+
+            # 4. 一盃口與二盃口互斥
+            if result.name == "一盃口" and "二盃口" in yaku_names:
+                should_include = False
+
+            # 5. 清一色與混一色互斥
+            if result.name == "清一色" and "混一色" in yaku_names:
+                should_include = False
+            if result.name == "混一色" and "清一色" in yaku_names:
+                should_include = False
+
+            # 6. 純全帶与混全帶互斥
+            if result.name == "純全帯么九" and "混全帯么九" in yaku_names:
+                should_include = False
+            if result.name == "混全帯么九" and "純全帯么九" in yaku_names:
+                should_include = False
+
+            # 7. 平和與對對和衝突（結構上互斥）
+            if result.name == "平和" and "対々和" in yaku_names:
+                should_include = False
+            if result.name == "対々和" and "平和" in yaku_names:
+                should_include = False
+
+            # 8. 平和與一盃口、二盃口衝突（平和只能有一個對子）
+            if result.name == "平和" and ("一盃口" in yaku_names or "二盃口" in yaku_names):
+                should_include = False
+
+            if should_include:
+                filtered.append(result)
+
+        return filtered
 
     def check_riichi(self, hand: Hand, game_state: GameState) -> Optional[YakuResult]:
         """檢查立直"""
