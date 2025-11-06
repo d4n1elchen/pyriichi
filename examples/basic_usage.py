@@ -14,6 +14,7 @@ from pyriichi import (
     YakuChecker,
     ScoreCalculator,
     GameState,
+    Wind,
 )
 from pyriichi.tiles import Tile, Suit
 
@@ -104,8 +105,8 @@ def example_winning_hand_and_scoring():
     """示例：和牌判定、役種檢查和得分計算"""
     print("=== 和牌判定與得分計算示例 ===")
 
-    # 創建一個和牌型手牌（斷么九）
-    # 123m 456p 789s 234m 55p（和牌牌5p）
+    # 創建一個和牌型手牌（平和 + 門清自摸）
+    # 手牌：1m2m3m 4p5p6p 7s8s9s 2m3m4m 5p（和牌牌5p）
     tiles = parse_tiles("1m2m3m4p5p6p7s8s9s2m3m4m5p")
     hand = Hand(tiles)
     winning_tile = Tile(Suit.PINZU, 5)
@@ -125,6 +126,9 @@ def example_winning_hand_and_scoring():
 
             # 3. 檢查役種
             game_state = GameState(num_players=4)
+            game_state.set_round(Wind.EAST, 1)  # 東一局
+            game_state.set_dealer(0)  # 玩家 0 為莊家
+
             yaku_checker = YakuChecker()
             yaku_results = yaku_checker.check_all(
                 hand=hand,
@@ -137,7 +141,7 @@ def example_winning_hand_and_scoring():
 
             print(f"\n役種檢查結果:")
             for yaku in yaku_results:
-                print(f"  - {yaku.name}: {yaku.han} 翻")
+                print(f"  - {yaku.name_cn} ({yaku.name}): {yaku.han} 翻")
 
             # 4. 計算得分
             score_calculator = ScoreCalculator()
@@ -155,9 +159,76 @@ def example_winning_hand_and_scoring():
             print(f"\n得分計算結果:")
             print(f"  翻數: {score_result.han}")
             print(f"  符數: {score_result.fu}")
+            print(f"  基本點: {score_result.base_points}")
             print(f"  總點數: {score_result.total_points}")
             print(f"  是否役滿: {score_result.is_yakuman}")
             print(f"  是否自摸: {score_result.is_tsumo}")
+            if score_result.is_tsumo:
+                print(f"  莊家支付: {score_result.dealer_payment}")
+                print(f"  閒家支付: {score_result.non_dealer_payment}")
+
+    print()
+
+
+def example_tenpai():
+    """示例：聽牌判定"""
+    print("=== 聽牌判定示例 ===")
+
+    # 創建一個聽牌型手牌（聽 1p 和 4p）
+    # 手牌結構：123m 456m 789m 123p 4p
+    # - 如果摸到 1p：組成 123m 456m 789m 234p 11p（對子）
+    # - 如果摸到 4p：組成 123m 456m 789m 123p 44p（對子）
+    tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
+    hand = Hand(tiles)
+    print(f"手牌: {format_tiles(hand.tiles)}")
+    print("手牌結構: 123m 456m 789m 123p 4p")
+
+    # 檢查是否聽牌
+    if hand.is_tenpai():
+        waiting_tiles = hand.get_waiting_tiles()
+        print(f"聽牌！等待的牌: {format_tiles(waiting_tiles)}")
+        print(f"說明: 摸到以上任意一張牌即可和牌")
+    else:
+        print("未聽牌")
+
+    print()
+
+
+def example_meld_operations():
+    """示例：鳴牌操作"""
+    print("=== 鳴牌操作示例 ===")
+
+    # 創建手牌（包含兩張相同的牌，可以碰）
+    # 手牌：1m1m 4p5p6p 7s8s9s 1z2z3z（手牌有兩張1m，可以碰外面的1m）
+    tiles = parse_tiles("1m1m4p5p6p7s8s9s1z2z3z")
+    hand = Hand(tiles)
+    print(f"初始手牌: {format_tiles(hand.tiles)}")
+
+    # 檢查是否可以碰（需要手牌中有兩張相同的牌，然後從外面碰一張）
+    tile_to_pon = Tile(Suit.MANZU, 1)
+    if hand.can_pon(tile_to_pon):
+        meld = hand.pon(tile_to_pon)
+        print(f"碰 {tile_to_pon}: {meld}")
+        print(f"碰後手牌: {format_tiles(hand.tiles)}")
+        print(f"副露: {[str(m) for m in hand.melds]}")
+        print(f"是否門清: {hand.is_concealed}")
+
+    # 創建新手牌用於吃示例
+    # 手牌：1m2m3m 4p6p7p 8p9p 1s2s3s 4s（可以吃外面的5p，組成4p5p6p）
+    tiles2 = parse_tiles("1m2m3m4p6p7p8p9p1s2s3s4s")
+    hand2 = Hand(tiles2)
+    print(f"\n新手牌: {format_tiles(hand2.tiles)}")
+
+    # 檢查是否可以吃（需要上家的牌）
+    tile_to_chi = Tile(Suit.PINZU, 5)  # 可以吃 4p5p6p
+    if hand2.can_chi(tile_to_chi, from_player=0):  # 0 表示上家
+        sequences = hand2.can_chi(tile_to_chi, from_player=0)
+        if sequences:
+            meld = hand2.chi(tile_to_chi, sequences[0])
+            print(f"吃 {tile_to_chi}: {meld}")
+            print(f"吃後手牌: {format_tiles(hand2.tiles)}")
+            print(f"副露: {[str(m) for m in hand2.melds]}")
+            print(f"是否門清: {hand2.is_concealed}")
 
     print()
 
@@ -169,5 +240,7 @@ if __name__ == "__main__":
     example_hand_operations()
     example_game_flow()
     example_winning_hand_and_scoring()
+    example_tenpai()
+    example_meld_operations()
 
     print("示例完成！")

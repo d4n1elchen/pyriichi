@@ -102,16 +102,17 @@
 
 #### `YakuChecker`
 役種判定器
-- `check_all(hand, winning_tile, combination, game_state)`: 檢查所有役種
+- `check_all(hand, winning_tile, winning_combination, game_state, is_tsumo=False, turns_after_riichi=-1, is_first_turn=False, is_last_tile=False, player_position=0, is_rinshan=False)`: 檢查所有役種
 - `check_riichi(hand, game_state)`: 檢查立直
-- `check_tanyao(hand, combination)`: 檢查斷么九
-- `check_pinfu(hand, combination)`: 檢查平和
+- `check_tanyao(hand, winning_combination)`: 檢查斷么九
+- `check_pinfu(hand, winning_combination)`: 檢查平和
 - 其他役種檢查方法...
 
 #### `YakuResult`
 役種判定結果
-- `name`: 役種名稱（中文）
+- `name`: 役種名稱（日文）
 - `name_en`: 役種名稱（英文）
+- `name_cn`: 役種名稱（中文）
 - `han`: 翻數
 - `is_yakuman`: 是否役滿
 
@@ -119,8 +120,8 @@
 
 #### `ScoreCalculator`
 得分計算器
-- `calculate(hand, winning_tile, combination, yaku_results, dora_count, game_state, is_tsumo)`: 計算得分
-- `calculate_fu(...)`: 計算符數
+- `calculate(hand, winning_tile, winning_combination, yaku_results, dora_count, game_state, is_tsumo, player_position=0)`: 計算得分
+- `calculate_fu(hand, winning_tile, winning_combination, yaku_results, game_state, is_tsumo, player_position=0)`: 計算符數
 - `calculate_han(yaku_results, dora_count)`: 計算翻數
 
 #### `ScoreResult`
@@ -133,6 +134,11 @@
 - `payment_to`: 獲得者位置
 - `is_yakuman`: 是否役滿
 - `yakuman_count`: 役滿倍數
+- `is_tsumo`: 是否自摸
+- `dealer_payment`: 莊家支付（自摸時）
+- `non_dealer_payment`: 閒家支付（自摸時）
+- `honba_bonus`: 本場獎勵
+- `riichi_sticks_bonus`: 供託分配
 
 ## 便利函數
 

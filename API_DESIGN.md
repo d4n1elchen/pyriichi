@@ -402,6 +402,8 @@ class Hand:
 
         Returns:
             所有可能的和牌組合（每種組合包含 4 組面子和 1 對子）
+            注意：返回的是 List[Tuple]，使用時需要轉換為 List：
+            winning_combination = list(combinations[0])
         """
         pass
 ```
@@ -417,8 +419,9 @@ from dataclasses import dataclass
 @dataclass
 class YakuResult:
     """役種判定結果"""
-    name: str           # 役種名稱（中文）
+    name: str           # 役種名稱（日文）
     name_en: str        # 役種名稱（英文）
+    name_cn: str        # 役種名稱（中文）
     han: int           # 翻數
     is_yakuman: bool   # 是否為役滿
 
@@ -426,16 +429,28 @@ class YakuChecker:
     """役種判定器"""
 
     def check_all(self, hand: Hand, winning_tile: Tile,
-                  winning_combination: Tuple,
-                  game_state: 'GameState') -> List[YakuResult]:
+                  winning_combination: List,
+                  game_state: 'GameState',
+                  is_tsumo: bool = False,
+                  turns_after_riichi: int = -1,
+                  is_first_turn: bool = False,
+                  is_last_tile: bool = False,
+                  player_position: int = 0,
+                  is_rinshan: bool = False) -> List[YakuResult]:
         """
         檢查所有符合的役種
 
         Args:
             hand: 手牌
             winning_tile: 和牌牌
-            winning_combination: 和牌組合
+            winning_combination: 和牌組合（標準型）或 None（特殊型如七對子）
             game_state: 遊戲狀態
+            is_tsumo: 是否自摸
+            turns_after_riichi: 立直後經過的回合數（-1 表示未立直）
+            is_first_turn: 是否為第一巡
+            is_last_tile: 是否為最後一張牌（海底撈月/河底撈魚）
+            player_position: 玩家位置（用於判定自風）
+            is_rinshan: 是否為嶺上開花
 
         Returns:
             所有符合的役種列表
@@ -484,16 +499,22 @@ class ScoreResult:
     payment_to: int       # 獲得者位置
     is_yakuman: bool      # 是否役滿
     yakuman_count: int    # 役滿倍數
+    is_tsumo: bool        # 是否自摸
+    dealer_payment: int   # 莊家支付（自摸時）
+    non_dealer_payment: int  # 閒家支付（自摸時）
+    honba_bonus: int      # 本場獎勵
+    riichi_sticks_bonus: int  # 供託分配
 
 class ScoreCalculator:
     """得分計算器"""
 
     def calculate(self, hand: Hand, winning_tile: Tile,
-                  winning_combination: Tuple,
+                  winning_combination: List,
                   yaku_results: List[YakuResult],
                   dora_count: int,
                   game_state: 'GameState',
-                  is_tsumo: bool) -> ScoreResult:
+                  is_tsumo: bool,
+                  player_position: int = 0) -> ScoreResult:
         """
         計算得分
 
@@ -505,6 +526,7 @@ class ScoreCalculator:
             dora_count: 寶牌數量
             game_state: 遊戲狀態
             is_tsumo: 是否自摸
+            player_position: 玩家位置（用於計算自風對子符數）
 
         Returns:
             得分計算結果
@@ -512,9 +534,11 @@ class ScoreCalculator:
         pass
 
     def calculate_fu(self, hand: Hand, winning_tile: Tile,
-                     winning_combination: Tuple,
+                     winning_combination: List,
+                     yaku_results: List[YakuResult],
                      game_state: 'GameState',
-                     is_tsumo: bool) -> int:
+                     is_tsumo: bool,
+                     player_position: int = 0) -> int:
         """
         計算符數
 
@@ -522,8 +546,10 @@ class ScoreCalculator:
             hand: 手牌
             winning_tile: 和牌牌
             winning_combination: 和牌組合
+            yaku_results: 役種列表（用於判斷是否為平和）
             game_state: 遊戲狀態
             is_tsumo: 是否自摸
+            player_position: 玩家位置（用於計算自風對子符數）
 
         Returns:
             符數

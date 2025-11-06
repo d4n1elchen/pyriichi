@@ -226,7 +226,7 @@ if winning_combinations:
     )
 
     for result in yaku_results:
-        print(f"{result.name}: {result.han} 翻")
+        print(f"{result.name_cn} ({result.name}): {result.han} 翻")
 
 # 檢查特定役種
 riichi_result = yaku_checker.check_riichi(hand, game_state)
@@ -282,8 +282,10 @@ if winning_combinations:
 
     print(f"翻數: {score_result.han}")
     print(f"符數: {score_result.fu}")
+    print(f"基本點: {score_result.base_points}")
     print(f"總點數: {score_result.total_points}")
     print(f"是否役滿: {score_result.is_yakuman}")
+    print(f"是否自摸: {score_result.is_tsumo}")
 ```
 
 ### 遊戲狀態管理
