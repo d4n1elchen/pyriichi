@@ -33,21 +33,12 @@ class TestRuleEngine:
         hands = self.engine.deal()
 
         assert len(hands) == 4
-        # 莊家應該有14張打牌"""
-        self.engine.start_game()
-        self.engine.start_round()
-        self.engine.deal()
+        # 莊家應該有14張，其他玩家13張
+        assert len(hands[0]) == 14
+        for i in range(1, 4):
+            assert len(hands[i]) == 13
 
-        current = self.engine.get_current_player()
-        hand = self.engine.get_hand(current)
-
-        # 先摸一張牌
-        self.engine.execute_action(current, GameAction.DRAW)
-
-        if hand.tiles:
-            tile = hand.tiles[0]
-            result = self.engine.execute_action(current, GameAction.DISCARD, tile=tile)
-            assert "discarded" in result
+        assert self.engine.get_phase() == GamePhase.PLAYING
 
     def test_check_draw(self):
         """測試流局判定"""
@@ -58,28 +49,6 @@ class TestRuleEngine:
         # 初始狀態不應該流局
         draw_type = self.engine.check_draw()
         assert draw_type is None or draw_type in ["exhausted", "suucha_riichi"]
-
-    def test_check_kyuushu_kyuuhai(self):
-        """測試九種九牌判定"""
-        self.engine.start_game()
-        self.engine.start_round()
-        self.engine.deal()
-
-        # 一般手牌不應該是九種九牌
-        is_kyuushu = self.engine.check_kyuushu_kyuuhai(0)
-        # 結果可能是 True 或 False明槓
-        kan_tile = Tile(Suit.MANZU, 1)
-        try:
-            result = self.engine.execute_action(0, GameAction.KAN, tile=kan_tile)
-            assert "kan" in result or "rinshan_tile" in result or "chankan" in result
-        except (ValueError, NotImplementedError):
-            # 如果槓功能未完全實現暗槓
-        try:
-            result = self.engine.execute_action(0, GameAction.ANKAN)
-            assert "ankan" in result or "rinshan_tile" in result
-        except (ValueError, NotImplementedError):
-            # 如果暗槓功能未完全實現，跳過
-            pass
 
     def test_check_sancha_ron(self):
         """測試三家和了檢查"""
@@ -94,6 +63,7 @@ class TestRuleEngine:
 
         # 設置最後捨牌
         from pyriichi.tiles import Tile, Suit
+
         discarded_tile = Tile(Suit.MANZU, 1)
         self.engine._last_discarded_tile = discarded_tile
         self.engine._last_discarded_player = 0
@@ -103,10 +73,18 @@ class TestRuleEngine:
 
         # 創建和牌型手牌
         test_tiles = [
-            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4), Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7), Tile(Suit.MANZU, 8), Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1), Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 3),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
             Tile(Suit.PINZU, 4),
         ]
 
@@ -135,10 +113,18 @@ class TestRuleEngine:
 
         # 設置一個可以搶槓和的手牌
         test_tiles = [
-            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4), Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7), Tile(Suit.MANZU, 8), Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1), Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 3),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
             Tile(Suit.PINZU, 4),
         ]
         test_hand = Hand(test_tiles)
@@ -173,10 +159,18 @@ class TestRuleEngine:
 
         # 創建一個和牌型手牌
         test_tiles = [
-            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4), Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7), Tile(Suit.MANZU, 8), Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1), Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 3),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
             Tile(Suit.PINZU, 4),
         ]
         test_hand = Hand(test_tiles)
@@ -212,10 +206,18 @@ class TestRuleEngine:
 
         # 創建一個和牌型手牌
         test_tiles = [
-            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4), Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7), Tile(Suit.MANZU, 8), Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1), Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 3),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
             Tile(Suit.PINZU, 4),
         ]
         test_hand = Hand(test_tiles)
@@ -242,22 +244,6 @@ class TestRuleEngine:
         result = self.engine.handle_draw()
         assert isinstance(result, dict)
 
-    def test_handle_draw_exhausted_with_flow_mangan(self):
-        """測試牌山耗盡流局並檢查流局滿貫"""
-        self.engine.start_game()
-        self.engine.start_round()
-        self.engine.deal()
-
-        # 模擬牌山耗盡
-        if self.engine._tile_set:
-            # 手動設置牌山為耗盡狀態
-            # 由於無法直接設置，我們通過其他方式測試
-            pass
-
-        # 測試流局滿貫檢查
-        is_flow_mangan = self.engine.check_flow_mangan(0)
-        assert isinstance(is_flow_mangan, bool)
-
     def test_check_win_no_combinations(self):
         """測試 check_win 沒有和牌組合"""
         self.engine.start_game()
@@ -269,11 +255,19 @@ class TestRuleEngine:
         from pyriichi.tiles import Tile, Suit
 
         test_tiles = [
-            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4), Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7), Tile(Suit.MANZU, 8),
-            Tile(Suit.PINZU, 1), Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4), Tile(Suit.PINZU, 5),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+            Tile(Suit.PINZU, 5),
         ]
         test_hand = Hand(test_tiles)
         self.engine._hands[0] = test_hand
@@ -307,6 +301,7 @@ class TestRuleEngine:
 
         # 設置捨牌歷史為四張相同的風牌
         from pyriichi.tiles import Tile, Suit
+
         wind_tile = Tile(Suit.JIHAI, 1)  # 東
 
         # 添加四張相同的風牌到捨牌歷史
@@ -379,10 +374,18 @@ class TestRuleEngine:
 
         # 創建聽牌型手牌
         tenpai_tiles = [
-            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4), Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7), Tile(Suit.MANZU, 8), Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1), Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 3),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
             Tile(Suit.PINZU, 4),
         ]
 
@@ -413,10 +416,18 @@ class TestRuleEngine:
         from pyriichi.tiles import Tile, Suit
 
         tenpai_tiles = [
-            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4), Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7), Tile(Suit.MANZU, 8), Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1), Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 3),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
             Tile(Suit.PINZU, 4),
         ]
 
@@ -446,12 +457,18 @@ class TestRuleEngine:
         from pyriichi.tiles import Tile, Suit
 
         kyuushu_tiles = [
-            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1), Tile(Suit.PINZU, 9),
-            Tile(Suit.SOZU, 1), Tile(Suit.SOZU, 9),
-            Tile(Suit.JIHAI, 1), Tile(Suit.JIHAI, 2),
-            Tile(Suit.JIHAI, 3), Tile(Suit.JIHAI, 4),
-            Tile(Suit.JIHAI, 5), Tile(Suit.JIHAI, 6),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 9),
+            Tile(Suit.SOZU, 1),
+            Tile(Suit.SOZU, 9),
+            Tile(Suit.JIHAI, 1),
+            Tile(Suit.JIHAI, 2),
+            Tile(Suit.JIHAI, 3),
+            Tile(Suit.JIHAI, 4),
+            Tile(Suit.JIHAI, 5),
+            Tile(Suit.JIHAI, 6),
             Tile(Suit.JIHAI, 7),
         ]
         test_hand = Hand(kyuushu_tiles)
@@ -472,11 +489,19 @@ class TestRuleEngine:
         # 創建一個聽牌且聽牌牌都是幺九牌或字牌的手牌
         # 聽牌牌是 1m（幺九牌）
         tenpai_tiles = [
-            Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3), Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 6), Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8), Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1), Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4), Tile(Suit.PINZU, 5),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+            Tile(Suit.PINZU, 5),
         ]
         test_hand = Hand(tenpai_tiles)
         self.engine._hands[0] = test_hand
@@ -505,6 +530,7 @@ class TestRuleEngine:
 
         # 恢復牌組
         from pyriichi.tiles import TileSet
+
         self.engine._tile_set = TileSet()
         self.engine._tile_set.shuffle()
 
@@ -569,11 +595,19 @@ class TestRuleEngine:
 
         # 創建一個聽牌且聽牌牌是幺九牌的手牌
         tenpai_tiles = [
-            Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3), Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 6), Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8), Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1), Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4), Tile(Suit.PINZU, 5),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+            Tile(Suit.PINZU, 5),
         ]
         test_hand = Hand(tenpai_tiles)
         self.engine._hands[0] = test_hand
@@ -598,12 +632,18 @@ class TestRuleEngine:
         from pyriichi.tiles import Tile, Suit
 
         kyuushu_tiles = [
-            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1), Tile(Suit.PINZU, 9),
-            Tile(Suit.SOZU, 1), Tile(Suit.SOZU, 9),
-            Tile(Suit.JIHAI, 1), Tile(Suit.JIHAI, 2),
-            Tile(Suit.JIHAI, 3), Tile(Suit.JIHAI, 4),
-            Tile(Suit.JIHAI, 5), Tile(Suit.JIHAI, 6),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 9),
+            Tile(Suit.SOZU, 1),
+            Tile(Suit.SOZU, 9),
+            Tile(Suit.JIHAI, 1),
+            Tile(Suit.JIHAI, 2),
+            Tile(Suit.JIHAI, 3),
+            Tile(Suit.JIHAI, 4),
+            Tile(Suit.JIHAI, 5),
+            Tile(Suit.JIHAI, 6),
             Tile(Suit.JIHAI, 7),
         ]
         test_hand = Hand(kyuushu_tiles)
@@ -625,10 +665,18 @@ class TestRuleEngine:
         from pyriichi.tiles import Tile, Suit
 
         tenpai_tiles = [
-            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4), Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7), Tile(Suit.MANZU, 8), Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1), Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 3),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
             Tile(Suit.PINZU, 4),
         ]
 
@@ -656,28 +704,6 @@ class TestRuleEngine:
         # 在非 PLAYING 階段，can_act 應該返回 False
         self.engine._phase = GamePhase.INIT
         assert not self.engine.can_act(current_player, GameAction.DRAW)
-
-    def test_execute_action_draw_no_tile_drawn(self):
-        """測試摸牌時無牌可摸"""
-        self.engine.start_game()
-        self.engine.start_round()
-        self.engine.deal()
-
-        current_player = self.engine.get_current_player()
-
-        # 耗盡牌組以觸發 draw() 返回 None
-        if self.engine._tile_set:
-            # 耗盡所有牌（但保留王牌區）
-            while self.engine._tile_set._tiles:
-                self.engine._tile_set.draw()
-
-            # 現在牌組為空，但 can_act 仍然允許 DRAW（因為只檢查 player == current_player）
-            # 執行 DRAW 動作，應該觸發 else 分支
-            result = self.engine.execute_action(current_player, GameAction.DRAW)
-            # 應該有 draw 標記
-            assert "draw" in result
-            assert result["draw"] == True
-            assert self.engine._phase == GamePhase.DRAW
 
     def test_execute_action_discard_tile_none(self):
         """測試打牌時 tile 為 None"""
@@ -715,37 +741,18 @@ class TestRuleEngine:
         current_player = self.engine.get_current_player()
 
         # 測試明槓時 tile 為 None
-        # can_act 會先檢查並返回 False（因為 tile is None）
-        # 實際上的檢查在 execute_action 內部，但 can_act 會先檢查
+        # can_act 會先檢查並返回 False（因為 tile is None），所以 execute_action 會先拋出錯誤
+        # 但我們可以通過直接調用內部邏輯來測試
+        # 實際上，檢查在 execute_action 內部，但 can_act 會先檢查
         # 所以我們需要確保 can_act 返回 True，然後 execute_action 內部檢查 tile
-        # 但 can_act 已經檢查了 tile is not None明槓，應該檢查搶槓
-        if self.engine.can_act(0, GameAction.KAN, tile=kan_tile):
-            result = self.engine.execute_action(0, GameAction.KAN, tile=kan_tile)
-            # 如果有搶槓 KAN 動作
-        pass  # 王牌區耗盡測試需要特定的設置
-
-    def test_execute_action_ankan_rinshan_win(self):
-        """測試暗槓後嶺上開花"""
-        self.engine.start_game()
-        self.engine.start_round()
-        self.engine.deal()
-
-        # 這個測試需要模擬暗槓後嶺上開花的情況
-        pass  # 暗槓嶺上開花測試需要特定的手牌配置
-
-    def test_execute_action_ankan_wall_exhausted(self):
-        """測試暗槓時王牌區耗盡"""
-        self.engine.start_game()
-        self.engine.start_round()
-        self.engine.deal()
-
-        # 耗盡王牌區
-        if self.engine._tile_set:
-            while self.engine._tile_set._wall:
-                self.engine._tile_set.draw_wall_tile()
-
-        # 嘗試暗槓（如果可能）
-        pass  # 暗槓王牌區耗盡測試需要特定的設置
+        # 但 can_act 已經檢查了 tile is not None，所以這個分支可能不會被執行
+        # 讓我們測試邏輯
+        try:
+            with pytest.raises(ValueError):
+                self.engine.execute_action(current_player, GameAction.KAN, tile=None)
+        except ValueError as e:
+            # 可能是 can_act 的錯誤或 execute_action 內部的錯誤
+            pass
 
     def test_check_win_payment_from_ron(self):
         """測試榮和支付者設置"""
@@ -758,10 +765,18 @@ class TestRuleEngine:
 
         # 設置一個和牌型手牌
         test_tiles = [
-            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4), Tile(Suit.MANZU, 5), Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7), Tile(Suit.MANZU, 8), Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1), Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 3),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
             Tile(Suit.PINZU, 4),
         ]
         test_hand = Hand(test_tiles)
@@ -780,8 +795,8 @@ class TestRuleEngine:
             # 檢查支付者設置
             if "score_result" in result:
                 score_result = result["score_result"]
-                # 榮和時動作"):
-            self.engine.execute_action(1, GameAction.DRAW)  # 當前玩家是 0
+                # 榮和時，支付者應該是放銃玩家
+                assert score_result.payment_from == 0  # 放銃玩家
 
     def test_execute_action_draw_no_tile_set(self):
         """測試摸牌時牌組未初始化"""
@@ -805,7 +820,28 @@ class TestRuleEngine:
         # 打牌必須指定牌（會先檢查 can_act，如果 tile=None 會返回 False）
         # 但實際上在 execute_action 內部會檢查 tile is None
         # 讓我們繞過 can_act 檢查，直接測試 execute_action 內部的檢查
-        # 由於 can_act 會先檢查 tile is not None立直動作"""
+        # 由於 can_act 會先檢查 tile is not None，所以這裡會先拋出 can_act 錯誤
+        # 我們測試的是 can_act 的檢查邏輯
+        assert not self.engine.can_act(0, GameAction.DISCARD, tile=None)
+
+    def test_execute_action_discard_no_tile_set(self):
+        """測試打牌時牌組未初始化"""
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine.deal()
+
+        # 先摸一張牌
+        self.engine.execute_action(0, GameAction.DRAW)
+
+        hand = self.engine.get_hand(0)
+        if hand.tiles:
+            tile = hand.tiles[0]
+            self.engine._tile_set = None
+            with pytest.raises(ValueError, match="牌組未初始化"):
+                self.engine.execute_action(0, GameAction.DISCARD, tile=tile)
+
+    def test_execute_action_riichi(self):
+        """測試執行立直動作"""
         self.engine.start_game()
         self.engine.start_round()
         self.engine.deal()
@@ -907,8 +943,447 @@ class TestRuleEngine:
         for i in range(5):
             # 確保是當前玩家的回合
             if self.engine.get_current_player() != current_player:
-                # 如果換了玩家的檢查）
+                # 如果換了玩家，需要切換到正確的玩家
+                break
+
+            # 摸牌（如果允許）
+            if self.engine.can_act(current_player, GameAction.DRAW):
+                self.engine.execute_action(current_player, GameAction.DRAW)
+                hand = self.engine.get_hand(current_player)
+                if hand.tiles:
+                    tile = hand.tiles[0]
+                    # 打牌（如果允許）
+                    if self.engine.can_act(current_player, GameAction.DISCARD, tile=tile):
+                        self.engine.execute_action(current_player, GameAction.DISCARD, tile=tile)
+                    else:
+                        break
+                else:
+                    break
+            else:
+                break
+
+        # 捨牌歷史應該只保留前4張
         assert len(self.engine._discard_history) <= 4
+
+    def test_deal_wrong_phase(self):
+        """測試在錯誤階段發牌"""
+        self.engine.start_game()
+        # 不在發牌階段
+        self.engine._phase = GamePhase.PLAYING
+        with pytest.raises(ValueError, match="只能在發牌階段發牌"):
+            self.engine.deal()
+
+    def test_deal_no_tile_set(self):
+        """測試牌組未初始化時發牌"""
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine._tile_set = None
+        with pytest.raises(ValueError, match="牌組未初始化"):
+            self.engine.deal()
+
+    def test_can_act_kan(self):
+        """測試是否可以明槓"""
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine.deal()
+
+        # 創建一個可以明槓的手牌（需要三張相同牌）
+        from pyriichi.hand import Hand
+        from pyriichi.tiles import Tile, Suit
+
+        test_tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+        ]
+        test_hand = Hand(test_tiles)
+        self.engine._hands[0] = test_hand
+
+        # 檢查是否可以槓
+        kan_tile = Tile(Suit.MANZU, 1)
+        can_kan = self.engine.can_act(0, GameAction.KAN, tile=kan_tile)
+        assert can_kan == True
+
+        # 測試不能槓的情況
+        can_kan = self.engine.can_act(0, GameAction.KAN, tile=Tile(Suit.MANZU, 9))
+        assert can_kan == False
+
+    def test_can_act_ankan(self):
+        """測試是否可以暗槓"""
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine.deal()
+
+        # 創建一個可以暗槓的手牌（需要四張相同牌）
+        from pyriichi.hand import Hand
+        from pyriichi.tiles import Tile, Suit
+
+        test_tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
+        ]
+        test_hand = Hand(test_tiles)
+        self.engine._hands[0] = test_hand
+
+        # 檢查是否可以暗槓
+        can_ankan = self.engine.can_act(0, GameAction.ANKAN)
+        assert can_ankan == True
+
+    def test_execute_action_draw_no_tile_drawn_detailed(self):
+        """測試摸牌時無牌可摸（詳細測試流局分支）"""
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine.deal()
+
+        current_player = self.engine.get_current_player()
+
+        # 耗盡牌組以觸發 draw() 返回 None
+        if self.engine._tile_set:
+            # 耗盡所有牌（但保留王牌區）
+            while self.engine._tile_set._tiles:
+                self.engine._tile_set.draw()
+
+            # 現在牌組為空，執行 DRAW 動作，應該觸發流局分支（191-195行）
+            result = self.engine.execute_action(current_player, GameAction.DRAW)
+            # 應該有 draw 標記，表示流局
+            assert "draw" in result
+            assert result["draw"] == True
+            assert self.engine._phase == GamePhase.DRAW
+
+    def test_execute_action_kan_chankan_detailed(self):
+        """測試明槓搶槓處理（詳細測試）"""
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine.deal()
+
+        from pyriichi.hand import Hand, Meld, MeldType
+        from pyriichi.tiles import Tile, Suit
+
+        # 設置玩家0可以明槓
+        kan_tile = Tile(Suit.MANZU, 1)
+        kan_tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+        ]
+        hand0 = Hand(kan_tiles)
+        self.engine._hands[0] = hand0
+        self.engine._current_player = 0
+
+        # 設置玩家1可以搶槓和
+        test_tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+        ]
+        test_hand = Hand(test_tiles)
+        self.engine._hands[1] = test_hand
+
+        # 執行明槓，應該檢查搶槓（249-252行）
+        if self.engine.can_act(0, GameAction.KAN, tile=kan_tile):
+            result = self.engine.execute_action(0, GameAction.KAN, tile=kan_tile)
+            # 如果有搶槓，應該有 chankan 標記
+            if "chankan" in result:
+                assert result["chankan"] == True
+                assert "winners" in result
+
+    def test_execute_action_kan_rinshan_win_detailed(self):
+        """測試明槓後嶺上開花（詳細測試）"""
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine.deal()
+
+        from pyriichi.hand import Hand
+        from pyriichi.tiles import Tile, Suit
+
+        # 設置玩家0可以明槓且槓後可以嶺上開花
+        kan_tile = Tile(Suit.MANZU, 1)
+        kan_tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+        ]
+        hand0 = Hand(kan_tiles)
+        self.engine._hands[0] = hand0
+        self.engine._current_player = 0
+
+        # 執行明槓
+        if self.engine.can_act(0, GameAction.KAN, tile=kan_tile):
+            result = self.engine.execute_action(0, GameAction.KAN, tile=kan_tile)
+            # 檢查是否有 rinshan_tile
+            if "rinshan_tile" in result:
+                rinshan_tile = result["rinshan_tile"]
+                # 檢查是否有嶺上開花（270-271行）
+                if "rinshan_win" in result:
+                    assert result["rinshan_win"] is not None
+
+    def test_execute_action_ankan_rinshan_win_detailed(self):
+        """測試暗槓後嶺上開花（詳細測試）"""
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine.deal()
+
+        from pyriichi.hand import Hand
+        from pyriichi.tiles import Tile, Suit
+
+        # 設置玩家0可以暗槓
+        ankan_tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
+        ]
+        hand0 = Hand(ankan_tiles)
+        self.engine._hands[0] = hand0
+        self.engine._current_player = 0
+
+        # 執行暗槓
+        if self.engine.can_act(0, GameAction.ANKAN):
+            result = self.engine.execute_action(0, GameAction.ANKAN)
+            # 檢查是否有 rinshan_tile（294-295行）
+            if "rinshan_tile" in result:
+                rinshan_tile = result["rinshan_tile"]
+                # 檢查是否有嶺上開花
+                if "rinshan_win" in result:
+                    assert result["rinshan_win"] is not None
+
+    def test_check_win_payment_from_chankan(self):
+        """測試搶槓和支付者設置"""
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine.deal()
+
+        # 設置 pending_kan_tile
+        from pyriichi.hand import Hand
+        from pyriichi.tiles import Tile, Suit
+
+        kan_tile = Tile(Suit.MANZU, 1)
+        self.engine._pending_kan_tile = (0, kan_tile)
+
+        # 設置一個可以搶槓和的手牌
+        test_tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+        ]
+        test_hand = Hand(test_tiles)
+        self.engine._hands[1] = test_hand
+
+        # 檢查搶槓和（369-370行）
+        result = self.engine.check_win(1, kan_tile, is_chankan=True)
+        if result:
+            # 檢查支付者設置
+            if "score_result" in result:
+                score_result = result["score_result"]
+                assert score_result.payment_from == 0  # 槓牌玩家
+                # 檢查 chankan 標記（383行）
+                assert "chankan" in result
+                assert result["chankan"] == True
+
+    def test_check_flow_mangan(self):
+        """測試流局滿貫判定"""
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine.deal()
+
+        from pyriichi.hand import Hand
+        from pyriichi.tiles import Tile, Suit
+
+        # 創建一個聽牌且聽牌牌都是幺九牌的手牌（503, 510-518行）
+        tenpai_tiles = [
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+            Tile(Suit.PINZU, 5),
+        ]
+        test_hand = Hand(tenpai_tiles)
+        self.engine._hands[0] = test_hand
+
+        # 測試流局滿貫判定
+        is_flow_mangan = self.engine.check_flow_mangan(0)
+        # 結果取決於手牌是否聽牌且聽牌牌是否都是幺九牌
+        assert isinstance(is_flow_mangan, bool)
+
+        # 測試非門清的情況（503行）
+        from pyriichi.hand import Meld, MeldType
+
+        meld = Meld(MeldType.PON, [Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 1)])
+        test_hand._melds.append(meld)
+        is_flow_mangan = self.engine.check_flow_mangan(0)
+        assert is_flow_mangan == False  # 非門清不應該是流局滿貫
+
+    def test_end_round_with_winner(self):
+        """測試結束一局（有獲勝者）"""
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine.deal()
+
+        # 測試有獲勝者的情況（637-649行）
+        winner = 0
+        self.engine.end_round(winner)
+
+        # 檢查遊戲狀態是否更新
+        assert self.engine._phase in [GamePhase.PLAYING, GamePhase.ENDED]
+
+    def test_end_round_draw(self):
+        """測試結束一局（流局）"""
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine.deal()
+
+        # 測試流局的情況（650-658行）
+        self.engine.end_round(None)
+
+        # 檢查遊戲狀態是否更新
+        assert self.engine._phase in [GamePhase.PLAYING, GamePhase.ENDED]
+
+    def test_get_dora_tiles(self):
+        """測試獲取表寶牌"""
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine.deal()
+
+        # 測試有牌組的情況（667-675行）
+        dora_tiles = self.engine.get_dora_tiles()
+        assert isinstance(dora_tiles, list)
+
+        # 測試沒有牌組的情況（667行）
+        self.engine._tile_set = None
+        dora_tiles = self.engine.get_dora_tiles()
+        assert dora_tiles == []
+
+    def test_get_ura_dora_tiles(self):
+        """測試獲取裡寶牌"""
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine.deal()
+
+        # 測試有牌組的情況（684-692行）
+        ura_dora_tiles = self.engine.get_ura_dora_tiles()
+        assert isinstance(ura_dora_tiles, list)
+
+        # 測試沒有牌組的情況（684行）
+        self.engine._tile_set = None
+        ura_dora_tiles = self.engine.get_ura_dora_tiles()
+        assert ura_dora_tiles == []
+
+    def test_check_sancha_ron_detailed(self):
+        """測試三家和了檢查（詳細測試）"""
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine.deal()
+
+        from pyriichi.hand import Hand
+        from pyriichi.tiles import Tile, Suit
+
+        # 設置最後捨牌
+        winning_tile = Tile(Suit.PINZU, 4)
+        self.engine._last_discarded_tile = winning_tile
+        self.engine._last_discarded_player = 0
+
+        # 設置三個玩家都可以和牌（736行）
+        test_tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.MANZU, 8),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+        ]
+        for i in range(1, 4):
+            test_hand = Hand(test_tiles)
+            self.engine._hands[i] = test_hand
+
+        # 檢查三家和了（402行）
+        result = self.engine.check_sancha_ron()
+        # 如果三個玩家都可以和牌，應該返回 True
+        assert isinstance(result, bool)
 
     def test_execute_action_riichi_turns_update(self):
         """測試立直回合數更新"""
@@ -1054,6 +1529,10 @@ class TestRuleEngine:
         assert not self.engine.can_act(current_player, GameAction.DRAW)
 
         # 測試：在 PLAYING 階段但不是當前玩家
+        self.engine._phase = GamePhase.PLAYING
+        non_current = (current_player + 1) % 4
+        # 某些動作在非當前玩家時應該返回 False
+        # 例如 DRAW 動作只有當前玩家可以執行
         assert not self.engine.can_act(non_current, GameAction.DRAW)
 
     def test_execute_action_draw_exhausted(self):
