@@ -734,7 +734,7 @@ class TestScoreCalculator:
         assert waiting_type == "ryanmen"
 
     def test_score_result_yakuman_13_han(self):
-        """測試13翻役滿判定（覆蓋38行）"""
+        """測試13翻役滿判定"""
         score_result = ScoreResult(
             han=13,
             fu=30,
@@ -749,7 +749,7 @@ class TestScoreCalculator:
         assert score_result.total_points == 8000
 
     def test_score_result_triple_mangan(self):
-        """測試11翻三倍滿判定（覆蓋40行）"""
+        """測試11翻三倍滿判定"""
         score_result = ScoreResult(
             han=11,
             fu=30,
@@ -764,7 +764,7 @@ class TestScoreCalculator:
         assert score_result.total_points == 6000
 
     def test_score_result_double_mangan(self):
-        """測試8翻倍滿判定（覆蓋42行）"""
+        """測試8翻倍滿判定"""
         score_result = ScoreResult(
             han=8,
             fu=30,
@@ -779,7 +779,7 @@ class TestScoreCalculator:
         assert score_result.total_points == 4000
 
     def test_score_result_mangan_5_han(self):
-        """測試5翻滿貫判定（覆蓋46行）"""
+        """測試5翻滿貫判定"""
         score_result = ScoreResult(
             han=5,
             fu=30,
@@ -794,7 +794,7 @@ class TestScoreCalculator:
         assert score_result.total_points == 2000
 
     def test_score_result_mangan_4_han_40_fu(self):
-        """測試4翻40符滿貫判定（覆蓋46行）"""
+        """測試4翻40符滿貫判定"""
         score_result = ScoreResult(
             han=4,
             fu=40,
@@ -809,7 +809,7 @@ class TestScoreCalculator:
         assert score_result.total_points == 2000
 
     def test_calculate_payments_non_dealer_tsumo(self):
-        """測試閒家自摸支付計算（覆蓋91-94行）"""
+        """測試閒家自摸支付計算"""
         self.game_state.set_dealer(0)  # 玩家0是莊家
 
         score_result = ScoreResult(
@@ -833,7 +833,7 @@ class TestScoreCalculator:
         assert score_result.total_points > 0
 
     def test_calculate_fu_seven_pairs(self):
-        """測試七對子符數（固定 25 符，覆蓋 184 行）"""
+        """測試七對子符數"""
         tiles = [
             Tile(Suit.MANZU, 1),
             Tile(Suit.MANZU, 1),
@@ -859,7 +859,7 @@ class TestScoreCalculator:
         assert fu == 25
 
     def test_calculate_fu_pinfu_tsumo(self):
-        """測試平和自摸符數（22 符，覆蓋 194 行）"""
+        """測試平和自摸符數（22 符）"""
         # 平和：只有順子，無刻子，無役牌對子
         tiles = [
             Tile(Suit.MANZU, 1),
@@ -931,7 +931,7 @@ class TestScoreCalculator:
                 assert fu == 30
 
     def test_calculate_fu_concealed_tsumo(self):
-        """測試門清自摸符數（+2 符，覆蓋 204 行）"""
+        """測試門清自摸符數"""
         # 使用有刻子的手牌，確保不是平和
         tiles = [
             Tile(Suit.MANZU, 1),
@@ -960,7 +960,7 @@ class TestScoreCalculator:
             assert fu >= 30
 
     def test_calculate_fu_open_tsumo(self):
-        """測試非門清自摸符數（+2 符，覆蓋 206 行）"""
+        """測試非門清自摸符數"""
         # 使用有刻子的手牌，確保不是平和
         tiles = [
             Tile(Suit.MANZU, 1),
@@ -994,7 +994,7 @@ class TestScoreCalculator:
             assert fu >= 20
 
     def test_calculate_fu_open_triplet_terminal(self):
-        """測試非門清幺九刻子符數（+4 符，覆蓋 221 行）"""
+        """測試非門清幺九刻子符數"""
         tiles = [
             Tile(Suit.MANZU, 2),
             Tile(Suit.MANZU, 3),
@@ -1029,7 +1029,7 @@ class TestScoreCalculator:
         assert fu >= 20
 
     def test_calculate_fu_open_triplet_simple(self):
-        """測試非門清中張刻子符數（+2 符，覆蓋 227 行）"""
+        """測試非門清中張刻子符數"""
         tiles = [
             Tile(Suit.MANZU, 1),
             Tile(Suit.MANZU, 2),
@@ -1062,7 +1062,7 @@ class TestScoreCalculator:
         assert fu >= 20
 
     def test_waiting_type_kanchan_other_rank(self):
-        """測試嵌張聽（其他 rank 的情況，覆蓋 318 行）"""
+        """測試嵌張聽"""
         # 測試 rank=2, winning_tile.rank == rank（第一張）但不是 rank=1 的情況
         winning_tile = Tile(Suit.MANZU, 2)
         combo = [
@@ -1076,7 +1076,7 @@ class TestScoreCalculator:
         assert waiting_type == "kanchan"
 
     def test_waiting_type_in_sequence_check(self):
-        """測試在順子中的檢查邏輯（覆蓋 338-339 行）"""
+        """測試在順子中的檢查邏輯"""
         # 測試 winning_tile 在順子中的情況，確保觸發 break
         # 使用一個不會被前面邏輯提前返回的情況
         winning_tile = Tile(Suit.MANZU, 4)  # 在 3-4-5 順子中
@@ -1086,13 +1086,13 @@ class TestScoreCalculator:
             ("sequence", (Suit.MANZU, 9)),  # 這個順子不會被處理（因為會 break）
             ("pair", (Suit.PINZU, 1)),
         ]
-        # winning_tile 4m 在 3-4-5 順子中，應該觸發 338-339 行的檢查和 break
+        # winning_tile 4m 在 3-4-5 順子中的檢查和 break
         waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
         # 應該檢測到在順子中，可能是嵌張
         assert waiting_type in ["kanchan", "penchan", "ryanmen"]
 
     def test_calculate_fu_open_tsumo_direct(self):
-        """直接測試非門清自摸符數（確保覆蓋 206 行）"""
+        """直接測試非門清自摸符數"""
         # 手動構建一個非門清、非平和的情況
         tiles = [
             Tile(Suit.MANZU, 2),
@@ -1124,12 +1124,7 @@ class TestScoreCalculator:
         # 確認手牌是非門清
         assert not hand.is_concealed
         fu = self.calculator.calculate_fu(hand, winning_tile, combo, yaku_results, self.game_state, True)
-        # 非門清自摸：20 + 2 = 22，加上刻子符，進位到 30
-        assert fu >= 20
-
-    def test_waiting_type_final_ryanmen(self):
-        """測試默認返回兩面聽（覆蓋 349 行）"""
-        # 創建一個會執行到最後一行（349行）的情況
+        # 非門清自摸：20 + 2 = 22，加上刻子符的情況
         # winning_tile 在順子中，但前面的邏輯沒有提前返回，執行到最後
         winning_tile = Tile(Suit.MANZU, 4)
         combo = [

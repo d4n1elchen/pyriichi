@@ -16,7 +16,7 @@ class TestTile:
         assert tile.rank == 1
 
     def test_tile_creation_invalid_rank_jihai(self):
-        """測試字牌無效 rank 錯誤（覆蓋 38 行）"""
+        """測試字牌無效 rank 錯誤"""
         # 字牌 rank 必須在 1-7 之間
         with pytest.raises(ValueError, match="字牌 rank 必須在 1-7 之間"):
             Tile(Suit.JIHAI, 0)  # 無效 rank
@@ -25,7 +25,7 @@ class TestTile:
             Tile(Suit.JIHAI, 8)  # 無效 rank
 
     def test_tile_creation_invalid_rank_number(self):
-        """測試數牌無效 rank 錯誤（覆蓋 41 行）"""
+        """測試數牌無效 rank 錯誤"""
         # 數牌 rank 必須在 1-9 之間
         with pytest.raises(ValueError, match="數牌 rank 必須在 1-9 之間"):
             Tile(Suit.MANZU, 0)  # 無效 rank
@@ -52,11 +52,11 @@ class TestTile:
         tile = Tile(Suit.JIHAI, 1)
         assert tile.is_honor == True
         assert tile.is_terminal == False
-        # 字牌 is_simple 應該返回 False（覆蓋 78 行）
+        # 字牌 is_simple 應該返回 False
         assert tile.is_simple == False
 
     def test_tile_eq(self):
-        """測試牌的相等性比較（覆蓋 84 行）"""
+        """測試牌的相等性比較"""
         tile1 = Tile(Suit.MANZU, 1)
         tile2 = Tile(Suit.MANZU, 1)
         tile3 = Tile(Suit.MANZU, 2)
@@ -64,12 +64,12 @@ class TestTile:
         assert tile1 == tile2
         assert tile1 != tile3
 
-        # 測試與非 Tile 對象比較（覆蓋 84 行）
+        # 測試與非 Tile 對象比較
         assert tile1 != "1m"
         assert tile1 != None
 
     def test_tile_hash(self):
-        """測試牌的哈希值（覆蓋 89 行）"""
+        """測試牌的哈希值"""
         tile1 = Tile(Suit.MANZU, 1)
         tile2 = Tile(Suit.MANZU, 1)
         tile3 = Tile(Suit.MANZU, 2)
@@ -84,7 +84,7 @@ class TestTile:
         assert len(tile_set) == 2  # tile1 和 tile2 相同
 
     def test_tile_lt(self):
-        """測試牌的排序（覆蓋 94 行）"""
+        """測試牌的排序"""
         tile1 = Tile(Suit.MANZU, 1)
         tile2 = Tile(Suit.MANZU, 2)
         tile3 = Tile(Suit.PINZU, 1)
@@ -92,12 +92,12 @@ class TestTile:
         assert tile1 < tile2
         assert tile1 < tile3  # 萬子 < 筒子
 
-        # 測試與非 Tile 對象比較（覆蓋 94 行）
+        # 測試與非 Tile 對象比較
         result = tile1.__lt__("1m")
         assert result is NotImplemented
 
     def test_tile_str_red_dora(self):
-        """測試牌的字符串表示（紅寶牌，覆蓋 108 行）"""
+        """測試牌的字符串表示"""
         tile = Tile(Suit.PINZU, 5, is_red=True)
         tile_str = str(tile)
         # 紅寶牌應該用 [] 標記
@@ -107,7 +107,7 @@ class TestTile:
         assert "p" in tile_str
 
     def test_tile_repr(self):
-        """測試牌的對象表示（覆蓋 113 行）"""
+        """測試牌的對象表示"""
         tile = Tile(Suit.MANZU, 1, is_red=False)
         repr_str = repr(tile)
         assert "Tile" in repr_str
@@ -115,7 +115,7 @@ class TestTile:
         assert "1" in repr_str
 
     def test_create_tile_invalid_suit(self):
-        """測試 create_tile 無效花色錯誤（覆蓋 138 行）"""
+        """測試 create_tile 無效花色錯誤"""
         with pytest.raises(ValueError, match="無效的花色"):
             create_tile("x", 1)  # 無效花色
 
@@ -158,7 +158,7 @@ class TestTileSet:
         assert len(tile_set._tiles) == initial_count - 1
 
     def test_tileset_draw_empty(self):
-        """測試從空牌組摸牌（覆蓋 221 行）"""
+        """測試從空牌組摸牌"""
         tile_set = TileSet()
         tile_set.shuffle()
         # 耗盡所有牌
@@ -169,7 +169,7 @@ class TestTileSet:
         assert tile is None
 
     def test_tileset_draw_wall_tile(self):
-        """測試從王牌區摸牌（覆蓋 232 行）"""
+        """測試從王牌區摸牌"""
         tile_set = TileSet()
         tile_set.shuffle()
         # 從王牌區摸牌
@@ -185,7 +185,7 @@ class TestTileSet:
         assert tile is None
 
     def test_tileset_remaining(self):
-        """測試剩餘牌數（覆蓋 238 行）"""
+        """測試剩餘牌數"""
         tile_set = TileSet()
         tile_set.shuffle()
         initial_remaining = tile_set.remaining
@@ -195,7 +195,7 @@ class TestTileSet:
         assert tile_set.remaining == initial_remaining - 1
 
     def test_tileset_wall_remaining(self):
-        """測試王牌區剩餘牌數（覆蓋 243 行）"""
+        """測試王牌區剩餘牌數"""
         tile_set = TileSet()
         tile_set.shuffle()
         wall_remaining = tile_set.wall_remaining
@@ -217,7 +217,7 @@ class TestTileSet:
         assert tile_set.is_exhausted()
 
     def test_tileset_get_dora_indicator(self):
-        """測試獲取寶牌指示牌（覆蓋 264 行）"""
+        """測試獲取寶牌指示牌"""
         tile_set = TileSet()
         tile_set.shuffle()
 
@@ -227,7 +227,7 @@ class TestTileSet:
 
         # 獲取裡寶牌（index=1，如果可用）
         indicator1 = tile_set.get_dora_indicator(1)
-        # 如果王牌區不足 2 張，應該返回 None（覆蓋 264 行）
+        # 如果王牌區不足 2 張，應該返回 None
         # 否則返回裡寶牌指示牌
 
         # 測試無效 index
@@ -235,36 +235,36 @@ class TestTileSet:
         assert indicator_invalid is None
 
     def test_tileset_get_dora(self):
-        """測試根據指示牌獲取寶牌（覆蓋 279, 281, 283, 285, 291 行）"""
+        """測試根據指示牌獲取寶牌"""
         tile_set = TileSet()
 
         # 測試字牌寶牌
-        # 北（4）→ 東（1）（覆蓋 279 行）
+        # 北（4）→ 東（1）
         indicator_north = Tile(Suit.JIHAI, 4)
         dora = tile_set.get_dora(indicator_north)
         assert dora.suit == Suit.JIHAI
         assert dora.rank == 1
 
-        # 白（5）→ 發（6）（覆蓋 281 行）
+        # 白（5）→ 發（6）
         indicator_white = Tile(Suit.JIHAI, 5)
         dora = tile_set.get_dora(indicator_white)
         assert dora.suit == Suit.JIHAI
         assert dora.rank == 6
 
-        # 發（6）→ 中（7）（覆蓋 283 行）
+        # 發（6）→ 中（7）
         indicator_green = Tile(Suit.JIHAI, 6)
         dora = tile_set.get_dora(indicator_green)
         assert dora.suit == Suit.JIHAI
         assert dora.rank == 7
 
-        # 中（7）→ 東（1）（覆蓋 285 行）
+        # 中（7）→ 東（1）
         indicator_red = Tile(Suit.JIHAI, 7)
         dora = tile_set.get_dora(indicator_red)
         assert dora.suit == Suit.JIHAI
         assert dora.rank == 1
 
         # 測試數牌寶牌
-        # 9 → 1（覆蓋 291 行）
+        # 9 → 1
         indicator_9 = Tile(Suit.MANZU, 9)
         dora = tile_set.get_dora(indicator_9)
         assert dora.suit == Suit.MANZU
