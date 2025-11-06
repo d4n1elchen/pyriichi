@@ -357,7 +357,7 @@ class RuleEngine:
         dora_count = self._count_dora(player, winning_tile, winning_combination)
 
         score_result = self._score_calculator.calculate(
-            hand, winning_tile, winning_combination, yaku_results, dora_count, self._game_state, is_tsumo
+            hand, winning_tile, winning_combination, yaku_results, dora_count, self._game_state, is_tsumo, player
         )
 
         score_result.payment_to = player

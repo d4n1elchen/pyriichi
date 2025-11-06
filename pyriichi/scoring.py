@@ -112,6 +112,7 @@ class ScoreCalculator:
         dora_count: int,
         game_state: GameState,
         is_tsumo: bool,
+        player_position: int = 0,
     ) -> ScoreResult:
         """
         計算得分
@@ -124,12 +125,13 @@ class ScoreCalculator:
             dora_count: 寶牌數量
             game_state: 遊戲狀態
             is_tsumo: 是否自摸
+            player_position: 玩家位置（用於計算自風對子符數）
 
         Returns:
             得分計算結果
         """
         # 計算符數（需要傳入 yaku_results 來判斷是否為平和）
-        fu = self.calculate_fu(hand, winning_tile, winning_combination, yaku_results, game_state, is_tsumo)
+        fu = self.calculate_fu(hand, winning_tile, winning_combination, yaku_results, game_state, is_tsumo, player_position)
 
         # 計算翻數
         han = self.calculate_han(yaku_results, dora_count)
@@ -165,6 +167,7 @@ class ScoreCalculator:
         yaku_results: List[YakuResult],
         game_state: GameState,
         is_tsumo: bool,
+        player_position: int = 0,
     ) -> int:
         """
         計算符數
@@ -189,11 +192,11 @@ class ScoreCalculator:
         is_pinfu = any(r.name == "平和" for r in yaku_results) if yaku_results else False
 
         if is_pinfu:
-            # 平和固定 20 符（如果是自摸，+2 符）
+            # 平和固定符數
             if is_tsumo:
-                fu = 22  # 平和自摸
+                fu = 22  # 平和自摸：20符基本符 + 2符自摸符
             else:
-                fu = 20  # 平和榮和
+                fu = 30  # 平和榮和：20符基本符 + 10符門清榮和
             # 進位到 10
             return ((fu + 9) // 10) * 10
 
@@ -269,7 +272,17 @@ class ScoreCalculator:
                     or (rank == 4 and round_wind.value == "n")
                 ):
                     fu += 2
-                # 自風（TODO: 需要根據玩家位置）
+                # 自風
+                player_winds = game_state.player_winds
+                if player_position < len(player_winds):
+                    player_wind = player_winds[player_position]
+                    if (
+                        (rank == 1 and player_wind.value == "e")
+                        or (rank == 2 and player_wind.value == "s")
+                        or (rank == 3 and player_wind.value == "w")
+                        or (rank == 4 and player_wind.value == "n")
+                    ):
+                        fu += 2
 
         # 聽牌符
         waiting_type = self._determine_waiting_type(winning_tile, winning_combination)
