@@ -700,6 +700,12 @@ class MahjongDemoUI:
         tile_set = getattr(self.engine, "_tile_set", None)
         if tile_set:
             info += f" | 牌山剩餘: {tile_set.remaining}"
+            indicators = []
+            for indicator in getattr(tile_set, "_dora_indicators", []):
+                if indicator is not None:
+                    indicators.append(tile_to_chinese(indicator))
+            if indicators:
+                info += " | 寶牌指示: " + " ".join(indicators)
         self.info_label.config(text=info)
 
     # ------------------------------------------------------------------
