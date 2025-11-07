@@ -379,11 +379,42 @@ class MahjongDemoUI:
         for widget in self.hand_frame.winfo_children():
             widget.destroy()
 
-        tiles_container = tk.Frame(self.hand_frame)
-        tiles_container.pack(side=tk.LEFT, padx=4)
+        top_container = tk.Frame(self.hand_frame)
+        top_container.pack(side=tk.TOP, anchor=tk.W)
 
         hand = self.engine.get_hand(self.human_player)
-        for tile in hand.tiles:
+        discards = self.engine.get_discards(self.human_player)
+        discard_label = tk.Label(
+            top_container,
+            text="捨牌池: {}".format(format_tiles_chinese(discards)),
+            anchor=tk.W,
+        )
+        discard_label.pack(side=tk.LEFT, padx=12)
+
+        melds = hand.melds
+        meld_text = " ".join(meld_to_chinese(meld) for meld in melds) if melds else "(無)"
+        meld_label = tk.Label(
+            top_container,
+            text="我的副露: {}".format(meld_text),
+            anchor=tk.W,
+        )
+        meld_label.pack(side=tk.LEFT, padx=12)
+
+        bottom_container = tk.Frame(self.hand_frame)
+        bottom_container.pack(side=tk.TOP, anchor=tk.W)
+
+        tiles_container = tk.Frame(bottom_container)
+        tiles_container.pack(side=tk.LEFT, padx=4)
+
+        sorted_tiles = sorted(hand.tiles)
+        drawn_tile = None
+        if self.last_drawn_tile is not None:
+            for idx, tile in enumerate(sorted_tiles):
+                if tile == self.last_drawn_tile:
+                    drawn_tile = sorted_tiles.pop(idx)
+                    break
+
+        for tile in sorted_tiles:
             btn = tk.Button(
                 tiles_container,
                 text=tile_to_vertical_text(tile),
@@ -399,24 +430,23 @@ class MahjongDemoUI:
             )
             btn.pack(side=tk.LEFT, padx=3)
 
-        discards = self.engine.get_discards(self.human_player)
-        discard_label = tk.Label(
-            self.hand_frame,
-            text="捨牌池: {}".format(format_tiles_chinese(discards)),
-            anchor=tk.W,
-        )
-        discard_label.pack(side=tk.LEFT, padx=12)
+        if drawn_tile is not None:
+            btn = tk.Button(
+                tiles_container,
+                text=tile_to_vertical_text(drawn_tile),
+                width=2,
+                height=3,
+                font=("Helvetica", 12),
+                justify=tk.CENTER,
+                anchor=tk.CENTER,
+                relief=tk.RIDGE,
+                bd=3,
+                command=lambda t=drawn_tile: self.discard_tile(t),
+                state=tk.NORMAL if enable else tk.DISABLED,
+            )
+            btn.pack(side=tk.LEFT, padx=3)
 
-        melds = hand.melds
-        meld_text = " ".join(meld_to_chinese(meld) for meld in melds) if melds else "(無)"
-        meld_label = tk.Label(
-            self.hand_frame,
-            text="我的副露: {}".format(meld_text),
-            anchor=tk.W,
-        )
-        meld_label.pack(side=tk.LEFT, padx=12)
-
-        action_container = tk.Frame(self.hand_frame)
+        action_container = tk.Frame(bottom_container)
         action_container.pack(side=tk.LEFT, padx=8)
 
         if enable and self.engine.can_act(self.human_player, GameAction.ANKAN):
@@ -441,6 +471,8 @@ class MahjongDemoUI:
             )
             tsumo_btn.pack(side=tk.TOP, pady=2)
 
+        # discards/melds 已在上方顯示
+
     def refresh_opponents_ui(self) -> None:
         """更新其他玩家的捨牌與副露資訊。"""
 
@@ -460,8 +492,13 @@ class MahjongDemoUI:
             meld_text = " ".join(meld_to_chinese(meld) for meld in melds) if melds else "(無)"
             discards = self.engine.get_discards(player)
             discard_text = format_tiles_chinese(discards)
+            concealed_count = len(hand.tiles)
+            total_tiles = hand.total_tile_count()
 
-            info = f"玩家 {player} | 副露: {meld_text} | 捨牌: {discard_text}"
+            info = (
+                f"玩家 {player} | 手牌:{total_tiles} 張 (暗牌 {concealed_count}) | "
+                f"副露: {meld_text} | 捨牌: {discard_text}"
+            )
             label = tk.Label(frame, text=info, anchor=tk.W, justify=tk.LEFT)
             label.pack(fill=tk.X)
 
