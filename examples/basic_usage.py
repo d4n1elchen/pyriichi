@@ -84,8 +84,8 @@ def example_game_flow():
     # 摸牌
     current_player = engine.get_current_player()
     result = engine.execute_action(current_player, GameAction.DRAW)
-    if "drawn_tile" in result:
-        print(f"玩家 {current_player} 摸到: {result['drawn_tile']}")
+    if result.drawn_tile is not None:
+        print(f"玩家 {current_player} 摸到: {result.drawn_tile}")
 
     # 獲取手牌
     hand = engine.get_hand(current_player)

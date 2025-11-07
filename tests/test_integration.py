@@ -145,7 +145,7 @@ class TestCompleteGameFlow:
         for _ in range(3):
             # 摸牌
             result = engine.execute_action(current_player, GameAction.DRAW)
-            if "drawn_tile" in result:
+            if result.drawn_tile is not None:
                 hand = engine.get_hand(current_player)
                 # 打牌（打第一張）
                 if hand.tiles:
@@ -498,7 +498,9 @@ class TestErrorHandling:
             # 這個動作在正常流程中可能不允許，但應該被正確處理
             result = engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
             # 驗證不會崩潰
-            assert isinstance(result, dict) or result is None
+            from pyriichi.rules import ActionResult
+
+            assert isinstance(result, ActionResult) or result is None
 
     def test_edge_case_hand_combinations(self):
         """測試邊界情況的手牌組合"""

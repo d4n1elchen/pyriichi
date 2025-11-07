@@ -6,11 +6,12 @@
 
 from enum import Enum
 from typing import List, Optional, Dict, Any, Tuple
+from dataclasses import dataclass, field
 from pyriichi.tiles import Tile, TileSet, Suit
 from pyriichi.hand import Hand
 from pyriichi.game_state import GameState
-from pyriichi.yaku import YakuChecker
-from pyriichi.scoring import ScoreCalculator
+from pyriichi.yaku import YakuChecker, YakuResult
+from pyriichi.scoring import ScoreCalculator, ScoreResult
 
 
 class GameAction(Enum):
@@ -38,6 +39,50 @@ class GamePhase(Enum):
     WINNING = "winning"  # 和牌
     DRAW = "draw"  # 流局
     ENDED = "ended"  # 結束
+
+
+@dataclass
+class ActionResult:
+    """動作執行結果"""
+
+    drawn_tile: Optional[Tile] = None
+    is_last_tile: Optional[bool] = None
+    draw: Optional[bool] = None
+    draw_reason: Optional[str] = None
+    discarded: Optional[bool] = None
+    riichi: Optional[bool] = None
+    chankan: Optional[bool] = None
+    winners: List[int] = field(default_factory=list)
+    rinshan_tile: Optional[Tile] = None
+    kan: Optional[bool] = None
+    ankan: Optional[bool] = None
+    rinshan_win: Optional["WinResult"] = None
+
+
+@dataclass
+class WinResult:
+    """和牌結果"""
+
+    win: bool
+    player: int
+    yaku: List[YakuResult]
+    han: int
+    fu: int
+    points: int
+    score_result: ScoreResult
+    chankan: Optional[bool] = None
+    rinshan: Optional[bool] = None
+
+
+@dataclass
+class DrawResult:
+    """流局結果"""
+
+    draw: bool
+    draw_type: Optional[str] = None
+    flow_mangan_players: List[int] = field(default_factory=list)
+    kyuushu_kyuuhai: Optional[bool] = None
+    kyuushu_kyuuhai_player: Optional[int] = None
 
 
 class RuleEngine:
@@ -161,7 +206,7 @@ class RuleEngine:
 
         return False
 
-    def execute_action(self, player: int, action: GameAction, tile: Optional[Tile] = None, **kwargs) -> Dict[str, Any]:
+    def execute_action(self, player: int, action: GameAction, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
         """
         執行動作
 
@@ -177,7 +222,7 @@ class RuleEngine:
         if not self.can_act(player, action, tile, **kwargs):
             raise ValueError(f"玩家 {player} 不能執行動作 {action}")
 
-        result = {}
+        result = ActionResult()
 
         if action == GameAction.DRAW:
             if not self._tile_set:
@@ -185,14 +230,14 @@ class RuleEngine:
             drawn_tile = self._tile_set.draw()
             if drawn_tile:
                 self._hands[player].add_tile(drawn_tile)
-                result["drawn_tile"] = drawn_tile
+                result.drawn_tile = drawn_tile
                 # 檢查是否為最後一張牌（海底撈月）
                 if self._tile_set.is_exhausted():
-                    result["is_last_tile"] = True
+                    result.is_last_tile = True
             else:
                 # 流局
                 self._phase = GamePhase.DRAW
-                result["draw"] = True
+                result.draw = True
 
         elif action == GameAction.DISCARD:
             if tile is None:
@@ -219,13 +264,13 @@ class RuleEngine:
 
                 # 檢查是否為最後一張牌（河底撈魚）
                 if self._tile_set.is_exhausted():
-                    result["is_last_tile"] = True
+                    result.is_last_tile = True
 
                 self._current_player = (player + 1) % self._num_players
                 self._turn_count += 1
                 self._is_first_turn_after_deal = False
                 self._is_first_round = False
-                result["discarded"] = True
+                result.discarded = True
 
         elif action == GameAction.RICHI:
             self._hands[player].set_riichi(True)
@@ -233,7 +278,7 @@ class RuleEngine:
             self._game_state.update_score(player, -1000)
             # 記錄立直回合數
             self._riichi_turns[player] = 0
-            result["riichi"] = True
+            result.riichi = True
 
         elif action == GameAction.KAN:
             # 明槓：檢查是否有其他玩家可以搶槓
@@ -246,8 +291,8 @@ class RuleEngine:
 
             if chankan_winners:
                 # 有玩家搶槓，不執行槓，轉為和牌處理
-                result["chankan"] = True
-                result["winners"] = chankan_winners
+                result.chankan = True
+                result.winners = chankan_winners
                 self._pending_kan_tile = None
                 return result
 
@@ -260,20 +305,20 @@ class RuleEngine:
                 rinshan_tile = self._tile_set.draw_wall_tile()
                 if rinshan_tile:
                     self._hands[player].add_tile(rinshan_tile)
-                    result["rinshan_tile"] = rinshan_tile
-                    result["kan"] = True
+                    result.rinshan_tile = rinshan_tile
+                    result.kan = True
                     self._pending_kan_tile = None
 
                     # 檢查嶺上開花（槓後摸牌和牌）
                     rinshan_win = self.check_rinshan_win(player, rinshan_tile)
                     if rinshan_win:
-                        result["rinshan_win"] = rinshan_win
+                        result.rinshan_win = rinshan_win
                         self._phase = GamePhase.WINNING
                 else:
                     # 王牌區耗盡，流局
                     self._phase = GamePhase.DRAW
-                    result["draw"] = True
-                    result["draw_reason"] = "wall_exhausted"
+                    result.draw = True
+                    result.draw_reason = "wall_exhausted"
 
         elif action == GameAction.ANKAN:
             # 暗槓
@@ -285,25 +330,25 @@ class RuleEngine:
                 rinshan_tile = self._tile_set.draw_wall_tile()
                 if rinshan_tile:
                     self._hands[player].add_tile(rinshan_tile)
-                    result["rinshan_tile"] = rinshan_tile
-                    result["ankan"] = True
+                    result.rinshan_tile = rinshan_tile
+                    result.ankan = True
 
                     # 檢查嶺上開花（槓後摸牌和牌）
                     rinshan_win = self.check_rinshan_win(player, rinshan_tile)
                     if rinshan_win:
-                        result["rinshan_win"] = rinshan_win
+                        result.rinshan_win = rinshan_win
                         self._phase = GamePhase.WINNING
                 else:
                     # 王牌區耗盡，流局
                     self._phase = GamePhase.DRAW
-                    result["draw"] = True
-                    result["draw_reason"] = "wall_exhausted"
+                    result.draw = True
+                    result.draw_reason = "wall_exhausted"
 
         return result
 
     def check_win(
         self, player: int, winning_tile: Tile, is_chankan: bool = False, is_rinshan: bool = False
-    ) -> Optional[Dict[str, Any]]:
+    ) -> Optional[WinResult]:
         """
         檢查是否可以和牌
 
@@ -369,20 +414,17 @@ class RuleEngine:
             kan_player, _ = self._pending_kan_tile
             score_result.payment_from = kan_player
 
-        result = {
-            "win": True,
-            "player": player,
-            "yaku": yaku_results,
-            "han": score_result.han,
-            "fu": score_result.fu,
-            "points": score_result.total_points,
-            "score_result": score_result,
-        }
-
-        if is_chankan:
-            result["chankan"] = True
-        if is_rinshan:
-            result["rinshan"] = True
+        result = WinResult(
+            win=True,
+            player=player,
+            yaku=yaku_results,
+            han=score_result.han,
+            fu=score_result.fu,
+            points=score_result.total_points,
+            score_result=score_result,
+            chankan=is_chankan if is_chankan else None,
+            rinshan=is_rinshan if is_rinshan else None,
+        )
 
         return result
 
@@ -578,7 +620,7 @@ class RuleEngine:
             raise ValueError(f"玩家位置必須在 0-{self._num_players-1} 之間")
         return self._hands[player].discards
 
-    def handle_draw(self) -> Dict[str, Any]:
+    def handle_draw(self) -> DrawResult:
         """
         處理流局
 
@@ -587,19 +629,19 @@ class RuleEngine:
         """
         draw_type = self.check_draw()
         if not draw_type:
-            return {}
+            return DrawResult(draw=False)
 
-        result = {
-            "draw": True,
-            "draw_type": draw_type,
-            "flow_mangan_players": [],
-        }
+        result = DrawResult(
+            draw=True,
+            draw_type=draw_type,
+            flow_mangan_players=[],
+        )
 
         # 檢查流局滿貫
         if draw_type == "exhausted":
             for i in range(self._num_players):
                 if self.check_flow_mangan(i):
-                    result["flow_mangan_players"].append(i)
+                    result.flow_mangan_players.append(i)
                     # 流局滿貫：3000 點
                     self._game_state.update_score(i, 3000)
                     for j in range(self._num_players):
@@ -611,8 +653,8 @@ class RuleEngine:
         if self._is_first_turn_after_deal:
             for i in range(self._num_players):
                 if self.check_kyuushu_kyuuhai(i):
-                    result["kyuushu_kyuuhai"] = True
-                    result["kyuushu_kyuuhai_player"] = i
+                    result.kyuushu_kyuuhai = True
+                    result.kyuushu_kyuuhai_player = i
                     # 九種九牌流局時，莊家連莊
                     break
 
@@ -738,7 +780,7 @@ class RuleEngine:
         # 如果三個或以上玩家和牌，則為三家和了
         return len(winning_players) >= 3
 
-    def check_rinshan_win(self, player: int, rinshan_tile: Tile) -> Optional[Dict[str, Any]]:
+    def check_rinshan_win(self, player: int, rinshan_tile: Tile) -> Optional[WinResult]:
         """
         檢查嶺上開花（槓後摸牌和牌）
 

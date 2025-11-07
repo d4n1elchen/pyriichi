@@ -145,7 +145,9 @@ class TestRuleEngine:
         rinshan_tile = Tile(Suit.MANZU, 1)
         result = self.engine.check_rinshan_win(0, rinshan_tile)
         # 結果可能是和牌結果或 None
-        assert result is None or isinstance(result, dict)
+        from pyriichi.rules import WinResult
+
+        assert result is None or isinstance(result, WinResult)
 
     def test_check_win_chankan(self):
         """測試搶槓和檢查"""
@@ -186,12 +188,12 @@ class TestRuleEngine:
 
         # 如果可以和牌，應該有結果
         if result:
-            assert result["win"] == True
-            assert "chankan" in result
-            assert result["chankan"] == True
+            assert result.win == True
+            assert result.chankan is not None
+            assert result.chankan == True
             # 檢查支付者設置
-            if "score_result" in result:
-                score_result = result["score_result"]
+            if result.score_result:
+                score_result = result.score_result
                 assert score_result.payment_from == 0  # 槓牌玩家
 
     def test_check_win_rinshan(self):
@@ -230,9 +232,9 @@ class TestRuleEngine:
 
         # 如果可以和牌，應該有結果
         if result:
-            assert result["win"] == True
-            assert "rinshan" in result
-            assert result["rinshan"] == True
+            assert result.win == True
+            assert result.rinshan is not None
+            assert result.rinshan == True
 
     def test_handle_draw(self):
         """測試流局處理"""
@@ -241,8 +243,10 @@ class TestRuleEngine:
         self.engine.deal()
 
         # 測試流局處理方法
+        from pyriichi.rules import DrawResult
+
         result = self.engine.handle_draw()
-        assert isinstance(result, dict)
+        assert isinstance(result, DrawResult)
 
     def test_check_win_no_combinations(self):
         """測試 check_win 沒有和牌組合"""
@@ -650,9 +654,8 @@ class TestRuleEngine:
 
         # 處理流局
         result = self.engine.handle_draw()
-        assert "draw" in result
-        assert result["draw"] == True
-        assert "draw_type" in result
+        assert result.draw == True
+        assert result.draw_type is not None
 
     def test_handle_draw_kyuushu_kyuuhai(self):
         """測試九種九牌流局處理"""
@@ -687,8 +690,8 @@ class TestRuleEngine:
 
         # 處理流局
         result = self.engine.handle_draw()
-        if "kyuushu_kyuuhai" in result:
-            assert result["kyuushu_kyuuhai"] == True
+        if result.kyuushu_kyuuhai is not None:
+            assert result.kyuushu_kyuuhai == True
 
     def test_handle_draw_suucha_riichi(self):
         """測試全員聽牌流局處理"""
@@ -722,9 +725,8 @@ class TestRuleEngine:
 
         # 處理流局
         result = self.engine.handle_draw()
-        if result.get("draw_type") == "suucha_riichi":
-            assert "draw" in result
-            assert result["draw"] == True
+        if result.draw_type == "suucha_riichi":
+            assert result.draw == True
 
     def test_can_act_default_false(self):
         """測試 can_act 默認返回 False"""
@@ -829,8 +831,8 @@ class TestRuleEngine:
         result = self.engine.check_win(1, winning_tile)
         if result:
             # 檢查支付者設置
-            if "score_result" in result:
-                score_result = result["score_result"]
+            if result.score_result:
+                score_result = result.score_result
                 # 榮和時，支付者應該是放銃玩家
                 assert score_result.payment_from == 0  # 放銃玩家
 
@@ -893,8 +895,7 @@ class TestRuleEngine:
         # 如果可以立直，執行立直
         if self.engine.can_act(0, GameAction.RICHI):
             result = self.engine.execute_action(0, GameAction.RICHI)
-            assert "riichi" in result
-            assert result["riichi"] == True
+            assert result.riichi == True
             assert hand.is_riichi
             # 檢查立直回合數已記錄
             assert 0 in self.engine._riichi_turns
@@ -933,7 +934,7 @@ class TestRuleEngine:
                 # 正常打牌，檢查結果
                 result = self.engine.execute_action(0, GameAction.DISCARD, tile=tile)
                 # 可能包含 is_last_tile 標記
-                assert "discarded" in result or "is_last_tile" in result
+                assert result.discarded is not None or result.is_last_tile is not None
 
     def test_execute_action_draw_last_tile(self):
         """測試摸到最後一張牌（海底撈月）"""
@@ -947,7 +948,7 @@ class TestRuleEngine:
             # 摸牌
             result = self.engine.execute_action(0, GameAction.DRAW)
             # 可能包含 is_last_tile 標記
-            assert "drawn_tile" in result or "is_last_tile" in result or "draw" in result
+            assert result.drawn_tile is not None or result.is_last_tile is not None or result.draw is not None
 
     def test_execute_action_discard_history(self):
         """測試捨牌歷史記錄"""
@@ -1103,8 +1104,7 @@ class TestRuleEngine:
             # 現在牌組為空，執行 DRAW 動作，應該觸發流局分支（191-195行）
             result = self.engine.execute_action(current_player, GameAction.DRAW)
             # 應該有 draw 標記，表示流局
-            assert "draw" in result
-            assert result["draw"] == True
+            assert result.draw == True
             assert self.engine._phase == GamePhase.DRAW
 
     def test_execute_action_kan_chankan_detailed(self):
@@ -1160,9 +1160,9 @@ class TestRuleEngine:
         if self.engine.can_act(0, GameAction.KAN, tile=kan_tile):
             result = self.engine.execute_action(0, GameAction.KAN, tile=kan_tile)
             # 如果有搶槓，應該有 chankan 標記
-            if "chankan" in result:
-                assert result["chankan"] == True
-                assert "winners" in result
+            if result.chankan is not None:
+                assert result.chankan == True
+                assert result.winners is not None
 
     def test_execute_action_kan_rinshan_win_detailed(self):
         """測試明槓後嶺上開花（詳細測試）"""
@@ -1198,11 +1198,11 @@ class TestRuleEngine:
         if self.engine.can_act(0, GameAction.KAN, tile=kan_tile):
             result = self.engine.execute_action(0, GameAction.KAN, tile=kan_tile)
             # 檢查是否有 rinshan_tile
-            if "rinshan_tile" in result:
-                rinshan_tile = result["rinshan_tile"]
+            if result.rinshan_tile is not None:
+                rinshan_tile = result.rinshan_tile
                 # 檢查是否有嶺上開花（270-271行）
-                if "rinshan_win" in result:
-                    assert result["rinshan_win"] is not None
+                if result.rinshan_win is not None:
+                    assert result.rinshan_win is not None
 
     def test_execute_action_ankan_rinshan_win_detailed(self):
         """測試暗槓後嶺上開花（詳細測試）"""
@@ -1237,11 +1237,11 @@ class TestRuleEngine:
         if self.engine.can_act(0, GameAction.ANKAN):
             result = self.engine.execute_action(0, GameAction.ANKAN)
             # 檢查是否有 rinshan_tile（294-295行）
-            if "rinshan_tile" in result:
-                rinshan_tile = result["rinshan_tile"]
+            if result.rinshan_tile is not None:
+                rinshan_tile = result.rinshan_tile
                 # 檢查是否有嶺上開花
-                if "rinshan_win" in result:
-                    assert result["rinshan_win"] is not None
+                if result.rinshan_win is not None:
+                    assert result.rinshan_win is not None
 
     def test_check_win_payment_from_chankan(self):
         """測試搶槓和支付者設置"""
@@ -1279,12 +1279,12 @@ class TestRuleEngine:
         result = self.engine.check_win(1, kan_tile, is_chankan=True)
         if result:
             # 檢查支付者設置
-            if "score_result" in result:
-                score_result = result["score_result"]
+            if result.score_result is not None:
+                score_result = result.score_result
                 assert score_result.payment_from == 0  # 槓牌玩家
                 # 檢查 chankan 標記（383行）
-                assert "chankan" in result
-                assert result["chankan"] == True
+                assert result.chankan is not None
+                assert result.chankan == True
 
     def test_check_flow_mangan(self):
         """測試流局滿貫判定"""
@@ -1511,17 +1511,17 @@ class TestRuleEngine:
         if self.engine.can_act(0, GameAction.KAN, tile=kan_tile):
             result = self.engine.execute_action(0, GameAction.KAN, tile=kan_tile)
             # 如果有搶槓，應該有 chankan 標記
-            if "chankan" in result:
-                assert result["chankan"] == True
-                assert "winners" in result
-                assert len(result["winners"]) > 0
+            if result.chankan is not None:
+                assert result.chankan == True
+                assert result.winners is not None
+                assert len(result.winners) > 0
                 # 檢查搶槓和結果
-                if result["winners"]:
-                    winner = result["winners"][0]
+                if result.winners:
+                    winner = result.winners[0]
                     win_result = self.engine.check_win(winner, kan_tile, is_chankan=True)
                     if win_result:
-                        assert win_result["win"] == True
-                        assert win_result["chankan"] == True
+                        assert win_result.win == True
+                        assert win_result.chankan == True
 
     def test_execute_action_kan_rinshan_win(self):
         """測試明槓後嶺上開花"""
@@ -1581,8 +1581,8 @@ class TestRuleEngine:
                     result = self.engine.execute_action(0, GameAction.DISCARD, tile=tile)
                     # 如果牌組耗盡，應該有 is_last_tile 標記
                     # 注意：這可能不會發生，取決於牌組狀態
-                    if "is_last_tile" in result:
-                        assert result["is_last_tile"] == True
+                    if result.is_last_tile is not None:
+                        assert result.is_last_tile == True
 
     def test_can_act_unknown_action(self):
         """測試未知動作類型"""
@@ -1633,8 +1633,8 @@ class TestRuleEngine:
 
         # 如果牌組耗盡，應該有 is_last_tile 標記
         # 注意：這可能不會發生，取決於牌組狀態
-        if "is_last_tile" in result:
-            assert result["is_last_tile"] == True
+        if result.is_last_tile is not None:
+            assert result.is_last_tile == True
 
     def test_execute_action_draw_no_tile_drawn(self):
         """測試摸牌時無牌可摸"""
@@ -1653,7 +1653,7 @@ class TestRuleEngine:
         # 但我們可以測試邏輯：如果 drawn_tile 為 None，應該設置流局
 
         # 由於無法直接模擬 draw() 返回 None，我們測試其他情況
-        # 如果能夠觸發 else 分支，應該設置 _phase = DRAW 和 result["draw"] = True
+        # 如果能夠觸發 else 分支，應該設置 _phase = DRAW 和 result.draw = True
         pass  # 這個分支很難觸發，因為 draw() 通常會拋出異常而不是返回 None
 
     def test_execute_action_draw_draw_result(self):
@@ -1666,7 +1666,7 @@ class TestRuleEngine:
         result = self.engine.execute_action(current_player, GameAction.DRAW)
 
         # 檢查結果中是否有 drawn_tile 或 is_last_tile
-        assert "drawn_tile" in result or "is_last_tile" in result or "draw" in result
+        assert result.drawn_tile is not None or result.is_last_tile is not None or result.draw is not None
 
 
 if __name__ == "__main__":

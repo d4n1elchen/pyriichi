@@ -8,7 +8,8 @@
 
 ```python
 from enum import Enum
-from typing import Optional
+from typing import Optional, List
+from dataclasses import dataclass, field
 
 class Suit(Enum):
     """花色"""
@@ -687,6 +688,10 @@ class GameState:
 ```python
 from typing import List, Optional, Dict, Any
 from enum import Enum
+from dataclasses import dataclass, field
+from pyriichi.yaku import YakuResult
+from pyriichi.scoring import ScoreResult
+from pyriichi.tiles import Tile
 
 class GameAction(Enum):
     """遊戲動作"""
@@ -710,6 +715,44 @@ class GamePhase(Enum):
     WINNING = "winning"    # 和牌
     DRAW = "draw"          # 流局
     ENDED = "ended"        # 結束
+
+@dataclass
+class ActionResult:
+    """動作執行結果"""
+    drawn_tile: Optional[Tile] = None
+    is_last_tile: Optional[bool] = None
+    draw: Optional[bool] = None
+    draw_reason: Optional[str] = None
+    discarded: Optional[bool] = None
+    riichi: Optional[bool] = None
+    chankan: Optional[bool] = None
+    winners: List[int] = field(default_factory=list)
+    rinshan_tile: Optional[Tile] = None
+    kan: Optional[bool] = None
+    ankan: Optional[bool] = None
+    rinshan_win: Optional["WinResult"] = None
+
+@dataclass
+class WinResult:
+    """和牌結果"""
+    win: bool
+    player: int
+    yaku: List[YakuResult]
+    han: int
+    fu: int
+    points: int
+    score_result: ScoreResult
+    chankan: Optional[bool] = None
+    rinshan: Optional[bool] = None
+
+@dataclass
+class DrawResult:
+    """流局結果"""
+    draw: bool
+    draw_type: Optional[str] = None
+    flow_mangan_players: List[int] = field(default_factory=list)
+    kyuushu_kyuuhai: Optional[bool] = None
+    kyuushu_kyuuhai_player: Optional[int] = None
 
 class RuleEngine:
     """規則引擎"""
@@ -765,7 +808,7 @@ class RuleEngine:
         pass
 
     def execute_action(self, player: int, action: GameAction,
-                      tile: Optional[Tile] = None, **kwargs) -> Dict[str, Any]:
+                      tile: Optional[Tile] = None, **kwargs) -> ActionResult:
         """
         執行動作
 
@@ -780,7 +823,7 @@ class RuleEngine:
         """
         pass
 
-    def check_win(self, player: int, winning_tile: Tile) -> Optional[Dict[str, Any]]:
+    def check_win(self, player: int, winning_tile: Tile, is_chankan: bool = False, is_rinshan: bool = False) -> Optional[WinResult]:
         """
         檢查是否可以和牌
 
@@ -883,6 +926,6 @@ engine.execute_action(0, GameAction.DISCARD, tile=player_hand.tiles[0])
 # 檢查和牌
 winning_result = engine.check_win(0, winning_tile)
 if winning_result:
-    print(f"和牌！翻數: {winning_result['han']}, 符數: {winning_result['fu']}")
-    print(f"得分: {winning_result['points']}")
+    print(f"和牌！翻數: {winning_result.han}, 符數: {winning_result.fu}")
+    print(f"得分: {winning_result.points}")
 ```

@@ -127,8 +127,8 @@ engine.deal()
 # 摸牌
 current_player = engine.get_current_player()
 result = engine.execute_action(current_player, GameAction.DRAW)
-if "drawn_tile" in result:
-    print(f"摸到: {result['drawn_tile']}")
+if result.drawn_tile is not None:
+    print(f"摸到: {result.drawn_tile}")
 
 # 打牌
 hand = engine.get_hand(current_player)
@@ -139,8 +139,8 @@ if hand.tiles:
 # 檢查和牌
 winning_result = engine.check_win(current_player, winning_tile)
 if winning_result:
-    print(f"和牌！翻數: {winning_result['han']}, 符數: {winning_result['fu']}")
-    print(f"得分: {winning_result['points']}")
+    print(f"和牌！翻數: {winning_result.han}, 符數: {winning_result.fu}")
+    print(f"得分: {winning_result.points}")
 ```
 
 ### 手牌操作
@@ -379,21 +379,21 @@ while engine.get_phase() == GamePhase.PLAYING and turn_count < max_turns:
 
     # 摸牌
     result = engine.execute_action(current_player, GameAction.DRAW)
-    if "draw" in result:
+    if result.draw:
         # 流局
         print("流局")
         break
 
     hand = engine.get_hand(current_player)
-    drawn_tile = result.get("drawn_tile")
+    drawn_tile = result.drawn_tile
 
     # 檢查和牌（自摸）
     if drawn_tile:
         win_result = engine.check_win(current_player, drawn_tile)
         if win_result:
             print(f"玩家 {current_player} 自摸！")
-            print(f"翻數: {win_result['han']}, 符數: {win_result['fu']}")
-            print(f"得分: {win_result['points']}")
+            print(f"翻數: {win_result.han}, 符數: {win_result.fu}")
+            print(f"得分: {win_result.points}")
             break
 
     # 檢查是否可以立直
