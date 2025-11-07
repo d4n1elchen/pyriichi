@@ -118,6 +118,16 @@ class Hand:
         except ValueError:
             return False
 
+    def remove_last_discard(self, tile: Tile) -> None:
+        """移除最後一張捨牌（鳴牌時取回）。"""
+
+        if not self._discards:
+            raise ValueError("沒有可移除的捨牌")
+        last_tile = self._discards[-1]
+        if last_tile != tile:
+            raise ValueError("最後一張捨牌與指定牌不符")
+        self._discards.pop()
+
     def can_chi(self, tile: Tile, from_player: int) -> List[List[Tile]]:
         """
         檢查是否可以吃

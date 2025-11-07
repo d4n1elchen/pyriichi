@@ -236,6 +236,168 @@ class TestRuleEngine:
             assert result.rinshan is not None
             assert result.rinshan == True
 
+    def test_pon_action_claims_last_discard(self):
+        """測試碰牌會取得最後捨牌並改變輪到的玩家。"""
+
+        from pyriichi.hand import Hand
+
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine.deal()
+
+        tile_to_discard = Tile(Suit.MANZU, 3)
+
+        self.engine._hands[0] = Hand(
+            [
+                tile_to_discard,
+                Tile(Suit.MANZU, 1),
+                Tile(Suit.MANZU, 5),
+                Tile(Suit.MANZU, 6),
+                Tile(Suit.MANZU, 7),
+                Tile(Suit.MANZU, 8),
+                Tile(Suit.MANZU, 9),
+                Tile(Suit.PINZU, 1),
+                Tile(Suit.PINZU, 2),
+                Tile(Suit.PINZU, 3),
+                Tile(Suit.PINZU, 4),
+                Tile(Suit.SOZU, 1),
+                Tile(Suit.SOZU, 2),
+                Tile(Suit.SOZU, 3),
+            ]
+        )
+
+        self.engine._hands[1] = Hand(
+            [
+                Tile(Suit.MANZU, 3),
+                Tile(Suit.MANZU, 3),
+                Tile(Suit.PINZU, 5),
+                Tile(Suit.PINZU, 6),
+                Tile(Suit.PINZU, 7),
+                Tile(Suit.PINZU, 8),
+                Tile(Suit.PINZU, 9),
+                Tile(Suit.SOZU, 4),
+                Tile(Suit.SOZU, 5),
+                Tile(Suit.SOZU, 6),
+                Tile(Suit.SOZU, 7),
+                Tile(Suit.SOZU, 8),
+                Tile(Suit.SOZU, 9),
+            ]
+        )
+
+        self.engine._current_player = 0
+        discard_before = len(self.engine.get_discards(0))
+
+        discard_result = self.engine.execute_action(0, GameAction.DISCARD, tile=tile_to_discard)
+        assert discard_result.discarded is True
+        assert self.engine.get_last_discard() == tile_to_discard
+        assert self.engine.get_last_discard_player() == 0
+        assert self.engine.can_act(1, GameAction.PON) is True
+
+        pon_result = self.engine.execute_action(1, GameAction.PON)
+
+        assert pon_result.called_action == GameAction.PON
+        assert pon_result.meld is not None
+        assert tile_to_discard in pon_result.meld.tiles
+        assert len(self.engine.get_hand(1).melds) == 1
+        assert len(self.engine.get_discards(0)) == discard_before
+        assert self.engine.get_last_discard() is None
+        assert self.engine.get_last_discard_player() is None
+        assert self.engine.get_current_player() == 1
+
+    def test_chi_action_uses_sequence_and_resets_turn(self):
+        """測試吃牌會使用指定順子並更新遊戲狀態。"""
+
+        from pyriichi.hand import Hand
+
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine.deal()
+
+        tile_to_discard = Tile(Suit.MANZU, 4)
+
+        self.engine._hands[0] = Hand(
+            [
+                tile_to_discard,
+                Tile(Suit.MANZU, 7),
+                Tile(Suit.MANZU, 8),
+                Tile(Suit.MANZU, 9),
+                Tile(Suit.PINZU, 1),
+                Tile(Suit.PINZU, 2),
+                Tile(Suit.PINZU, 3),
+                Tile(Suit.PINZU, 4),
+                Tile(Suit.PINZU, 5),
+                Tile(Suit.SOZU, 1),
+                Tile(Suit.SOZU, 2),
+                Tile(Suit.SOZU, 3),
+                Tile(Suit.SOZU, 4),
+                Tile(Suit.SOZU, 5),
+            ]
+        )
+
+        self.engine._hands[1] = Hand(
+            [
+                Tile(Suit.MANZU, 2),
+                Tile(Suit.MANZU, 3),
+                Tile(Suit.MANZU, 5),
+                Tile(Suit.MANZU, 6),
+                Tile(Suit.PINZU, 6),
+                Tile(Suit.PINZU, 7),
+                Tile(Suit.PINZU, 8),
+                Tile(Suit.PINZU, 9),
+                Tile(Suit.SOZU, 6),
+                Tile(Suit.SOZU, 7),
+                Tile(Suit.SOZU, 8),
+                Tile(Suit.SOZU, 9),
+                Tile(Suit.SOZU, 5),
+            ]
+        )
+
+        self.engine._hands[2] = Hand(
+            [
+                Tile(Suit.MANZU, 1),
+                Tile(Suit.MANZU, 1),
+                Tile(Suit.PINZU, 1),
+                Tile(Suit.PINZU, 1),
+                Tile(Suit.SOZU, 1),
+                Tile(Suit.SOZU, 1),
+                Tile(Suit.SOZU, 2),
+                Tile(Suit.SOZU, 3),
+                Tile(Suit.SOZU, 4),
+                Tile(Suit.SOZU, 5),
+                Tile(Suit.SOZU, 6),
+                Tile(Suit.SOZU, 7),
+                Tile(Suit.SOZU, 8),
+            ]
+        )
+
+        self.engine._current_player = 0
+        self.engine.execute_action(0, GameAction.DISCARD, tile=tile_to_discard)
+
+        assert self.engine.can_act(1, GameAction.CHI) is True
+        assert self.engine.can_act(2, GameAction.CHI) is False
+
+        sequences = self.engine.get_available_chi_sequences(1)
+        assert sequences
+
+        target_sequence = None
+        for seq in sequences:
+            ranks = sorted(tile.rank for tile in seq)
+            if ranks == [2, 3]:
+                target_sequence = seq
+                break
+
+        assert target_sequence is not None
+
+        chi_result = self.engine.execute_action(1, GameAction.CHI, sequence=target_sequence)
+
+        assert chi_result.called_action == GameAction.CHI
+        assert chi_result.called_tile == tile_to_discard
+        assert chi_result.meld is not None
+        assert len(self.engine.get_hand(1).melds) == 1
+        assert self.engine.get_last_discard() is None
+        assert self.engine.get_last_discard_player() is None
+        assert self.engine.get_current_player() == 1
+
     def test_handle_draw(self):
         """測試流局處理"""
         self.engine.start_game()

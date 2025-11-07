@@ -8,7 +8,7 @@ from enum import Enum
 from typing import List, Optional, Dict, Any, Tuple
 from dataclasses import dataclass, field
 from pyriichi.tiles import Tile, TileSet, Suit
-from pyriichi.hand import Hand
+from pyriichi.hand import Hand, Meld
 from pyriichi.game_state import GameState
 from pyriichi.yaku import YakuChecker, YakuResult
 from pyriichi.scoring import ScoreCalculator, ScoreResult
@@ -57,6 +57,9 @@ class ActionResult:
     kan: Optional[bool] = None
     ankan: Optional[bool] = None
     rinshan_win: Optional["WinResult"] = None
+    meld: Optional[Meld] = None
+    called_action: Optional[GameAction] = None
+    called_tile: Optional[Tile] = None
 
 
 @dataclass
@@ -185,7 +188,28 @@ class RuleEngine:
             return False
 
         if action == GameAction.DRAW:
-            return player == self._current_player
+            if player != self._current_player:
+                return False
+            if not (0 <= player < len(self._hands)):
+                return False
+            return len(self._hands[player].tiles) < 14
+
+        if action == GameAction.PON:
+            if self._last_discarded_tile is None or self._last_discarded_player is None:
+                return False
+            if player == self._last_discarded_player:
+                return False
+            hand = self._hands[player]
+            return hand.can_pon(self._last_discarded_tile)
+
+        if action == GameAction.CHI:
+            if self._last_discarded_tile is None or self._last_discarded_player is None:
+                return False
+            if (player - self._last_discarded_player) % self._num_players != 1:
+                return False  # 只能吃上家
+            hand = self._hands[player]
+            sequences = hand.can_chi(self._last_discarded_tile, from_player=0)
+            return len(sequences) > 0
 
         if action == GameAction.DISCARD:
             return player == self._current_player and tile is not None
@@ -197,6 +221,9 @@ class RuleEngine:
         if action == GameAction.KAN:
             if tile is None:
                 return False
+            if self._last_discarded_tile is not None and tile == self._last_discarded_tile:
+                if player == self._last_discarded_player:
+                    return False
             hand = self._hands[player]
             return len(hand.can_kan(tile)) > 0
 
@@ -227,9 +254,12 @@ class RuleEngine:
         if action == GameAction.DRAW:
             if not self._tile_set:
                 raise ValueError("牌組未初始化")
+            hand = self._hands[player]
+            if len(hand.tiles) >= 14:
+                raise ValueError("手牌已達 14 張，不能再摸牌")
             drawn_tile = self._tile_set.draw()
             if drawn_tile:
-                self._hands[player].add_tile(drawn_tile)
+                hand.add_tile(drawn_tile)
                 result.drawn_tile = drawn_tile
                 # 檢查是否為最後一張牌（海底撈月）
                 if self._tile_set.is_exhausted():
@@ -271,6 +301,66 @@ class RuleEngine:
                 self._is_first_turn_after_deal = False
                 self._is_first_round = False
                 result.discarded = True
+
+        elif action == GameAction.PON:
+            if self._last_discarded_tile is None or self._last_discarded_player is None:
+                raise ValueError("沒有可碰的捨牌")
+            if player == self._last_discarded_player:
+                raise ValueError("不能碰自己打出的牌")
+
+            tile_to_claim = self._last_discarded_tile
+            hand = self._hands[player]
+            if not hand.can_pon(tile_to_claim):
+                raise ValueError("手牌無法碰這張牌")
+
+            discarder = self._last_discarded_player
+            self._hands[discarder].remove_last_discard(tile_to_claim)
+            if self._discard_history and self._discard_history[-1] == (discarder, tile_to_claim):
+                self._discard_history.pop()
+
+            meld = hand.pon(tile_to_claim)
+            result.meld = meld
+            result.called_action = GameAction.PON
+            result.called_tile = tile_to_claim
+
+            self._current_player = player
+            self._last_discarded_tile = None
+            self._last_discarded_player = None
+            self._is_first_turn_after_deal = False
+
+        elif action == GameAction.CHI:
+            if self._last_discarded_tile is None or self._last_discarded_player is None:
+                raise ValueError("沒有可吃的捨牌")
+            if (player - self._last_discarded_player) % self._num_players != 1:
+                raise ValueError("只能吃上家的牌")
+
+            tile_to_claim = self._last_discarded_tile
+            hand = self._hands[player]
+            sequences = hand.can_chi(tile_to_claim, from_player=0)
+            if not sequences:
+                raise ValueError("手牌無法吃這張牌")
+
+            sequence = kwargs.get("sequence")
+            if sequence is None:
+                sequence = sequences[0]
+            else:
+                if sequence not in sequences:
+                    raise ValueError("提供的順子無效")
+
+            discarder = self._last_discarded_player
+            self._hands[discarder].remove_last_discard(tile_to_claim)
+            if self._discard_history and self._discard_history[-1] == (discarder, tile_to_claim):
+                self._discard_history.pop()
+
+            meld = hand.chi(tile_to_claim, sequence)
+            result.meld = meld
+            result.called_action = GameAction.CHI
+            result.called_tile = tile_to_claim
+
+            self._current_player = player
+            self._last_discarded_tile = None
+            self._last_discarded_player = None
+            self._is_first_turn_after_deal = False
 
         elif action == GameAction.RICHI:
             self._hands[player].set_riichi(True)
@@ -619,6 +709,28 @@ class RuleEngine:
         if not (0 <= player < self._num_players):
             raise ValueError(f"玩家位置必須在 0-{self._num_players-1} 之間")
         return self._hands[player].discards
+
+    def get_last_discard(self) -> Optional[Tile]:
+        """取得最新的捨牌（尚未被處理）。"""
+        return self._last_discarded_tile
+
+    def get_last_discard_player(self) -> Optional[int]:
+        """取得最後捨牌的玩家。"""
+        return self._last_discarded_player
+
+    def get_num_players(self) -> int:
+        """取得玩家數量。"""
+        return self._num_players
+
+    def get_available_chi_sequences(self, player: int) -> List[List[Tile]]:
+        """取得玩家可用的吃牌組合（僅限上家捨牌）。"""
+
+        if self._last_discarded_tile is None or self._last_discarded_player is None:
+            return []
+        if (player - self._last_discarded_player) % self._num_players != 1:
+            return []
+        hand = self._hands[player]
+        return [seq.copy() for seq in hand.can_chi(self._last_discarded_tile, from_player=0)]
 
     def handle_draw(self) -> DrawResult:
         """
