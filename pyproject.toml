@@ -41,10 +41,10 @@ test = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/pyriichi"
-Documentation = "https://github.com/yourusername/pyriichi#readme"
-"Bug Reports" = "https://github.com/yourusername/pyriichi/issues"
-Source = "https://github.com/yourusername/pyriichi"
+Homepage = "https://github.com/d4n1elchen/pyriichi"
+Documentation = "https://github.com/d4n1elchen/pyriichi#readme"
+"Bug Reports" = "https://github.com/d4n1elchen/pyriichi/issues"
+Source = "https://github.com/d4n1elchen/pyriichi"
 
 [tool.setuptools]
 packages = ["pyriichi"]

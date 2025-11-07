@@ -16,6 +16,15 @@
 - ⚙️ **規則配置** - 支援標準競技規則和自定義規則配置
 - 🔧 **易於整合** - 清晰的 API 設計，易於整合到其他應用程式
 
+## 專案資訊
+
+- **專案狀態**：Development Status :: 3 - Alpha
+- **支援關鍵字**：mahjong、riichi、japanese、game、engine
+- **首頁**：<https://github.com/d4n1elchen/pyriichi>
+- **文件**：<https://github.com/d4n1elchen/pyriichi#readme>
+- **問題回報**：<https://github.com/d4n1elchen/pyriichi/issues>
+- **原始碼**：<https://github.com/d4n1elchen/pyriichi>
+
 ## 安裝
 
 ```bash
@@ -25,7 +34,7 @@ pip install pyriichi
 或從源碼安裝：
 
 ```bash
-git clone https://github.com/yourusername/pyriichi.git
+git clone https://github.com/d4n1elchen/pyriichi.git
 cd pyriichi
 pip install -e .
 ```
@@ -478,16 +487,24 @@ print("遊戲結束")
 
 ## 系統需求
 
-- Python 3.8 或更高版本
-- 無其他外部依賴（核心功能）
+- Python 3.8 至 3.12（官方支援版本）
+- 核心功能無其他外部依賴
+
+## 開發與測試
+
+- 建議於虛擬環境中安裝專案依賴
+- 安裝完整開發工具：`pip install ".[dev]"`
+  - 內容包含：pytest>=7.0.0、pytest-cov>=4.0.0、black>=23.0.0、flake8>=6.0.0、mypy>=1.0.0
+- 僅安裝測試工具：`pip install ".[test]"`
+  - 內容包含：pytest>=7.0.0、pytest-cov>=4.0.0
 
 ## 貢獻
 
-歡迎提交 Issue 和 Pull Request！
+歡迎透過 Issue 與 Pull Request 參與開發，並於 `dev`/`test` 額外依賴協助維護測試品質。
 
 ## 授權
 
-[待定]
+本專案採用 MIT 授權條款，詳見 `LICENSE`。
 
 ## 相關資源
 
