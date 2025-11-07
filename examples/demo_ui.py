@@ -14,7 +14,7 @@ import tkinter as tk
 from typing import Iterable, Optional
 
 from pyriichi.hand import Meld
-from pyriichi.rules import GameAction, GamePhase, RuleEngine
+from pyriichi.rules import GameAction, GamePhase, RuleEngine, WinResult
 from pyriichi.tiles import Tile, Suit
 
 
@@ -68,6 +68,13 @@ def tile_to_chinese(tile: Tile) -> str:
     return prefix + numeral + suit
 
 
+def tile_to_vertical_text(tile: Tile) -> str:
+    """將牌轉換為垂直顯示的文字。"""
+
+    text = tile_to_chinese(tile)
+    return "\n".join(text)
+
+
 def format_tiles_chinese(tiles: Iterable[Tile]) -> str:
     """將多張牌格式化為中文字串。"""
 
@@ -95,6 +102,9 @@ class MahjongDemoUI:
 
         self.root = tk.Tk()
         self.root.title("PyRiichi Demo UI")
+
+        self.last_drawn_tile: Optional[Tile] = None
+        self._cached_tsumo_result: Optional[WinResult] = None
 
         self.info_label = tk.Label(self.root, text="初始化中...")
         self.info_label.pack(pady=8)
@@ -140,6 +150,8 @@ class MahjongDemoUI:
         self.engine.start_round()
         hands = self.engine.deal()
 
+        self.last_drawn_tile = None
+        self._cached_tsumo_result = None
         self.clear_reaction_options()
         self.log("新的一局開始！莊家為玩家 {}".format(self.engine.get_game_state().dealer))
         self.log("你的起始手牌: {}".format(format_tiles_chinese(hands[self.human_player])))
@@ -181,6 +193,7 @@ class MahjongDemoUI:
             # 若無法自動摸牌，恢復玩家手動操作
             self.refresh_hand_ui(enable=True)
             self.update_controls()
+            self._cached_tsumo_result = None
 
     def end_round_if_needed(self, extra_message: Optional[str] = None) -> None:
         """若遊戲階段已經結束，停用操作並顯示訊息。"""
@@ -222,15 +235,21 @@ class MahjongDemoUI:
         result = self.engine.execute_action(self.human_player, GameAction.DRAW)
         if result.draw:
             self.log("牌山耗盡，流局！")
+            self.last_drawn_tile = None
+            self._cached_tsumo_result = None
             self.end_round_if_needed()
             return
 
         if result.drawn_tile is not None:
             self.log("你摸到了 {}".format(tile_to_chinese(result.drawn_tile)))
+            self.last_drawn_tile = result.drawn_tile
+        else:
+            self.last_drawn_tile = None
 
         if result.is_last_tile:
             self.log("這是海底最後一張牌。")
 
+        self._cached_tsumo_result = None
         self.refresh_ui()
 
     def discard_tile(self, tile) -> None:
@@ -242,6 +261,9 @@ class MahjongDemoUI:
 
         self.engine.execute_action(self.human_player, GameAction.DISCARD, tile=tile)
         self.log("你打出了 {}".format(tile_to_chinese(tile)))
+
+        self.last_drawn_tile = None
+        self._cached_tsumo_result = None
 
         self.refresh_ui()
         if not self.handle_reactions():
@@ -271,7 +293,7 @@ class MahjongDemoUI:
                 self.end_round_if_needed()
                 return
             if result.drawn_tile is not None:
-                self.log("玩家 {} 摸到了 {}".format(player, tile_to_chinese(result.drawn_tile)))
+                self.log("玩家 {} 摸牌".format(player))
             if result.is_last_tile:
                 self.log("玩家 {} 摸到了最後一張牌。".format(player))
 
@@ -357,16 +379,25 @@ class MahjongDemoUI:
         for widget in self.hand_frame.winfo_children():
             widget.destroy()
 
+        tiles_container = tk.Frame(self.hand_frame)
+        tiles_container.pack(side=tk.LEFT, padx=4)
+
         hand = self.engine.get_hand(self.human_player)
         for tile in hand.tiles:
             btn = tk.Button(
-                self.hand_frame,
-                text=tile_to_chinese(tile),
-                width=4,
+                tiles_container,
+                text=tile_to_vertical_text(tile),
+                width=2,
+                height=3,
+                font=("Helvetica", 12),
+                justify=tk.CENTER,
+                anchor=tk.CENTER,
+                relief=tk.RIDGE,
+                bd=3,
                 command=lambda t=tile: self.discard_tile(t),
                 state=tk.NORMAL if enable else tk.DISABLED,
             )
-            btn.pack(side=tk.LEFT, padx=2)
+            btn.pack(side=tk.LEFT, padx=3)
 
         discards = self.engine.get_discards(self.human_player)
         discard_label = tk.Label(
@@ -375,6 +406,40 @@ class MahjongDemoUI:
             anchor=tk.W,
         )
         discard_label.pack(side=tk.LEFT, padx=12)
+
+        melds = hand.melds
+        meld_text = " ".join(meld_to_chinese(meld) for meld in melds) if melds else "(無)"
+        meld_label = tk.Label(
+            self.hand_frame,
+            text="我的副露: {}".format(meld_text),
+            anchor=tk.W,
+        )
+        meld_label.pack(side=tk.LEFT, padx=12)
+
+        action_container = tk.Frame(self.hand_frame)
+        action_container.pack(side=tk.LEFT, padx=8)
+
+        if enable and self.engine.can_act(self.human_player, GameAction.ANKAN):
+            ankan_btn = tk.Button(
+                action_container,
+                text="暗槓",
+                command=self.perform_ankan,
+            )
+            ankan_btn.pack(side=tk.TOP, pady=2)
+
+        tsumo_result = None
+        if enable and self.engine.get_phase() == GamePhase.PLAYING and self.last_drawn_tile is not None:
+            tsumo_result = self._compute_win_result(self.human_player, self.last_drawn_tile, remove_tile=True)
+
+        self._cached_tsumo_result = tsumo_result
+
+        if enable and tsumo_result is not None:
+            tsumo_btn = tk.Button(
+                action_container,
+                text="自摸",
+                command=self.perform_tsumo,
+            )
+            tsumo_btn.pack(side=tk.TOP, pady=2)
 
     def refresh_opponents_ui(self) -> None:
         """更新其他玩家的捨牌與副露資訊。"""
@@ -452,11 +517,19 @@ class MahjongDemoUI:
         if action == GameAction.PON:
             self.engine.execute_action(self.human_player, GameAction.PON)
             self.log("你碰了 {}".format(tile_label))
+            self.last_drawn_tile = None
+            self._cached_tsumo_result = None
         elif action == GameAction.CHI:
             sequence = option["sequence"]
             self.engine.execute_action(self.human_player, GameAction.CHI, sequence=sequence)
             combination = option.get("combination") or (sequence + [tile])
             self.log("你吃了 {} ({})".format(tile_label, format_tiles_chinese(combination)))
+            self.last_drawn_tile = None
+            self._cached_tsumo_result = None
+        elif action == GameAction.RON:
+            win_result = option.get("win_result")
+            self.perform_ron(tile, win_result)
+            return
 
         self.clear_reaction_options()
         self.refresh_ui()
@@ -481,7 +554,126 @@ class MahjongDemoUI:
                     }
                 )
 
+        ron_result = self._compute_win_result(self.human_player, last_tile, remove_tile=False)
+        if ron_result is not None:
+            options.insert(
+                0,
+                {
+                    "action": GameAction.RON,
+                    "label": f"榮 {tile_label}",
+                    "win_result": ron_result,
+                },
+            )
+
         return options
+
+    def perform_ankan(self) -> None:
+        if not self.engine.can_act(self.human_player, GameAction.ANKAN):
+            self.log("目前無法暗槓。")
+            return
+
+        result = self.engine.execute_action(self.human_player, GameAction.ANKAN)
+        self.log("你暗槓了。")
+        self.last_drawn_tile = result.rinshan_tile
+        self._cached_tsumo_result = None
+        if result.rinshan_tile is not None:
+            self.log("你嶺上摸到 {}".format(tile_to_chinese(result.rinshan_tile)))
+
+        self.refresh_ui()
+        self.schedule_next_turn()
+
+    def perform_tsumo(self) -> None:
+        if self.last_drawn_tile is None:
+            self.log("目前無自摸機會。")
+            return
+
+        win_result = self._cached_tsumo_result or self._compute_win_result(
+            self.human_player, self.last_drawn_tile, remove_tile=True
+        )
+        if win_result is None:
+            self.log("目前無法自摸。")
+            self._cached_tsumo_result = None
+            self.refresh_ui()
+            return
+
+        tile_label = tile_to_chinese(self.last_drawn_tile)
+        self._finalize_win(win_result, method_label="自摸", tile_label=tile_label)
+
+    def perform_ron(self, tile: Tile, win_result: Optional[WinResult]) -> None:
+        result = win_result or self._compute_win_result(self.human_player, tile, remove_tile=False)
+        if result is None:
+            next_offset = 1
+            if self.pending_reaction:
+                next_offset = self.pending_reaction.get("next_offset", 1)
+            self.log("目前無法榮和。")
+            self.clear_reaction_options()
+            if not self.handle_reactions(start_offset=next_offset):
+                self.schedule_next_turn()
+            return
+
+        tile_label = tile_to_chinese(tile)
+        self._finalize_win(result, method_label="榮和", tile_label=tile_label)
+
+    def _compute_win_result(self, player: int, tile: Tile, remove_tile: bool) -> Optional[WinResult]:
+        hand = self.engine.get_hand(player)
+        removed = False
+
+        if remove_tile:
+            for idx, t in enumerate(getattr(hand, "_tiles", [])):
+                if t == tile:
+                    hand._tiles.pop(idx)  # type: ignore[attr-defined]
+                    hand._tile_counts_cache = None  # type: ignore[attr-defined]
+                    removed = True
+                    break
+            if not removed:
+                return None
+
+        try:
+            return self.engine.check_win(player, tile)
+        finally:
+            if remove_tile and removed:
+                hand._tiles.append(tile)  # type: ignore[attr-defined]
+                hand._tiles.sort()  # type: ignore[attr-defined]
+                hand._tile_counts_cache = None  # type: ignore[attr-defined]
+
+    def _finalize_win(self, win_result: WinResult, method_label: str, tile_label: Optional[str]) -> None:
+        message = f"你{method_label}!"
+        if tile_label:
+            message = f"你{method_label} {tile_label}!"
+        self.log(message)
+
+        self._log_win_result(win_result)
+
+        self.engine._phase = GamePhase.WINNING  # type: ignore[attr-defined]
+        self.engine._last_discarded_tile = None  # type: ignore[attr-defined]
+        self.engine._last_discarded_player = None  # type: ignore[attr-defined]
+
+        self.last_drawn_tile = None
+        self._cached_tsumo_result = None
+
+        self.clear_reaction_options()
+        self.engine.end_round(winner=self.human_player)
+        self.refresh_ui()
+        self.update_controls()
+
+    def _log_win_result(self, win_result: WinResult) -> None:
+        if win_result.yaku:
+            self.log("役種:")
+            for yaku in win_result.yaku:
+                name = getattr(yaku, "name_cn", None) or getattr(yaku, "name", "")
+                self.log(f"  - {name} ({yaku.han} 翻)")
+
+        score = win_result.score_result
+        if score:
+            self.log(f"翻數: {score.han} | 符數: {score.fu} | 總點數: {score.total_points}")
+            if score.is_tsumo:
+                if score.dealer_payment:
+                    self.log(f"莊家支付: {score.dealer_payment}")
+                if score.non_dealer_payment:
+                    self.log(f"閒家支付: {score.non_dealer_payment}")
+            else:
+                if score.payment_from is not None:
+                    self.log(f"放銃玩家: {score.payment_from}")
 
     def update_controls(self) -> None:
         """依遊戲狀態更新功能按鈕。"""
@@ -505,6 +697,9 @@ class MahjongDemoUI:
             f"局風: {game_state.round_wind.name} | 局數: {game_state.round_number} | "
             f"莊家: {game_state.dealer} | 當前玩家: {current} | 階段: {phase.value}"
         )
+        tile_set = getattr(self.engine, "_tile_set", None)
+        if tile_set:
+            info += f" | 牌山剩餘: {tile_set.remaining}"
         self.info_label.config(text=info)
 
     # ------------------------------------------------------------------
