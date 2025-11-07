@@ -175,7 +175,7 @@ class MahjongDemoUI:
             return
 
         hand = self.engine.get_hand(self.human_player)
-        if len(hand.tiles) < 14 and self.engine.can_act(self.human_player, GameAction.DRAW):
+        if hand.total_tile_count() < 14 and self.engine.can_act(self.human_player, GameAction.DRAW):
             self.draw_tile()
         else:
             # 若無法自動摸牌，恢復玩家手動操作
@@ -211,7 +211,7 @@ class MahjongDemoUI:
         """玩家摸牌。"""
 
         hand = self.engine.get_hand(self.human_player)
-        if len(hand.tiles) >= 14:
+        if hand.total_tile_count() >= 14:
             self.log("手牌已達 14 張，請先打出一張牌。")
             return
 

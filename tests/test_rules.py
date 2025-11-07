@@ -303,6 +303,7 @@ class TestRuleEngine:
         assert self.engine.get_last_discard() is None
         assert self.engine.get_last_discard_player() is None
         assert self.engine.get_current_player() == 1
+        assert self.engine.can_act(1, GameAction.DRAW) is False
 
     def test_chi_action_uses_sequence_and_resets_turn(self):
         """測試吃牌會使用指定順子並更新遊戲狀態。"""
@@ -397,6 +398,36 @@ class TestRuleEngine:
         assert self.engine.get_last_discard() is None
         assert self.engine.get_last_discard_player() is None
         assert self.engine.get_current_player() == 1
+        assert self.engine.can_act(1, GameAction.DRAW) is False
+
+    def test_hand_total_tile_count_includes_melds(self):
+        """手牌總數應包含副露的牌。"""
+
+        from pyriichi.hand import Hand
+
+        tiles = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.PINZU, 4),
+            Tile(Suit.PINZU, 5),
+            Tile(Suit.PINZU, 6),
+            Tile(Suit.SOZU, 7),
+            Tile(Suit.SOZU, 7),
+            Tile(Suit.SOZU, 8),
+            Tile(Suit.SOZU, 9),
+            Tile(Suit.SOZU, 9),
+        ]
+
+        hand = Hand(tiles)
+        assert hand.total_tile_count() == 13
+
+        meld = hand.pon(Tile(Suit.MANZU, 1))
+        assert meld is not None
+        assert len(hand.tiles) == 11
+        assert hand.total_tile_count() == 14
 
     def test_handle_draw(self):
         """測試流局處理"""
@@ -1004,9 +1035,15 @@ class TestRuleEngine:
         self.engine.start_round()
         self.engine.deal()
 
+        hand = self.engine.get_hand(0)
+        if hand.total_tile_count() >= 14 and hand.tiles:
+            self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
+        current_player = self.engine.get_current_player()
+
         self.engine._tile_set = None
+
         with pytest.raises(ValueError, match="牌組未初始化"):
-            self.engine.execute_action(0, GameAction.DRAW)
+            self.engine.execute_action(current_player, GameAction.DRAW)
 
     def test_execute_action_discard_no_tile(self):
         """測試打牌時未指定牌"""
@@ -1014,8 +1051,11 @@ class TestRuleEngine:
         self.engine.start_round()
         self.engine.deal()
 
-        # 先摸一張牌
-        self.engine.execute_action(0, GameAction.DRAW)
+        hand = self.engine.get_hand(0)
+        if hand.total_tile_count() >= 14 and hand.tiles:
+            self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
+
+        self.engine.execute_action(self.engine.get_current_player(), GameAction.DRAW)
 
         # 打牌必須指定牌（會先檢查 can_act，如果 tile=None 會返回 False）
         # 但實際上在 execute_action 內部會檢查 tile is None
@@ -1030,15 +1070,19 @@ class TestRuleEngine:
         self.engine.start_round()
         self.engine.deal()
 
-        # 先摸一張牌
-        self.engine.execute_action(0, GameAction.DRAW)
-
         hand = self.engine.get_hand(0)
+        if hand.total_tile_count() >= 14 and hand.tiles:
+            self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
+
+        current_player = self.engine.get_current_player()
+        self.engine.execute_action(current_player, GameAction.DRAW)
+
+        hand = self.engine.get_hand(current_player)
         if hand.tiles:
             tile = hand.tiles[0]
             self.engine._tile_set = None
             with pytest.raises(ValueError, match="牌組未初始化"):
-                self.engine.execute_action(0, GameAction.DISCARD, tile=tile)
+                self.engine.execute_action(current_player, GameAction.DISCARD, tile=tile)
 
     def test_execute_action_riichi(self):
         """測試執行立直動作"""
@@ -1051,8 +1095,10 @@ class TestRuleEngine:
         # 手牌默認應該是門清的，但需要確保聽牌
         # 如果手牌不聽牌，這個測試可能會失敗，但至少測試了方法調用
 
-        # 先摸一張牌
-        self.engine.execute_action(0, GameAction.DRAW)
+        if hand.total_tile_count() >= 14 and hand.tiles:
+            self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
+
+        self.engine.execute_action(self.engine.get_current_player(), GameAction.DRAW)
 
         # 如果可以立直，執行立直
         if self.engine.can_act(0, GameAction.RICHI):
@@ -1069,8 +1115,11 @@ class TestRuleEngine:
         self.engine.start_round()
         self.engine.deal()
 
-        # 先摸一張牌
-        self.engine.execute_action(0, GameAction.DRAW)
+        hand = self.engine.get_hand(0)
+        if hand.total_tile_count() >= 14 and hand.tiles:
+            self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
+
+        self.engine.execute_action(self.engine.get_current_player(), GameAction.DRAW)
 
         # 明槓必須指定牌（can_act 會先檢查）
         assert not self.engine.can_act(0, GameAction.KAN, tile=None)
@@ -1087,14 +1136,17 @@ class TestRuleEngine:
         # 手動設置牌組為即將耗盡狀態
         # 由於無法直接控制牌組，這裡測試邏輯路徑
         if self.engine._tile_set:
-            # 先摸一張牌
-            self.engine.execute_action(0, GameAction.DRAW)
-
             hand = self.engine.get_hand(0)
+            if hand.total_tile_count() >= 14 and hand.tiles:
+                self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
+
+            self.engine.execute_action(self.engine.get_current_player(), GameAction.DRAW)
+
+            hand = self.engine.get_hand(self.engine.get_current_player())
             if hand.tiles:
                 tile = hand.tiles[0]
                 # 正常打牌，檢查結果
-                result = self.engine.execute_action(0, GameAction.DISCARD, tile=tile)
+                result = self.engine.execute_action(self.engine.get_current_player(), GameAction.DISCARD, tile=tile)
                 # 可能包含 is_last_tile 標記
                 assert result.discarded is not None or result.is_last_tile is not None
 
@@ -1107,8 +1159,11 @@ class TestRuleEngine:
         # 手動設置牌組為即將耗盡狀態
         # 由於無法直接控制牌組，這裡測試邏輯路徑
         if self.engine._tile_set:
-            # 摸牌
-            result = self.engine.execute_action(0, GameAction.DRAW)
+            hand = self.engine.get_hand(0)
+            if hand.total_tile_count() >= 14 and hand.tiles:
+                self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
+
+            result = self.engine.execute_action(self.engine.get_current_player(), GameAction.DRAW)
             # 可能包含 is_last_tile 標記
             assert result.drawn_tile is not None or result.is_last_tile is not None or result.draw is not None
 
@@ -1118,14 +1173,18 @@ class TestRuleEngine:
         self.engine.start_round()
         self.engine.deal()
 
-        # 先摸一張牌
-        self.engine.execute_action(0, GameAction.DRAW)
-
         hand = self.engine.get_hand(0)
+        if hand.total_tile_count() >= 14 and hand.tiles:
+            self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
+
+        current_player = self.engine.get_current_player()
+        self.engine.execute_action(current_player, GameAction.DRAW)
+
+        hand = self.engine.get_hand(current_player)
         if hand.tiles:
             tile = hand.tiles[0]
             # 打牌
-            self.engine.execute_action(0, GameAction.DISCARD, tile=tile)
+            self.engine.execute_action(current_player, GameAction.DISCARD, tile=tile)
 
             # 檢查捨牌歷史
             assert len(self.engine._discard_history) > 0
@@ -1596,14 +1655,18 @@ class TestRuleEngine:
             assert 0 in self.engine._riichi_turns
 
         # 玩家0打牌，自己的回合數增加
-        if self.engine.can_act(0, GameAction.DRAW):
-            self.engine.execute_action(0, GameAction.DRAW)
-            hand0 = self.engine.get_hand(0)
+        hand0 = self.engine.get_hand(0)
+        if hand0.total_tile_count() >= 14 and hand0.tiles:
+            self.engine.execute_action(0, GameAction.DISCARD, tile=hand0.tiles[0])
+
+        if self.engine.can_act(self.engine.get_current_player(), GameAction.DRAW):
+            current = self.engine.get_current_player()
+            self.engine.execute_action(current, GameAction.DRAW)
+            hand0 = self.engine.get_hand(current)
             if hand0.tiles:
                 tile = hand0.tiles[0]
-                if self.engine.can_act(0, GameAction.DISCARD, tile=tile):
-                    self.engine.execute_action(0, GameAction.DISCARD, tile=tile)
-                    # 立直玩家自己打牌，回合數應該增加
+                if self.engine.can_act(current, GameAction.DISCARD, tile=tile):
+                    self.engine.execute_action(current, GameAction.DISCARD, tile=tile)
                     if 0 in self.engine._riichi_turns:
                         assert self.engine._riichi_turns[0] > 0
 
@@ -1734,13 +1797,18 @@ class TestRuleEngine:
 
         # 測試 is_last_tile 標記
         # 當牌組耗盡時，打牌應該設置 is_last_tile
-        if self.engine.can_act(0, GameAction.DRAW):
-            self.engine.execute_action(0, GameAction.DRAW)
-            hand = self.engine.get_hand(0)
+        hand = self.engine.get_hand(0)
+        if hand.total_tile_count() >= 14 and hand.tiles:
+            self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
+
+        current = self.engine.get_current_player()
+        if self.engine.can_act(current, GameAction.DRAW):
+            self.engine.execute_action(current, GameAction.DRAW)
+            hand = self.engine.get_hand(current)
             if hand.tiles:
                 tile = hand.tiles[0]
-                if self.engine.can_act(0, GameAction.DISCARD, tile=tile):
-                    result = self.engine.execute_action(0, GameAction.DISCARD, tile=tile)
+                if self.engine.can_act(current, GameAction.DISCARD, tile=tile):
+                    result = self.engine.execute_action(current, GameAction.DISCARD, tile=tile)
                     # 如果牌組耗盡，應該有 is_last_tile 標記
                     # 注意：這可能不會發生，取決於牌組狀態
                     if result.is_last_tile is not None:
@@ -1791,7 +1859,11 @@ class TestRuleEngine:
         # 當 is_exhausted() 返回 True 時，應該設置 is_last_tile
 
         # 先執行一次摸牌，檢查結果
-        result = self.engine.execute_action(current_player, GameAction.DRAW)
+        hand = self.engine.get_hand(current_player)
+        if hand.total_tile_count() >= 14 and hand.tiles:
+            self.engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
+
+        result = self.engine.execute_action(self.engine.get_current_player(), GameAction.DRAW)
 
         # 如果牌組耗盡，應該有 is_last_tile 標記
         # 注意：這可能不會發生，取決於牌組狀態
@@ -1825,6 +1897,10 @@ class TestRuleEngine:
         self.engine.deal()
 
         current_player = self.engine.get_current_player()
+        hand = self.engine.get_hand(current_player)
+        if hand.total_tile_count() >= 14 and hand.tiles:
+            self.engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
+            current_player = self.engine.get_current_player()
         result = self.engine.execute_action(current_player, GameAction.DRAW)
 
         # 檢查結果中是否有 drawn_tile 或 is_last_tile

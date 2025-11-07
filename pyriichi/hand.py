@@ -128,6 +128,12 @@ class Hand:
             raise ValueError("最後一張捨牌與指定牌不符")
         self._discards.pop()
 
+    def total_tile_count(self) -> int:
+        """手牌總數（包含副露的牌）。"""
+
+        meld_count = sum(len(meld.tiles) for meld in self._melds)
+        return len(self._tiles) + meld_count
+
     def can_chi(self, tile: Tile, from_player: int) -> List[List[Tile]]:
         """
         檢查是否可以吃

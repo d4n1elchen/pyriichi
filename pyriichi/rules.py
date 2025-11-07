@@ -192,7 +192,7 @@ class RuleEngine:
                 return False
             if not (0 <= player < len(self._hands)):
                 return False
-            return len(self._hands[player].tiles) < 14
+            return self._hands[player].total_tile_count() < 14
 
         if action == GameAction.PON:
             if self._last_discarded_tile is None or self._last_discarded_player is None:
@@ -255,7 +255,7 @@ class RuleEngine:
             if not self._tile_set:
                 raise ValueError("牌組未初始化")
             hand = self._hands[player]
-            if len(hand.tiles) >= 14:
+            if hand.total_tile_count() >= 14:
                 raise ValueError("手牌已達 14 張，不能再摸牌")
             drawn_tile = self._tile_set.draw()
             if drawn_tile:

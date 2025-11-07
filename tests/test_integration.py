@@ -140,18 +140,25 @@ class TestCompleteGameFlow:
             assert len(hands[i]) == 13  # 閒家13張
         assert engine.get_phase() == GamePhase.PLAYING
 
-        # 3. 執行幾個回合：摸牌 -> 打牌
+        # 3. 執行幾個回合：先打牌（若牌數達14）-> 摸牌 -> 再打牌
         current_player = engine.get_current_player()
         for _ in range(3):
-            # 摸牌
-            result = engine.execute_action(current_player, GameAction.DRAW)
-            if result.drawn_tile is not None:
+            hand = engine.get_hand(current_player)
+
+            if hand.total_tile_count() >= 14 and hand.tiles:
+                engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
+                current_player = engine.get_current_player()
                 hand = engine.get_hand(current_player)
-                # 打牌（打第一張）
-                if hand.tiles:
-                    discard_tile = hand.tiles[0]
-                    engine.execute_action(current_player, GameAction.DISCARD, tile=discard_tile)
-            current_player = engine.get_current_player()
+
+            if engine.can_act(current_player, GameAction.DRAW):
+                result = engine.execute_action(current_player, GameAction.DRAW)
+                if result.drawn_tile is not None:
+                    hand = engine.get_hand(current_player)
+                    if hand.tiles:
+                        engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
+                current_player = engine.get_current_player()
+            else:
+                break
 
         # 驗證遊戲仍在進行中
         assert engine.get_phase() == GamePhase.PLAYING
@@ -166,8 +173,14 @@ class TestCompleteGameFlow:
         # 設置一個可以碰的場景
         current_player = engine.get_current_player()
 
-        # 摸牌
-        engine.execute_action(current_player, GameAction.DRAW)
+        # 若莊家，需先打牌再摸牌
+        hand = engine.get_hand(current_player)
+        if hand.total_tile_count() >= 14 and hand.tiles:
+            engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
+            current_player = engine.get_current_player()
+
+        if engine.can_act(current_player, GameAction.DRAW):
+            engine.execute_action(current_player, GameAction.DRAW)
         hand = engine.get_hand(current_player)
 
         # 打出一張牌
