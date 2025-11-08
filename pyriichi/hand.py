@@ -162,16 +162,11 @@ class Hand:
                     if rank == tile.rank:
                         continue
                     needed_tile = Tile(tile.suit, rank)
-                    if needed_tile in self._tiles:
-                        # 檢查是否有重複（需要移除）
-                        if needed_tile in sequence:
-                            break
-                        sequence.append(needed_tile)
-                    else:
-                        break
-                else:
-                    if len(sequence) == 2:
-                        results.append(sequence)
+                    if needed_tile not in self._tiles:
+                        continue
+                    sequence.append(needed_tile)
+                if len(sequence) == 2:
+                    results.append(sequence)
 
         return results
 
@@ -275,15 +270,13 @@ class Hand:
                 ):
                     kan_tiles = meld.tiles + [meld.called_tile]
                     results.append(Meld(MeldType.KAN, kan_tiles, called_tile=meld.called_tile))
-        else:
-            # 明槓：手牌中有三張相同牌，碰別人打出的第四張
-            if self._tiles.count(tile) == 3:
-                kan_tiles = []
-                for t in self._tiles:
-                    if t == tile and len(kan_tiles) < 3:
-                        kan_tiles.append(t)
-                kan_tiles.append(tile)
-                results.append(Meld(MeldType.KAN, kan_tiles, called_tile=tile))
+        elif self._tiles.count(tile) == 3:
+            kan_tiles = []
+            for t in self._tiles:
+                if t == tile and len(kan_tiles) < 3:
+                    kan_tiles.append(t)
+            kan_tiles.append(tile)
+            results.append(Meld(MeldType.KAN, kan_tiles, called_tile=tile))
 
         return results
 
@@ -485,8 +478,7 @@ class Hand:
                 continue
 
             # 遞迴尋找4組面子
-            result = self._find_melds(test_counts, [], pair_key)
-            if result:
+            if result := self._find_melds(test_counts, [], pair_key):
                 combinations.extend(result)
 
         return len(combinations) > 0, combinations
@@ -506,9 +498,7 @@ class Hand:
         # 檢查是否所有牌都已用完
         remaining_count = sum(counts.values())
         if remaining_count == 0:
-            if len(current_melds) == 4:
-                return [current_melds + [("pair", pair)]]
-            return []
+            return [current_melds + [("pair", pair)]] if len(current_melds) == 4 else []
 
         # 如果已經找到4個面子但還有剩餘牌，說明不匹配
         if len(current_melds) == 4:
@@ -519,37 +509,35 @@ class Hand:
             return []
 
         results = []
+        results.extend(self._search_triplet_melds(counts, current_melds, pair))
+        results.extend(self._search_sequence_melds(counts, current_melds, pair))
+        return results
 
-        # 嘗試所有可能的刻子（使用回溯，減少字典複製）
+    def _search_triplet_melds(self, counts: dict, current_melds: List[Tuple], pair: Tuple) -> List[List[Tuple]]:
+        results = []
         for (suit, rank), count in list(counts.items()):
-            if count >= 3:
-                # 原地修改並回溯
-                if self._remove_triplet(counts, suit, rank):
-                    new_melds = current_melds + [("triplet", (suit, rank))]
-                    result = self._find_melds(counts, new_melds, pair)
-                    if result:
-                        results.extend(result)
-                    # 回溯：恢復計數
-                    counts[(suit, rank)] += 3
+            if count < 3 or not self._remove_triplet(counts, suit, rank):
+                continue
+            new_melds = current_melds + [("triplet", (suit, rank))]
+            if result := self._find_melds(counts, new_melds, pair):
+                results.extend(result)
+            counts[(suit, rank)] += 3  # 回溯：恢復計數
+        return results
 
-        # 嘗試所有可能的順子（僅對數牌，使用回溯）
+    def _search_sequence_melds(self, counts: dict, current_melds: List[Tuple], pair: Tuple) -> List[List[Tuple]]:
+        results = []
         for suit in [Suit.MANZU, Suit.PINZU, Suit.SOZU]:
-            for rank in range(1, 8):  # 順子最多到 7（7-8-9）
-                # 檢查是否可以組成順子（快速檢查）
-                can_form_sequence = all(counts.get((suit, rank + i), 0) > 0 for i in range(3))
-                if can_form_sequence:
-                    # 記錄原始值以便回溯
-                    original_values = {(suit, rank + i): counts.get((suit, rank + i), 0) for i in range(3)}
-                    # 原地修改並回溯
-                    if self._remove_sequence(counts, suit, rank):
-                        new_melds = current_melds + [("sequence", (suit, rank))]
-                        result = self._find_melds(counts, new_melds, pair)
-                        if result:
-                            results.extend(result)
-                        # 回溯：恢復計數
-                        for i in range(3):
-                            counts[(suit, rank + i)] = original_values[(suit, rank + i)]
-
+            for rank in range(1, 8):
+                if any(counts.get((suit, rank + i), 0) <= 0 for i in range(3)):
+                    continue
+                original_values = {(suit, rank + i): counts.get((suit, rank + i), 0) for i in range(3)}
+                if not self._remove_sequence(counts, suit, rank):
+                    continue
+                new_melds = current_melds + [("sequence", (suit, rank))]
+                if result := self._find_melds(counts, new_melds, pair):
+                    results.extend(result)
+                for i in range(3):
+                    counts[(suit, rank + i)] = original_values[(suit, rank + i)]
         return results
 
     def _is_seven_pairs(self, tiles: List[Tile]) -> bool:
@@ -612,18 +600,12 @@ class Hand:
 
         for tile in tiles:
             key = (tile.suit, tile.rank)
-            if key in required_tiles:
-                if key in found_tiles:
-                    # 找到重複的牌
-                    if duplicate is None:
-                        duplicate = key
-                    elif duplicate != key:
-                        return False  # 有多個重複
-                else:
-                    found_tiles.add(key)
-            else:
-                return False  # 有非幺九牌
-
+            if key in required_tiles and key in found_tiles and duplicate is None:
+                duplicate = key
+            elif key in required_tiles and key in found_tiles and duplicate != key or key not in required_tiles:
+                return False  # 有多個重複
+            elif key not in found_tiles:
+                found_tiles.add(key)
         # 必須有13種各1張，加上1張重複
         return len(found_tiles) == 13 and duplicate is not None
 
@@ -665,10 +647,7 @@ class Hand:
         # 如果候選太少，回退到檢查所有牌
         if len(candidates) < 10:
             for suit in Suit:
-                if suit == Suit.JIHAI:
-                    max_rank = 7
-                else:
-                    max_rank = 9
+                max_rank = 7 if suit == Suit.JIHAI else 9
                 for rank in range(1, max_rank + 1):
                     candidates.add((suit, rank))
 
@@ -718,10 +697,7 @@ class Hand:
         # 如果候選太少，回退到檢查所有牌（確保不遺漏）
         if len(candidates) < 10:
             for suit in Suit:
-                if suit == Suit.JIHAI:
-                    max_rank = 7
-                else:
-                    max_rank = 9
+                max_rank = 7 if suit == Suit.JIHAI else 9
                 for rank in range(1, max_rank + 1):
                     candidates.add((suit, rank))
 
@@ -787,8 +763,4 @@ class Hand:
         # 檢查標準和牌型
         is_winning, combinations = self._is_standard_winning(all_tiles)
 
-        if is_winning:
-            return combinations
-
-        # 特殊和牌型不返回組合（因為不需要用於役種判定）
-        return []
+        return combinations if is_winning else []

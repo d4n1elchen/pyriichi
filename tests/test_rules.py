@@ -1318,6 +1318,13 @@ class TestRuleEngine:
 
         # 耗盡牌組以觸發 draw() 返回 None
         if self.engine._tile_set:
+            # 先打出一張牌，確保下一位玩家手牌為 13 張
+            hand = self.engine.get_hand(current_player)
+            if hand.tiles:
+                discard_tile = hand.tiles[0]
+                self.engine.execute_action(current_player, GameAction.DISCARD, tile=discard_tile)
+                current_player = self.engine.get_current_player()
+
             # 耗盡所有牌（但保留王牌區）
             while self.engine._tile_set._tiles:
                 self.engine._tile_set.draw()
