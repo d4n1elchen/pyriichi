@@ -6,7 +6,7 @@
 
 import itertools
 from enum import Enum
-from typing import List, Optional
+from typing import Dict, List, Optional
 import random
 from pyriichi.enum_utils import TranslatableEnum
 
@@ -22,6 +22,26 @@ class Suit(TranslatableEnum):
 
 class Tile:
     """單張麻將牌"""
+
+    _NUMERAL_MAP: Dict[str, Dict[int, str]] = {
+        "zh": {1: "一", 2: "二", 3: "三", 4: "四", 5: "五", 6: "六", 7: "七", 8: "八", 9: "九"},
+        "ja": {1: "一", 2: "二", 3: "三", 4: "四", 5: "五", 6: "六", 7: "七", 8: "八", 9: "九"},
+        "en": {1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9"},
+    }
+
+    _SUIT_SUFFIX_MAP: Dict[str, Dict[Suit, str]] = {
+        "zh": {Suit.MANZU: "萬", Suit.PINZU: "筒", Suit.SOZU: "索"},
+        "ja": {Suit.MANZU: "萬", Suit.PINZU: "筒", Suit.SOZU: "索"},
+        "en": {Suit.MANZU: "Man", Suit.PINZU: "Pin", Suit.SOZU: "Sou"},
+    }
+
+    _HONOR_NAME_MAP: Dict[str, Dict[int, str]] = {
+        "zh": {1: "東", 2: "南", 3: "西", 4: "北", 5: "白", 6: "發", 7: "中"},
+        "ja": {1: "東", 2: "南", 3: "西", 4: "北", 5: "白", 6: "發", 7: "中"},
+        "en": {1: "East", 2: "South", 3: "West", 4: "North", 5: "White", 6: "Green", 7: "Red"},
+    }
+
+    _RED_PREFIX_MAP: Dict[str, str] = {"zh": "赤", "ja": "赤", "en": "Red "}
 
     def __init__(self, suit: Suit, rank: int, is_red: bool = False):
         """
@@ -108,6 +128,38 @@ class Tile:
     def __repr__(self) -> str:
         """對象表示"""
         return f"Tile({self._suit.name}, {self._rank}, red={self._is_red})"
+
+    def _format_name(self, locale: str) -> str:
+        if locale not in {"zh", "ja", "en"}:
+            raise ValueError(f"Unsupported locale: {locale}")
+
+        prefix = self._RED_PREFIX_MAP[locale] if self._is_red else ""
+
+        if self._suit == Suit.JIHAI:
+            return f"{prefix}{self._HONOR_NAME_MAP[locale][self._rank]}"
+
+        numeral = self._NUMERAL_MAP[locale][self._rank]
+        suffix = self._SUIT_SUFFIX_MAP[locale][self._suit]
+
+        if locale == "en":
+            return f"{prefix}{numeral} {suffix}".strip()
+
+        return f"{prefix}{numeral}{suffix}"
+
+    @property
+    def zh(self) -> str:
+        """中文名稱"""
+        return self._format_name("zh")
+
+    @property
+    def ja(self) -> str:
+        """日文名稱"""
+        return self._format_name("ja")
+
+    @property
+    def en(self) -> str:
+        """英文名稱"""
+        return self._format_name("en")
 
 
 def create_tile(suit: str, rank: int, is_red: bool = False) -> Tile:

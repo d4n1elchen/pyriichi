@@ -18,35 +18,6 @@ from pyriichi.rules import GameAction, GamePhase, RuleEngine, WinResult
 from pyriichi.tiles import Tile, Suit
 
 
-CHINESE_NUMERALS = {
-    1: "一",
-    2: "二",
-    3: "三",
-    4: "四",
-    5: "五",
-    6: "六",
-    7: "七",
-    8: "八",
-    9: "九",
-}
-
-SUIT_CHINESE = {
-    Suit.MANZU: "萬",
-    Suit.PINZU: "筒",
-    Suit.SOZU: "索",
-}
-
-HONOR_CHINESE = {
-    1: "東",
-    2: "南",
-    3: "西",
-    4: "北",
-    5: "白",
-    6: "發",
-    7: "中",
-}
-
-
 MELD_TYPE_TEXT = {
     "chi": "吃",
     "pon": "碰",
@@ -55,23 +26,10 @@ MELD_TYPE_TEXT = {
 }
 
 
-def tile_to_chinese(tile: Tile) -> str:
-    """將牌轉換為中文表示。"""
-
-    prefix = "赤" if tile.is_red else ""
-
-    if tile.suit == Suit.JIHAI:
-        return prefix + HONOR_CHINESE.get(tile.rank, f"字{tile.rank}")
-
-    numeral = CHINESE_NUMERALS.get(tile.rank, str(tile.rank))
-    suit = SUIT_CHINESE.get(tile.suit, tile.suit.value)
-    return prefix + numeral + suit
-
-
 def tile_to_vertical_text(tile: Tile) -> str:
     """將牌轉換為垂直顯示的文字。"""
 
-    text = tile_to_chinese(tile)
+    text = tile.zh
     return "\n".join(text)
 
 
@@ -81,12 +39,12 @@ def format_tiles_chinese(tiles: Iterable[Tile]) -> str:
     tile_list = list(tiles)
     if not tile_list:
         return "(無)"
-    return " ".join(tile_to_chinese(tile) for tile in tile_list)
+    return " ".join(tile.zh for tile in tile_list)
 
 
 def meld_to_chinese(meld: Meld) -> str:
     kind = MELD_TYPE_TEXT.get(meld.meld_type.value, meld.meld_type.value)
-    tiles_text = " ".join(tile_to_chinese(tile) for tile in meld.tiles)
+    tiles_text = " ".join(tile.zh for tile in meld.tiles)
     return f"{kind}({tiles_text})"
 
 
@@ -154,7 +112,7 @@ class MahjongDemoUI:
         self._cached_tsumo_result = None
         self.clear_reaction_options()
         self.log("新的一局開始！莊家為玩家 {}".format(self.engine.get_game_state().dealer))
-        self.log("你的起始手牌: {}".format(format_tiles_chinese(hands[self.human_player])))
+        self.log("你的起始手牌: {}".format(" ".join(tile.zh for tile in hands[self.human_player])))
 
         self.refresh_ui()
         self.schedule_next_turn()
@@ -241,7 +199,7 @@ class MahjongDemoUI:
             return
 
         if result.drawn_tile is not None:
-            self.log("你摸到了 {}".format(tile_to_chinese(result.drawn_tile)))
+            self.log("你摸到了 {}".format(result.drawn_tile.zh))
             self.last_drawn_tile = result.drawn_tile
         else:
             self.last_drawn_tile = None
@@ -260,7 +218,7 @@ class MahjongDemoUI:
             return
 
         self.engine.execute_action(self.human_player, GameAction.DISCARD, tile=tile)
-        self.log("你打出了 {}".format(tile_to_chinese(tile)))
+        self.log("你打出了 {}".format(tile.zh))
 
         self.last_drawn_tile = None
         self._cached_tsumo_result = None
@@ -301,7 +259,7 @@ class MahjongDemoUI:
         if hand.tiles:
             tile = random.choice(hand.tiles)
             self.engine.execute_action(player, GameAction.DISCARD, tile=tile)
-            self.log("玩家 {} 打出了 {}".format(player, tile_to_chinese(tile)))
+            self.log("玩家 {} 打出了 {}".format(player, tile.zh))
 
         self.refresh_ui()
 
@@ -316,7 +274,7 @@ class MahjongDemoUI:
         if last_tile is None or last_player is None:
             return False
 
-        tile_label = tile_to_chinese(last_tile)
+        tile_label = last_tile.zh
         num_players = self.engine.get_num_players()
 
         for offset in range(start_offset, num_players):
@@ -341,7 +299,7 @@ class MahjongDemoUI:
                 result = self.engine.execute_action(caller, GameAction.KAN, tile=last_tile)
                 self.log("玩家 {} 槓了 {}".format(caller, tile_label))
                 if result.rinshan_tile is not None:
-                    self.log("玩家 {} 嶺上摸到 {}".format(caller, tile_to_chinese(result.rinshan_tile)))
+                    self.log("玩家 {} 嶺上摸到 {}".format(caller, result.rinshan_tile.zh))
                 self.refresh_ui()
                 if caller != self.human_player:
                     self.root.after(self.ai_delay_ms, self.ai_take_turn)
@@ -584,7 +542,7 @@ class MahjongDemoUI:
             self.last_drawn_tile = result.rinshan_tile
             self._cached_tsumo_result = None
             if result.rinshan_tile is not None:
-                self.log("你嶺上摸到 {}".format(tile_to_chinese(result.rinshan_tile)))
+                self.log("你嶺上摸到 {}".format(result.rinshan_tile.zh))
         elif action == GameAction.RON:
             win_result = option.get("win_result")
             self.perform_ron(tile, win_result)
@@ -645,7 +603,7 @@ class MahjongDemoUI:
         self.last_drawn_tile = result.rinshan_tile
         self._cached_tsumo_result = None
         if result.rinshan_tile is not None:
-            self.log("你嶺上摸到 {}".format(tile_to_chinese(result.rinshan_tile)))
+            self.log("你嶺上摸到 {}".format(result.rinshan_tile.zh))
 
         self.refresh_ui()
         self.schedule_next_turn()
@@ -664,7 +622,7 @@ class MahjongDemoUI:
             self.refresh_ui()
             return
 
-        tile_label = tile_to_chinese(self.last_drawn_tile)
+        tile_label = self.last_drawn_tile.zh
         self._finalize_win(win_result, method_label="自摸", tile_label=tile_label)
 
     def perform_ron(self, tile: Tile, win_result: Optional[WinResult]) -> None:
@@ -679,7 +637,7 @@ class MahjongDemoUI:
                 self.schedule_next_turn()
             return
 
-        tile_label = tile_to_chinese(tile)
+        tile_label = tile.zh
         self._finalize_win(result, method_label="榮和", tile_label=tile_label)
 
     def _compute_win_result(self, player: int, tile: Tile, remove_tile: bool) -> Optional[WinResult]:
@@ -771,7 +729,7 @@ class MahjongDemoUI:
             indicators = []
             for indicator in getattr(tile_set, "_dora_indicators", []):
                 if indicator is not None:
-                    indicators.append(tile_to_chinese(indicator))
+                    indicators.append(indicator.zh)
             if indicators:
                 info += " | 寶牌指示: " + " ".join(indicators)
         self.info_label.config(text=info)
