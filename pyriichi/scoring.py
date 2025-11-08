@@ -200,47 +200,32 @@ class ScoreCalculator:
         # 副底符
         if hand.is_concealed and not is_tsumo:
             fu += 10  # 門清榮和
-        elif hand.is_concealed and is_tsumo:
+        elif hand.is_concealed or is_tsumo:
             fu += 2  # 門清自摸
-        elif not hand.is_concealed and is_tsumo:
-            fu += 2  # 非門清自摸
-
         # 面子符
         for meld in winning_combination:
             if isinstance(meld, tuple) and len(meld) == 2:
                 meld_type, (suit, rank) = meld
                 tile = Tile(suit, rank)
 
-                if meld_type == "triplet":
-                    # 刻子符
-                    if tile.is_terminal or tile.is_honor:
-                        # 幺九刻子
-                        if hand.is_concealed:
-                            fu += 8  # 暗刻
-                        else:
-                            fu += 4  # 明刻
-                    else:
-                        # 中張刻子
-                        if hand.is_concealed:
-                            fu += 4  # 暗刻
-                        else:
-                            fu += 2  # 明刻
-
-                elif meld_type == "kan":
+                if meld_type == "kan":
                     # 槓子符（需要判斷是明槓還是暗槓）
                     # TODO: 需要從 Meld 中獲取是否為暗槓
-                    if tile.is_terminal or tile.is_honor:
-                        # 幺九槓子
-                        if hand.is_concealed:
-                            fu += 32  # 暗槓
-                        else:
-                            fu += 16  # 明槓
+                    if (tile.is_terminal or tile.is_honor) and hand.is_concealed:
+                        fu += 32  # 暗槓
+                    elif tile.is_terminal or tile.is_honor or hand.is_concealed:
+                        fu += 16  # 明槓
                     else:
-                        # 中張槓子
-                        if hand.is_concealed:
-                            fu += 16  # 暗槓
-                        else:
-                            fu += 8  # 明槓
+                        fu += 8  # 明槓
+
+                elif meld_type == "triplet":
+                    # 刻子符
+                    if (tile.is_terminal or tile.is_honor) and hand.is_concealed:
+                        fu += 8  # 暗刻
+                    elif tile.is_terminal or tile.is_honor or hand.is_concealed:
+                        fu += 4  # 明刻
+                    else:
+                        fu += 2  # 明刻
 
         # 雀頭符
         pair = None
@@ -308,9 +293,8 @@ class ScoreCalculator:
         for meld in winning_combination:
             if isinstance(meld, tuple) and len(meld) == 2:
                 meld_type, (suit, rank) = meld
-                if meld_type == "pair":
-                    if winning_tile.suit == suit and winning_tile.rank == rank:
-                        return "tanki"  # 單騎聽
+                if meld_type == "pair" and (winning_tile.suit == suit and winning_tile.rank == rank):
+                    return "tanki"  # 單騎聽
 
         # 檢查是否為順子聽（兩面、邊張、嵌張）
         for meld in winning_combination:
@@ -321,20 +305,13 @@ class ScoreCalculator:
                     seq_ranks = [rank, rank + 1, rank + 2]
                     if winning_tile.suit == suit and winning_tile.rank in seq_ranks:
                         # 判斷聽牌位置
-                        if winning_tile.rank == rank:
-                            # 聽順子的第一張（邊張）
-                            if rank == 1:
-                                return "penchan"  # 1-2-3 聽 1（邊張）
+                        if winning_tile.rank == rank == 1:
+                            return "penchan"  # 1-2-3 聽 1（邊張）
+                        elif winning_tile.rank in [rank, rank + 1]:
                             return "kanchan"  # 其他情況可能是嵌張
-                        elif winning_tile.rank == rank + 1:
-                            # 聽順子的中間張（嵌張）
-                            return "kanchan"
                         elif winning_tile.rank == rank + 2:
                             # 聽順子的最後一張（邊張）
-                            if rank == 7:
-                                return "penchan"  # 7-8-9 聽 9（邊張）
-                            return "kanchan"  # 其他情況可能是嵌張
-
+                            return "penchan" if rank == 7 else "kanchan"
         # 檢查是否為雙碰聽（winning_tile 可以是兩個對子中的任一個）
         # 這需要檢查手牌結構，但這裡簡化處理
         # 如果 winning_tile 不在任何順子中，可能是雙碰聽
@@ -348,14 +325,10 @@ class ScoreCalculator:
                         in_sequence = True
                         break
 
-        if not in_sequence:
-            # 可能是雙碰聽，但需要檢查是否有兩個對子
-            # 簡化處理：如果不是順子聽且不是單騎聽，可能是雙碰聽
-            # 但實際上需要更複雜的邏輯來判斷
-            # 這裡先返回兩面聽（最常見的情況）
-            return "ryanmen"
-
-        # 默認為兩面聽
+        # 可能是雙碰聽，但需要檢查是否有兩個對子
+        # 簡化處理：如果不是順子聽且不是單騎聽，可能是雙碰聽
+        # 但實際上需要更複雜的邏輯來判斷
+        # 這裡先返回兩面聽（最常見的情況）
         return "ryanmen"
 
     def calculate_han(self, yaku_results: List[YakuResult], dora_count: int) -> int:

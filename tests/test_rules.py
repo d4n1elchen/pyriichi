@@ -184,10 +184,7 @@ class TestRuleEngine:
 
         # 檢查玩家1是否可以搶槓和
         winning_tile = kan_tile
-        result = self.engine.check_win(1, winning_tile, is_chankan=True)
-
-        # 如果可以和牌，應該有結果
-        if result:
+        if result := self.engine.check_win(1, winning_tile, is_chankan=True):
             assert result.win == True
             assert result.chankan is not None
             assert result.chankan == True
@@ -228,10 +225,7 @@ class TestRuleEngine:
 
         # 檢查嶺上開花和牌
         rinshan_tile = Tile(Suit.PINZU, 4)
-        result = self.engine.check_win(0, rinshan_tile, is_rinshan=True)
-
-        # 如果可以和牌，應該有結果
-        if result:
+        if result := self.engine.check_win(0, rinshan_tile, is_rinshan=True):
             assert result.win == True
             assert result.rinshan is not None
             assert result.rinshan == True
@@ -545,9 +539,7 @@ class TestRuleEngine:
         result = self.engine.check_suufon_renda()
         assert result == True
 
-        # 測試 check_draw 中的四風連打檢查
-        draw_type = self.engine.check_draw()
-        if draw_type:
+        if draw_type := self.engine.check_draw():
             assert draw_type == "suufon_renda"
 
     def test_check_draw_sancha_ron(self):
@@ -1022,12 +1014,10 @@ class TestRuleEngine:
         # check_win 內部會根據 player == current_player 判斷是否為自摸
         self.engine._current_player = 2  # 設置為其他玩家，表示榮和
         result = self.engine.check_win(1, winning_tile)
-        if result:
-            # 檢查支付者設置
-            if result.score_result:
-                score_result = result.score_result
-                # 榮和時，支付者應該是放銃玩家
-                assert score_result.payment_from == 0  # 放銃玩家
+        if result and result.score_result:
+            score_result = result.score_result
+            # 榮和時，支付者應該是放銃玩家
+            assert score_result.payment_from == 0  # 放銃玩家
 
     def test_execute_action_draw_no_tile_set(self):
         """測試摸牌時牌組未初始化"""
@@ -1198,28 +1188,26 @@ class TestRuleEngine:
         # 打多張牌，測試歷史限制
         # 注意：需要確保當前玩家可以執行 DRAW 和 DISCARD
         current_player = self.engine.get_current_player()
-        for i in range(5):
+        for _ in range(5):
             # 確保是當前玩家的回合
             if self.engine.get_current_player() != current_player:
                 # 如果換了玩家，需要切換到正確的玩家
                 break
 
-            # 摸牌（如果允許）
-            if self.engine.can_act(current_player, GameAction.DRAW):
-                self.engine.execute_action(current_player, GameAction.DRAW)
-                hand = self.engine.get_hand(current_player)
-                if hand.tiles:
-                    tile = hand.tiles[0]
-                    # 打牌（如果允許）
-                    if self.engine.can_act(current_player, GameAction.DISCARD, tile=tile):
-                        self.engine.execute_action(current_player, GameAction.DISCARD, tile=tile)
-                    else:
-                        break
+            if not self.engine.can_act(current_player, GameAction.DRAW):
+                break
+
+            self.engine.execute_action(current_player, GameAction.DRAW)
+            hand = self.engine.get_hand(current_player)
+            if hand.tiles:
+                tile = hand.tiles[0]
+                # 打牌（如果允許）
+                if self.engine.can_act(current_player, GameAction.DISCARD, tile=tile):
+                    self.engine.execute_action(current_player, GameAction.DISCARD, tile=tile)
                 else:
                     break
             else:
                 break
-
         # 捨牌歷史應該只保留前4張
         assert len(self.engine._discard_history) <= 4
 

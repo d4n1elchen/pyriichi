@@ -4,6 +4,7 @@
 提供牌的表示、牌組管理和發牌功能。
 """
 
+import itertools
 from enum import Enum
 from typing import List, Optional
 import random
@@ -36,9 +37,8 @@ class Tile:
         if suit == Suit.JIHAI:
             if not (1 <= rank <= 7):
                 raise ValueError(f"字牌 rank 必須在 1-7 之間，得到 {rank}")
-        else:
-            if not (1 <= rank <= 9):
-                raise ValueError(f"數牌 rank 必須在 1-9 之間，得到 {rank}")
+        elif not (1 <= rank <= 9):
+            raise ValueError(f"數牌 rank 必須在 1-9 之間，得到 {rank}")
 
         self._suit = suit
         self._rank = rank
@@ -67,16 +67,12 @@ class Tile:
     @property
     def is_terminal(self) -> bool:
         """是否為老頭牌（1 或 9）"""
-        if self._suit == Suit.JIHAI:
-            return False
-        return self._rank == 1 or self._rank == 9
+        return False if self._suit == Suit.JIHAI else self._rank in [1, 9]
 
     @property
     def is_simple(self) -> bool:
         """是否為中張牌（2-8）"""
-        if self._suit == Suit.JIHAI:
-            return False
-        return 2 <= self._rank <= 8
+        return False if self._suit == Suit.JIHAI else 2 <= self._rank <= 8
 
     def __eq__(self, other) -> bool:
         """比較兩張牌是否相同（不考慮紅寶牌）"""
@@ -161,15 +157,9 @@ class TileSet:
         tiles = []
         # 數牌：萬、筒、條各 36 張（1-9 各 4 張）
         for suit in [Suit.MANZU, Suit.PINZU, Suit.SOZU]:
-            for rank in range(1, 10):
-                for _ in range(4):
-                    tiles.append(Tile(suit, rank))
-
+            tiles.extend(Tile(suit, rank) for rank, _ in itertools.product(range(1, 10), range(4)))
         # 字牌：風牌 16 張（東南西北各 4 張），三元牌 12 張（白發中各 4 張）
-        for rank in range(1, 8):
-            for _ in range(4):
-                tiles.append(Tile(Suit.JIHAI, rank))
-
+        tiles.extend(Tile(Suit.JIHAI, rank) for rank, _ in itertools.product(range(1, 8), range(4)))
         return tiles
 
     def shuffle(self) -> None:
@@ -195,10 +185,9 @@ class TileSet:
         hands = [[] for _ in range(num_players)]
 
         # 每人發 13 張
-        for i in range(13):
-            for player in range(num_players):
-                if self._tiles:
-                    hands[player].append(self._tiles.pop(0))
+        for _, player in itertools.product(range(13), range(num_players)):
+            if self._tiles:
+                hands[player].append(self._tiles.pop(0))
 
         # 莊家多發 1 張（第 14 張）
         if self._tiles:
@@ -217,9 +206,7 @@ class TileSet:
         Returns:
             摸到的牌，如果牌山為空則返回 None
         """
-        if not self._tiles:
-            return None
-        return self._tiles.pop(0)
+        return self._tiles.pop(0) if self._tiles else None
 
     def draw_wall_tile(self) -> Optional[Tile]:
         """
@@ -228,9 +215,7 @@ class TileSet:
         Returns:
             摸到的牌，如果王牌區為空則返回 None
         """
-        if not self._wall:
-            return None
-        return self._wall.pop(0)
+        return self._wall.pop(0) if self._wall else None
 
     @property
     def remaining(self) -> int:
@@ -259,9 +244,7 @@ class TileSet:
         if index < len(self._dora_indicators):
             return self._dora_indicators[index]
         # 裡寶牌在王牌區倒數第 2 張開始
-        if index == 1 and len(self._wall) >= 2:
-            return self._wall[-2]
-        return None
+        return self._wall[-2] if index == 1 and len(self._wall) >= 2 else None
 
     def get_dora(self, indicator: Tile) -> Tile:
         """
