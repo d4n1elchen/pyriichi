@@ -6,7 +6,7 @@
 
 from typing import List, Optional, Tuple
 from dataclasses import dataclass
-from pyriichi.hand import Hand
+from pyriichi.hand import Hand, CombinationType
 from pyriichi.tiles import Tile, Suit
 from pyriichi.game_state import GameState
 from pyriichi.yaku import YakuResult, Yaku
@@ -208,7 +208,7 @@ class ScoreCalculator:
                 meld_type, (suit, rank) = meld
                 tile = Tile(suit, rank)
 
-                if meld_type == "kan":
+                if meld_type == CombinationType.KAN:
                     # 槓子符（需要判斷是明槓還是暗槓）
                     # TODO: 需要從 Meld 中獲取是否為暗槓
                     if (tile.is_terminal or tile.is_honor) and hand.is_concealed:
@@ -218,7 +218,7 @@ class ScoreCalculator:
                     else:
                         fu += 8  # 明槓
 
-                elif meld_type == "triplet":
+                elif meld_type == CombinationType.TRIPLET:
                     # 刻子符
                     if (tile.is_terminal or tile.is_honor) and hand.is_concealed:
                         fu += 8  # 暗刻
@@ -232,7 +232,7 @@ class ScoreCalculator:
         for meld in winning_combination:
             if isinstance(meld, tuple) and len(meld) == 2:
                 meld_type, (suit, rank) = meld
-                if meld_type == "pair":
+                if meld_type == CombinationType.PAIR:
                     pair = (suit, rank)
                     break
 
@@ -293,14 +293,14 @@ class ScoreCalculator:
         for meld in winning_combination:
             if isinstance(meld, tuple) and len(meld) == 2:
                 meld_type, (suit, rank) = meld
-                if meld_type == "pair" and (winning_tile.suit == suit and winning_tile.rank == rank):
+                if meld_type == CombinationType.PAIR and (winning_tile.suit == suit and winning_tile.rank == rank):
                     return "tanki"  # 單騎聽
 
         # 檢查是否為順子聽（兩面、邊張、嵌張）
         for meld in winning_combination:
             if isinstance(meld, tuple) and len(meld) == 2:
                 meld_type, (suit, rank) = meld
-                if meld_type == "sequence":
+                if meld_type == CombinationType.SEQUENCE:
                     # 順子的牌範圍
                     seq_ranks = [rank, rank + 1, rank + 2]
                     if winning_tile.suit == suit and winning_tile.rank in seq_ranks:
@@ -319,7 +319,7 @@ class ScoreCalculator:
         for meld in winning_combination:
             if isinstance(meld, tuple) and len(meld) == 2:
                 meld_type, (suit, rank) = meld
-                if meld_type == "sequence":
+                if meld_type == CombinationType.SEQUENCE:
                     seq_ranks = [rank, rank + 1, rank + 2]
                     if winning_tile.suit == suit and winning_tile.rank in seq_ranks:
                         in_sequence = True

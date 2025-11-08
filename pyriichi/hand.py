@@ -19,6 +19,15 @@ class MeldType(TranslatableEnum):
     ANKAN = ("ankan", "暗槓", "暗槓", "Ankan")
 
 
+class CombinationType(Enum):
+    """和牌組合類型"""
+
+    PAIR = "pair"
+    TRIPLET = "triplet"
+    SEQUENCE = "sequence"
+    KAN = "kan"
+
+
 class Meld:
     """副露（明刻、明順、明槓、暗槓）"""
 
@@ -499,7 +508,7 @@ class Hand:
         # 檢查是否所有牌都已用完
         remaining_count = sum(counts.values())
         if remaining_count == 0:
-            return [current_melds + [("pair", pair)]] if len(current_melds) == 4 else []
+            return [current_melds + [(CombinationType.PAIR, pair)]] if len(current_melds) == 4 else []
 
         # 如果已經找到4個面子但還有剩餘牌，說明不匹配
         if len(current_melds) == 4:
@@ -519,7 +528,7 @@ class Hand:
         for (suit, rank), count in list(counts.items()):
             if count < 3 or not self._remove_triplet(counts, suit, rank):
                 continue
-            new_melds = current_melds + [("triplet", (suit, rank))]
+            new_melds = current_melds + [(CombinationType.TRIPLET, (suit, rank))]
             if result := self._find_melds(counts, new_melds, pair):
                 results.extend(result)
             counts[(suit, rank)] += 3  # 回溯：恢復計數
@@ -534,7 +543,7 @@ class Hand:
                 original_values = {(suit, rank + i): counts.get((suit, rank + i), 0) for i in range(3)}
                 if not self._remove_sequence(counts, suit, rank):
                     continue
-                new_melds = current_melds + [("sequence", (suit, rank))]
+                new_melds = current_melds + [(CombinationType.SEQUENCE, (suit, rank))]
                 if result := self._find_melds(counts, new_melds, pair):
                     results.extend(result)
                 for i in range(3):

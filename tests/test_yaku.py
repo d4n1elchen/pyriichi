@@ -3,7 +3,7 @@ YakuChecker 的單元測試
 """
 
 import pytest
-from pyriichi.hand import Hand
+from pyriichi.hand import Hand, CombinationType
 from pyriichi.tiles import Tile, Suit
 from pyriichi.yaku import YakuChecker, YakuResult
 from pyriichi.game_state import GameState, Wind
@@ -864,10 +864,10 @@ class TestYakuChecker:
         # 三槓子需要通過 Hand 的 melds 來實現
         # 這裡測試判定邏輯
         combo_with_kan = [
-            ("kan", (Suit.MANZU, 1)),
-            ("kan", (Suit.PINZU, 2)),
-            ("kan", (Suit.SOZU, 3)),
-            ("pair", (Suit.JIHAI, 1)),
+            (CombinationType.KAN, (Suit.MANZU, 1)),
+            (CombinationType.KAN, (Suit.PINZU, 2)),
+            (CombinationType.KAN, (Suit.SOZU, 3)),
+            (CombinationType.PAIR, (Suit.JIHAI, 1)),
         ]
         result = self.checker.check_sankantsu(hand, combo_with_kan)
         assert result is not None
@@ -1400,11 +1400,11 @@ class TestYakuChecker:
 
         # 手動構建包含四個槓子的組合
         combo_with_kan = [
-            ("kan", (Suit.MANZU, 1)),
-            ("kan", (Suit.MANZU, 2)),
-            ("kan", (Suit.MANZU, 3)),
-            ("kan", (Suit.PINZU, 1)),
-            ("pair", (Suit.PINZU, 2)),
+            (CombinationType.KAN, (Suit.MANZU, 1)),
+            (CombinationType.KAN, (Suit.MANZU, 2)),
+            (CombinationType.KAN, (Suit.MANZU, 3)),
+            (CombinationType.KAN, (Suit.PINZU, 1)),
+            (CombinationType.PAIR, (Suit.PINZU, 2)),
         ]
         result = self.checker.check_suukantsu(hand, combo_with_kan)
         assert result is not None
