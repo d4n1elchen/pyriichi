@@ -1654,6 +1654,115 @@ class TestRuleEngine:
         assert self.engine._kan_count == 4
         assert self.engine.check_draw() == "suukantsu"
 
+    def test_fourth_kan_chankan_does_not_trigger_suukantsu(self):
+        """第四次槓時被搶槓不算四槓散了"""
+        self._init_game()
+        from pyriichi.hand import Hand
+
+        self.engine._kan_count = 3
+        self.engine._current_player = 0
+        kan_tile = Tile(Suit.SOZU, 4)
+
+        hand0_tiles = [
+            Tile(Suit.SOZU, 4),
+            Tile(Suit.SOZU, 4),
+            Tile(Suit.SOZU, 4),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 2),
+            Tile(Suit.PINZU, 3),
+            Tile(Suit.PINZU, 4),
+        ]
+        self.engine._hands[0] = Hand(hand0_tiles)
+
+        winning_tiles = [
+            Tile(Suit.PINZU, 9),
+            Tile(Suit.PINZU, 9),
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.PINZU, 7),
+            Tile(Suit.PINZU, 8),
+            Tile(Suit.PINZU, 9),
+            Tile(Suit.SOZU, 2),
+            Tile(Suit.SOZU, 3),
+        ]
+        self.engine._hands[1] = Hand(winning_tiles)
+
+        result = self.engine.execute_action(0, GameAction.KAN, tile=kan_tile)
+        assert result.chankan is True
+        assert self.engine._kan_count == 3
+        assert self.engine.check_draw() is None
+
+    def test_fourth_kan_ron_does_not_trigger_suukantsu(self):
+        """第四次槓後他家榮和，不算四槓散了"""
+        self._init_game()
+        from pyriichi.hand import Hand
+
+        self.engine._kan_count = 4
+        winning_tile = Tile(Suit.PINZU, 1)
+
+        ron_ready = [
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.PINZU, 7),
+            Tile(Suit.PINZU, 8),
+            Tile(Suit.PINZU, 9),
+            Tile(Suit.SOZU, 2),
+            Tile(Suit.SOZU, 3),
+            Tile(Suit.SOZU, 4),
+            Tile(Suit.PINZU, 1),
+        ]
+        self.engine._hands[1] = Hand(ron_ready)
+        self.engine._last_discarded_tile = winning_tile
+        self.engine._last_discarded_player = 0
+
+        win_result = self.engine.check_win(1, winning_tile)
+        assert win_result is not None
+        assert self.engine.check_draw() is None
+
+    def test_fourth_kan_rinshan_win_does_not_trigger_suukantsu(self):
+        """第四次槓後嶺上開花，不算四槓散了"""
+        self._init_game()
+        from pyriichi.hand import Hand
+
+        self.engine._kan_count = 4
+        player = 0
+        winning_tile = Tile(Suit.PINZU, 1)
+
+        hand_tiles = [
+            Tile(Suit.MANZU, 2),
+            Tile(Suit.MANZU, 3),
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.MANZU, 5),
+            Tile(Suit.MANZU, 6),
+            Tile(Suit.MANZU, 7),
+            Tile(Suit.PINZU, 7),
+            Tile(Suit.PINZU, 8),
+            Tile(Suit.PINZU, 9),
+            Tile(Suit.SOZU, 2),
+            Tile(Suit.SOZU, 3),
+            Tile(Suit.SOZU, 4),
+            Tile(Suit.PINZU, 1),
+        ]
+        self.engine._hands[player] = Hand(hand_tiles)
+
+        win_result = self.engine.check_win(player, winning_tile, is_rinshan=True)
+        assert win_result is not None
+        assert self.engine.check_draw() is None
+
     def test_execute_action_ankan_rinshan_win(self):
         """測試暗槓後嶺上開花"""
         self._init_game()

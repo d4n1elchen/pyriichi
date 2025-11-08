@@ -118,6 +118,7 @@ class RuleEngine:
         self._is_first_turn_after_deal: bool = True  # 發牌後是否為第一回合
         self._pending_kan_tile: Optional[Tuple[int, Tile]] = None  # (player, tile) 待處理的槓牌，用於搶槓判定
         self._winning_players: List[int] = []  # 多人和牌時的玩家列表（用於三家和了）
+        self._ignore_suukantsu: bool = False  # 是否忽略四槓散了判定
         self._action_handlers = {
             GameAction.DRAW: self._handle_draw,
             GameAction.DISCARD: self._handle_discard,
@@ -151,6 +152,7 @@ class RuleEngine:
         self._is_first_turn_after_deal = True
         self._pending_kan_tile = None
         self._winning_players = []
+        self._ignore_suukantsu = False
 
     def deal(self) -> Dict[int, List[Tile]]:
         """
@@ -407,6 +409,7 @@ class RuleEngine:
 
             if rinshan_win := self.check_rinshan_win(player, rinshan_tile):
                 result.rinshan_win = rinshan_win
+                self._ignore_suukantsu = True
                 self._phase = GamePhase.WINNING
             return True
 
@@ -505,6 +508,9 @@ class RuleEngine:
             kan_player, _ = self._pending_kan_tile
             score_result.payment_from = kan_player
 
+        if self._kan_count >= 4:
+            self._ignore_suukantsu = True
+
         return WinResult(
             win=True,
             player=player,
@@ -533,7 +539,7 @@ class RuleEngine:
             return "sancha_ron"
 
         # 檢查四槓散了（四個槓之後流局）
-        if self._kan_count >= 4:
+        if self._kan_count >= 4 and not self._ignore_suukantsu:
             return "suukantsu"
 
         # 牌山耗盡流局
