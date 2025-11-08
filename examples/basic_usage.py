@@ -17,6 +17,7 @@ from pyriichi import (
     Wind,
     RulesetConfig,
 )
+from pyriichi.yaku import Yaku
 from pyriichi.rules_config import RenhouPolicy
 from pyriichi.tiles import Tile, Suit
 
@@ -82,23 +83,31 @@ def example_game_flow():
     print(f"發牌完成，當前階段: {engine.get_phase()}")
     print(f"當前玩家: {engine.get_current_player()}")
 
-    # 摸牌
     current_player = engine.get_current_player()
-    result = engine.execute_action(current_player, GameAction.DRAW)
-    if result.drawn_tile is not None:
-        print(f"玩家 {current_player} 摸到: {result.drawn_tile}")
+    if engine.can_act(current_player, GameAction.DRAW):
+        draw_result = engine.execute_action(current_player, GameAction.DRAW)
+        if draw_result.drawn_tile is not None:
+            print(f"玩家 {current_player} 摸到: {draw_result.drawn_tile}")
+    else:
+        print(f"玩家 {current_player} 目前無法摸牌（需先打出一張牌）")
 
     # 獲取手牌
     hand = engine.get_hand(current_player)
     print(f"玩家 {current_player} 的手牌: {format_tiles(hand.tiles)}")
 
     # 打牌
-    if hand.tiles:
+    if hand.tiles and engine.can_act(current_player, GameAction.DISCARD):
         discard_tile = hand.tiles[0]
         engine.execute_action(current_player, GameAction.DISCARD, tile=discard_tile)
         print(f"玩家 {current_player} 打出: {discard_tile}")
 
-    print(f"下一回合玩家: {engine.get_current_player()}")
+    next_player = engine.get_current_player()
+    print(f"下一回合玩家: {next_player}")
+
+    if engine.can_act(next_player, GameAction.DRAW):
+        next_draw = engine.execute_action(next_player, GameAction.DRAW)
+        if next_draw.drawn_tile is not None:
+            print(f"玩家 {next_player} 摸到: {next_draw.drawn_tile}")
 
     print()
 
@@ -247,26 +256,11 @@ def example_ruleset_configuration():
     print(f"   - 平和需要兩面聽: {game_state_standard.ruleset.pinfu_require_ryanmen}")
     print(f"   - 全帶么九（門清）: {game_state_standard.ruleset.chanta_closed_han}翻")
     print(f"   - 全帶么九（副露）: {game_state_standard.ruleset.chanta_open_han}翻")
-    print(
-        f"   - 四暗刻單騎: {'雙倍役滿' if game_state_standard.ruleset.suuankou_tanki_is_double_yakuman else '單倍役滿'}"
-    )
-    print(f"   - 四歸一: {'啟用' if game_state_standard.ruleset.suukantsu_ii_enabled else '不啟用'}")
+    print(f"   - 四暗刻單騎: {'雙倍役滿' if game_state_standard.ruleset.suuankou_tanki_double else '單倍役滿'}")
+    print(f"   - 純正九蓮寶燈: {'雙倍役滿' if game_state_standard.ruleset.chuuren_pure_double else '單倍役滿'}")
 
-    # 2. 使用舊版規則
-    print("\n2. 舊版規則：")
-    legacy_ruleset = RulesetConfig.legacy()
-    game_state_legacy = GameState(num_players=4, ruleset=legacy_ruleset)
-    print(f"   - 人和: {game_state_legacy.ruleset.renhou_policy.value} (役滿)")
-    print(f"   - 平和需要兩面聽: {game_state_legacy.ruleset.pinfu_require_ryanmen}")
-    print(f"   - 全帶么九（門清）: {game_state_legacy.ruleset.chanta_closed_han}翻")
-    print(f"   - 全帶么九（副露）: {game_state_legacy.ruleset.chanta_open_han}翻")
-    print(
-        f"   - 四暗刻單騎: {'雙倍役滿' if game_state_legacy.ruleset.suuankou_tanki_is_double_yakuman else '單倍役滿'}"
-    )
-    print(f"   - 四歸一: {'啟用' if game_state_legacy.ruleset.suukantsu_ii_enabled else '不啟用'}")
-
-    # 3. 自定義規則配置
-    print("\n3. 自定義規則配置：")
+    # 2. 自定義規則配置
+    print("\n2. 自定義規則配置：")
     custom_ruleset = RulesetConfig(
         renhou_policy=RenhouPolicy.YAKUMAN,  # 人和為役滿
         pinfu_require_ryanmen=False,  # 平和不檢查兩面聽
@@ -275,16 +269,15 @@ def example_ruleset_configuration():
         chanta_open_han=1,
         junchan_closed_han=3,
         junchan_open_han=2,
-        suukantsu_ii_enabled=False,
-        suuankou_tanki_is_double_yakuman=True,
-        chuuren_pure_double=True,
+        suuankou_tanki_double=False,
+        chuuren_pure_double=False,
     )
     game_state_custom = GameState(num_players=4, ruleset=custom_ruleset)
     print(f"   - 人和: {game_state_custom.ruleset.renhou_policy.value}")
     print(f"   - 平和需要兩面聽: {game_state_custom.ruleset.pinfu_require_ryanmen}")
 
     # 4. 演示規則配置對役種判定的影響
-    print("\n4. 規則配置對役種判定的影響：")
+    print("\n3. 規則配置對役種判定的影響：")
     tiles = parse_tiles("1m2m3m4p5p6p7s8s9s2m3m4m5p")
     hand = Hand(tiles)
     winning_tile = Tile(Suit.PINZU, 5)
@@ -310,21 +303,21 @@ def example_ruleset_configuration():
         if renhou_standard:
             print(f"   標準規則 - 人和: {renhou_standard[0].han}翻 (非役滿)")
 
-        # 使用舊版規則（人和為役滿）
-        game_state_legacy.set_round(Wind.EAST, 1)
-        game_state_legacy.set_dealer(0)
-        results_legacy = yaku_checker.check_all(
+        # 使用自定義規則（人和為役滿）
+        game_state_custom.set_round(Wind.EAST, 1)
+        game_state_custom.set_dealer(0)
+        results_custom = yaku_checker.check_all(
             hand=hand,
             winning_tile=winning_tile,
             winning_combination=winning_combination,
-            game_state=game_state_legacy,
+            game_state=game_state_custom,
             is_tsumo=False,
             is_first_turn=True,
             player_position=1,  # 閒家
         )
-        renhou_legacy = [r for r in results_legacy if r.yaku == Yaku.RENHOU]
-        if renhou_legacy:
-            print(f"   舊版規則 - 人和: {renhou_legacy[0].han}翻 (役滿)")
+        renhou_custom = [r for r in results_custom if r.yaku == Yaku.RENHOU]
+        if renhou_custom:
+            print(f"   自定義規則 - 人和: {renhou_custom[0].han}翻 (役滿)")
 
     print()
 

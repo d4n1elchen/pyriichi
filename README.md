@@ -336,11 +336,7 @@ from pyriichi.rules_config import RenhouPolicy
 game_state = GameState(num_players=4)
 # game_state.ruleset 已經是 RulesetConfig.standard()
 
-# 2. 使用舊版規則（保持向後兼容）
-legacy_ruleset = RulesetConfig.legacy()
-game_state_legacy = GameState(num_players=4, ruleset=legacy_ruleset)
-
-# 3. 自定義規則配置
+# 2. 自定義規則配置
 custom_ruleset = RulesetConfig(
     renhou_policy=RenhouPolicy.YAKUMAN,  # 人和為役滿
     pinfu_require_ryanmen=False,  # 平和不檢查兩面聽
@@ -349,9 +345,8 @@ custom_ruleset = RulesetConfig(
     chanta_open_han=1,  # 全帶么九（副露）1翻
     junchan_closed_han=3,  # 純全帶么九（門清）3翻
     junchan_open_han=2,  # 純全帶么九（副露）2翻
-    suukantsu_ii_enabled=False,  # 不啟用四歸一
-    suuankou_tanki_is_double_yakuman=True,  # 四暗刻單騎為雙倍役滿
-    chuuren_pure_double=True,  # 純正九蓮寶燈為雙倍役滿
+    suuankou_tanki_double=False,  # 四暗刻單騎為單倍役滿
+    chuuren_pure_double=False,  # 純正九蓮寶燈為單倍役滿
 )
 game_state_custom = GameState(num_players=4, ruleset=custom_ruleset)
 
