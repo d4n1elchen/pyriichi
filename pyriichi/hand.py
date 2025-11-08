@@ -262,32 +262,27 @@ class Hand:
         results = []
 
         if tile is None:
-            # 暗槓：檢查手牌中是否有四張相同的牌
             tile_counts = self._get_tile_counts(self._tiles)
             for (suit, rank), count in tile_counts.items():
                 if count == 4:
-                    # 找到四張相同的牌
                     kan_tiles = [t for t in self._tiles if t.suit == suit and t.rank == rank]
                     results.append(Meld(MeldType.ANKAN, kan_tiles))
-        else:
-            # 明槓：檢查是否可以加槓（之前碰過，現在摸到第四張）
-            # 檢查是否有碰過這張牌
             for meld in self._melds:
-                if meld.meld_type == MeldType.PON and meld.called_tile == tile:
-                    # 可以加槓
-                    kan_tiles = meld.tiles + [tile]
-                    results.append(Meld(MeldType.KAN, kan_tiles, called_tile=tile))
-                    break
-
+                if (
+                    meld.meld_type == MeldType.PON
+                    and meld.called_tile is not None
+                    and self._tiles.count(meld.called_tile) > 0
+                ):
+                    kan_tiles = meld.tiles + [meld.called_tile]
+                    results.append(Meld(MeldType.KAN, kan_tiles, called_tile=meld.called_tile))
+        else:
             # 明槓：手牌中有三張相同牌，碰別人打出的第四張
-            count = self._tiles.count(tile)
-            if count >= 3:
-                # 找到三張相同的牌
+            if self._tiles.count(tile) == 3:
                 kan_tiles = []
                 for t in self._tiles:
                     if t == tile and len(kan_tiles) < 3:
                         kan_tiles.append(t)
-                kan_tiles.append(tile)  # 加上被槓的牌
+                kan_tiles.append(tile)
                 results.append(Meld(MeldType.KAN, kan_tiles, called_tile=tile))
 
         return results
@@ -642,7 +637,7 @@ class Hand:
         Returns:
             是否聽牌
         """
-        if len(self._tiles) != 13:
+        if self.total_tile_count() != 13:
             return False
 
         # 獲取當前手牌的計數，只檢查可能相關的牌
@@ -695,7 +690,7 @@ class Hand:
         Returns:
             所有可以和的牌列表
         """
-        if len(self._tiles) != 13:
+        if self.total_tile_count() != 13:
             return []
 
         # 獲取當前手牌的計數，只檢查可能相關的牌
@@ -753,11 +748,14 @@ class Hand:
             是否可以和牌
         """
         # 手牌應該有13張，加上和牌牌共14張
-        if len(self._tiles) != 13:
+        if self.total_tile_count() != 13:
             return False
 
-        # 加上和牌牌
-        all_tiles = self._tiles + [winning_tile]
+        # 加上和牌牌與副露
+        all_tiles = self._tiles.copy()
+        all_tiles.append(winning_tile)
+        for meld in self._melds:
+            all_tiles.extend(meld.tiles)
 
         # 檢查特殊和牌型
         if self._is_seven_pairs(all_tiles):
@@ -780,11 +778,14 @@ class Hand:
         Returns:
             所有可能的和牌組合（每種組合包含 4 組面子和 1 對子）
         """
-        if len(self._tiles) != 13:
+        if self.total_tile_count() != 13:
             return []
 
-        # 加上和牌牌
-        all_tiles = self._tiles + [winning_tile]
+        # 加上和牌牌與副露
+        all_tiles = self._tiles.copy()
+        all_tiles.append(winning_tile)
+        for meld in self._melds:
+            all_tiles.extend(meld.tiles)
 
         # 檢查標準和牌型
         is_winning, combinations = self._is_standard_winning(all_tiles)

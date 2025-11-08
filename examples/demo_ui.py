@@ -336,6 +336,20 @@ class MahjongDemoUI:
                     return True
                 continue
 
+            if self.engine.can_act(caller, GameAction.KAN, tile=last_tile):
+                self.clear_reaction_options()
+                result = self.engine.execute_action(caller, GameAction.KAN, tile=last_tile)
+                self.log("玩家 {} 槓了 {}".format(caller, tile_label))
+                if result.rinshan_tile is not None:
+                    self.log("玩家 {} 嶺上摸到 {}".format(caller, tile_to_chinese(result.rinshan_tile)))
+                self.refresh_ui()
+                if caller != self.human_player:
+                    self.root.after(self.ai_delay_ms, self.ai_take_turn)
+                else:
+                    self.last_drawn_tile = result.rinshan_tile
+                    self.schedule_next_turn()
+                return True
+
             if self.engine.can_act(caller, GameAction.PON):
                 self.clear_reaction_options()
                 self.engine.execute_action(caller, GameAction.PON)
@@ -563,6 +577,14 @@ class MahjongDemoUI:
             self.log("你吃了 {} ({})".format(tile_label, format_tiles_chinese(combination)))
             self.last_drawn_tile = None
             self._cached_tsumo_result = None
+        elif action == GameAction.KAN:
+            kan_tile = option.get("tile") or tile
+            result = self.engine.execute_action(self.human_player, GameAction.KAN, tile=kan_tile)
+            self.log("你槓了 {}".format(tile_label))
+            self.last_drawn_tile = result.rinshan_tile
+            self._cached_tsumo_result = None
+            if result.rinshan_tile is not None:
+                self.log("你嶺上摸到 {}".format(tile_to_chinese(result.rinshan_tile)))
         elif action == GameAction.RON:
             win_result = option.get("win_result")
             self.perform_ron(tile, win_result)
@@ -574,6 +596,15 @@ class MahjongDemoUI:
 
     def _build_human_reaction_options(self, last_tile: Tile, tile_label: str, offset: int) -> list:
         options = []
+
+        if self.engine.can_act(self.human_player, GameAction.KAN, tile=last_tile):
+            options.append(
+                {
+                    "action": GameAction.KAN,
+                    "label": f"槓 {tile_label}",
+                    "tile": last_tile,
+                }
+            )
 
         if self.engine.can_act(self.human_player, GameAction.PON):
             options.append({"action": GameAction.PON, "label": f"碰 {tile_label}"})

@@ -103,6 +103,25 @@ class TestHand:
 
         assert hand.is_winning_hand(winning_tile)
 
+    def test_winning_hand_with_open_meld(self):
+        """測試含有副露的和牌判定"""
+
+        tiles = parse_tiles("2m3m5m6m7m7m8m9m5z5z5p5p1p")
+        hand = Hand(tiles)
+
+        # 副露：碰 5p
+        hand.pon(Tile(Suit.PINZU, 5))
+        # 打出額外的 1p 使牌數回到 13 張
+        hand.discard(Tile(Suit.PINZU, 1))
+
+        winning_tile = Tile(Suit.MANZU, 4)
+
+        assert hand.total_tile_count() == 13
+        assert hand.is_winning_hand(winning_tile)
+
+        combinations = hand.get_winning_combinations(winning_tile)
+        assert len(combinations) > 0
+
     def test_seven_pairs(self):
         """測試七對子"""
         # 七對子（手牌13張，和牌牌1張）
@@ -171,6 +190,43 @@ class TestHand:
 
         waiting_tiles = hand.get_waiting_tiles()
         assert Tile(Suit.PINZU, 4) in waiting_tiles
+
+    def test_tenpai_with_open_meld(self):
+        """測試含副露的聽牌判定"""
+
+        tiles = parse_tiles("2m3m5m6m7m7m8m9m5z5z5p5p1p")
+        hand = Hand(tiles)
+
+        hand.pon(Tile(Suit.PINZU, 5))
+        hand.discard(Tile(Suit.PINZU, 1))
+
+        assert hand.total_tile_count() == 13
+        assert hand.is_tenpai()
+        waiting_tiles = hand.get_waiting_tiles()
+        assert Tile(Suit.MANZU, 4) in waiting_tiles
+
+    def test_cannot_open_kan_from_pair(self):
+        """測試副露對子不能直接槓"""
+
+        hand = Hand(parse_tiles("1m1m2m3m4m5m6m7m8m9m1p1p1p"))
+        hand.pon(Tile(Suit.PINZU, 1))
+
+        # 對手打出 1p 時不可再槓
+        kan_options = hand.can_kan(Tile(Suit.PINZU, 1))
+        assert kan_options == []
+
+    def test_open_kan_upgrade_after_pon(self):
+        """測試碰後摸到第四張牌可以加槓"""
+
+        hand = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p1p1p9p"))
+        hand.pon(Tile(Suit.PINZU, 1))
+
+        drawn = Tile(Suit.PINZU, 1)
+        hand.add_tile(drawn)
+
+        assert any(
+            meld.meld_type == MeldType.KAN and meld.called_tile == Tile(Suit.PINZU, 1) for meld in hand.can_kan()
+        )
 
     def test_pon(self):
         """測試碰"""
