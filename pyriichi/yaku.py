@@ -4,7 +4,7 @@
 提供所有役種的判定功能。
 """
 
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from pyriichi.hand import Hand
 from pyriichi.tiles import Tile, Suit
@@ -22,9 +22,7 @@ class YakuResult:
     is_yakuman: bool  # 是否為役滿
 
     def __eq__(self, other):
-        if not isinstance(other, YakuResult):
-            return False
-        return self.name == other.name
+        return self.name == other.name if isinstance(other, YakuResult) else False
 
     def __hash__(self):
         return hash(self.name)
@@ -82,20 +80,12 @@ class YakuChecker:
             return results
 
         # 七對子判定
-        if hand.is_concealed and len(all_tiles) == 14:
-            counts = {}
-            for tile in all_tiles:
-                key = (tile.suit, tile.rank)
-                counts[key] = counts.get(key, 0) + 1
+        if result := self.check_chiitoitsu(hand, all_tiles):
+            results = [result]
+            if hand.is_riichi:
+                results.insert(0, YakuResult("立直", "Riichi", "立直", 1, False))
+            return results
 
-            # 檢查是否全部是對子
-            pairs = sum(1 for count in counts.values() if count == 2)
-            if pairs == 7:
-                results = [YakuResult("七対子", "Chiitoitsu", "七對子", 2, False)]
-                # 七對子不能和其他役種複合（除了立直），所以直接返回
-                if hand.is_riichi:
-                    results.insert(0, YakuResult("立直", "Riichi", "立直", 1, False))
-                return results
         results = []
 
         # 基本役
@@ -105,10 +95,8 @@ class YakuChecker:
             results.append(result)
         if result := self.check_menzen_tsumo(hand, game_state, is_tsumo):
             results.append(result)
-        # 海底撈月/河底撈魚
         if result := self.check_haitei_raoyue(hand, is_tsumo, is_last_tile):
             results.append(result)
-        # 嶺上開花
         if result := self.check_rinshan_kaihou(hand, is_rinshan):
             results.append(result)
         if result := self.check_tanyao(hand, winning_combination):
@@ -137,12 +125,12 @@ class YakuChecker:
             results.append(result)
         if result := self.check_honitsu(hand, winning_combination):
             results.append(result)
-        # 七對子需要特殊處理（因為 winning_combination 為空）
-        # 如果 winning_combination 為空且手牌是門清，檢查是否為七對子
-        if not winning_combination and hand.is_concealed:
-            # 檢查手牌是否為七對子型（需要和牌牌）
-            # 這個檢查需要在調用時傳入完整的14張牌
-            pass
+        if result := self.check_sanshoku_doukou(hand, winning_combination):
+            results.append(result)
+        if result := self.check_shousangen(hand, winning_combination):
+            results.append(result)
+        if result := self.check_honroutou(hand, winning_combination):
+            results.append(result)
 
         # 高級役（3翻以上）
         if result := self.check_junchan(hand, winning_combination, game_state):
@@ -150,14 +138,6 @@ class YakuChecker:
         if result := self.check_honchan(hand, winning_combination, game_state):
             results.append(result)
         if result := self.check_ryanpeikou(hand, winning_combination):
-            results.append(result)
-
-        # 特殊役（2翻）
-        if result := self.check_sanshoku_doukou(hand, winning_combination):
-            results.append(result)
-        if result := self.check_shousangen(hand, winning_combination):
-            results.append(result)
-        if result := self.check_honroutou(hand, winning_combination):
             results.append(result)
 
         # 役滿檢查（優先檢查，因為役滿會覆蓋其他役種）
@@ -169,7 +149,6 @@ class YakuChecker:
             yakuman_results.append(result)
         if result := self.check_suuankou(hand, winning_combination, winning_tile, game_state):
             yakuman_results.append(result)
-        # 國士無雙已在前面檢查，這裡跳過
         if result := self.check_shousuushi(hand, winning_combination):
             yakuman_results.append(result)
         if result := self.check_daisuushi(hand, winning_combination):
@@ -216,26 +195,6 @@ class YakuChecker:
             should_include = True
 
             # 1. 平和與役牌衝突
-            if result.name == "平和":
-                # 檢查是否有役牌
-                yakuhai_names = {"白", "發", "中", "場風東", "場風南", "場風西", "場風北"}
-                if yaku_names & yakuhai_names:
-                    should_include = False
-
-            # 2. 斷么九與包含幺九的役種衝突
-            if result.name == "斷么九":
-                # 包含幺九的役種
-                terminal_yaku = {
-                    "一気通貫",  # 包含1和9的順子
-                    "純全帯么九",
-                    "混全帯么九",
-                    "混老頭",
-                    "清老頭",
-                }
-                if yaku_names & terminal_yaku:
-                    should_include = False
-
-            # 3. 對對和與順子役種衝突
             if result.name == "対々和":
                 # 需要順子的役種
                 sequence_yaku = {
@@ -245,6 +204,24 @@ class YakuChecker:
                     "二盃口",
                 }
                 if yaku_names & sequence_yaku:
+                    should_include = False
+
+            elif result.name == "平和":
+                # 檢查是否有役牌
+                yakuhai_names = {"白", "發", "中", "場風東", "場風南", "場風西", "場風北"}
+                if yaku_names & yakuhai_names:
+                    should_include = False
+
+            elif result.name == "斷么九":
+                # 包含幺九的役種
+                terminal_yaku = {
+                    "一気通貫",  # 包含1和9的順子
+                    "純全帯么九",
+                    "混全帯么九",
+                    "混老頭",
+                    "清老頭",
+                }
+                if yaku_names & terminal_yaku:
                     should_include = False
 
             # 4. 一盃口與二盃口互斥
@@ -280,9 +257,7 @@ class YakuChecker:
 
     def check_riichi(self, hand: Hand, game_state: GameState) -> Optional[YakuResult]:
         """檢查立直"""
-        if hand.is_riichi:
-            return YakuResult("立直", "Riichi", "立直", 1, False)
-        return None
+        return YakuResult("立直", "Riichi", "立直", 1, False) if hand.is_riichi else None
 
     def check_ippatsu(self, hand: Hand, game_state: GameState, turns_after_riichi: int = -1) -> Optional[YakuResult]:
         """
@@ -336,9 +311,7 @@ class YakuChecker:
                 elif meld_type == "triplet":
                     all_tiles.extend([Tile(suit, rank), Tile(suit, rank), Tile(suit, rank)])
                 elif meld_type == "sequence":
-                    for i in range(3):
-                        all_tiles.append(Tile(suit, rank + i))
-
+                    all_tiles.extend(Tile(suit, rank + i) for i in range(3))
         # 檢查是否有幺九牌或字牌
         for tile in all_tiles:
             if tile.is_honor or tile.is_terminal:
@@ -372,10 +345,10 @@ class YakuChecker:
         for meld in winning_combination:
             if isinstance(meld, tuple) and len(meld) == 2:
                 meld_type, (suit, rank) = meld
-                if meld_type == "sequence":
-                    sequences += 1
-                elif meld_type == "pair":
+                if meld_type == "pair":
                     pair = (suit, rank)
+                elif meld_type == "sequence":
+                    sequences += 1
                 elif meld_type == "triplet":
                     # 有刻子就不是平和
                     return None
@@ -408,15 +381,10 @@ class YakuChecker:
 
         # 檢查聽牌類型（兩面聽）- 根據規則配置
         ruleset = game_state.ruleset if game_state else None
-        if ruleset and ruleset.pinfu_require_ryanmen:
-            # 需要檢查是否為兩面聽
-            if winning_tile is None:
-                # 如果沒有提供 winning_tile，無法檢查聽牌類型，跳過此檢查
-                pass
-            else:
-                waiting_type = self._determine_waiting_type(winning_tile, winning_combination)
-                if waiting_type != "ryanmen":
-                    return None  # 不是兩面聽，不能是平和
+        if ruleset and ruleset.pinfu_require_ryanmen and winning_tile is not None:
+            waiting_type = self._determine_waiting_type(winning_tile, winning_combination)
+            if waiting_type != "ryanmen":
+                return None  # 不是兩面聽，不能是平和
 
         return YakuResult("平和", "Pinfu", "平和", 1, False)
 
@@ -464,14 +432,14 @@ class YakuChecker:
         for meld in winning_combination:
             if isinstance(meld, tuple) and len(meld) == 2:
                 meld_type, (suit, rank) = meld
-                if meld_type == "triplet":
-                    triplets += 1
-                elif meld_type == "pair":
+                if meld_type == "pair":
                     pair = (suit, rank)
                 elif meld_type == "sequence":
                     # 有順子就不是對對和
                     return None
 
+                elif meld_type == "triplet":
+                    triplets += 1
         # 必須有4個刻子和1個對子
         if triplets == 4 and pair is not None:
             return YakuResult("対々和", "Toitoi", "對對和", 2, False)
@@ -522,39 +490,37 @@ class YakuChecker:
         for meld in winning_combination:
             if isinstance(meld, tuple) and len(meld) == 2:
                 meld_type, (suit, rank) = meld
-                if meld_type == "triplet" or meld_type == "kan":
-                    if suit.value == "z":
-                        # 三元牌
-                        if rank in sangen:
-                            if rank == 5:
-                                results.append(YakuResult("白", "Haku", "白", 1, False))
-                            elif rank == 6:
-                                results.append(YakuResult("發", "Hatsu", "發", 1, False))
-                            elif rank == 7:
-                                results.append(YakuResult("中", "Chun", "中", 1, False))
+                if meld_type in ["triplet", "kan"] and suit.value == "z":
+                    if rank in sangen:
+                        if rank == 5:
+                            results.append(YakuResult("白", "Haku", "白", 1, False))
+                        elif rank == 6:
+                            results.append(YakuResult("發", "Hatsu", "發", 1, False))
+                        elif rank == 7:
+                            results.append(YakuResult("中", "Chun", "中", 1, False))
 
-                        # 場風和自風
-                        if rank == 1 and round_wind.value == "e":  # 東
-                            results.append(YakuResult("場風東", "Ton", "場風東", 1, False))
-                        elif rank == 2 and round_wind.value == "s":  # 南
-                            results.append(YakuResult("場風南", "Nan", "場風南", 1, False))
-                        elif rank == 3 and round_wind.value == "w":  # 西
-                            results.append(YakuResult("場風西", "Shaa", "場風西", 1, False))
-                        elif rank == 4 and round_wind.value == "n":  # 北
-                            results.append(YakuResult("場風北", "Pei", "場風北", 1, False))
+                    # 場風和自風
+                    if rank == 1 and round_wind.value == "e":  # 東
+                        results.append(YakuResult("場風東", "Ton", "場風東", 1, False))
+                    elif rank == 2 and round_wind.value == "s":  # 南
+                        results.append(YakuResult("場風南", "Nan", "場風南", 1, False))
+                    elif rank == 3 and round_wind.value == "w":  # 西
+                        results.append(YakuResult("場風西", "Shaa", "場風西", 1, False))
+                    elif rank == 4 and round_wind.value == "n":  # 北
+                        results.append(YakuResult("場風北", "Pei", "場風北", 1, False))
 
-                        # 自風（需要根據玩家位置）
-                        # 自風：與玩家位置對應的風牌刻子
-                        if player_position < len(game_state.player_winds):
-                            player_wind = game_state.player_winds[player_position]
-                            if rank == 1 and player_wind.value == "e":  # 東
-                                results.append(YakuResult("自風東", "Ton", "自風東", 1, False))
-                            elif rank == 2 and player_wind.value == "s":  # 南
-                                results.append(YakuResult("自風南", "Nan", "自風南", 1, False))
-                            elif rank == 3 and player_wind.value == "w":  # 西
-                                results.append(YakuResult("自風西", "Shaa", "自風西", 1, False))
-                            elif rank == 4 and player_wind.value == "n":  # 北
-                                results.append(YakuResult("自風北", "Pei", "自風北", 1, False))
+                    # 自風（需要根據玩家位置）
+                    # 自風：與玩家位置對應的風牌刻子
+                    if player_position < len(game_state.player_winds):
+                        player_wind = game_state.player_winds[player_position]
+                        if rank == 1 and player_wind.value == "e":  # 東
+                            results.append(YakuResult("自風東", "Ton", "自風東", 1, False))
+                        elif rank == 2 and player_wind.value == "s":  # 南
+                            results.append(YakuResult("自風南", "Nan", "自風南", 1, False))
+                        elif rank == 3 and player_wind.value == "w":  # 西
+                            results.append(YakuResult("自風西", "Shaa", "自風西", 1, False))
+                        elif rank == 4 and player_wind.value == "n":  # 北
+                            results.append(YakuResult("自風北", "Pei", "自風北", 1, False))
 
         return results
 
@@ -698,24 +664,28 @@ class YakuChecker:
 
         return None
 
-    def check_chiitoitsu(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
+    def check_chiitoitsu(self, hand: Hand, all_tiles: List[Tile]) -> Optional[YakuResult]:
         """
         檢查七對子
 
         七對子：七組對子（特殊和牌型）
         注意：七對子不會有標準的和牌組合，需要特殊處理
         """
-        if not hand.is_concealed:
+        if not hand.is_concealed or len(all_tiles) != 14:
             return None
 
-        # 七對子的和牌組合為空，所以我們需要檢查手牌本身
-        # 但這裡我們無法直接訪問完整手牌（14張），所以需要通過其他方式判斷
-        # 實際上，如果 winning_combination 為空且是門清，可能是七對子
-        # 但這不準確，因為國士無雙也是空組合
+        counts: Dict[Tuple[Suit, int], int] = {}
+        for tile in all_tiles:
+            key = (tile.suit, tile.rank)
+            counts[key] = counts.get(key, 0) + 1
+            if counts[key] > 2:
+                return None
 
-        # 更好的方法：在 check_all 中，如果檢測到是七對子型，直接返回
-        # 但這裡我們暫時返回 None，因為七對子的判定需要特殊處理
-        return None
+        pairs = [count for count in counts.values() if count == 2]
+        if len(pairs) != 7:
+            return None
+
+        return YakuResult("七対子", "Chiitoitsu", "七對子", 2, False)
 
     def check_junchan(
         self, hand: Hand, winning_combination: List, game_state: Optional[GameState] = None
@@ -745,10 +715,9 @@ class YakuChecker:
                 if meld_type == "sequence":
                     sequences_count += 1
                     # 順子必須包含1或9（1-2-3 或 7-8-9）
-                    if rank != 1 and rank != 7:
+                    if rank not in [1, 7]:
                         return None
 
-                # 純全帶么九應該只有順子，不應該有刻子
                 elif meld_type == "triplet":
                     return None
 
@@ -792,20 +761,15 @@ class YakuChecker:
 
                 if tile.is_honor:
                     has_honor = True
-                else:
-                    # 檢查順子
-                    if meld_type == "sequence":
-                        # 順子必須包含1或9
-                        if rank != 1 and rank != 7:
-                            all_terminals = False
-                            break
-
-                    # 檢查刻子或對子
-                    elif meld_type in ["triplet", "pair"]:
-                        # 必須是1或9
-                        if rank != 1 and rank != 9:
-                            all_terminals = False
-                            break
+                elif (
+                    meld_type == "sequence"
+                    and rank not in [1, 7]
+                    or meld_type != "sequence"
+                    and meld_type in ["triplet", "pair"]
+                    and rank not in [1, 9]
+                ):
+                    all_terminals = False
+                    break
 
         # 必須有字牌，且所有數牌都是幺九牌
         if has_honor and all_terminals:
@@ -955,9 +919,8 @@ class YakuChecker:
         for meld in winning_combination:
             if isinstance(meld, tuple) and len(meld) == 2:
                 meld_type, (suit, rank) = meld
-                if suit == Suit.JIHAI and rank in sangen:
-                    if meld_type in ["triplet", "kan"]:
-                        sangen_triplets.append(rank)
+                if suit == Suit.JIHAI and rank in sangen and meld_type in ["triplet", "kan"]:
+                    sangen_triplets.append(rank)
 
         # 三個三元牌刻子
         if len(sangen_triplets) == 3:
@@ -1022,7 +985,7 @@ class YakuChecker:
         # 四個暗刻
         if triplets == 4:
             ruleset = game_state.ruleset if game_state else None
-            if ruleset and ruleset.suuankou_tanki_is_double_yakuman and is_tanki:
+            if ruleset and ruleset.suuankou_tanki_double and is_tanki:
                 return YakuResult("四暗刻単騎", "Suuankou Tanki", "四暗刻單騎", 26, True)
             return YakuResult("四暗刻", "Suuankou", "四暗刻", 13, True)
 
@@ -1134,9 +1097,8 @@ class YakuChecker:
         for meld in winning_combination:
             if isinstance(meld, tuple) and len(meld) == 2:
                 meld_type, (suit, rank) = meld
-                if suit == Suit.JIHAI and rank in kaze:
-                    if meld_type in ["triplet", "kan"]:
-                        kaze_triplets.append(rank)
+                if suit == Suit.JIHAI and rank in kaze and meld_type in ["triplet", "kan"]:
+                    kaze_triplets.append(rank)
 
         # 四個風牌刻子
         if len(kaze_triplets) == 4:
@@ -1164,13 +1126,13 @@ class YakuChecker:
                     return None
 
                 # 必須是刻子或對子，且是幺九牌
-                if meld_type in ["triplet", "kan", "pair"]:
-                    if not tile.is_terminal:
-                        return None
-                elif meld_type == "sequence":
-                    # 清老頭不能有順子
+                if (
+                    meld_type in ["triplet", "kan", "pair"]
+                    and not tile.is_terminal
+                    or meld_type not in ["triplet", "kan", "pair"]
+                    and meld_type == "sequence"
+                ):
                     return None
-
         return YakuResult("清老頭", "Chinroutou", "清老頭", 13, True)
 
     def check_tsuuiisou(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
@@ -1518,35 +1480,30 @@ class YakuChecker:
         for meld in winning_combination:
             if isinstance(meld, tuple) and len(meld) == 2:
                 meld_type, (suit, rank) = meld
-                if meld_type == "sequence":
-                    # 檢查和牌牌是否在這個順子中
-                    if suit == winning_tile.suit:
-                        if rank <= winning_tile.rank <= rank + 2:
-                            # 在順子中
-                            if winning_tile.rank == rank:
-                                # 第一張（邊張聽）
-                                if rank == 1:
-                                    return "penchan"
-                                else:
-                                    return "kanchan"
-                            elif winning_tile.rank == rank + 1:
-                                # 中間張（嵌張聽）
-                                return "kanchan"
-                            elif winning_tile.rank == rank + 2:
-                                # 最後一張（邊張聽）
-                                if rank == 7:
-                                    return "penchan"
-                                else:
-                                    return "kanchan"
-                            break
+                if meld_type == "sequence" and suit == winning_tile.suit and rank <= winning_tile.rank <= rank + 2:
+                    if (
+                        winning_tile.rank == rank == 1
+                        or winning_tile.rank != rank
+                        and winning_tile.rank != rank + 1
+                        and winning_tile.rank == rank + 2
+                        and rank == 7
+                    ):
+                        return "penchan"
+                    elif (
+                        winning_tile.rank == rank
+                        or winning_tile.rank != rank + 1
+                        and winning_tile.rank == rank + 2
+                        or winning_tile.rank == rank + 1
+                    ):
+                        return "kanchan"
+                    break
 
         # 檢查是否為單騎聽（對子的一部分）
         for meld in winning_combination:
             if isinstance(meld, tuple) and len(meld) == 2:
                 meld_type, (suit, rank) = meld
-                if meld_type == "pair":
-                    if suit == winning_tile.suit and rank == winning_tile.rank:
-                        return "tanki"
+                if meld_type == "pair" and (suit == winning_tile.suit and rank == winning_tile.rank):
+                    return "tanki"
 
         # 默認為兩面聽
         return "ryanmen"
