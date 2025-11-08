@@ -11,7 +11,7 @@ from pyriichi.tiles import Tile, Suit, TileSet
 from pyriichi.hand import Hand, Meld, MeldType
 from pyriichi.game_state import GameState, Wind
 from pyriichi.rules import RuleEngine, GameAction, GamePhase, ActionResult, WinResult, DrawResult
-from pyriichi.yaku import YakuChecker, YakuResult
+from pyriichi.yaku import YakuChecker, YakuResult, Yaku
 from pyriichi.scoring import ScoreCalculator, ScoreResult
 from pyriichi.rules_config import RulesetConfig
 
@@ -36,6 +36,7 @@ __all__ = [
     "DrawResult",
     "YakuChecker",
     "YakuResult",
+    "Yaku",
     "ScoreCalculator",
     "ScoreResult",
     "RulesetConfig",

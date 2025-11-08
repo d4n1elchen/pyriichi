@@ -5,7 +5,7 @@ ScoreCalculator 的單元測試
 import pytest
 from pyriichi.hand import Hand
 from pyriichi.tiles import Tile, Suit
-from pyriichi.yaku import YakuChecker, YakuResult
+from pyriichi.yaku import YakuChecker, YakuResult, Yaku
 from pyriichi.scoring import ScoreCalculator, ScoreResult
 from pyriichi.game_state import GameState, Wind
 
@@ -89,8 +89,8 @@ class TestScoreCalculator:
     def test_calculate_han(self):
         """測試翻數計算"""
         yaku_results = [
-            YakuResult("立直", "Riichi", "立直", 1, False),
-            YakuResult("斷么九", "Tanyao", "斷么九", 1, False),
+            YakuResult(Yaku.RIICHI, 1, False),
+            YakuResult(Yaku.TANYAO, 1, False),
         ]
 
         han = self.calculator.calculate_han(yaku_results, 0)
@@ -138,10 +138,10 @@ class TestScoreCalculator:
         """測試滿貫得分"""
         # 5翻滿貫
         yaku_results = [
-            YakuResult("立直", "Riichi", "立直", 1, False),
-            YakuResult("斷么九", "Tanyao", "斷么九", 1, False),
-            YakuResult("三色同順", "Sanshoku Doujun", "三色同順", 2, False),
-            YakuResult("一気通貫", "Ittsu", "一氣通貫", 2, False),
+            YakuResult(Yaku.RIICHI, 1, False),
+            YakuResult(Yaku.TANYAO, 1, False),
+            YakuResult(Yaku.SANSHOKU_DOUJUN, 2, False),
+            YakuResult(Yaku.ITTSU, 2, False),
         ]
 
         # 模擬一個和牌組合

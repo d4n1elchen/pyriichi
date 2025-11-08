@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pyriichi.hand import Hand
 from pyriichi.tiles import Tile, Suit
 from pyriichi.game_state import GameState
-from pyriichi.yaku import YakuResult
+from pyriichi.yaku import YakuResult, Yaku
 
 
 @dataclass
@@ -140,7 +140,7 @@ class ScoreCalculator:
 
         # 檢查是否役滿
         is_yakuman = any(r.is_yakuman for r in yaku_results)
-        yakuman_count = sum(1 for r in yaku_results if r.is_yakuman)
+        yakuman_count = sum(bool(r.is_yakuman) for r in yaku_results)
 
         # 創建結果對象
         result = ScoreResult(
@@ -191,14 +191,9 @@ class ScoreCalculator:
         fu = 20  # 基本符
 
         # 檢查是否為平和（平和固定 20 符，無其他符）
-        is_pinfu = any(r.name == "平和" for r in yaku_results) if yaku_results else False
+        is_pinfu = any(r.yaku == Yaku.PINFU for r in yaku_results) if yaku_results else False
 
         if is_pinfu:
-            # 平和固定符數
-            if is_tsumo:
-                fu = 30  # 平和自摸：20符基本符 + 2符自摸符 + 8符副底符 = 30符
-            else:
-                fu = 30  # 平和榮和：20符基本符 + 10符門清榮和 = 30符
             # 平和固定30符，不需要進位
             return 30
 

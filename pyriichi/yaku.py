@@ -6,26 +6,107 @@
 
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
+from enum import Enum
 from pyriichi.hand import Hand
 from pyriichi.tiles import Tile, Suit
 from pyriichi.game_state import GameState
 
 
-@dataclass
+__all__ = ["Yaku", "YakuResult", "YakuChecker"]
+
+
+class Yaku(Enum):
+    """所有役種枚舉"""
+
+    RIICHI = ("立直", "Riichi", "立直")
+    IPPATSU = ("一発", "Ippatsu", "一發")
+    MENZEN_TSUMO = ("門前清自摸和", "Menzen Tsumo", "門清自摸")
+    TANYAO = ("斷么九", "Tanyao", "斷么九")
+    PINFU = ("平和", "Pinfu", "平和")
+    IIPEIKOU = ("一盃口", "Iipeikou", "一盃口")
+    RYANPEIKOU = ("二盃口", "Ryanpeikou", "二盃口")
+    TOITOI = ("対々和", "Toitoi", "對對和")
+    SANANKOU = ("三暗刻", "Sanankou", "三暗刻")
+    SANKANTSU = ("三槓子", "Sankantsu", "三槓子")
+    SANSHOKU_DOUJUN = ("三色同順", "Sanshoku Doujun", "三色同順")
+    SANSHOKU_DOUKOU = ("三色同刻", "Sanshoku Doukou", "三色同刻")
+    ITTSU = ("一気通貫", "Ittsu", "一氣通貫")
+    HONITSU = ("混一色", "Honitsu", "混一色")
+    CHINITSU = ("清一色", "Chinitsu", "清一色")
+    JUNCHAN = ("純全帯么九", "Junchan", "純全帶么九")
+    CHANTA = ("全帯么九", "Chanta", "全帶么九")
+    HONROUTOU = ("混老頭", "Honroutou", "混老頭")
+    SHOUSANGEN = ("小三元", "Shousangen", "小三元")
+    DAISANGEN = ("大三元", "Daisangen", "大三元")
+    SUUANKOU = ("四暗刻", "Suuankou", "四暗刻")
+    SUUANKOU_TANKI = ("四暗刻単騎", "Suuankou Tanki", "四暗刻單騎")
+    SUUKANTSU = ("四槓子", "Suukantsu", "四槓子")
+    SHOUSUUSHI = ("小四喜", "Shousuushi", "小四喜")
+    DAISUUSHI = ("大四喜", "Daisuushi", "大四喜")
+    CHINROUTOU = ("清老頭", "Chinroutou", "清老頭")
+    TSUUIISOU = ("字一色", "Tsuuiisou", "字一色")
+    RYUIISOU = ("綠一色", "Ryuuiisou", "綠一色")
+    CHUUREN_POUTOU = ("九蓮寶燈", "Chuuren Poutou", "九蓮寶燈")
+    CHUUREN_POUTOU_PURE = ("純正九蓮寶燈", "Junsei Chuuren Poutou", "純正九蓮寶燈")
+    KOKUSHI_MUSOU = ("國士無雙", "Kokushi Musou", "國士無雙")
+    KOKUSHI_MUSOU_JUUSANMEN = ("國士無雙十三面", "Kokushi Musou Juusanmen", "國士無雙十三面")
+    TENHOU = ("天和", "Tenhou", "天和")
+    CHIHOU = ("地和", "Chihou", "地和")
+    RENHOU = ("人和", "Renhou", "人和")
+    HAITEI = ("海底撈月", "Haitei Raoyue", "海底撈月")
+    HOUTEI = ("河底撈魚", "Houtei Raoyui", "河底撈魚")
+    RINSHAN = ("嶺上開花", "Rinshan Kaihou", "嶺上開花")
+    CHIITOITSU = ("七対子", "Chiitoitsu", "七對子")
+    HAKU = ("白", "Haku", "白")
+    HATSU = ("發", "Hatsu", "發")
+    CHUN = ("中", "Chun", "中")
+    ROUND_WIND_EAST = ("場風東", "Ton", "場風東")
+    ROUND_WIND_SOUTH = ("場風南", "Nan", "場風南")
+    ROUND_WIND_WEST = ("場風西", "Shaa", "場風西")
+    ROUND_WIND_NORTH = ("場風北", "Pei", "場風北")
+    SEAT_WIND_EAST = ("自風東", "Ton", "自風東")
+    SEAT_WIND_SOUTH = ("自風南", "Nan", "自風南")
+    SEAT_WIND_WEST = ("自風西", "Shaa", "自風西")
+    SEAT_WIND_NORTH = ("自風北", "Pei", "自風北")
+
+    @property
+    def japanese(self) -> str:
+        return self.value[0]
+
+    @property
+    def english(self) -> str:
+        return self.value[1]
+
+    @property
+    def chinese(self) -> str:
+        return self.value[2]
+
+
+@dataclass(frozen=True)
 class YakuResult:
     """役種判定結果"""
 
-    name: str  # 役種名稱（日文）
-    name_en: str  # 役種名稱（英文）
-    name_cn: str  # 役種名稱（中文）
-    han: int  # 翻數
-    is_yakuman: bool  # 是否為役滿
+    yaku: Yaku
+    han: int
+    is_yakuman: bool
 
     def __eq__(self, other):
-        return self.name == other.name if isinstance(other, YakuResult) else False
+        return self.yaku == other.yaku if isinstance(other, YakuResult) else False
 
     def __hash__(self):
-        return hash(self.name)
+        return hash(self.yaku)
+
+    @property
+    def name(self) -> str:
+        return self.yaku.japanese
+
+    @property
+    def name_en(self) -> str:
+        return self.yaku.english
+
+    @property
+    def name_cn(self) -> str:
+        return self.yaku.chinese
 
 
 class YakuChecker:
@@ -72,18 +153,17 @@ class YakuChecker:
             results = [result]
             # 檢查是否為十三面聽牌
             if self.check_kokushi_musou_juusanmen(hand, all_tiles):
-                # 十三面聽牌是雙倍役滿（26翻），但這裡先標記為役滿
-                results[0] = YakuResult("國士無雙十三面", "Kokushi Musou Juusanmen", "國士無雙十三面", 26, True)
+                results[0] = YakuResult(Yaku.KOKUSHI_MUSOU_JUUSANMEN, 26, True)
             # 國士無雙可以與立直複合（但天和、地和、人和不能與立直複合）
             if hand.is_riichi:
-                results.insert(0, YakuResult("立直", "Riichi", "立直", 1, False))
+                results.insert(0, YakuResult(Yaku.RIICHI, 1, False))
             return results
 
         # 七對子判定
         if result := self.check_chiitoitsu(hand, all_tiles):
             results = [result]
             if hand.is_riichi:
-                results.insert(0, YakuResult("立直", "Riichi", "立直", 1, False))
+                results.insert(0, YakuResult(Yaku.RIICHI, 1, False))
             return results
 
         results = []
@@ -166,7 +246,7 @@ class YakuChecker:
         if yakuman_results:
             # 役滿可以與立直複合
             if hand.is_riichi:
-                yakuman_results.insert(0, YakuResult("立直", "Riichi", "立直", 1, False))
+                yakuman_results.insert(0, YakuResult(Yaku.RIICHI, 1, False))
             return yakuman_results
 
         # 役種衝突檢測和過濾
@@ -257,7 +337,7 @@ class YakuChecker:
 
     def check_riichi(self, hand: Hand, game_state: GameState) -> Optional[YakuResult]:
         """檢查立直"""
-        return YakuResult("立直", "Riichi", "立直", 1, False) if hand.is_riichi else None
+        return YakuResult(Yaku.RIICHI, 1, False) if hand.is_riichi else None
 
     def check_ippatsu(self, hand: Hand, game_state: GameState, turns_after_riichi: int = -1) -> Optional[YakuResult]:
         """
@@ -274,7 +354,7 @@ class YakuChecker:
 
         # 一發：立直後一巡內和牌（turns_after_riichi == 0）
         if turns_after_riichi == 0:
-            return YakuResult("一発", "Ippatsu", "一發", 1, False)
+            return YakuResult(Yaku.IPPATSU, 1, False)
 
         return None
 
@@ -290,7 +370,7 @@ class YakuChecker:
         if not is_tsumo:
             return None
 
-        return YakuResult("門前清自摸和", "Menzen Tsumo", "門清自摸", 1, False)
+        return YakuResult(Yaku.MENZEN_TSUMO, 1, False)
 
     def check_tanyao(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
         """
@@ -317,7 +397,7 @@ class YakuChecker:
             if tile.is_honor or tile.is_terminal:
                 return None
 
-        return YakuResult("斷么九", "Tanyao", "斷么九", 1, False)
+        return YakuResult(Yaku.TANYAO, 1, False)
 
     def check_pinfu(
         self,
@@ -386,7 +466,7 @@ class YakuChecker:
             if waiting_type != "ryanmen":
                 return None  # 不是兩面聽，不能是平和
 
-        return YakuResult("平和", "Pinfu", "平和", 1, False)
+        return YakuResult(Yaku.PINFU, 1, False)
 
     def check_iipeikou(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
         """
@@ -413,7 +493,7 @@ class YakuChecker:
             for i in range(len(sequences)):
                 for j in range(i + 1, len(sequences)):
                     if sequences[i] == sequences[j]:
-                        return YakuResult("一盃口", "Iipeikou", "一盃口", 1, False)
+                        return YakuResult(Yaku.IIPEIKOU, 1, False)
 
         return None
 
@@ -442,7 +522,7 @@ class YakuChecker:
                     triplets += 1
         # 必須有4個刻子和1個對子
         if triplets == 4 and pair is not None:
-            return YakuResult("対々和", "Toitoi", "對對和", 2, False)
+            return YakuResult(Yaku.TOITOI, 2, False)
 
         return None
 
@@ -464,7 +544,7 @@ class YakuChecker:
 
         # 三個槓子
         if kan_count == 3:
-            return YakuResult("三槓子", "Sankantsu", "三槓子", 2, False)
+            return YakuResult(Yaku.SANKANTSU, 2, False)
 
         return None
 
@@ -493,34 +573,34 @@ class YakuChecker:
                 if meld_type in ["triplet", "kan"] and suit.value == "z":
                     if rank in sangen:
                         if rank == 5:
-                            results.append(YakuResult("白", "Haku", "白", 1, False))
+                            results.append(YakuResult(Yaku.HAKU, 1, False))
                         elif rank == 6:
-                            results.append(YakuResult("發", "Hatsu", "發", 1, False))
+                            results.append(YakuResult(Yaku.HATSU, 1, False))
                         elif rank == 7:
-                            results.append(YakuResult("中", "Chun", "中", 1, False))
+                            results.append(YakuResult(Yaku.CHUN, 1, False))
 
                     # 場風和自風
                     if rank == 1 and round_wind.value == "e":  # 東
-                        results.append(YakuResult("場風東", "Ton", "場風東", 1, False))
+                        results.append(YakuResult(Yaku.ROUND_WIND_EAST, 1, False))
                     elif rank == 2 and round_wind.value == "s":  # 南
-                        results.append(YakuResult("場風南", "Nan", "場風南", 1, False))
+                        results.append(YakuResult(Yaku.ROUND_WIND_SOUTH, 1, False))
                     elif rank == 3 and round_wind.value == "w":  # 西
-                        results.append(YakuResult("場風西", "Shaa", "場風西", 1, False))
+                        results.append(YakuResult(Yaku.ROUND_WIND_WEST, 1, False))
                     elif rank == 4 and round_wind.value == "n":  # 北
-                        results.append(YakuResult("場風北", "Pei", "場風北", 1, False))
+                        results.append(YakuResult(Yaku.ROUND_WIND_NORTH, 1, False))
 
                     # 自風（需要根據玩家位置）
                     # 自風：與玩家位置對應的風牌刻子
                     if player_position < len(game_state.player_winds):
                         player_wind = game_state.player_winds[player_position]
                         if rank == 1 and player_wind.value == "e":  # 東
-                            results.append(YakuResult("自風東", "Ton", "自風東", 1, False))
+                            results.append(YakuResult(Yaku.SEAT_WIND_EAST, 1, False))
                         elif rank == 2 and player_wind.value == "s":  # 南
-                            results.append(YakuResult("自風南", "Nan", "自風南", 1, False))
+                            results.append(YakuResult(Yaku.SEAT_WIND_SOUTH, 1, False))
                         elif rank == 3 and player_wind.value == "w":  # 西
-                            results.append(YakuResult("自風西", "Shaa", "自風西", 1, False))
+                            results.append(YakuResult(Yaku.SEAT_WIND_WEST, 1, False))
                         elif rank == 4 and player_wind.value == "n":  # 北
-                            results.append(YakuResult("自風北", "Pei", "自風北", 1, False))
+                            results.append(YakuResult(Yaku.SEAT_WIND_NORTH, 1, False))
 
         return results
 
@@ -549,7 +629,7 @@ class YakuChecker:
             has_sozu = rank in sequences_by_suit[Suit.SOZU]
 
             if has_manzu and has_pinzu and has_sozu:
-                return YakuResult("三色同順", "Sanshoku Doujun", "三色同順", 2, False)
+                return YakuResult(Yaku.SANSHOKU_DOUJUN, 2, False)
 
         return None
 
@@ -580,7 +660,7 @@ class YakuChecker:
             has_789 = 7 in sequences
 
             if has_123 and has_456 and has_789:
-                return YakuResult("一気通貫", "Ittsu", "一氣通貫", 2, False)
+                return YakuResult(Yaku.ITTSU, 2, False)
 
         return None
 
@@ -606,7 +686,7 @@ class YakuChecker:
                     triplets += 1
 
         if triplets >= 3:
-            return YakuResult("三暗刻", "Sanankou", "三暗刻", 2, False)
+            return YakuResult(Yaku.SANANKOU, 2, False)
 
         return None
 
@@ -633,7 +713,7 @@ class YakuChecker:
 
         # 只有一種數牌花色
         if len(suits) == 1:
-            return YakuResult("清一色", "Chinitsu", "清一色", 6, False)
+            return YakuResult(Yaku.CHINITSU, 6, False)
 
         return None
 
@@ -660,7 +740,7 @@ class YakuChecker:
 
         # 只有一種數牌花色，且包含字牌
         if len(number_suits) == 1 and has_honor:
-            return YakuResult("混一色", "Honitsu", "混一色", 3, False)
+            return YakuResult(Yaku.HONITSU, 3, False)
 
         return None
 
@@ -685,7 +765,7 @@ class YakuChecker:
         if len(pairs) != 7:
             return None
 
-        return YakuResult("七対子", "Chiitoitsu", "七對子", 2, False)
+        return YakuResult(Yaku.CHIITOITSU, 2, False)
 
     def check_junchan(
         self, hand: Hand, winning_combination: List, game_state: Optional[GameState] = None
@@ -730,7 +810,7 @@ class YakuChecker:
             else:
                 # 默認：門清3翻，副露2翻
                 han = 3 if hand.is_concealed else 2
-            return YakuResult("純全帯么九", "Junchan", "純全帶么九", han, False)
+            return YakuResult(Yaku.JUNCHAN, han, False)
 
         return None
 
@@ -779,7 +859,7 @@ class YakuChecker:
             else:
                 # 默認：門清2翻，副露1翻
                 han = 2 if hand.is_concealed else 1
-            return YakuResult("全帯么九", "Chanta", "全帶么九", han, False)
+            return YakuResult(Yaku.CHANTA, han, False)
 
         return None
 
@@ -822,7 +902,7 @@ class YakuChecker:
             for seq in paired_sequences:
                 if sequence_counts[seq] != 2:
                     return None
-            return YakuResult("二盃口", "Ryanpeikou", "二盃口", 3, False)
+            return YakuResult(Yaku.RYANPEIKOU, 3, False)
 
         return None
 
@@ -851,7 +931,7 @@ class YakuChecker:
             has_sozu = rank in triplets_by_suit[Suit.SOZU]
 
             if has_manzu and has_pinzu and has_sozu:
-                return YakuResult("三色同刻", "Sanshoku Doukou", "三色同刻", 2, False)
+                return YakuResult(Yaku.SANSHOKU_DOUKOU, 2, False)
 
         return None
 
@@ -879,7 +959,7 @@ class YakuChecker:
 
         # 兩個三元牌刻子 + 一個三元牌對子
         if len(sangen_triplets) == 2 and sangen_pair is not None:
-            return YakuResult("小三元", "Shousangen", "小三元", 2, False)
+            return YakuResult(Yaku.SHOUSANGEN, 2, False)
 
         return None
 
@@ -902,7 +982,7 @@ class YakuChecker:
                 if not (tile.is_terminal or tile.is_honor):
                     return None
 
-        return YakuResult("混老頭", "Honroutou", "混老頭", 2, False)
+        return YakuResult(Yaku.HONROUTOU, 2, False)
 
     def check_daisangen(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
         """
@@ -924,7 +1004,7 @@ class YakuChecker:
 
         # 三個三元牌刻子
         if len(sangen_triplets) == 3:
-            return YakuResult("大三元", "Daisangen", "大三元", 13, True)
+            return YakuResult(Yaku.DAISANGEN, 13, True)
 
         return None
 
@@ -946,7 +1026,7 @@ class YakuChecker:
 
         # 四個槓子
         if kan_count == 4:
-            return YakuResult("四槓子", "Suukantsu", "四槓子", 13, True)
+            return YakuResult(Yaku.SUUKANTSU, 13, True)
 
         return None
 
@@ -986,8 +1066,8 @@ class YakuChecker:
         if triplets == 4:
             ruleset = game_state.ruleset if game_state else None
             if ruleset and ruleset.suuankou_tanki_double and is_tanki:
-                return YakuResult("四暗刻単騎", "Suuankou Tanki", "四暗刻單騎", 26, True)
-            return YakuResult("四暗刻", "Suuankou", "四暗刻", 13, True)
+                return YakuResult(Yaku.SUUANKOU_TANKI, 26, True)
+            return YakuResult(Yaku.SUUANKOU, 13, True)
 
         return None
 
@@ -1050,7 +1130,7 @@ class YakuChecker:
             # 檢查是否為十三面聽（重複的牌是聽牌）
             # 這裡簡化處理，如果重複的牌是聽牌，則為十三面
             # TODO: 需要更精確的判定
-            return YakuResult("國士無雙", "Kokushi Musou", "國士無雙", 13, True)
+            return YakuResult(Yaku.KOKUSHI_MUSOU, 13, True)
 
         return None
 
@@ -1078,7 +1158,7 @@ class YakuChecker:
 
         # 三個風牌刻子 + 一個風牌對子
         if len(kaze_triplets) == 3 and kaze_pair is not None:
-            return YakuResult("小四喜", "Shousuushi", "小四喜", 13, True)
+            return YakuResult(Yaku.SHOUSUUSHI, 13, True)
 
         return None
 
@@ -1102,7 +1182,7 @@ class YakuChecker:
 
         # 四個風牌刻子
         if len(kaze_triplets) == 4:
-            return YakuResult("大四喜", "Daisuushi", "大四喜", 13, True)
+            return YakuResult(Yaku.DAISUUSHI, 13, True)
 
         return None
 
@@ -1133,7 +1213,7 @@ class YakuChecker:
                     and meld_type == "sequence"
                 ):
                     return None
-        return YakuResult("清老頭", "Chinroutou", "清老頭", 13, True)
+        return YakuResult(Yaku.CHINROUTOU, 13, True)
 
     def check_tsuuiisou(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
         """
@@ -1154,7 +1234,7 @@ class YakuChecker:
                 if not tile.is_honor:
                     return None
 
-        return YakuResult("字一色", "Tsuuiisou", "字一色", 13, True)
+        return YakuResult(Yaku.TSUUIISOU, 13, True)
 
     def check_ryuuiisou(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
         """
@@ -1194,7 +1274,7 @@ class YakuChecker:
                     if tile_key not in green_tiles:
                         return None
 
-        return YakuResult("綠一色", "Ryuuiisou", "綠一色", 13, True)
+        return YakuResult(Yaku.RYUIISOU, 13, True)
 
     def check_chuuren_poutou(
         self, hand: Hand, all_tiles: List[Tile], game_state: Optional[GameState] = None
@@ -1267,11 +1347,11 @@ class YakuChecker:
                 # 根據規則配置決定是否為雙倍役滿
                 ruleset = game_state.ruleset if game_state else None
                 if ruleset and ruleset.chuuren_pure_double:
-                    return YakuResult("純正九蓮寶燈", "Junsei Chuuren Poutou", "純正九蓮寶燈", 26, True)
+                    return YakuResult(Yaku.CHUUREN_POUTOU_PURE, 26, True)
                 else:
-                    return YakuResult("純正九蓮寶燈", "Junsei Chuuren Poutou", "純正九蓮寶燈", 13, True)
+                    return YakuResult(Yaku.CHUUREN_POUTOU_PURE, 13, True)
 
-        return YakuResult("九蓮寶燈", "Chuuren Poutou", "九蓮寶燈", 13, True)
+        return YakuResult(Yaku.CHUUREN_POUTOU, 13, True)
 
     def check_tenhou(
         self, hand: Hand, is_tsumo: bool, is_first_turn: bool, player_position: int, game_state: GameState
@@ -1302,7 +1382,7 @@ class YakuChecker:
         if not hand.is_concealed:
             return None
 
-        return YakuResult("天和", "Tenhou", "天和", 13, True)
+        return YakuResult(Yaku.TENHOU, 13, True)
 
     def check_chihou(
         self, hand: Hand, is_tsumo: bool, is_first_turn: bool, player_position: int, game_state: GameState
@@ -1333,7 +1413,7 @@ class YakuChecker:
         if not hand.is_concealed:
             return None
 
-        return YakuResult("地和", "Chihou", "地和", 13, True)
+        return YakuResult(Yaku.CHIHOU, 13, True)
 
     def check_renhou(
         self, hand: Hand, is_tsumo: bool, is_first_turn: bool, player_position: int, game_state: GameState
@@ -1377,9 +1457,9 @@ class YakuChecker:
 
         # 根據規則配置返回不同的翻數
         if ruleset.renhou_policy == "yakuman":
-            return YakuResult("人和", "Renhou", "人和", 13, True)
+            return YakuResult(Yaku.RENHOU, 13, True)
         elif ruleset.renhou_policy == "2han":
-            return YakuResult("人和", "Renhou", "人和", 2, False)
+            return YakuResult(Yaku.RENHOU, 2, False)
         else:
             return None
 
@@ -1394,9 +1474,9 @@ class YakuChecker:
             return None
 
         if is_tsumo:
-            return YakuResult("海底撈月", "Haitei Raoyue", "海底撈月", 1, False)
+            return YakuResult(Yaku.HAITEI, 1, False)
         else:
-            return YakuResult("河底撈魚", "Houtei Raoyui", "河底撈魚", 1, False)
+            return YakuResult(Yaku.HOUTEI, 1, False)
 
     def check_rinshan_kaihou(self, hand: Hand, is_rinshan: bool) -> Optional[YakuResult]:
         """
@@ -1407,7 +1487,7 @@ class YakuChecker:
         if not is_rinshan:
             return None
 
-        return YakuResult("嶺上開花", "Rinshan Kaihou", "嶺上開花", 1, False)
+        return YakuResult(Yaku.RINSHAN, 1, False)
 
     def check_kokushi_musou_juusanmen(self, hand: Hand, all_tiles: List[Tile]) -> bool:
         """
