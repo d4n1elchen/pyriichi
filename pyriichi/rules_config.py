@@ -63,7 +63,7 @@ class RulesetConfig:
 
     # 四歸一規則
     # 四暗刻單騎規則
-    suuankou_tanki_is_double_yakuman: bool = True
+    suuankou_tanki_double: bool = True
     """
     四暗刻單騎是否為雙倍役滿：
     - True: 雙倍役滿（26翻，標準競技規則）
@@ -95,6 +95,6 @@ class RulesetConfig:
             chanta_closed_han=2,
             junchan_open_han=2,
             junchan_closed_han=3,
-            suuankou_tanki_is_double_yakuman=True,
+            suuankou_tanki_double=True,
             chuuren_pure_double=True,
         )
