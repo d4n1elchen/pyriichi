@@ -182,8 +182,6 @@ class YakuChecker:
             yakuman_results.append(result)
         if result := self.check_chuuren_poutou(hand, all_tiles, game_state):
             yakuman_results.append(result)
-        if result := self.check_suukantsu_ii(hand, winning_combination, game_state):
-            yakuman_results.append(result)
 
         # 如果有役滿，只返回役滿（役滿不與其他役種複合，但可以多個役滿複合）
         if yakuman_results:
@@ -1312,72 +1310,6 @@ class YakuChecker:
                     return YakuResult("純正九蓮寶燈", "Junsei Chuuren Poutou", "純正九蓮寶燈", 13, True)
 
         return YakuResult("九蓮寶燈", "Chuuren Poutou", "九蓮寶燈", 13, True)
-
-    def check_suukantsu_ii(
-        self, hand: Hand, winning_combination: List, game_state: Optional[GameState] = None
-    ) -> Optional[YakuResult]:
-        """
-        檢查四歸一
-
-        四歸一：同一種牌四張分別在四個順子中
-        例如：1122334455...其中某種牌在四個順子中都出現各一次
-        根據規則配置決定是否啟用（標準競技規則中不啟用）
-        """
-        ruleset = game_state.ruleset if game_state else None
-        if ruleset and not ruleset.suukantsu_ii_enabled:
-            return None
-
-        if not winning_combination:
-            return None
-
-        # 統計所有順子中的牌
-        sequences = []
-        tile_to_sequences = {}  # 記錄每張牌出現在哪些順子中
-
-        for i, meld in enumerate(winning_combination):
-            if isinstance(meld, tuple) and len(meld) == 2:
-                meld_type, (suit, rank) = meld
-                if meld_type == "sequence":
-                    # 記錄順子中的所有牌
-                    seq_tiles = []
-                    for offset in range(3):
-                        tile_key = (suit, rank + offset)
-                        seq_tiles.append(tile_key)
-                        if tile_key not in tile_to_sequences:
-                            tile_to_sequences[tile_key] = []
-                        tile_to_sequences[tile_key].append(i)
-                    sequences.append(seq_tiles)
-
-        # 必須有4個順子
-        if len(sequences) != 4:
-            return None
-
-        # 檢查是否有某種牌在四個順子中都出現
-        for tile_key, seq_indices in tile_to_sequences.items():
-            # 如果這種牌在四個不同的順子中都出現
-            if len(set(seq_indices)) == 4:
-                # 檢查這種牌是否正好有4張（在四個順子中各出現一次）
-                # 統計這種牌的總數
-                total_count = 0
-                for meld in winning_combination:
-                    if isinstance(meld, tuple) and len(meld) == 2:
-                        meld_type, (meld_suit, meld_rank) = meld
-                        if meld_type == "sequence":
-                            for offset in range(3):
-                                if (meld_suit, meld_rank + offset) == tile_key:
-                                    total_count += 1
-                        elif meld_type in ["triplet", "kan"]:
-                            if (meld_suit, meld_rank) == tile_key:
-                                total_count += 3 if meld_type == "triplet" else 4
-                        elif meld_type == "pair":
-                            if (meld_suit, meld_rank) == tile_key:
-                                total_count += 2
-
-                # 四歸一要求：某種牌正好4張，且這4張分別在四個順子中
-                if total_count == 4:
-                    return YakuResult("四帰一", "Suukantsu II", "四歸一", 13, True)
-
-        return None
 
     def check_tenhou(
         self, hand: Hand, is_tsumo: bool, is_first_turn: bool, player_position: int, game_state: GameState

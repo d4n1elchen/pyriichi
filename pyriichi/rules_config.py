@@ -62,13 +62,6 @@ class RulesetConfig:
     """純全帶么九（門清）：3翻（標準競技規則）"""
 
     # 四歸一規則
-    suukantsu_ii_enabled: bool = False
-    """
-    是否啟用四歸一：
-    - True: 啟用（非標準規則）
-    - False: 不啟用（標準競技規則）
-    """
-
     # 四暗刻單騎規則
     suuankou_tanki_is_double_yakuman: bool = True
     """
@@ -102,29 +95,6 @@ class RulesetConfig:
             chanta_closed_han=2,
             junchan_open_han=2,
             junchan_closed_han=3,
-            suukantsu_ii_enabled=False,
             suuankou_tanki_is_double_yakuman=True,
-            chuuren_pure_double=True,
-        )
-
-    @classmethod
-    def legacy(cls) -> "RulesetConfig":
-        """
-        創建舊版規則配置（保持向後兼容）
-
-        Returns:
-            舊版規則配置
-        """
-        return cls(
-            renhou_policy="yakuman",
-            pinfu_require_ryanmen=False,
-            ippatsu_interrupt_on_meld_or_kan=False,
-            chanta_enabled=False,
-            chanta_open_han=2,  # 舊版混全帶么九
-            chanta_closed_han=2,
-            junchan_open_han=3,  # 舊版純全帶么九
-            junchan_closed_han=3,
-            suukantsu_ii_enabled=True,
-            suuankou_tanki_is_double_yakuman=False,
             chuuren_pure_double=True,
         )

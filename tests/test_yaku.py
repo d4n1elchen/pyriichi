@@ -1049,49 +1049,6 @@ class TestYakuChecker:
         # 註：純全帶和混全帶的判定邏輯本身就會互相排斥
         # 這裡主要測試衝突檢測邏輯
 
-    def test_suukantsu_ii(self):
-        """測試四歸一役滿"""
-        # 四歸一：同一種牌四張分別在四個順子中
-        # 標準競技規則中不啟用四歸一
-        # 這裡測試舊版規則（legacy ruleset）
-        from pyriichi.rules_config import RulesetConfig
-
-        # 使用舊版規則配置
-        legacy_ruleset = RulesetConfig.legacy()
-        self.game_state._ruleset = legacy_ruleset
-
-        tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.JIHAI, 1),
-        ]
-        hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 1)
-        combinations = hand.get_winning_combinations(winning_tile)
-
-        if combinations:
-            # 檢查是否有四歸一（3在四個順子中都出現）
-            result = self.checker.check_suukantsu_ii(hand, list(combinations[0]), self.game_state)
-            # 註：這個例子中，3在123、234、345、456四個順子中都出現
-            # 但需要確認是否正好4張
-            if result:
-                assert result.name == "四帰一"
-                assert result.han == 13
-                assert result.is_yakuman
-
-        # 恢復標準規則配置
-        self.game_state._ruleset = RulesetConfig.standard()
-
     def test_shousuushi(self):
         """測試小四喜役滿"""
         # 小四喜：三個風牌刻子 + 一個風牌對子
