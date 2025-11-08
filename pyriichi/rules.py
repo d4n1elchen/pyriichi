@@ -118,6 +118,15 @@ class RuleEngine:
         self._is_first_turn_after_deal: bool = True  # 發牌後是否為第一回合
         self._pending_kan_tile: Optional[Tuple[int, Tile]] = None  # (player, tile) 待處理的槓牌，用於搶槓判定
         self._winning_players: List[int] = []  # 多人和牌時的玩家列表（用於三家和了）
+        self._action_handlers = {
+            GameAction.DRAW: self._handle_draw,
+            GameAction.DISCARD: self._handle_discard,
+            GameAction.PON: self._handle_pon,
+            GameAction.CHI: self._handle_chi,
+            GameAction.RICHI: self._handle_riichi,
+            GameAction.KAN: self._handle_kan,
+            GameAction.ANKAN: self._handle_ankan,
+        }
 
     def start_game(self) -> None:
         """開始新遊戲"""
@@ -221,9 +230,12 @@ class RuleEngine:
         if action == GameAction.KAN:
             if tile is None:
                 return False
-            if self._last_discarded_tile is not None and tile == self._last_discarded_tile:
-                if player == self._last_discarded_player:
-                    return False
+            if (
+                self._last_discarded_tile is not None
+                and tile == self._last_discarded_tile
+                and player == self._last_discarded_player
+            ):
+                return False
             hand = self._hands[player]
             return len(hand.can_kan(tile)) > 0
 
@@ -249,192 +261,181 @@ class RuleEngine:
         if not self.can_act(player, action, tile, **kwargs):
             raise ValueError(f"玩家 {player} 不能執行動作 {action}")
 
+        handler = self._action_handlers.get(action)
+        if handler is None:
+            raise ValueError(f"動作 {action} 尚未實作")
+        return handler(player, tile=tile, **kwargs)
+
+    def _handle_draw(self, player: int, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
         result = ActionResult()
-
-        if action == GameAction.DRAW:
-            if not self._tile_set:
-                raise ValueError("牌組未初始化")
-            hand = self._hands[player]
-            if hand.total_tile_count() >= 14:
-                raise ValueError("手牌已達 14 張，不能再摸牌")
-            drawn_tile = self._tile_set.draw()
-            if drawn_tile:
-                hand.add_tile(drawn_tile)
-                result.drawn_tile = drawn_tile
-                # 檢查是否為最後一張牌（海底撈月）
-                if self._tile_set.is_exhausted():
-                    result.is_last_tile = True
-            else:
-                # 流局
-                self._phase = GamePhase.DRAW
-                result.draw = True
-
-        elif action == GameAction.DISCARD:
-            if tile is None:
-                raise ValueError("打牌動作必須指定牌")
-            if not self._tile_set:
-                raise ValueError("牌組未初始化")
-            if self._hands[player].discard(tile):
-                self._last_discarded_tile = tile
-                self._last_discarded_player = player
-                # 記錄捨牌歷史（用於四風連打判定）
-                self._discard_history.append((player, tile))
-                # 只保留前四張捨牌
-                if len(self._discard_history) > 4:
-                    self._discard_history.pop(0)
-
-                # 更新立直後回合數
-                # 立直後，每當其他玩家行動時，立直玩家的回合數增加
-                for p in list(self._riichi_turns.keys()):
-                    if p != player:
-                        self._riichi_turns[p] += 1
-                # 如果立直玩家自己打牌，也增加回合數（但這表示已經過了一巡）
-                if player in self._riichi_turns:
-                    self._riichi_turns[player] += 1
-
-                # 檢查是否為最後一張牌（河底撈魚）
-                if self._tile_set.is_exhausted():
-                    result.is_last_tile = True
-
-                self._current_player = (player + 1) % self._num_players
-                self._turn_count += 1
-                self._is_first_turn_after_deal = False
-                self._is_first_round = False
-                result.discarded = True
-
-        elif action == GameAction.PON:
-            if self._last_discarded_tile is None or self._last_discarded_player is None:
-                raise ValueError("沒有可碰的捨牌")
-            if player == self._last_discarded_player:
-                raise ValueError("不能碰自己打出的牌")
-
-            tile_to_claim = self._last_discarded_tile
-            hand = self._hands[player]
-            if not hand.can_pon(tile_to_claim):
-                raise ValueError("手牌無法碰這張牌")
-
-            discarder = self._last_discarded_player
-            self._hands[discarder].remove_last_discard(tile_to_claim)
-            if self._discard_history and self._discard_history[-1] == (discarder, tile_to_claim):
-                self._discard_history.pop()
-
-            meld = hand.pon(tile_to_claim)
-            result.meld = meld
-            result.called_action = GameAction.PON
-            result.called_tile = tile_to_claim
-
-            self._current_player = player
-            self._last_discarded_tile = None
-            self._last_discarded_player = None
-            self._is_first_turn_after_deal = False
-
-        elif action == GameAction.CHI:
-            if self._last_discarded_tile is None or self._last_discarded_player is None:
-                raise ValueError("沒有可吃的捨牌")
-            if (player - self._last_discarded_player) % self._num_players != 1:
-                raise ValueError("只能吃上家的牌")
-
-            tile_to_claim = self._last_discarded_tile
-            hand = self._hands[player]
-            sequences = hand.can_chi(tile_to_claim, from_player=0)
-            if not sequences:
-                raise ValueError("手牌無法吃這張牌")
-
-            sequence = kwargs.get("sequence")
-            if sequence is None:
-                sequence = sequences[0]
-            else:
-                if sequence not in sequences:
-                    raise ValueError("提供的順子無效")
-
-            discarder = self._last_discarded_player
-            self._hands[discarder].remove_last_discard(tile_to_claim)
-            if self._discard_history and self._discard_history[-1] == (discarder, tile_to_claim):
-                self._discard_history.pop()
-
-            meld = hand.chi(tile_to_claim, sequence)
-            result.meld = meld
-            result.called_action = GameAction.CHI
-            result.called_tile = tile_to_claim
-
-            self._current_player = player
-            self._last_discarded_tile = None
-            self._last_discarded_player = None
-            self._is_first_turn_after_deal = False
-
-        elif action == GameAction.RICHI:
-            self._hands[player].set_riichi(True)
-            self._game_state.add_riichi_stick()
-            self._game_state.update_score(player, -1000)
-            # 記錄立直回合數
-            self._riichi_turns[player] = 0
-            result.riichi = True
-
-        elif action == GameAction.KAN:
-            # 明槓：檢查是否有其他玩家可以搶槓
-            if tile is None:
-                raise ValueError("明槓必須指定被槓的牌")
-
-            # 先檢查是否有其他玩家可以搶槓和
-            self._pending_kan_tile = (player, tile)
-            chankan_winners = self._check_chankan(player, tile)
-
-            if chankan_winners:
-                # 有玩家搶槓，不執行槓，轉為和牌處理
-                result.chankan = True
-                result.winners = chankan_winners
-                self._pending_kan_tile = None
-                return result
-
-            # 執行明槓
-            meld = self._hands[player].kan(tile)
-            self._kan_count += 1
-
-            # 從嶺上摸牌（嶺上開花）
-            if self._tile_set:
-                rinshan_tile = self._tile_set.draw_wall_tile()
-                if rinshan_tile:
-                    self._hands[player].add_tile(rinshan_tile)
-                    result.rinshan_tile = rinshan_tile
-                    result.kan = True
-                    self._pending_kan_tile = None
-
-                    # 檢查嶺上開花（槓後摸牌和牌）
-                    rinshan_win = self.check_rinshan_win(player, rinshan_tile)
-                    if rinshan_win:
-                        result.rinshan_win = rinshan_win
-                        self._phase = GamePhase.WINNING
-                else:
-                    # 王牌區耗盡，流局
-                    self._phase = GamePhase.DRAW
-                    result.draw = True
-                    result.draw_reason = "wall_exhausted"
-
-        elif action == GameAction.ANKAN:
-            # 暗槓
-            meld = self._hands[player].kan(None)
-            self._kan_count += 1
-
-            # 從嶺上摸牌（嶺上開花）
-            if self._tile_set:
-                rinshan_tile = self._tile_set.draw_wall_tile()
-                if rinshan_tile:
-                    self._hands[player].add_tile(rinshan_tile)
-                    result.rinshan_tile = rinshan_tile
-                    result.ankan = True
-
-                    # 檢查嶺上開花（槓後摸牌和牌）
-                    rinshan_win = self.check_rinshan_win(player, rinshan_tile)
-                    if rinshan_win:
-                        result.rinshan_win = rinshan_win
-                        self._phase = GamePhase.WINNING
-                else:
-                    # 王牌區耗盡，流局
-                    self._phase = GamePhase.DRAW
-                    result.draw = True
-                    result.draw_reason = "wall_exhausted"
-
+        if not self._tile_set:
+            raise ValueError("牌組未初始化")
+        hand = self._hands[player]
+        if hand.total_tile_count() >= 14:
+            raise ValueError("手牌已達 14 張，不能再摸牌")
+        if drawn_tile := self._tile_set.draw():
+            hand.add_tile(drawn_tile)
+            result.drawn_tile = drawn_tile
+            if self._tile_set.is_exhausted():
+                result.is_last_tile = True
+        else:
+            self._phase = GamePhase.DRAW
+            result.draw = True
         return result
+
+    def _handle_discard(self, player: int, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
+        result = ActionResult()
+        if tile is None:
+            raise ValueError("打牌動作必須指定牌")
+        if not self._tile_set:
+            raise ValueError("牌組未初始化")
+        if self._hands[player].discard(tile):
+            self._apply_discard_effects(player, tile, result)
+        return result
+
+    def _handle_pon(self, player: int, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
+        result = ActionResult()
+        if self._last_discarded_tile is None or self._last_discarded_player is None:
+            raise ValueError("沒有可碰的捨牌")
+        if player == self._last_discarded_player:
+            raise ValueError("不能碰自己打出的牌")
+
+        tile_to_claim = self._last_discarded_tile
+        hand = self._hands[player]
+        if not hand.can_pon(tile_to_claim):
+            raise ValueError("手牌無法碰這張牌")
+
+        discarder = self._last_discarded_player
+        self._remove_last_discard(discarder, tile_to_claim)
+
+        meld = hand.pon(tile_to_claim)
+        result.meld = meld
+        result.called_action = GameAction.PON
+        result.called_tile = tile_to_claim
+
+        self._current_player = player
+        self._last_discarded_tile = None
+        self._last_discarded_player = None
+        self._is_first_turn_after_deal = False
+        return result
+
+    def _handle_chi(self, player: int, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
+        result = ActionResult()
+        if self._last_discarded_tile is None or self._last_discarded_player is None:
+            raise ValueError("沒有可吃的捨牌")
+        if (player - self._last_discarded_player) % self._num_players != 1:
+            raise ValueError("只能吃上家的牌")
+
+        tile_to_claim = self._last_discarded_tile
+        hand = self._hands[player]
+        sequences = hand.can_chi(tile_to_claim, from_player=0)
+        if not sequences:
+            raise ValueError("手牌無法吃這張牌")
+
+        sequence = kwargs.get("sequence")
+        if sequence is None:
+            sequence = sequences[0]
+        elif sequence not in sequences:
+            raise ValueError("提供的順子無效")
+
+        discarder = self._last_discarded_player
+        self._remove_last_discard(discarder, tile_to_claim)
+
+        meld = hand.chi(tile_to_claim, sequence)
+        result.meld = meld
+        result.called_action = GameAction.CHI
+        result.called_tile = tile_to_claim
+
+        self._current_player = player
+        self._last_discarded_tile = None
+        self._last_discarded_player = None
+        self._is_first_turn_after_deal = False
+        return result
+
+    def _handle_riichi(self, player: int, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
+        result = ActionResult()
+        self._hands[player].set_riichi(True)
+        self._game_state.add_riichi_stick()
+        self._game_state.update_score(player, -1000)
+        self._riichi_turns[player] = 0
+        result.riichi = True
+        return result
+
+    def _handle_kan(self, player: int, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
+        result = ActionResult()
+        if tile is None:
+            raise ValueError("明槓必須指定被槓的牌")
+
+        self._pending_kan_tile = (player, tile)
+        if chankan_winners := self._check_chankan(player, tile):
+            result.chankan = True
+            result.winners = chankan_winners
+            self._pending_kan_tile = None
+            return result
+
+        meld = self._hands[player].kan(tile)
+        self._kan_count += 1
+
+        if self._draw_rinshan_tile(player, result, kan_type="kan"):
+            self._pending_kan_tile = None
+        return result
+
+    def _handle_ankan(self, player: int, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
+        result = ActionResult()
+        meld = self._hands[player].kan(None)
+        if meld:
+            self._kan_count += 1
+
+        self._draw_rinshan_tile(player, result, kan_type="ankan")
+        return result
+
+    def _remove_last_discard(self, discarder: int, tile: Tile) -> None:
+        self._hands[discarder].remove_last_discard(tile)
+        if self._discard_history and self._discard_history[-1] == (discarder, tile):
+            self._discard_history.pop()
+
+    def _draw_rinshan_tile(self, player: int, result: ActionResult, *, kan_type: str) -> bool:
+        if not self._tile_set:
+            return False
+        if rinshan_tile := self._tile_set.draw_wall_tile():
+            self._hands[player].add_tile(rinshan_tile)
+            result.rinshan_tile = rinshan_tile
+            if kan_type == "kan":
+                result.kan = True
+            else:
+                result.ankan = True
+
+            if rinshan_win := self.check_rinshan_win(player, rinshan_tile):
+                result.rinshan_win = rinshan_win
+                self._phase = GamePhase.WINNING
+            return True
+
+        self._phase = GamePhase.DRAW
+        result.draw = True
+        result.draw_reason = "wall_exhausted"
+        return False
+
+    def _apply_discard_effects(self, player: int, tile: Tile, result: ActionResult) -> None:
+        self._last_discarded_tile = tile
+        self._last_discarded_player = player
+        self._discard_history.append((player, tile))
+        if len(self._discard_history) > 4:
+            self._discard_history.pop(0)
+
+        for p in list(self._riichi_turns.keys()):
+            if p != player:
+                self._riichi_turns[p] += 1
+        if player in self._riichi_turns:
+            self._riichi_turns[player] += 1
+
+        if self._tile_set and self._tile_set.is_exhausted():
+            result.is_last_tile = True
+
+        self._current_player = (player + 1) % self._num_players
+        self._turn_count += 1
+        self._is_first_turn_after_deal = False
+        self._is_first_round = False
+        result.discarded = True
 
     def check_win(
         self, player: int, winning_tile: Tile, is_chankan: bool = False, is_rinshan: bool = False
@@ -504,7 +505,7 @@ class RuleEngine:
             kan_player, _ = self._pending_kan_tile
             score_result.payment_from = kan_player
 
-        result = WinResult(
+        return WinResult(
             win=True,
             player=player,
             yaku=yaku_results,
@@ -512,11 +513,9 @@ class RuleEngine:
             fu=score_result.fu,
             points=score_result.total_points,
             score_result=score_result,
-            chankan=is_chankan if is_chankan else None,
-            rinshan=is_rinshan if is_rinshan else None,
+            chankan=is_chankan or None,
+            rinshan=is_rinshan or None,
         )
-
-        return result
 
     def check_draw(self) -> Optional[str]:
         """
@@ -542,22 +541,14 @@ class RuleEngine:
             return "exhausted"
 
         # 檢查是否所有玩家都聽牌（全員聽牌流局）
-        if self._check_all_tenpai():
-            return "suucha_riichi"
-
-        return None
+        return "suucha_riichi" if self._check_all_tenpai() else None
 
     def _check_all_tenpai(self) -> bool:
         """檢查是否所有玩家都聽牌"""
         if self._phase != GamePhase.PLAYING:
             return False
 
-        # 檢查所有玩家是否聽牌
-        for i, hand in enumerate(self._hands):
-            if not hand.is_tenpai():
-                return False
-
-        return True
+        return all(hand.is_tenpai() for hand in self._hands)
 
     def check_kyuushu_kyuuhai(self, player: int) -> bool:
         """
@@ -579,12 +570,7 @@ class RuleEngine:
         if len(hand.tiles) != 13:
             return False
 
-        # 統計幺九牌種類
-        terminal_and_honor_tiles = set()
-        for tile in hand.tiles:
-            if tile.is_terminal or tile.is_honor:
-                terminal_and_honor_tiles.add((tile.suit, tile.rank))
-
+        terminal_and_honor_tiles = {(tile.suit, tile.rank) for tile in hand.tiles if tile.is_terminal or tile.is_honor}
         # 如果有9種或以上不同種類的幺九牌，則為九種九牌
         return len(terminal_and_honor_tiles) >= 9
 
@@ -606,12 +592,7 @@ class RuleEngine:
         if first_tile.suit != Suit.JIHAI or not (1 <= first_tile.rank <= 4):
             return False
 
-        # 檢查前四張是否都是同一風牌
-        for _, tile in self._discard_history[:4]:
-            if tile.suit != Suit.JIHAI or tile.rank != first_tile.rank:
-                return False
-
-        return True
+        return not any(tile.suit != Suit.JIHAI or tile.rank != first_tile.rank for _, tile in self._discard_history[:4])
 
     def check_flow_mangan(self, player: int) -> bool:
         """
@@ -638,16 +619,10 @@ class RuleEngine:
         if not hand.is_tenpai():
             return False
 
-        # 檢查聽牌牌是否都是幺九牌或字牌
-        waiting_tiles = hand.get_waiting_tiles()
-        if not waiting_tiles:
+        if waiting_tiles := hand.get_waiting_tiles():
+            return all((tile.is_terminal or tile.is_honor) for tile in waiting_tiles)
+        else:
             return False
-
-        for tile in waiting_tiles:
-            if not (tile.is_terminal or tile.is_honor):
-                return False
-
-        return True
 
     def _count_dora(self, player: int, winning_tile: Tile, winning_combination: List) -> int:
         """
@@ -680,8 +655,7 @@ class RuleEngine:
 
         # 裡寶牌（立直時）
         if hand.is_riichi:
-            ura_indicator = self._tile_set.get_dora_indicator(1)
-            if ura_indicator:
+            if ura_indicator := self._tile_set.get_dora_indicator(1):
                 ura_dora_tile = self._tile_set.get_dora(ura_indicator)
                 for tile in all_tiles:
                     if tile.suit == ura_dora_tile.suit and tile.rank == ura_dora_tile.rank:
@@ -802,8 +776,6 @@ class RuleEngine:
                 if not has_next:
                     self._phase = GamePhase.ENDED
         else:
-            # 流局處理
-            dealer = self._game_state.dealer
             dealer_won = False  # 流局時莊家不連莊（除非九種九牌）
             self._game_state.next_dealer(dealer_won)
 
@@ -818,15 +790,7 @@ class RuleEngine:
         Returns:
             表寶牌列表
         """
-        if not self._tile_set:
-            return []
-
-        dora_tiles = []
-        dora_indicator = self._tile_set.get_dora_indicator(0)
-        if dora_indicator:
-            dora_tiles.append(self._tile_set.get_dora(dora_indicator))
-
-        return dora_tiles
+        return self._get_dora_tiles_by_indicator(0)
 
     def get_ura_dora_tiles(self) -> List[Tile]:
         """
@@ -835,15 +799,13 @@ class RuleEngine:
         Returns:
             裡寶牌列表
         """
+        return self._get_dora_tiles_by_indicator(1)
+
+    def _get_dora_tiles_by_indicator(self, indicator_index: int) -> List[Tile]:
         if not self._tile_set:
             return []
-
-        ura_dora_tiles = []
-        ura_indicator = self._tile_set.get_dora_indicator(1)
-        if ura_indicator:
-            ura_dora_tiles.append(self._tile_set.get_dora(ura_indicator))
-
-        return ura_dora_tiles
+        indicator = self._tile_set.get_dora_indicator(indicator_index)
+        return [self._tile_set.get_dora(indicator)] if indicator else []
 
     def _check_chankan(self, kan_player: int, kan_tile: Tile) -> List[int]:
         """
@@ -861,9 +823,7 @@ class RuleEngine:
             if player == kan_player:
                 continue  # 不能搶自己的槓
 
-            # 檢查是否可以和這張牌
-            win_result = self.check_win(player, kan_tile, is_chankan=True)
-            if win_result:
+            if self.check_win(player, kan_tile, is_chankan=True):
                 winners.append(player)
 
         return winners
