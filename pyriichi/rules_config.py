@@ -5,7 +5,15 @@
 """
 
 from dataclasses import dataclass
-from typing import Literal
+from enum import Enum
+
+
+class RenhouPolicy(str, Enum):
+    """人和規則設定"""
+
+    YAKUMAN = "yakuman"
+    TWO_HAN = "2han"
+    OFF = "off"
 
 
 @dataclass
@@ -17,12 +25,12 @@ class RulesetConfig:
     """
 
     # 人和規則
-    renhou_policy: Literal["yakuman", "2han", "off"] = "2han"
+    renhou_policy: RenhouPolicy = RenhouPolicy.TWO_HAN
     """
     人和規則：
-    - "yakuman": 役滿（13翻）
-    - "2han": 2翻（標準競技規則）
-    - "off": 不啟用
+    - RenhouPolicy.YAKUMAN: 役滿（13翻）
+    - RenhouPolicy.TWO_HAN: 2翻（標準競技規則）
+    - RenhouPolicy.OFF: 不啟用
     """
 
     # 平和規則
@@ -87,7 +95,7 @@ class RulesetConfig:
             標準競技規則配置
         """
         return cls(
-            renhou_policy="2han",
+            renhou_policy=RenhouPolicy.TWO_HAN,
             pinfu_require_ryanmen=True,
             ippatsu_interrupt_on_meld_or_kan=True,
             chanta_enabled=True,

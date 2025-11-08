@@ -17,6 +17,7 @@ from pyriichi import (
     Wind,
     RulesetConfig,
 )
+from pyriichi.rules_config import RenhouPolicy
 from pyriichi.tiles import Tile, Suit
 
 
@@ -242,7 +243,7 @@ def example_ruleset_configuration():
     # 1. 使用默認標準競技規則
     print("1. 默認標準競技規則：")
     game_state_standard = GameState(num_players=4)
-    print(f"   - 人和: {game_state_standard.ruleset.renhou_policy} (2翻)")
+    print(f"   - 人和: {game_state_standard.ruleset.renhou_policy.value} (2翻)")
     print(f"   - 平和需要兩面聽: {game_state_standard.ruleset.pinfu_require_ryanmen}")
     print(f"   - 全帶么九（門清）: {game_state_standard.ruleset.chanta_closed_han}翻")
     print(f"   - 全帶么九（副露）: {game_state_standard.ruleset.chanta_open_han}翻")
@@ -255,7 +256,7 @@ def example_ruleset_configuration():
     print("\n2. 舊版規則：")
     legacy_ruleset = RulesetConfig.legacy()
     game_state_legacy = GameState(num_players=4, ruleset=legacy_ruleset)
-    print(f"   - 人和: {game_state_legacy.ruleset.renhou_policy} (役滿)")
+    print(f"   - 人和: {game_state_legacy.ruleset.renhou_policy.value} (役滿)")
     print(f"   - 平和需要兩面聽: {game_state_legacy.ruleset.pinfu_require_ryanmen}")
     print(f"   - 全帶么九（門清）: {game_state_legacy.ruleset.chanta_closed_han}翻")
     print(f"   - 全帶么九（副露）: {game_state_legacy.ruleset.chanta_open_han}翻")
@@ -267,7 +268,7 @@ def example_ruleset_configuration():
     # 3. 自定義規則配置
     print("\n3. 自定義規則配置：")
     custom_ruleset = RulesetConfig(
-        renhou_policy="yakuman",  # 人和為役滿
+        renhou_policy=RenhouPolicy.YAKUMAN,  # 人和為役滿
         pinfu_require_ryanmen=False,  # 平和不檢查兩面聽
         chanta_enabled=True,
         chanta_closed_han=2,
@@ -279,7 +280,7 @@ def example_ruleset_configuration():
         chuuren_pure_double=True,
     )
     game_state_custom = GameState(num_players=4, ruleset=custom_ruleset)
-    print(f"   - 人和: {game_state_custom.ruleset.renhou_policy}")
+    print(f"   - 人和: {game_state_custom.ruleset.renhou_policy.value}")
     print(f"   - 平和需要兩面聽: {game_state_custom.ruleset.pinfu_require_ryanmen}")
 
     # 4. 演示規則配置對役種判定的影響

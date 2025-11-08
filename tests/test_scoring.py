@@ -5,7 +5,7 @@ ScoreCalculator 的單元測試
 import pytest
 from pyriichi.hand import Hand, CombinationType
 from pyriichi.tiles import Tile, Suit
-from pyriichi.yaku import YakuChecker, YakuResult, Yaku
+from pyriichi.yaku import YakuChecker, YakuResult, Yaku, WaitingType
 from pyriichi.scoring import ScoreCalculator, ScoreResult
 from pyriichi.game_state import GameState, Wind
 
@@ -342,7 +342,13 @@ class TestScoreCalculator:
 
         if combinations:
             waiting_type = self.calculator._determine_waiting_type(winning_tile, list(combinations[0]))
-            assert waiting_type in ["ryanmen", "penchan", "kanchan", "tanki", "shabo"]
+            assert waiting_type in {
+                WaitingType.RYANMEN,
+                WaitingType.PENCHAN,
+                WaitingType.KANCHAN,
+                WaitingType.TANKI,
+                WaitingType.SHABO,
+            }
 
     def test_waiting_type_kanchan(self):
         """測試嵌張聽符數（+2符）"""
@@ -406,7 +412,7 @@ class TestScoreCalculator:
         # 測試當 winning_combination 為空時的情況
         winning_tile = Tile(Suit.MANZU, 1)
         waiting_type = self.calculator._determine_waiting_type(winning_tile, [])
-        assert waiting_type == "ryanmen"
+        assert waiting_type == WaitingType.RYANMEN
 
     def test_fu_kan_concealed(self):
         """測試暗槓符數"""
@@ -699,7 +705,7 @@ class TestScoreCalculator:
             (CombinationType.PAIR, (Suit.PINZU, 1)),
         ]
         waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
-        assert waiting_type == "penchan"
+        assert waiting_type == WaitingType.PENCHAN
 
     def test_waiting_type_penchan_rank7(self):
         """測試邊張聽（rank=7的情況）"""
@@ -712,7 +718,7 @@ class TestScoreCalculator:
             (CombinationType.PAIR, (Suit.PINZU, 1)),
         ]
         waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
-        assert waiting_type == "penchan"
+        assert waiting_type == WaitingType.PENCHAN
 
     def test_waiting_type_kanchan_middle(self):
         """測試嵌張聽（中間張的情況）"""
@@ -725,7 +731,7 @@ class TestScoreCalculator:
             (CombinationType.PAIR, (Suit.PINZU, 1)),
         ]
         waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
-        assert waiting_type == "kanchan"
+        assert waiting_type == WaitingType.KANCHAN
 
     def test_waiting_type_kanchan_other(self):
         """測試嵌張聽（其他情況）"""
@@ -739,7 +745,7 @@ class TestScoreCalculator:
         ]
         waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
         # 應該是嵌張或邊張，取決於具體實現
-        assert waiting_type in ["kanchan", "penchan"]
+        assert waiting_type in {WaitingType.KANCHAN, WaitingType.PENCHAN}
 
     def test_waiting_type_not_in_sequence(self):
         """測試不在順子中的聽牌類型判定"""
@@ -753,7 +759,7 @@ class TestScoreCalculator:
         ]
         # 和牌牌 5p 不在任何順子中（因為順子都是萬子），也不是對子的一部分
         waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
-        assert waiting_type == "ryanmen"
+        assert waiting_type == WaitingType.RYANMEN
 
     def test_score_result_yakuman_13_han(self):
         """測試13翻役滿判定"""
@@ -1099,7 +1105,7 @@ class TestScoreCalculator:
         ]
         waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
         # 應該是嵌張（因為 rank != 1）
-        assert waiting_type == "kanchan"
+        assert waiting_type == WaitingType.KANCHAN
 
     def test_waiting_type_in_sequence_check(self):
         """測試在順子中的檢查邏輯"""
@@ -1115,7 +1121,11 @@ class TestScoreCalculator:
         # winning_tile 4m 在 3-4-5 順子中的檢查和 break
         waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
         # 應該檢測到在順子中，可能是嵌張
-        assert waiting_type in ["kanchan", "penchan", "ryanmen"]
+        assert waiting_type in {
+            WaitingType.KANCHAN,
+            WaitingType.PENCHAN,
+            WaitingType.RYANMEN,
+        }
 
     def test_calculate_fu_open_tsumo_direct(self):
         """直接測試非門清自摸符數"""
@@ -1163,7 +1173,13 @@ class TestScoreCalculator:
         # 但由於前面的邏輯可能已經處理過，需要確保執行到最後的 return
         waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
         # 應該返回某種聽牌類型
-        assert waiting_type in ["kanchan", "penchan", "ryanmen", "tanki", "shabo"]
+        assert waiting_type in {
+            WaitingType.KANCHAN,
+            WaitingType.PENCHAN,
+            WaitingType.RYANMEN,
+            WaitingType.TANKI,
+            WaitingType.SHABO,
+        }
 
     def test_waiting_type_shabo(self):
         """測試雙碰聽符數（+0符，不增加符數）"""
@@ -1182,7 +1198,11 @@ class TestScoreCalculator:
         waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
         # 雙碰聽不增加符數，所以符數計算時應該跳過
         # 這裡主要測試 waiting_type 的判定邏輯
-        assert waiting_type in ["tanki", "ryanmen", "shabo"]
+        assert waiting_type in {
+            WaitingType.TANKI,
+            WaitingType.RYANMEN,
+            WaitingType.SHABO,
+        }
 
     def test_fu_waiting_type_shabo_no_fu(self):
         """測試雙碰聽不增加符數"""
@@ -1219,7 +1239,7 @@ class TestScoreCalculator:
             # 雙碰聽不增加符數，所以應該 >= 30
             assert fu >= 30
             # 如果 waiting_type 是 shabo，確認不增加符數
-            if waiting_type == "shabo":
+            if waiting_type == WaitingType.SHABO:
                 # 雙碰聽不增加符數，所以符數應該與其他聽牌類型相同（不考慮聽牌符）
                 pass  # 這裡主要確認邏輯正確
 

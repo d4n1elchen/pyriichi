@@ -10,7 +10,8 @@ from enum import Enum
 from pyriichi.enum_utils import TranslatableEnum
 from pyriichi.hand import Hand, CombinationType
 from pyriichi.tiles import Tile, Suit
-from pyriichi.game_state import GameState
+from pyriichi.game_state import GameState, Wind
+from pyriichi.rules_config import RenhouPolicy
 
 
 __all__ = ["Yaku", "YakuResult", "YakuChecker"]
@@ -435,12 +436,13 @@ class YakuChecker:
             # 檢查是否是場風（需要game_state）
             if game_state is not None:
                 round_wind = game_state.round_wind
-                if (
-                    (pair_rank == 1 and round_wind.value == "e")
-                    or (pair_rank == 2 and round_wind.value == "s")
-                    or (pair_rank == 3 and round_wind.value == "w")
-                    or (pair_rank == 4 and round_wind.value == "n")
-                ):
+                wind_mapping = {
+                    1: Wind.EAST,
+                    2: Wind.SOUTH,
+                    3: Wind.WEST,
+                    4: Wind.NORTH,
+                }
+                if round_wind == wind_mapping.get(pair_rank):
                     return None  # 場風對子，不能是平和
 
             # 檢查是否是自風（需要玩家位置，這裡先跳過）
@@ -547,6 +549,12 @@ class YakuChecker:
 
         # 三元牌
         sangen = [5, 6, 7]  # 白、發、中
+        wind_rank_mapping = {
+            1: (Wind.EAST, Yaku.ROUND_WIND_EAST, Yaku.SEAT_WIND_EAST),
+            2: (Wind.SOUTH, Yaku.ROUND_WIND_SOUTH, Yaku.SEAT_WIND_SOUTH),
+            3: (Wind.WEST, Yaku.ROUND_WIND_WEST, Yaku.SEAT_WIND_WEST),
+            4: (Wind.NORTH, Yaku.ROUND_WIND_NORTH, Yaku.SEAT_WIND_NORTH),
+        }
         round_wind = game_state.round_wind
         player_wind = game_state.player_winds[0] if game_state.player_winds else None
 
@@ -554,7 +562,7 @@ class YakuChecker:
         for meld in winning_combination:
             if isinstance(meld, tuple) and len(meld) == 2:
                 meld_type, (suit, rank) = meld
-                if meld_type in {CombinationType.TRIPLET, CombinationType.KAN} and suit.value == "z":
+                if meld_type in {CombinationType.TRIPLET, CombinationType.KAN} and suit == Suit.JIHAI:
                     if rank in sangen:
                         if rank == 5:
                             results.append(YakuResult(Yaku.HAKU, 1, False))
@@ -564,27 +572,19 @@ class YakuChecker:
                             results.append(YakuResult(Yaku.CHUN, 1, False))
 
                     # 場風和自風
-                    if rank == 1 and round_wind.value == "e":  # 東
-                        results.append(YakuResult(Yaku.ROUND_WIND_EAST, 1, False))
-                    elif rank == 2 and round_wind.value == "s":  # 南
-                        results.append(YakuResult(Yaku.ROUND_WIND_SOUTH, 1, False))
-                    elif rank == 3 and round_wind.value == "w":  # 西
-                        results.append(YakuResult(Yaku.ROUND_WIND_WEST, 1, False))
-                    elif rank == 4 and round_wind.value == "n":  # 北
-                        results.append(YakuResult(Yaku.ROUND_WIND_NORTH, 1, False))
+                    if rank in wind_rank_mapping:
+                        target_wind, round_yaku, seat_yaku = wind_rank_mapping[rank]
+                        if round_wind == target_wind:
+                            results.append(YakuResult(round_yaku, 1, False))
 
                     # 自風（需要根據玩家位置）
                     # 自風：與玩家位置對應的風牌刻子
                     if player_position < len(game_state.player_winds):
                         player_wind = game_state.player_winds[player_position]
-                        if rank == 1 and player_wind.value == "e":  # 東
-                            results.append(YakuResult(Yaku.SEAT_WIND_EAST, 1, False))
-                        elif rank == 2 and player_wind.value == "s":  # 南
-                            results.append(YakuResult(Yaku.SEAT_WIND_SOUTH, 1, False))
-                        elif rank == 3 and player_wind.value == "w":  # 西
-                            results.append(YakuResult(Yaku.SEAT_WIND_WEST, 1, False))
-                        elif rank == 4 and player_wind.value == "n":  # 北
-                            results.append(YakuResult(Yaku.SEAT_WIND_NORTH, 1, False))
+                        if rank in wind_rank_mapping:
+                            target_wind, _, seat_yaku = wind_rank_mapping[rank]
+                            if player_wind == target_wind:
+                                results.append(YakuResult(seat_yaku, 1, False))
 
         return results
 
@@ -1393,14 +1393,14 @@ class YakuChecker:
         4. 門清（hand.is_concealed）
 
         根據規則配置決定翻數：
-        - "yakuman": 役滿（13翻）
-        - "2han": 2翻（標準競技規則）
-        - "off": 不啟用
+        - RenhouPolicy.YAKUMAN: 役滿（13翻）
+        - RenhouPolicy.TWO_HAN: 2翻（標準競技規則）
+        - RenhouPolicy.OFF: 不啟用
         """
         ruleset = game_state.ruleset
 
         # 檢查是否啟用
-        if ruleset.renhou_policy == "off":
+        if ruleset.renhou_policy == RenhouPolicy.OFF:
             return None
 
         # 必須是閒家
@@ -1420,9 +1420,9 @@ class YakuChecker:
             return None
 
         # 根據規則配置返回不同的翻數
-        if ruleset.renhou_policy == "yakuman":
+        if ruleset.renhou_policy == RenhouPolicy.YAKUMAN:
             return YakuResult(Yaku.RENHOU, 13, True)
-        elif ruleset.renhou_policy == "2han":
+        elif ruleset.renhou_policy == RenhouPolicy.TWO_HAN:
             return YakuResult(Yaku.RENHOU, 2, False)
         else:
             return None

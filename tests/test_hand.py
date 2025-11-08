@@ -354,7 +354,7 @@ class TestHand:
         initial_tile_count = len(hand.tiles)
 
         meld = hand.kan(None)
-        assert meld.meld_type.value == "ankan"
+        assert meld.meld_type == MeldType.ANKAN
         assert len(meld.tiles) == 4
         # 暗槓後，手牌應該減少4張
         assert len(hand.tiles) == initial_tile_count - 4
@@ -380,7 +380,7 @@ class TestHand:
         kan_tile = Tile(Suit.MANZU, 1)
 
         meld = hand.kan(kan_tile)
-        assert meld.meld_type.value == "kan"
+        assert meld.meld_type == MeldType.KAN
         assert len(meld.tiles) == 4
         # 明槓後，手牌應該減少3張（被槓的牌來自外部，不包含在初始手牌中）
         # 注意：kan_tile 是外部牌，不應該在手牌中，所以實際減少的是手牌中的3張

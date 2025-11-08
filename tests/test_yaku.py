@@ -555,7 +555,9 @@ class TestYakuChecker:
         if combinations:
             # 檢查組合中是否有4個刻子
             triplets = sum(
-                1 for m in list(combinations[0]) if isinstance(m, tuple) and len(m) == 2 and m[0] == "triplet"
+                1
+                for m in list(combinations[0])
+                if isinstance(m, tuple) and len(m) == 2 and m[0] == CombinationType.TRIPLET
             )
             if triplets == 4:
                 results = self.checker.check_all(
@@ -645,7 +647,7 @@ class TestYakuChecker:
             )
             yakuman = [r for r in results if r.is_yakuman]
             assert len(yakuman) > 0
-            assert yakuman[0].yaku.ja == "國士無雙"
+            assert yakuman and yakuman[0].yaku in {Yaku.KOKUSHI_MUSOU, Yaku.KOKUSHI_MUSOU_JUUSANMEN}
             assert yakuman[0].han == 13
 
     def test_tsuuiisou(self):
@@ -682,7 +684,7 @@ class TestYakuChecker:
             # 如果檢測到四暗刻，字一色也可能存在（多役滿）
             # 這裡檢查字一色是否存在
             if tsuuiisou:
-                assert tsuuiisou[0].yaku.ja == "字一色"
+                assert tsuuiisou[0].yaku == Yaku.TSUUIISOU
                 assert tsuuiisou[0].han == 13
             else:
                 # 如果沒有檢測到字一色，可能是因為四暗刻優先
@@ -831,7 +833,7 @@ class TestYakuChecker:
 
         result = self.checker.check_chuuren_poutou(hand, all_tiles)
         assert result is not None
-        assert result.yaku.ja in ["九蓮寶燈", "純正九蓮寶燈"]
+        assert result.yaku in {Yaku.CHUUREN_POUTOU, Yaku.CHUUREN_POUTOU_PURE}
         assert result.han >= 13
 
     def test_sankantsu(self):

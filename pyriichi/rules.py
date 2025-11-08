@@ -8,7 +8,7 @@ from enum import Enum
 from typing import List, Optional, Dict, Any, Tuple
 from dataclasses import dataclass, field
 from pyriichi.tiles import Tile, TileSet, Suit
-from pyriichi.hand import Hand, Meld
+from pyriichi.hand import Hand, Meld, MeldType
 from pyriichi.game_state import GameState
 from pyriichi.yaku import YakuChecker, YakuResult
 from pyriichi.scoring import ScoreCalculator, ScoreResult
@@ -389,7 +389,7 @@ class RuleEngine:
         meld = self._hands[player].kan(tile)
         self._kan_count += 1
 
-        if self._draw_rinshan_tile(player, result, kan_type="kan"):
+        if self._draw_rinshan_tile(player, result, kan_type=meld.meld_type):
             self._pending_kan_tile = None
         return result
 
@@ -398,8 +398,9 @@ class RuleEngine:
         meld = self._hands[player].kan(None)
         if meld:
             self._kan_count += 1
+        kan_type = meld.meld_type if meld else MeldType.ANKAN
 
-        self._draw_rinshan_tile(player, result, kan_type="ankan")
+        self._draw_rinshan_tile(player, result, kan_type=kan_type)
         return result
 
     def _remove_last_discard(self, discarder: int, tile: Tile) -> None:
@@ -407,13 +408,13 @@ class RuleEngine:
         if self._discard_history and self._discard_history[-1] == (discarder, tile):
             self._discard_history.pop()
 
-    def _draw_rinshan_tile(self, player: int, result: ActionResult, *, kan_type: str) -> bool:
+    def _draw_rinshan_tile(self, player: int, result: ActionResult, *, kan_type: MeldType) -> bool:
         if not self._tile_set:
             return False
         if rinshan_tile := self._tile_set.draw_wall_tile():
             self._hands[player].add_tile(rinshan_tile)
             result.rinshan_tile = rinshan_tile
-            if kan_type == "kan":
+            if kan_type == MeldType.KAN:
                 result.kan = True
             else:
                 result.ankan = True

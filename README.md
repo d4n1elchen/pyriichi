@@ -330,6 +330,7 @@ PyRiichi 支援標準競技規則和自定義規則配置：
 
 ```python
 from pyriichi import GameState, RulesetConfig
+from pyriichi.rules_config import RenhouPolicy
 
 # 1. 使用默認標準競技規則
 game_state = GameState(num_players=4)
@@ -341,7 +342,7 @@ game_state_legacy = GameState(num_players=4, ruleset=legacy_ruleset)
 
 # 3. 自定義規則配置
 custom_ruleset = RulesetConfig(
-    renhou_policy="yakuman",  # 人和為役滿
+    renhou_policy=RenhouPolicy.YAKUMAN,  # 人和為役滿
     pinfu_require_ryanmen=False,  # 平和不檢查兩面聽
     chanta_enabled=True,
     chanta_closed_han=2,  # 全帶么九（門清）2翻
@@ -355,7 +356,7 @@ custom_ruleset = RulesetConfig(
 game_state_custom = GameState(num_players=4, ruleset=custom_ruleset)
 
 # 規則配置會影響役種判定
-print(f"人和規則: {game_state.ruleset.renhou_policy}")  # 標準: "2han"
+print(f"人和規則: {game_state.ruleset.renhou_policy.value}")  # 標準: "2han"
 print(f"平和需要兩面聽: {game_state.ruleset.pinfu_require_ryanmen}")  # 標準: True
 ```
 
