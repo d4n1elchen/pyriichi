@@ -287,13 +287,12 @@ class Hand:
 
         return results
 
-    def kan(self, tile: Optional[Tile], kan_tiles: Optional[List[Tile]] = None) -> Meld:
+    def kan(self, tile: Optional[Tile]) -> Meld:
         """
         執行槓操作
 
         Args:
             tile: 被槓的牌（明槓時需要，暗槓時為 None）
-            kan_tiles: 手牌中的牌（可選，如果不提供則自動查找）
 
         Returns:
             創建的 Meld 對象
@@ -313,21 +312,19 @@ class Hand:
             for t in meld.tiles:
                 self._tiles.remove(t)
         elif meld.meld_type == MeldType.KAN:
-            # 明槓：檢查是否為加槓（升級已有的碰為槓）
-            if tile is not None:
+            if tile is None:
+                called_tile = meld.called_tile
+                if called_tile is None or self._tiles.count(called_tile) == 0:
+                    raise ValueError("沒有可用的牌升級為加槓")
                 for existing_meld in self._melds:
-                    if existing_meld.meld_type == MeldType.PON and existing_meld.called_tile == tile:
-                        # 加槓：移除舊的碰，添加新的槓
+                    if existing_meld.meld_type == MeldType.PON and existing_meld.called_tile == called_tile:
                         self._melds.remove(existing_meld)
-                        # 從手牌中移除新摸到的牌
-                        if tile in self._tiles:
-                            self._tiles.remove(tile)
+                        self._tiles.remove(called_tile)
                         break
-                else:
-                    # 普通明槓：從手牌中移除三張牌
-                    for t in meld.tiles:
-                        if t != tile and t in self._tiles:
-                            self._tiles.remove(t)
+            else:
+                for t in meld.tiles:
+                    if t != tile and t in self._tiles:
+                        self._tiles.remove(t)
 
         self._melds.append(meld)
         self._tile_counts_cache = None  # 清除緩存
