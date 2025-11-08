@@ -8,15 +8,16 @@ import itertools
 from enum import Enum
 from typing import List, Optional
 import random
+from pyriichi.enum_utils import TranslatableEnum
 
 
-class Suit(Enum):
+class Suit(TranslatableEnum):
     """花色"""
 
-    MANZU = "m"  # 萬子
-    PINZU = "p"  # 筒子
-    SOZU = "s"  # 條子
-    JIHAI = "z"  # 字牌
+    MANZU = ("m", "萬子", "萬子", "Manzu")
+    PINZU = ("p", "筒子", "筒子", "Pinzu")
+    SOZU = ("s", "索子", "索子", "Souzu")
+    JIHAI = ("z", "字牌", "字牌", "Honors")
 
 
 class Tile:

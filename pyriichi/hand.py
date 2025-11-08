@@ -7,15 +7,16 @@
 from enum import Enum
 from typing import List, Optional, Tuple
 from pyriichi.tiles import Tile, Suit
+from pyriichi.enum_utils import TranslatableEnum
 
 
-class MeldType(Enum):
+class MeldType(TranslatableEnum):
     """副露類型"""
 
-    CHI = "chi"  # 吃
-    PON = "pon"  # 碰
-    KAN = "kan"  # 明槓
-    ANKAN = "ankan"  # 暗槓
+    CHI = ("chi", "吃", "チー", "Chi")
+    PON = ("pon", "碰", "ポン", "Pon")
+    KAN = ("kan", "明槓", "カン", "Kan")
+    ANKAN = ("ankan", "暗槓", "暗槓", "Ankan")
 
 
 class Meld:

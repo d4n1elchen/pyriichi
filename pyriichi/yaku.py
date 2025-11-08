@@ -7,6 +7,7 @@
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
+from pyriichi.enum_utils import TranslatableEnum
 from pyriichi.hand import Hand
 from pyriichi.tiles import Tile, Suit
 from pyriichi.game_state import GameState
@@ -15,71 +16,71 @@ from pyriichi.game_state import GameState
 __all__ = ["Yaku", "YakuResult", "YakuChecker"]
 
 
-class Yaku(Enum):
+class Yaku(TranslatableEnum):
     """所有役種枚舉"""
 
-    RIICHI = ("立直", "Riichi", "立直")
-    IPPATSU = ("一発", "Ippatsu", "一發")
-    MENZEN_TSUMO = ("門前清自摸和", "Menzen Tsumo", "門清自摸")
-    TANYAO = ("斷么九", "Tanyao", "斷么九")
-    PINFU = ("平和", "Pinfu", "平和")
-    IIPEIKOU = ("一盃口", "Iipeikou", "一盃口")
-    RYANPEIKOU = ("二盃口", "Ryanpeikou", "二盃口")
-    TOITOI = ("対々和", "Toitoi", "對對和")
-    SANANKOU = ("三暗刻", "Sanankou", "三暗刻")
-    SANKANTSU = ("三槓子", "Sankantsu", "三槓子")
-    SANSHOKU_DOUJUN = ("三色同順", "Sanshoku Doujun", "三色同順")
-    SANSHOKU_DOUKOU = ("三色同刻", "Sanshoku Doukou", "三色同刻")
-    ITTSU = ("一気通貫", "Ittsu", "一氣通貫")
-    HONITSU = ("混一色", "Honitsu", "混一色")
-    CHINITSU = ("清一色", "Chinitsu", "清一色")
-    JUNCHAN = ("純全帯么九", "Junchan", "純全帶么九")
-    CHANTA = ("全帯么九", "Chanta", "全帶么九")
-    HONROUTOU = ("混老頭", "Honroutou", "混老頭")
-    SHOUSANGEN = ("小三元", "Shousangen", "小三元")
-    DAISANGEN = ("大三元", "Daisangen", "大三元")
-    SUUANKOU = ("四暗刻", "Suuankou", "四暗刻")
-    SUUANKOU_TANKI = ("四暗刻単騎", "Suuankou Tanki", "四暗刻單騎")
-    SUUKANTSU = ("四槓子", "Suukantsu", "四槓子")
-    SHOUSUUSHI = ("小四喜", "Shousuushi", "小四喜")
-    DAISUUSHI = ("大四喜", "Daisuushi", "大四喜")
-    CHINROUTOU = ("清老頭", "Chinroutou", "清老頭")
-    TSUUIISOU = ("字一色", "Tsuuiisou", "字一色")
-    RYUIISOU = ("綠一色", "Ryuuiisou", "綠一色")
-    CHUUREN_POUTOU = ("九蓮寶燈", "Chuuren Poutou", "九蓮寶燈")
-    CHUUREN_POUTOU_PURE = ("純正九蓮寶燈", "Junsei Chuuren Poutou", "純正九蓮寶燈")
-    KOKUSHI_MUSOU = ("國士無雙", "Kokushi Musou", "國士無雙")
-    KOKUSHI_MUSOU_JUUSANMEN = ("國士無雙十三面", "Kokushi Musou Juusanmen", "國士無雙十三面")
-    TENHOU = ("天和", "Tenhou", "天和")
-    CHIHOU = ("地和", "Chihou", "地和")
-    RENHOU = ("人和", "Renhou", "人和")
-    HAITEI = ("海底撈月", "Haitei Raoyue", "海底撈月")
-    HOUTEI = ("河底撈魚", "Houtei Raoyui", "河底撈魚")
-    RINSHAN = ("嶺上開花", "Rinshan Kaihou", "嶺上開花")
-    CHIITOITSU = ("七対子", "Chiitoitsu", "七對子")
-    HAKU = ("白", "Haku", "白")
-    HATSU = ("發", "Hatsu", "發")
-    CHUN = ("中", "Chun", "中")
-    ROUND_WIND_EAST = ("場風東", "Ton", "場風東")
-    ROUND_WIND_SOUTH = ("場風南", "Nan", "場風南")
-    ROUND_WIND_WEST = ("場風西", "Shaa", "場風西")
-    ROUND_WIND_NORTH = ("場風北", "Pei", "場風北")
-    SEAT_WIND_EAST = ("自風東", "Ton", "自風東")
-    SEAT_WIND_SOUTH = ("自風南", "Nan", "自風南")
-    SEAT_WIND_WEST = ("自風西", "Shaa", "自風西")
-    SEAT_WIND_NORTH = ("自風北", "Pei", "自風北")
+    RIICHI = ("riichi", "立直", "立直", "Riichi")
+    IPPATSU = ("ippatsu", "一發", "一発", "Ippatsu")
+    MENZEN_TSUMO = ("menzen_tsumo", "門清自摸", "門前清自摸和", "Menzen Tsumo")
+    TANYAO = ("tanyao", "斷么九", "断么九", "Tanyao")
+    PINFU = ("pinfu", "平和", "平和", "Pinfu")
+    IIPEIKOU = ("iipeikou", "一盃口", "一盃口", "Iipeikou")
+    RYANPEIKOU = ("ryanpeikou", "二盃口", "二盃口", "Ryanpeikou")
+    TOITOI = ("toitoi", "對對和", "対々和", "Toitoi")
+    SANANKOU = ("sanankou", "三暗刻", "三暗刻", "Sanankou")
+    SANKANTSU = ("sankantsu", "三槓子", "三槓子", "Sankantsu")
+    SANSHOKU_DOUJUN = ("sanshoku_doujun", "三色同順", "三色同順", "Sanshoku Doujun")
+    SANSHOKU_DOUKOU = ("sanshoku_doukou", "三色同刻", "三色同刻", "Sanshoku Doukou")
+    ITTSU = ("ittsu", "一氣通貫", "一気通貫", "Ittsu")
+    HONITSU = ("honitsu", "混一色", "混一色", "Honitsu")
+    CHINITSU = ("chinitsu", "清一色", "清一色", "Chinitsu")
+    JUNCHAN = ("junchan", "純全帶么九", "純全帯么九", "Junchan")
+    CHANTA = ("chanta", "全帶么九", "全帯么九", "Chanta")
+    HONROUTOU = ("honroutou", "混老頭", "混老頭", "Honroutou")
+    SHOUSANGEN = ("shousangen", "小三元", "小三元", "Shousangen")
+    DAISANGEN = ("daisangen", "大三元", "大三元", "Daisangen")
+    SUUANKOU = ("suuankou", "四暗刻", "四暗刻", "Suuankou")
+    SUUANKOU_TANKI = ("suuankou_tanki", "四暗刻單騎", "四暗刻単騎", "Suuankou Tanki")
+    SUUKANTSU = ("suukantsu", "四槓子", "四槓子", "Suukantsu")
+    SHOUSUUSHI = ("shousuushi", "小四喜", "小四喜", "Shousuushi")
+    DAISUUSHI = ("daisuushi", "大四喜", "大四喜", "Daisuushi")
+    CHINROUTOU = ("chinroutou", "清老頭", "清老頭", "Chinroutou")
+    TSUUIISOU = ("tsuuiisou", "字一色", "字一色", "Tsuuiisou")
+    RYUIISOU = ("ryuiisou", "綠一色", "綠一色", "Ryuuiisou")
+    CHUUREN_POUTOU = ("chuuren_poutou", "九蓮寶燈", "九蓮宝燈", "Chuuren Poutou")
+    CHUUREN_POUTOU_PURE = ("chuuren_poutou_pure", "純正九蓮寶燈", "純正九蓮寶燈", "Pure Chuuren Poutou")
+    KOKUSHI_MUSOU = ("kokushi_musou", "國士無雙", "國士無双", "Kokushi Musou")
+    KOKUSHI_MUSOU_JUUSANMEN = ("kokushi_musou_juusanmen", "國士無雙十三面", "國士無双十三面", "Kokushi Musou Juusanmen")
+    TENHOU = ("tenhou", "天和", "天和", "Tenhou")
+    CHIHOU = ("chihou", "地和", "地和", "Chihou")
+    RENHOU = ("renhou", "人和", "人和", "Renhou")
+    HAITEI = ("haitei", "海底撈月", "海底撈月", "Haitei")
+    HOUTEI = ("houtei", "河底撈魚", "河底撈魚", "Houtei")
+    RINSHAN = ("rinshan", "嶺上開花", "嶺上開花", "Rinshan Kaihou")
+    CHIITOITSU = ("chiitoitsu", "七對子", "七対子", "Chiitoitsu")
+    HAKU = ("haku", "白", "白", "Haku")
+    HATSU = ("hatsu", "發", "發", "Hatsu")
+    CHUN = ("chun", "中", "中", "Chun")
+    ROUND_WIND_EAST = ("round_wind_east", "場風東", "場風東", "Round Wind East")
+    ROUND_WIND_SOUTH = ("round_wind_south", "場風南", "場風南", "Round Wind South")
+    ROUND_WIND_WEST = ("round_wind_west", "場風西", "場風西", "Round Wind West")
+    ROUND_WIND_NORTH = ("round_wind_north", "場風北", "場風北", "Round Wind North")
+    SEAT_WIND_EAST = ("seat_wind_east", "自風東", "自風東", "Seat Wind East")
+    SEAT_WIND_SOUTH = ("seat_wind_south", "自風南", "自風南", "Seat Wind South")
+    SEAT_WIND_WEST = ("seat_wind_west", "自風西", "自風西", "Seat Wind West")
+    SEAT_WIND_NORTH = ("seat_wind_north", "自風北", "自風北", "Seat Wind North")
 
     @property
     def japanese(self) -> str:
-        return self.value[0]
+        return self.ja
 
     @property
     def english(self) -> str:
-        return self.value[1]
+        return self.en
 
     @property
     def chinese(self) -> str:
-        return self.value[2]
+        return self.zh
 
 
 @dataclass(frozen=True)
@@ -95,18 +96,6 @@ class YakuResult:
 
     def __hash__(self):
         return hash(self.yaku)
-
-    @property
-    def name(self) -> str:
-        return self.yaku.japanese
-
-    @property
-    def name_en(self) -> str:
-        return self.yaku.english
-
-    @property
-    def name_cn(self) -> str:
-        return self.yaku.chinese
 
 
 class YakuChecker:
@@ -269,65 +258,71 @@ class YakuChecker:
             過濾後的役種列表
         """
         filtered = []
-        yaku_names = {r.name for r in results}
+        yaku_set = {r.yaku for r in results}
 
         for result in results:
             should_include = True
 
             # 1. 平和與役牌衝突
-            if result.name == "対々和":
-                # 需要順子的役種
+            if result.yaku == Yaku.TOITOI:
                 sequence_yaku = {
-                    "三色同順",
-                    "一気通貫",
-                    "一盃口",
-                    "二盃口",
+                    Yaku.SANSHOKU_DOUJUN,
+                    Yaku.ITTSU,
+                    Yaku.IIPEIKOU,
+                    Yaku.RYANPEIKOU,
                 }
-                if yaku_names & sequence_yaku:
+                if yaku_set & sequence_yaku:
                     should_include = False
 
-            elif result.name == "平和":
-                # 檢查是否有役牌
-                yakuhai_names = {"白", "發", "中", "場風東", "場風南", "場風西", "場風北"}
-                if yaku_names & yakuhai_names:
+            elif result.yaku == Yaku.PINFU:
+                yakuhai_set = {
+                    Yaku.HAKU,
+                    Yaku.HATSU,
+                    Yaku.CHUN,
+                    Yaku.ROUND_WIND_EAST,
+                    Yaku.ROUND_WIND_SOUTH,
+                    Yaku.ROUND_WIND_WEST,
+                    Yaku.ROUND_WIND_NORTH,
+                }
+                if yaku_set & yakuhai_set:
                     should_include = False
 
-            elif result.name == "斷么九":
+            elif result.yaku == Yaku.TANYAO:
                 # 包含幺九的役種
                 terminal_yaku = {
-                    "一気通貫",  # 包含1和9的順子
-                    "純全帯么九",
-                    "混全帯么九",
-                    "混老頭",
-                    "清老頭",
+                    Yaku.ITTSU,  # 包含1和9的順子
+                    Yaku.JUNCHAN,
+                    Yaku.CHANTA,
+                    Yaku.HONROUTOU,
+                    Yaku.CHINROUTOU,
                 }
-                if yaku_names & terminal_yaku:
+                if yaku_set & terminal_yaku:
                     should_include = False
 
             # 4. 一盃口與二盃口互斥
-            if result.name == "一盃口" and "二盃口" in yaku_names:
+            if result.yaku == Yaku.IIPEIKOU and Yaku.RYANPEIKOU in yaku_set:
                 should_include = False
 
             # 5. 清一色與混一色互斥
-            if result.name == "清一色" and "混一色" in yaku_names:
+            if result.yaku == Yaku.CHINITSU and Yaku.HONITSU in yaku_set:
                 should_include = False
-            if result.name == "混一色" and "清一色" in yaku_names:
+            if result.yaku == Yaku.HONITSU and Yaku.CHINITSU in yaku_set:
                 should_include = False
 
             # 6. 純全帶与混全帶互斥
-            if result.name == "純全帯么九" and "混全帯么九" in yaku_names:
+            if result.yaku == Yaku.JUNCHAN and Yaku.CHANTA in yaku_set:
                 should_include = False
-            if result.name == "混全帯么九" and "純全帯么九" in yaku_names:
+            if result.yaku == Yaku.CHANTA and Yaku.JUNCHAN in yaku_set:
                 should_include = False
 
             # 7. 平和與對對和衝突（結構上互斥）
-            if result.name == "平和" and "対々和" in yaku_names:
+            if result.yaku == Yaku.PINFU and Yaku.TOITOI in yaku_set:
                 should_include = False
-            if result.name == "対々和" and "平和" in yaku_names:
+            if result.yaku == Yaku.TOITOI and Yaku.PINFU in yaku_set:
                 should_include = False
 
             # 8. 平和與一盃口、二盃口衝突（平和只能有一個對子）
-            if result.name == "平和" and ("一盃口" in yaku_names or "二盃口" in yaku_names):
+            if result.yaku == Yaku.PINFU and (Yaku.IIPEIKOU in yaku_set or Yaku.RYANPEIKOU in yaku_set):
                 should_include = False
 
             if should_include:

@@ -907,7 +907,7 @@ class TestScoreCalculator:
             yaku_results = self.yaku_checker.check_all(
                 hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=True, turns_after_riichi=-1
             )
-            is_pinfu = any(r.name == "平和" for r in yaku_results)
+            is_pinfu = any(r.yaku == Yaku.PINFU for r in yaku_results)
 
             if is_pinfu:
                 fu = self.calculator.calculate_fu(
@@ -943,7 +943,7 @@ class TestScoreCalculator:
             yaku_results = self.yaku_checker.check_all(
                 hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
             )
-            is_pinfu = any(r.name == "平和" for r in yaku_results)
+            is_pinfu = any(r.yaku == Yaku.PINFU for r in yaku_results)
 
             if is_pinfu:
                 fu = self.calculator.calculate_fu(

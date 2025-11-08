@@ -7,15 +7,16 @@
 from enum import Enum
 from typing import List, Optional
 from pyriichi.rules_config import RulesetConfig
+from pyriichi.enum_utils import TranslatableEnum
 
 
-class Wind(Enum):
+class Wind(TranslatableEnum):
     """風"""
 
-    EAST = "e"  # 東
-    SOUTH = "s"  # 南
-    WEST = "w"  # 西
-    NORTH = "n"  # 北
+    EAST = ("e", "東", "東", "East")
+    SOUTH = ("s", "南", "南", "South")
+    WEST = ("w", "西", "西", "West")
+    NORTH = ("n", "北", "北", "North")
 
 
 class GameState:

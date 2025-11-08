@@ -143,7 +143,7 @@ def example_winning_hand_and_scoring():
 
             print(f"\n役種檢查結果:")
             for yaku in yaku_results:
-                print(f"  - {yaku.name_cn} ({yaku.name}): {yaku.han} 翻")
+                print(f"  - {yaku.yaku.zh} ({yaku.yaku.ja}): {yaku.han} 翻")
 
             # 4. 計算得分
             score_calculator = ScoreCalculator()
@@ -305,7 +305,7 @@ def example_ruleset_configuration():
             is_first_turn=True,
             player_position=1,  # 閒家
         )
-        renhou_standard = [r for r in results_standard if r.name == "人和"]
+        renhou_standard = [r for r in results_standard if r.yaku == Yaku.RENHOU]
         if renhou_standard:
             print(f"   標準規則 - 人和: {renhou_standard[0].han}翻 (非役滿)")
 
@@ -321,7 +321,7 @@ def example_ruleset_configuration():
             is_first_turn=True,
             player_position=1,  # 閒家
         )
-        renhou_legacy = [r for r in results_legacy if r.name == "人和"]
+        renhou_legacy = [r for r in results_legacy if r.yaku == Yaku.RENHOU]
         if renhou_legacy:
             print(f"   舊版規則 - 人和: {renhou_legacy[0].han}翻 (役滿)")
 

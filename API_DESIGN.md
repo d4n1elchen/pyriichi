@@ -722,7 +722,7 @@ class ActionResult:
     drawn_tile: Optional[Tile] = None
     is_last_tile: Optional[bool] = None
     draw: Optional[bool] = None
-    draw_reason: Optional[str] = None
+    draw_type: Optional[DrawType] = None
     discarded: Optional[bool] = None
     riichi: Optional[bool] = None
     chankan: Optional[bool] = None

@@ -16,6 +16,7 @@ from pyriichi import (
     ScoreCalculator,
     GameState,
     Wind,
+    Yaku,
     parse_tiles,
     format_tiles,
 )
@@ -50,9 +51,9 @@ class TestCompleteWinFlow:
             player_position=0,
         )
 
-        # 應該有門清自摸和斷么九（使用中文名稱）
-        yaku_names = [y.name for y in yaku_results]
-        assert "斷么九" in yaku_names or "門前清自摸和" in yaku_names
+        # 應該至少有門清自摸
+        yaku_set = {y.yaku for y in yaku_results}
+        assert Yaku.MENZEN_TSUMO in yaku_set
 
         # 3. 計算得分
         score_calculator = ScoreCalculator()

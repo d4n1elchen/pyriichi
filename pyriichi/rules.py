@@ -12,33 +12,44 @@ from pyriichi.hand import Hand, Meld
 from pyriichi.game_state import GameState
 from pyriichi.yaku import YakuChecker, YakuResult
 from pyriichi.scoring import ScoreCalculator, ScoreResult
+from pyriichi.enum_utils import TranslatableEnum
 
 
-class GameAction(Enum):
+class GameAction(TranslatableEnum):
     """遊戲動作"""
 
-    DRAW = "draw"  # 摸牌
-    DISCARD = "discard"  # 打牌
-    CHI = "chi"  # 吃
-    PON = "pon"  # 碰
-    KAN = "kan"  # 槓
-    ANKAN = "ankan"  # 暗槓
-    RICHI = "riichi"  # 立直
-    WIN = "win"  # 和牌
-    TSUMO = "tsumo"  # 自摸
-    RON = "ron"  # 榮和
-    PASS = "pass"  # 過
+    DRAW = ("draw", "摸牌", "ツモ", "Draw")
+    DISCARD = ("discard", "打牌", "捨て牌", "Discard")
+    CHI = ("chi", "吃牌", "チー", "Chi")
+    PON = ("pon", "碰牌", "ポン", "Pon")
+    KAN = ("kan", "明槓", "カン", "Kan")
+    ANKAN = ("ankan", "暗槓", "暗槓", "Ankan")
+    RICHI = ("riichi", "立直", "リーチ", "Riichi")
+    WIN = ("win", "和牌", "和了", "Win")
+    TSUMO = ("tsumo", "自摸", "ツモ和", "Tsumo")
+    RON = ("ron", "榮和", "ロン", "Ron")
+    PASS = ("pass", "過", "パス", "Pass")
 
 
-class GamePhase(Enum):
+class GamePhase(TranslatableEnum):
     """遊戲階段"""
 
-    INIT = "init"  # 初始化
-    DEALING = "dealing"  # 發牌
-    PLAYING = "playing"  # 遊戲中
-    WINNING = "winning"  # 和牌
-    DRAW = "draw"  # 流局
-    ENDED = "ended"  # 結束
+    INIT = ("init", "初始化", "初期化", "Init")
+    DEALING = ("dealing", "發牌", "配牌", "Dealing")
+    PLAYING = ("playing", "對局中", "対局中", "Playing")
+    WINNING = ("winning", "和牌處理", "和了処理", "Winning")
+    DRAW = ("draw", "流局", "流局", "Draw")
+    ENDED = ("ended", "結束", "終了", "Ended")
+
+
+class DrawType(TranslatableEnum):
+    """流局類型"""
+
+    SUUFON_RENDA = ("suufon_renda", "四風連打", "四風連打", "Suufon Renda")
+    SANCHA_RON = ("sancha_ron", "三家和了", "三家和了", "Sancha Ron")
+    SUUKANTSU = ("suukantsu", "四槓散了", "四槓散了", "Suukantsu")
+    EXHAUSTED = ("exhausted", "牌山耗盡", "牌山が尽きる", "Exhausted Wall")
+    SUUCHA_RIICHI = ("suucha_riichi", "四家立直", "四家立直", "Suucha Riichi")
 
 
 @dataclass
@@ -48,7 +59,7 @@ class ActionResult:
     drawn_tile: Optional[Tile] = None
     is_last_tile: Optional[bool] = None
     draw: Optional[bool] = None
-    draw_reason: Optional[str] = None
+    draw_type: Optional[DrawType] = None
     discarded: Optional[bool] = None
     riichi: Optional[bool] = None
     chankan: Optional[bool] = None
@@ -82,7 +93,7 @@ class DrawResult:
     """流局結果"""
 
     draw: bool
-    draw_type: Optional[str] = None
+    draw_type: Optional[DrawType] = None
     flow_mangan_players: List[int] = field(default_factory=list)
     kyuushu_kyuuhai: Optional[bool] = None
     kyuushu_kyuuhai_player: Optional[int] = None
@@ -415,7 +426,7 @@ class RuleEngine:
 
         self._phase = GamePhase.DRAW
         result.draw = True
-        result.draw_reason = "wall_exhausted"
+        result.draw_type = DrawType.EXHAUSTED
         return False
 
     def _apply_discard_effects(self, player: int, tile: Tile, result: ActionResult) -> None:
@@ -523,31 +534,31 @@ class RuleEngine:
             rinshan=is_rinshan or None,
         )
 
-    def check_draw(self) -> Optional[str]:
+    def check_draw(self) -> Optional[DrawType]:
         """
         檢查是否流局
 
         Returns:
-            流局類型（"exhausted", "kyuushu", "suufon_renda", "suucha_riichi", "suukantsu", "sancha_ron"），否則返回 None
+            流局類型，否則返回 None
         """
         # 檢查四風連打（優先檢查，因為可以在第一巡發生）
         if self.check_suufon_renda():
-            return "suufon_renda"
+            return DrawType.SUUFON_RENDA
 
         # 檢查三家和了（多人和牌流局）
         if self.check_sancha_ron():
-            return "sancha_ron"
+            return DrawType.SANCHA_RON
 
         # 檢查四槓散了（四個槓之後流局）
         if self._kan_count >= 4 and not self._ignore_suukantsu:
-            return "suukantsu"
+            return DrawType.SUUKANTSU
 
         # 牌山耗盡流局
         if self._tile_set and self._tile_set.is_exhausted():
-            return "exhausted"
+            return DrawType.EXHAUSTED
 
         # 檢查是否所有玩家都聽牌（全員聽牌流局）
-        return "suucha_riichi" if self._check_all_tenpai() else None
+        return DrawType.SUUCHA_RIICHI if self._check_all_tenpai() else None
 
     def _check_all_tenpai(self) -> bool:
         """檢查是否所有玩家都聽牌"""
@@ -730,7 +741,7 @@ class RuleEngine:
         )
 
         # 檢查流局滿貫
-        if draw_type == "exhausted":
+        if draw_type == DrawType.EXHAUSTED:
             for i in range(self._num_players):
                 if self.check_flow_mangan(i):
                     result.flow_mangan_players.append(i)
@@ -751,7 +762,7 @@ class RuleEngine:
                     break
 
         # 處理全員聽牌流局
-        if draw_type == "suucha_riichi":
+        if draw_type == DrawType.SUUCHA_RIICHI:
             # 全員聽牌流局時，莊家支付 300 點給每個閒家
             dealer = self._game_state.dealer
             for i in range(self._num_players):
