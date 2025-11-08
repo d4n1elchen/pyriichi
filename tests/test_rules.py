@@ -3,7 +3,7 @@ RuleEngine 的單元測試
 """
 
 import pytest
-from pyriichi.rules import RuleEngine, GameAction, GamePhase
+from pyriichi.rules import RuleEngine, GameAction, GamePhase, DrawType
 from pyriichi.tiles import Tile, Suit
 from pyriichi.game_state import Wind
 
@@ -45,7 +45,7 @@ class TestRuleEngine:
         self._init_game()
         # 初始狀態不應該流局
         draw_type = self.engine.check_draw()
-        assert draw_type is None or draw_type in ["exhausted", "suucha_riichi"]
+        assert draw_type is None or draw_type in {DrawType.EXHAUSTED, DrawType.SUUCHA_RIICHI}
 
     def test_check_sancha_ron(self):
         """測試三家和了檢查"""
@@ -504,7 +504,7 @@ class TestRuleEngine:
         assert result == True
 
         if draw_type := self.engine.check_draw():
-            assert draw_type == "suufon_renda"
+            assert draw_type == DrawType.SUUFON_RENDA
 
     def test_check_draw_sancha_ron(self):
         """測試三家和了流局檢查"""
@@ -517,7 +517,7 @@ class TestRuleEngine:
         # 如果返回 True，check_draw 應該返回 "sancha_ron"
         if result:
             draw_type = self.engine.check_draw()
-            assert draw_type == "sancha_ron"
+            assert draw_type == DrawType.SANCHA_RON
 
     def test_check_draw_suukantsu(self):
         """測試四槓散了流局檢查"""
@@ -527,7 +527,7 @@ class TestRuleEngine:
 
         # 檢查四槓散了
         draw_type = self.engine.check_draw()
-        assert draw_type == "suukantsu"
+        assert draw_type == DrawType.SUUKANTSU
 
     def test_check_draw_exhausted(self):
         """測試牌山耗盡流局檢查"""
@@ -540,7 +540,7 @@ class TestRuleEngine:
 
             # 檢查牌山耗盡流局
             draw_type = self.engine.check_draw()
-            assert draw_type == "exhausted"
+            assert draw_type == DrawType.EXHAUSTED
 
     def test_check_draw_suucha_riichi(self):
         """測試全員聽牌流局檢查"""
@@ -572,7 +572,7 @@ class TestRuleEngine:
 
         # 檢查全員聽牌流局
         draw_type = self.engine.check_draw()
-        assert draw_type == "suucha_riichi"
+        assert draw_type == DrawType.SUUCHA_RIICHI
 
     def test_check_all_tenpai(self):
         """測試全員聽牌檢查"""
@@ -835,7 +835,7 @@ class TestRuleEngine:
 
         # 處理流局
         result = self.engine.handle_draw()
-        if result.draw_type == "suucha_riichi":
+        if result.draw_type == DrawType.SUUCHA_RIICHI:
             assert result.draw == True
 
     def test_can_act_default_false(self):
@@ -1652,7 +1652,7 @@ class TestRuleEngine:
 
         assert result.kan is True
         assert self.engine._kan_count == 4
-        assert self.engine.check_draw() == "suukantsu"
+        assert self.engine.check_draw() == DrawType.SUUKANTSU
 
     def test_fourth_kan_chankan_does_not_trigger_suukantsu(self):
         """第四次槓時被搶槓不算四槓散了"""
@@ -1831,7 +1831,7 @@ class TestRuleEngine:
 
         assert result.ankan is True
         assert self.engine._kan_count == 4
-        assert self.engine.check_draw() == "suukantsu"
+        assert self.engine.check_draw() == DrawType.SUUKANTSU
 
     def test_execute_action_discard_is_last_tile(self):
         """測試打牌時最後一張牌檢查"""
