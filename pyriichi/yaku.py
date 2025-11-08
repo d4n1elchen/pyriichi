@@ -353,10 +353,7 @@ class YakuChecker:
             return None
 
         # 一發：立直後一巡內和牌（turns_after_riichi == 0）
-        if turns_after_riichi == 0:
-            return YakuResult(Yaku.IPPATSU, 1, False)
-
-        return None
+        return YakuResult(Yaku.IPPATSU, 1, False) if turns_after_riichi == 0 else None
 
     def check_menzen_tsumo(self, hand: Hand, game_state: GameState, is_tsumo: bool = False) -> Optional[YakuResult]:
         """
@@ -367,10 +364,7 @@ class YakuChecker:
         if not hand.is_concealed:
             return None
 
-        if not is_tsumo:
-            return None
-
-        return YakuResult(Yaku.MENZEN_TSUMO, 1, False)
+        return YakuResult(Yaku.MENZEN_TSUMO, 1, False) if is_tsumo else None
 
     def check_tanyao(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
         """
@@ -543,10 +537,7 @@ class YakuChecker:
                     kan_count += 1
 
         # 三個槓子
-        if kan_count == 3:
-            return YakuResult(Yaku.SANKANTSU, 2, False)
-
-        return None
+        return YakuResult(Yaku.SANKANTSU, 2, False) if kan_count == 3 else None
 
     def check_yakuhai(
         self, hand: Hand, winning_combination: List, game_state: GameState, player_position: int = 0
@@ -685,10 +676,7 @@ class YakuChecker:
                 if meld_type == "triplet":
                     triplets += 1
 
-        if triplets >= 3:
-            return YakuResult(Yaku.SANANKOU, 2, False)
-
-        return None
+        return YakuResult(Yaku.SANANKOU, 2, False) if triplets >= 3 else None
 
     def check_chinitsu(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
         """
@@ -712,10 +700,7 @@ class YakuChecker:
                     return None
 
         # 只有一種數牌花色
-        if len(suits) == 1:
-            return YakuResult(Yaku.CHINITSU, 6, False)
-
-        return None
+        return YakuResult(Yaku.CHINITSU, 6, False) if len(suits) == 1 else None
 
     def check_honitsu(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
         """
@@ -762,10 +747,7 @@ class YakuChecker:
                 return None
 
         pairs = [count for count in counts.values() if count == 2]
-        if len(pairs) != 7:
-            return None
-
-        return YakuResult(Yaku.CHIITOITSU, 2, False)
+        return None if len(pairs) != 7 else YakuResult(Yaku.CHIITOITSU, 2, False)
 
     def check_junchan(
         self, hand: Hand, winning_combination: List, game_state: Optional[GameState] = None
@@ -1025,10 +1007,7 @@ class YakuChecker:
                     kan_count += 1
 
         # 四個槓子
-        if kan_count == 4:
-            return YakuResult(Yaku.SUUKANTSU, 13, True)
-
-        return None
+        return YakuResult(Yaku.SUUKANTSU, 13, True) if kan_count == 4 else None
 
     def check_suuankou(
         self,
@@ -1126,13 +1105,7 @@ class YakuChecker:
                 return None  # 有非幺九牌
 
         # 必須有一張重複（且只有一張重複）
-        if pairs == 1:
-            # 檢查是否為十三面聽（重複的牌是聽牌）
-            # 這裡簡化處理，如果重複的牌是聽牌，則為十三面
-            # TODO: 需要更精確的判定
-            return YakuResult(Yaku.KOKUSHI_MUSOU, 13, True)
-
-        return None
+        return YakuResult(Yaku.KOKUSHI_MUSOU, 13, True) if pairs == 1 else None
 
     def check_shousuushi(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
         """
@@ -1379,10 +1352,7 @@ class YakuChecker:
             return None
 
         # 必須是門清
-        if not hand.is_concealed:
-            return None
-
-        return YakuResult(Yaku.TENHOU, 13, True)
+        return YakuResult(Yaku.TENHOU, 13, True) if hand.is_concealed else None
 
     def check_chihou(
         self, hand: Hand, is_tsumo: bool, is_first_turn: bool, player_position: int, game_state: GameState
@@ -1410,10 +1380,7 @@ class YakuChecker:
             return None
 
         # 必須是門清
-        if not hand.is_concealed:
-            return None
-
-        return YakuResult(Yaku.CHIHOU, 13, True)
+        return YakuResult(Yaku.CHIHOU, 13, True) if hand.is_concealed else None
 
     def check_renhou(
         self, hand: Hand, is_tsumo: bool, is_first_turn: bool, player_position: int, game_state: GameState
@@ -1484,10 +1451,7 @@ class YakuChecker:
 
         嶺上開花：槓後從嶺上摸牌和牌（1翻）
         """
-        if not is_rinshan:
-            return None
-
-        return YakuResult(Yaku.RINSHAN, 1, False)
+        return YakuResult(Yaku.RINSHAN, 1, False) if is_rinshan else None
 
     def check_kokushi_musou_juusanmen(self, hand: Hand, all_tiles: List[Tile]) -> bool:
         """
