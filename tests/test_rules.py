@@ -6,6 +6,7 @@ import pytest
 from pyriichi.rules import RuleEngine, GameAction, GamePhase, DrawType
 from pyriichi.tiles import Tile, Suit
 from pyriichi.game_state import Wind
+from pyriichi.utils import parse_tiles
 
 
 class TestRuleEngine:
@@ -66,21 +67,7 @@ class TestRuleEngine:
         from pyriichi.hand import Hand
 
         # 創建和牌型手牌
-        test_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-        ]
+        test_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
 
         # 設置玩家 1, 2, 3 都可以和這張牌
         for i in [1, 2, 3]:
@@ -103,21 +90,7 @@ class TestRuleEngine:
         self.engine._pending_kan_tile = (0, kan_tile)
 
         # 設置一個可以搶槓和的手牌
-        test_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-        ]
+        test_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
         test_hand = Hand(test_tiles)
         self.engine._hands[1] = test_hand
 
@@ -145,21 +118,7 @@ class TestRuleEngine:
         from pyriichi.tiles import Tile, Suit
 
         # 創建一個和牌型手牌
-        test_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-        ]
+        test_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
         test_hand = Hand(test_tiles)
         self.engine._hands[1] = test_hand
 
@@ -186,21 +145,7 @@ class TestRuleEngine:
         from pyriichi.tiles import Tile, Suit
 
         # 創建一個和牌型手牌
-        test_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-        ]
+        test_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
         test_hand = Hand(test_tiles)
         self.engine._hands[0] = test_hand
         self.engine._current_player = 0
@@ -220,42 +165,8 @@ class TestRuleEngine:
         self._init_game()
         tile_to_discard = Tile(Suit.MANZU, 3)
 
-        self.engine._hands[0] = Hand(
-            [
-                tile_to_discard,
-                Tile(Suit.MANZU, 1),
-                Tile(Suit.MANZU, 5),
-                Tile(Suit.MANZU, 6),
-                Tile(Suit.MANZU, 7),
-                Tile(Suit.MANZU, 8),
-                Tile(Suit.MANZU, 9),
-                Tile(Suit.PINZU, 1),
-                Tile(Suit.PINZU, 2),
-                Tile(Suit.PINZU, 3),
-                Tile(Suit.PINZU, 4),
-                Tile(Suit.SOZU, 1),
-                Tile(Suit.SOZU, 2),
-                Tile(Suit.SOZU, 3),
-            ]
-        )
-
-        self.engine._hands[1] = Hand(
-            [
-                Tile(Suit.MANZU, 3),
-                Tile(Suit.MANZU, 3),
-                Tile(Suit.PINZU, 5),
-                Tile(Suit.PINZU, 6),
-                Tile(Suit.PINZU, 7),
-                Tile(Suit.PINZU, 8),
-                Tile(Suit.PINZU, 9),
-                Tile(Suit.SOZU, 4),
-                Tile(Suit.SOZU, 5),
-                Tile(Suit.SOZU, 6),
-                Tile(Suit.SOZU, 7),
-                Tile(Suit.SOZU, 8),
-                Tile(Suit.SOZU, 9),
-            ]
-        )
+        self.engine._hands[0] = Hand(parse_tiles("1m3m5m6m7m8m9m1p2p3p4p1s2s3s"))
+        self.engine._hands[1] = Hand(parse_tiles("3m3m5p6p7p8p9p4s5s6s7s8s9s"))
 
         self.engine._current_player = 0
         discard_before = len(self.engine.get_discards(0))
@@ -286,60 +197,9 @@ class TestRuleEngine:
         self._init_game()
         tile_to_discard = Tile(Suit.MANZU, 4)
 
-        self.engine._hands[0] = Hand(
-            [
-                tile_to_discard,
-                Tile(Suit.MANZU, 7),
-                Tile(Suit.MANZU, 8),
-                Tile(Suit.MANZU, 9),
-                Tile(Suit.PINZU, 1),
-                Tile(Suit.PINZU, 2),
-                Tile(Suit.PINZU, 3),
-                Tile(Suit.PINZU, 4),
-                Tile(Suit.PINZU, 5),
-                Tile(Suit.SOZU, 1),
-                Tile(Suit.SOZU, 2),
-                Tile(Suit.SOZU, 3),
-                Tile(Suit.SOZU, 4),
-                Tile(Suit.SOZU, 5),
-            ]
-        )
-
-        self.engine._hands[1] = Hand(
-            [
-                Tile(Suit.MANZU, 2),
-                Tile(Suit.MANZU, 3),
-                Tile(Suit.MANZU, 5),
-                Tile(Suit.MANZU, 6),
-                Tile(Suit.PINZU, 6),
-                Tile(Suit.PINZU, 7),
-                Tile(Suit.PINZU, 8),
-                Tile(Suit.PINZU, 9),
-                Tile(Suit.SOZU, 6),
-                Tile(Suit.SOZU, 7),
-                Tile(Suit.SOZU, 8),
-                Tile(Suit.SOZU, 9),
-                Tile(Suit.SOZU, 5),
-            ]
-        )
-
-        self.engine._hands[2] = Hand(
-            [
-                Tile(Suit.MANZU, 1),
-                Tile(Suit.MANZU, 1),
-                Tile(Suit.PINZU, 1),
-                Tile(Suit.PINZU, 1),
-                Tile(Suit.SOZU, 1),
-                Tile(Suit.SOZU, 1),
-                Tile(Suit.SOZU, 2),
-                Tile(Suit.SOZU, 3),
-                Tile(Suit.SOZU, 4),
-                Tile(Suit.SOZU, 5),
-                Tile(Suit.SOZU, 6),
-                Tile(Suit.SOZU, 7),
-                Tile(Suit.SOZU, 8),
-            ]
-        )
+        self.engine._hands[0] = Hand(parse_tiles("4m7m8m9m1p2p3p4p5p1s2s3s4s5s"))
+        self.engine._hands[1] = Hand(parse_tiles("2m3m5m6m6p7p8p9p6s7s8s9s5s"))
+        self.engine._hands[2] = Hand(parse_tiles("1m1m1p1p1s1s2s3s4s5s6s7s8s"))
 
         self.engine._current_player = 0
         self.engine.execute_action(0, GameAction.DISCARD, tile=tile_to_discard)
@@ -375,21 +235,7 @@ class TestRuleEngine:
 
         from pyriichi.hand import Hand
 
-        tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.PINZU, 4),
-            Tile(Suit.PINZU, 5),
-            Tile(Suit.PINZU, 6),
-            Tile(Suit.SOZU, 7),
-            Tile(Suit.SOZU, 7),
-            Tile(Suit.SOZU, 8),
-            Tile(Suit.SOZU, 9),
-            Tile(Suit.SOZU, 9),
-        ]
+        tiles = parse_tiles("1m1m1m2m3m4p5p6p7s7s8s9s9s")
 
         hand = Hand(tiles)
         assert hand.total_tile_count() == 13
@@ -415,21 +261,7 @@ class TestRuleEngine:
         from pyriichi.hand import Hand
         from pyriichi.tiles import Tile, Suit
 
-        test_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-            Tile(Suit.PINZU, 5),
-        ]
+        test_tiles = parse_tiles("1m2m3m4m5m6m7m8m1p2p3p4p5p")
         test_hand = Hand(test_tiles)
         self.engine._hands[0] = test_hand
 
@@ -450,30 +282,13 @@ class TestRuleEngine:
         from pyriichi.hand import Hand
         from pyriichi.tiles import Tile, Suit
 
-        tiles = [
-            # 萬子：234m、567m、789m（避免一氣通貫 123/456/789 的完整組合）
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.MANZU, 9),
-            # 筒子：2、4 等待 3p（嵌張）
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 4),
-            # 索子：對子 2s（非役牌）
-            Tile(Suit.SOZU, 2),
-            Tile(Suit.SOZU, 2),
-        ]
+        tiles = parse_tiles("2m3m4m5m6m7m7m8m9m2p4p2s2s")
 
         hand = Hand(tiles)
         # 將手牌設為非門清，避免平和（實作目前未檢查兩面聽，防止誤判平和）
         from pyriichi.hand import Meld, MeldType
 
-        hand._melds.append(Meld(MeldType.PON, [Tile(Suit.SOZU, 1), Tile(Suit.SOZU, 1), Tile(Suit.SOZU, 1)]))
+        hand._melds.append(Meld(MeldType.PON, parse_tiles("1s1s1s")))
         # 設定最後捨牌為 3p，測試榮和
         winning_tile = Tile(Suit.PINZU, 3)
         self.engine._last_discarded_tile = winning_tile
@@ -550,21 +365,7 @@ class TestRuleEngine:
         from pyriichi.tiles import Tile, Suit
 
         # 創建聽牌型手牌
-        tenpai_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-        ]
+        tenpai_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
 
         for i in range(4):
             test_hand = Hand(tenpai_tiles.copy())
@@ -589,21 +390,7 @@ class TestRuleEngine:
         from pyriichi.hand import Hand
         from pyriichi.tiles import Tile, Suit
 
-        tenpai_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-        ]
+        tenpai_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
 
         for i in range(4):
             test_hand = Hand(tenpai_tiles.copy())
@@ -627,21 +414,7 @@ class TestRuleEngine:
         from pyriichi.hand import Hand
         from pyriichi.tiles import Tile, Suit
 
-        kyuushu_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 9),
-            Tile(Suit.SOZU, 1),
-            Tile(Suit.SOZU, 9),
-            Tile(Suit.JIHAI, 1),
-            Tile(Suit.JIHAI, 2),
-            Tile(Suit.JIHAI, 3),
-            Tile(Suit.JIHAI, 4),
-            Tile(Suit.JIHAI, 5),
-            Tile(Suit.JIHAI, 6),
-            Tile(Suit.JIHAI, 7),
-        ]
+        kyuushu_tiles = parse_tiles("1m9m1p9p1s9s1z2z3z4z5z6z7z")
         test_hand = Hand(kyuushu_tiles)
         self.engine._hands[0] = test_hand
 
@@ -656,21 +429,7 @@ class TestRuleEngine:
 
         # 創建一個聽牌且聽牌牌都是幺九牌或字牌的手牌
         # 聽牌牌是 1m（幺九牌）
-        tenpai_tiles = [
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-            Tile(Suit.PINZU, 5),
-        ]
+        tenpai_tiles = parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p5p")
         test_hand = Hand(tenpai_tiles)
         self.engine._hands[0] = test_hand
 
@@ -688,7 +447,7 @@ class TestRuleEngine:
 
         # 測試沒有牌組的情況
         self.engine._tile_set = None
-        test_hand = Hand([Tile(Suit.MANZU, 1)])
+        test_hand = Hand(parse_tiles("1m"))
         self.engine._hands[0] = test_hand
         dora_count = self.engine._count_dora(0, Tile(Suit.MANZU, 1), [])
         assert dora_count == 0
@@ -700,7 +459,7 @@ class TestRuleEngine:
         self.engine._tile_set.shuffle()
 
         # 測試有牌組的情況
-        test_hand = Hand([Tile(Suit.MANZU, 1)])
+        test_hand = Hand(parse_tiles("1m"))
         self.engine._hands[0] = test_hand
         dora_count = self.engine._count_dora(0, Tile(Suit.MANZU, 1), [])
         assert dora_count >= 0
@@ -711,8 +470,9 @@ class TestRuleEngine:
         assert dora_count >= 0
 
         # 測試紅寶牌
-        red_tile = Tile(Suit.PINZU, 5, is_red=True)
-        test_hand = Hand([red_tile])
+        red_tiles = parse_tiles("r5p")
+        red_tile = red_tiles[0]
+        test_hand = Hand(red_tiles)
         self.engine._hands[0] = test_hand
         dora_count = self.engine._count_dora(0, Tile(Suit.PINZU, 5), [])
         assert dora_count >= 1  # 至少有一個紅寶牌
@@ -750,21 +510,7 @@ class TestRuleEngine:
         from pyriichi.tiles import Tile, Suit
 
         # 創建一個聽牌且聽牌牌是幺九牌的手牌
-        tenpai_tiles = [
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-            Tile(Suit.PINZU, 5),
-        ]
+        tenpai_tiles = parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p5p")
         test_hand = Hand(tenpai_tiles)
         self.engine._hands[0] = test_hand
 
@@ -783,21 +529,7 @@ class TestRuleEngine:
         from pyriichi.hand import Hand
         from pyriichi.tiles import Tile, Suit
 
-        kyuushu_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 9),
-            Tile(Suit.SOZU, 1),
-            Tile(Suit.SOZU, 9),
-            Tile(Suit.JIHAI, 1),
-            Tile(Suit.JIHAI, 2),
-            Tile(Suit.JIHAI, 3),
-            Tile(Suit.JIHAI, 4),
-            Tile(Suit.JIHAI, 5),
-            Tile(Suit.JIHAI, 6),
-            Tile(Suit.JIHAI, 7),
-        ]
+        kyuushu_tiles = parse_tiles("1m9m1p9p1s9s1z2z3z4z5z6z7z")
         test_hand = Hand(kyuushu_tiles)
         self.engine._hands[0] = test_hand
 
@@ -813,21 +545,7 @@ class TestRuleEngine:
         from pyriichi.hand import Hand
         from pyriichi.tiles import Tile, Suit
 
-        tenpai_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-        ]
+        tenpai_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
 
         for i in range(4):
             test_hand = Hand(tenpai_tiles.copy())
@@ -900,21 +618,7 @@ class TestRuleEngine:
         from pyriichi.tiles import Tile, Suit
 
         # 設置一個和牌型手牌
-        test_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-        ]
+        test_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
         test_hand = Hand(test_tiles)
         self.engine._hands[1] = test_hand
 
@@ -1120,21 +824,7 @@ class TestRuleEngine:
         from pyriichi.hand import Hand
         from pyriichi.tiles import Tile, Suit
 
-        test_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-        ]
+        test_tiles = parse_tiles("1m1m1m2m3m4m5m6m7m1p2p3p4p")
         test_hand = Hand(test_tiles)
         self.engine._hands[0] = test_hand
 
@@ -1154,21 +844,7 @@ class TestRuleEngine:
         from pyriichi.hand import Hand
         from pyriichi.tiles import Tile, Suit
 
-        test_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-        ]
+        test_tiles = parse_tiles("1m1m1m1m2m3m4m5m6m7m1p2p3p")
         test_hand = Hand(test_tiles)
         self.engine._hands[0] = test_hand
 
@@ -1208,41 +884,13 @@ class TestRuleEngine:
 
         # 設置玩家0可以明槓
         kan_tile = Tile(Suit.MANZU, 1)
-        kan_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-        ]
+        kan_tiles = parse_tiles("1m1m1m2m3m4m5m6m7m1p2p3p4p")
         hand0 = Hand(kan_tiles)
         self.engine._hands[0] = hand0
         self.engine._current_player = 0
 
         # 設置玩家1可以搶槓和
-        test_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-        ]
+        test_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
         test_hand = Hand(test_tiles)
         self.engine._hands[1] = test_hand
 
@@ -1262,21 +910,7 @@ class TestRuleEngine:
 
         # 設置玩家0可以明槓且槓後可以嶺上開花
         kan_tile = Tile(Suit.MANZU, 1)
-        kan_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-        ]
+        kan_tiles = parse_tiles("1m1m1m2m3m4m5m6m7m1p2p3p4p")
         hand0 = Hand(kan_tiles)
         self.engine._hands[0] = hand0
         self.engine._current_player = 0
@@ -1298,21 +932,7 @@ class TestRuleEngine:
         from pyriichi.tiles import Tile, Suit
 
         # 設置玩家0可以暗槓
-        ankan_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-        ]
+        ankan_tiles = parse_tiles("1m1m1m1m2m3m4m5m6m7m1p2p3p")
         hand0 = Hand(ankan_tiles)
         self.engine._hands[0] = hand0
         self.engine._current_player = 0
@@ -1338,21 +958,7 @@ class TestRuleEngine:
         self.engine._pending_kan_tile = (0, kan_tile)
 
         # 設置一個可以搶槓和的手牌
-        test_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-        ]
+        test_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
         test_hand = Hand(test_tiles)
         self.engine._hands[1] = test_hand
 
@@ -1372,21 +978,7 @@ class TestRuleEngine:
         from pyriichi.tiles import Tile, Suit
 
         # 創建一個聽牌且聽牌牌都是幺九牌的手牌（503, 510-518行）
-        tenpai_tiles = [
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-            Tile(Suit.PINZU, 5),
-        ]
+        tenpai_tiles = parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p5p")
         test_hand = Hand(tenpai_tiles)
         self.engine._hands[0] = test_hand
 
@@ -1398,7 +990,7 @@ class TestRuleEngine:
         # 測試非門清的情況（503行）
         from pyriichi.hand import Meld, MeldType
 
-        meld = Meld(MeldType.PON, [Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 1)])
+        meld = Meld(MeldType.PON, parse_tiles("1m1m1m"))
         test_hand._melds.append(meld)
         is_flow_mangan = self.engine.check_flow_mangan(0)
         assert is_flow_mangan == False  # 非門清不應該是流局滿貫
@@ -1458,21 +1050,7 @@ class TestRuleEngine:
         self.engine._last_discarded_player = 0
 
         # 設置三個玩家都可以和牌（736行）
-        test_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-        ]
+        test_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
         for i in range(1, 4):
             test_hand = Hand(test_tiles)
             self.engine._hands[i] = test_hand
@@ -1527,41 +1105,13 @@ class TestRuleEngine:
         from pyriichi.tiles import Tile, Suit
 
         # 設置玩家0可以明槓（有三張1m，需要一張1m來明槓）
-        kan_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-        ]
+        kan_tiles = parse_tiles("1m1m1m2m3m4m5m6m7m1p2p3p4p")
         hand0 = Hand(kan_tiles)
         self.engine._hands[0] = hand0
         self.engine._current_player = 0
 
         # 設置玩家1可以搶槓和（聽1m）
-        test_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-        ]
+        test_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
         test_hand = Hand(test_tiles)
         self.engine._hands[1] = test_hand
 
@@ -1589,22 +1139,7 @@ class TestRuleEngine:
         player = self.engine.get_current_player()
         kan_tile = Tile(Suit.MANZU, 9)
 
-        starting_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.MANZU, 8),
-            kan_tile,
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.MANZU, 9),
-        ]
+        starting_tiles = parse_tiles("1m1m1m2m3m4m5m6m7m8m8m9m9m9m")
         self.engine._hands[player] = Hand(starting_tiles)
 
         if self.engine._tile_set:
@@ -1626,21 +1161,7 @@ class TestRuleEngine:
         player = self.engine.get_current_player()
         kan_tile = Tile(Suit.MANZU, 6)
 
-        starting_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            kan_tile,
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.MANZU, 8),
-        ]
+        starting_tiles = parse_tiles("1m1m1m2m3m4m5m6m6m6m7m8m8m")
         self.engine._hands[player] = Hand(starting_tiles)
 
         self.engine._kan_count = 3
@@ -1663,38 +1184,10 @@ class TestRuleEngine:
         self.engine._current_player = 0
         kan_tile = Tile(Suit.SOZU, 4)
 
-        hand0_tiles = [
-            Tile(Suit.SOZU, 4),
-            Tile(Suit.SOZU, 4),
-            Tile(Suit.SOZU, 4),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-        ]
+        hand0_tiles = parse_tiles("4s4s4s2m3m4m5m6m7m1p2p3p4p")
         self.engine._hands[0] = Hand(hand0_tiles)
 
-        winning_tiles = [
-            Tile(Suit.PINZU, 9),
-            Tile(Suit.PINZU, 9),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.PINZU, 7),
-            Tile(Suit.PINZU, 8),
-            Tile(Suit.PINZU, 9),
-            Tile(Suit.SOZU, 2),
-            Tile(Suit.SOZU, 3),
-        ]
+        winning_tiles = parse_tiles("9p9p2m3m4m5m6m7m7p8p9p2s3s")
         self.engine._hands[1] = Hand(winning_tiles)
 
         result = self.engine.execute_action(0, GameAction.KAN, tile=kan_tile)
@@ -1710,21 +1203,7 @@ class TestRuleEngine:
         self.engine._kan_count = 4
         winning_tile = Tile(Suit.PINZU, 1)
 
-        ron_ready = [
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.PINZU, 7),
-            Tile(Suit.PINZU, 8),
-            Tile(Suit.PINZU, 9),
-            Tile(Suit.SOZU, 2),
-            Tile(Suit.SOZU, 3),
-            Tile(Suit.SOZU, 4),
-            Tile(Suit.PINZU, 1),
-        ]
+        ron_ready = parse_tiles("2m3m4m5m6m7m7p8p9p2s3s4s1p")
         self.engine._hands[1] = Hand(ron_ready)
         self.engine._last_discarded_tile = winning_tile
         self.engine._last_discarded_player = 0
@@ -1742,21 +1221,7 @@ class TestRuleEngine:
         player = 0
         winning_tile = Tile(Suit.PINZU, 1)
 
-        hand_tiles = [
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.PINZU, 7),
-            Tile(Suit.PINZU, 8),
-            Tile(Suit.PINZU, 9),
-            Tile(Suit.SOZU, 2),
-            Tile(Suit.SOZU, 3),
-            Tile(Suit.SOZU, 4),
-            Tile(Suit.PINZU, 1),
-        ]
+        hand_tiles = parse_tiles("2m3m4m5m6m7m7p8p9p2s3s4s1p")
         self.engine._hands[player] = Hand(hand_tiles)
 
         win_result = self.engine.check_win(player, winning_tile, is_rinshan=True)
@@ -1770,21 +1235,7 @@ class TestRuleEngine:
 
         player = self.engine.get_current_player()
 
-        starting_tiles = [
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-        ]
+        starting_tiles = parse_tiles("2m2m2m2m3m3m4m4m5m5m6m7m8m")
         self.engine._hands[player] = Hand(starting_tiles)
 
         if self.engine._tile_set:
@@ -1805,21 +1256,7 @@ class TestRuleEngine:
 
         player = self.engine.get_current_player()
 
-        starting_tiles = [
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-        ]
+        starting_tiles = parse_tiles("2m2m2m2m3m3m4m4m5m5m6m7m8m")
         self.engine._hands[player] = Hand(starting_tiles)
 
         self.engine._kan_count = 3

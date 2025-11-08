@@ -18,7 +18,6 @@ from pyriichi import (
     Wind,
     Yaku,
     parse_tiles,
-    format_tiles,
 )
 from pyriichi.hand import Meld, MeldType
 
@@ -252,21 +251,7 @@ class TestDrawScenarios:
         current_player = engine.get_current_player()
 
         # 創建九種九牌手牌（9種不同的幺九牌）
-        kyuushu_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 9),
-            Tile(Suit.SOZU, 1),
-            Tile(Suit.SOZU, 9),
-            Tile(Suit.JIHAI, 1),
-            Tile(Suit.JIHAI, 2),
-            Tile(Suit.JIHAI, 3),
-            Tile(Suit.JIHAI, 4),
-            Tile(Suit.JIHAI, 5),
-            Tile(Suit.JIHAI, 6),
-            Tile(Suit.JIHAI, 7),
-        ]
+        kyuushu_tiles = parse_tiles("1m9m1p9p1s9s1z2z3z4z5z6z7z")
         hand = Hand(kyuushu_tiles)
         engine._hands[current_player] = hand
         engine._is_first_turn_after_deal = True
@@ -527,21 +512,7 @@ class TestErrorHandling:
         assert hand.is_winning_hand(winning_tile)
 
         # 測試國士無雙
-        kokushi_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 9),
-            Tile(Suit.SOZU, 1),
-            Tile(Suit.SOZU, 9),
-            Tile(Suit.JIHAI, 1),
-            Tile(Suit.JIHAI, 2),
-            Tile(Suit.JIHAI, 3),
-            Tile(Suit.JIHAI, 4),
-            Tile(Suit.JIHAI, 5),
-            Tile(Suit.JIHAI, 6),
-            Tile(Suit.JIHAI, 7),
-        ]
+        kokushi_tiles = parse_tiles("1m9m1p9p1s9s1z2z3z4z5z6z7z")
         hand2 = Hand(kokushi_tiles)
         winning_tile2 = Tile(Suit.JIHAI, 1)  # 和牌牌1z（組成11z對子）
 

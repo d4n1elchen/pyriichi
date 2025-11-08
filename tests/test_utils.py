@@ -70,21 +70,7 @@ class TestUtils:
     def test_is_winning_hand(self):
         """測試 is_winning_hand 便利函數"""
         # 標準和牌型
-        tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-        ]
+        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
         winning_tile = Tile(Suit.PINZU, 4)
 
         result = is_winning_hand(tiles, winning_tile)
@@ -92,21 +78,7 @@ class TestUtils:
 
     def test_is_winning_hand_not_winning(self):
         """測試非和牌"""
-        tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.MANZU, 6),
-            Tile(Suit.MANZU, 7),
-            Tile(Suit.MANZU, 8),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-            Tile(Suit.PINZU, 5),
-        ]
+        tiles = parse_tiles("1m2m3m4m5m6m7m8m1p2p3p4p5p")
         winning_tile = Tile(Suit.MANZU, 9)
 
         result = is_winning_hand(tiles, winning_tile)
