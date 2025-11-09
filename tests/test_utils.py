@@ -12,6 +12,7 @@ class TestUtils:
 
     def test_parse_tiles_basic(self):
         """測試基本牌解析"""
+        # 手牌：123m 456p
         tiles = parse_tiles("1m2m3m4p5p6p")
         assert len(tiles) == 6
         assert tiles[0].suit == Suit.MANZU
@@ -22,6 +23,7 @@ class TestUtils:
     def test_parse_tiles_red_dora(self):
         """測試解析紅寶牌（標準格式：r5p）"""
         # 測試標準格式：用 r 前綴
+        # 手牌：r5p
         tiles = parse_tiles("r5p")
         assert len(tiles) == 1
         assert tiles[0].is_red == True
@@ -31,6 +33,7 @@ class TestUtils:
     def test_parse_tiles_with_red_dora(self):
         """測試包含紅寶牌的牌字符串"""
         # 測試標準格式：r5p6p7p
+        # 手牌：r567p
         tiles = parse_tiles("r5p6p7p")
         assert len(tiles) == 3
         assert tiles[0].is_red == True
@@ -43,6 +46,7 @@ class TestUtils:
     def test_parse_tiles_invalid_char(self):
         """測試解析無效字符（跳過）"""
         # 測試包含非數字和花色的字符
+        # 手牌：123m 45p
         tiles = parse_tiles("1m2m3m abc 4p5p")
         # 應該跳過無效字符，只解析有效部分
         assert len(tiles) >= 3
@@ -70,6 +74,7 @@ class TestUtils:
     def test_is_winning_hand(self):
         """測試 is_winning_hand 便利函數"""
         # 標準和牌型
+        # 手牌：123m 456m 789m 123p 4p
         tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
         winning_tile = Tile(Suit.PINZU, 4)
 
@@ -78,6 +83,7 @@ class TestUtils:
 
     def test_is_winning_hand_not_winning(self):
         """測試非和牌"""
+        # 手牌：123m 456m 78m 123p 45p
         tiles = parse_tiles("1m2m3m4m5m6m7m8m1p2p3p4p5p")
         winning_tile = Tile(Suit.MANZU, 9)
 
