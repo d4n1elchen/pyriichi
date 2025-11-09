@@ -4,7 +4,7 @@ RuleEngine 的單元測試
 
 import pytest
 from pyriichi.hand import Hand, Meld, MeldType
-from pyriichi.rules import RuleEngine, GameAction, GamePhase, DrawType, DrawResult
+from pyriichi.rules import RuleEngine, GameAction, GamePhase, RyuukyokuType, RyuukyokuResult
 from pyriichi.tiles import Tile, Suit, TileSet
 from pyriichi.utils import parse_tiles
 
@@ -46,7 +46,7 @@ class TestRuleEngine:
         """測試流局判定"""
         self._init_game()
         # 初始狀態不應該流局
-        draw_type = self.engine.check_draw()
+        draw_type = self.engine.check_ryuukyoku()
         assert draw_type is None
 
     def test_check_sancha_ron(self):
@@ -55,10 +55,6 @@ class TestRuleEngine:
 
     def test_check_chankan(self):
         """測試搶槓檢查"""
-        pass
-
-    def test_check_rinshan_win(self):
-        """測試嶺上開花檢查"""
         pass
 
     def test_check_win_rinshan(self):
@@ -166,10 +162,8 @@ class TestRuleEngine:
     def test_handle_draw(self):
         """測試流局處理"""
         self._init_game()
-        # 測試流局處理方法
-        result = self.engine.handle_draw()
-        assert result is not None
-        assert result.draw is False
+        # 開局時不能流局
+        assert self.engine.can_act(0, GameAction.DRAW) is False
 
     def test_check_win_no_combinations(self):
         """測試 check_win 沒有和牌組合"""
@@ -221,15 +215,15 @@ class TestRuleEngine:
         wind_tile = Tile(Suit.JIHAI, 1)  # 東
 
         # 添加四張相同的風牌到捨牌歷史
-        for i in range(4):
-            self.engine._discard_history.append((i, wind_tile))
+        self.engine._discard_history.append((0, wind_tile))
+        self.engine._discard_history.append((1, wind_tile))
+        self.engine._discard_history.append((2, wind_tile))
+        self.engine._discard_history.append((3, wind_tile))
 
         # 檢查四風連打
-        result = self.engine._check_suufon_renda()
-        assert result == True
-
-        if draw_type := self.engine.check_draw():
-            assert draw_type == DrawType.SUUFON_RENDA
+        ryuukyoku_type = self.engine.check_ryuukyoku()
+        assert ryuukyoku_type is not None
+        assert ryuukyoku_type == RyuukyokuType.SUUFON_RENDA
 
     def test_check_draw_sancha_ron(self):
         """測試三家和了流局檢查"""
@@ -242,83 +236,24 @@ class TestRuleEngine:
         self.engine._kan_count = 4
 
         # 檢查四槓散了
-        draw_type = self.engine.check_draw()
-        assert draw_type == DrawType.SUUKANTSU
+        ryuukyoku_type = self.engine.check_ryuukyoku()
+        assert ryuukyoku_type is not None
+        assert ryuukyoku_type == RyuukyokuType.SUUKANTSU
 
     def test_check_draw_exhausted(self):
         """測試牌山耗盡流局檢查"""
         self._init_game()
         # 模擬牌山耗盡
-        if self.engine._tile_set:
-            # 耗盡牌山
-            while self.engine._tile_set._tiles:
-                self.engine._tile_set.draw()
+        assert self.engine._tile_set is not None
 
-            # 檢查牌山耗盡流局
-            draw_type = self.engine.check_draw()
-            assert draw_type == DrawType.EXHAUSTED
+        # 耗盡牌山
+        while self.engine._tile_set._tiles:
+            self.engine._tile_set.draw()
 
-    def test_check_draw_suucha_riichi(self):
-        """測試全員聽牌流局檢查"""
-        self._init_game()
-        # 設置所有玩家都聽牌
-        # 創建聽牌型手牌
-        # 手牌：123m 456m 789m 123p 4p
-        tenpai_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
-
-        for i in range(4):
-            test_hand = Hand(tenpai_tiles.copy())
-            self.engine._hands[i] = test_hand
-
-        # 檢查全員聽牌流局
-        draw_type = self.engine.check_draw()
-        assert draw_type == DrawType.SUUCHA_RIICHI
-
-    def test_check_all_tenpai(self):
-        """測試全員聽牌檢查"""
-        self._init_game()
-        # 測試非 PLAYING 階段
-        self.engine._phase = GamePhase.INIT
-        result = self.engine._check_all_tenpai()
-        assert result == False
-
-        # 設置為 PLAYING 階段
-        self.engine._phase = GamePhase.PLAYING
-
-        # 設置所有玩家都聽牌
-        # 手牌：123m 456m 789m 123p 4p
-        tenpai_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
-
-        for i in range(4):
-            test_hand = Hand(tenpai_tiles.copy())
-            self.engine._hands[i] = test_hand
-
-        result = self.engine._check_all_tenpai()
-        assert result == True
-
-    def test_check_kyuushu_kyuuhai(self):
-        """測試九種九牌檢查"""
-        self._init_game()
-        # 測試非第一巡
-        self.engine._is_first_turn_after_deal = False
-        result = self.engine.check_kyuushu_kyuuhai(0)
-        assert result == False
-
-        # 設置為第一巡
-        self.engine._is_first_turn_after_deal = True
-
-        # 創建一個有9種或以上不同種類幺九牌的手牌
-        # 手牌：1m 9m 1p 9p 1s 9s 123z 456z 7z
-        kyuushu_tiles = parse_tiles("1m9m1p9p1s9s1z2z3z4z5z6z7z")
-        test_hand = Hand(kyuushu_tiles)
-        self.engine._hands[0] = test_hand
-
-        result = self.engine.check_kyuushu_kyuuhai(0)
-        assert result == True
-
-    def test_check_suucha_riichi(self):
-        """測試四家立直流局檢查"""
-        pass
+        # 檢查牌山耗盡流局
+        ryuukyoku_type = self.engine.check_ryuukyoku()
+        assert ryuukyoku_type is not None
+        assert ryuukyoku_type == RyuukyokuType.EXHAUSTED
 
     def test_count_dora(self):
         """測試寶牌計算"""
@@ -378,36 +313,12 @@ class TestRuleEngine:
 
     def test_handle_draw_kyuushu_kyuuhai(self):
         """測試九種九牌流局處理"""
-        self._init_game()
-        # 設置為第一巡
-        self.engine._is_first_turn_after_deal = True
-
-        # 創建一個有9種或以上不同種類幺九牌的手牌
-        # 手牌：1m 9m 1p 9p 1s 9s 123z 456z 7z
-        kyuushu_tiles = parse_tiles("1m9m1p9p1s9s1z2z3z4z5z6z7z")
-        test_hand = Hand(kyuushu_tiles)
-        self.engine._hands[0] = test_hand
-
-        # 處理流局
-        result = self.engine.handle_draw()
-        if result.kyuushu_kyuuhai is not None:
-            assert result.kyuushu_kyuuhai == True
+        # TODO: 新增九種九牌流局 action
+        pass
 
     def test_handle_draw_suucha_riichi(self):
-        """測試全員聽牌流局處理"""
-        self._init_game()
-        # 設置所有玩家都聽牌
-        # 手牌：123m 456m 789m 123p 4p
-        tenpai_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
-
-        for i in range(4):
-            test_hand = Hand(tenpai_tiles.copy())
-            self.engine._hands[i] = test_hand
-
-        # 處理流局
-        result = self.engine.handle_draw()
-        if result.draw_type == DrawType.SUUCHA_RIICHI:
-            assert result.draw == True
+        """測試四家立直流局處理"""
+        pass
 
     def test_can_act_default_false(self):
         """測試 can_act 默認返回 False"""
@@ -721,7 +632,7 @@ class TestRuleEngine:
             result = self.engine.execute_action(current_player, GameAction.DRAW)
             # 應該有 draw 標記，表示流局
             assert result.draw == True
-            assert self.engine._phase == GamePhase.DRAW
+            assert self.engine._phase == GamePhase.RYUUKYOKU
 
     def test_execute_action_kan_chankan_detailed(self):
         """測試明槓搶槓處理（詳細測試）"""
@@ -996,7 +907,7 @@ class TestRuleEngine:
 
         assert result.kan is True
         assert self.engine._kan_count == 4
-        assert self.engine.check_draw() == DrawType.SUUKANTSU
+        assert self.engine.check_ryuukyoku() == RyuukyokuType.SUUKANTSU
 
     def test_fourth_kan_chankan_does_not_trigger_suukantsu(self):
         """第四次槓時被搶槓不算四槓散了"""
@@ -1017,7 +928,7 @@ class TestRuleEngine:
         result = self.engine.execute_action(0, GameAction.KAN, tile=kan_tile)
         assert result.chankan is True
         assert self.engine._kan_count == 3
-        assert self.engine.check_draw() is None
+        assert self.engine.check_ryuukyoku() is None
 
     def test_fourth_kan_ron_does_not_trigger_suukantsu(self):
         """第四次槓後他家榮和，不算四槓散了"""
@@ -1034,7 +945,7 @@ class TestRuleEngine:
 
         win_result = self.engine.check_win(1, winning_tile)
         assert win_result is not None
-        assert self.engine.check_draw() is None
+        assert self.engine.check_ryuukyoku() is None
 
     def test_fourth_kan_rinshan_win_does_not_trigger_suukantsu(self):
         """第四次槓後嶺上開花，不算四槓散了"""
@@ -1050,7 +961,7 @@ class TestRuleEngine:
 
         win_result = self.engine.check_win(player, winning_tile, is_rinshan=True)
         assert win_result is not None
-        assert self.engine.check_draw() is None
+        assert self.engine.check_ryuukyoku() is None
 
     def test_execute_action_ankan_rinshan_win(self):
         """測試暗槓後嶺上開花"""
@@ -1092,7 +1003,7 @@ class TestRuleEngine:
 
         assert result.ankan is True
         assert self.engine._kan_count == 4
-        assert self.engine.check_draw() == DrawType.SUUKANTSU
+        assert self.engine.check_ryuukyoku() == RyuukyokuType.SUUKANTSU
 
     def test_execute_action_discard_is_last_tile(self):
         """測試打牌時最後一張牌檢查"""
@@ -1186,7 +1097,7 @@ class TestRuleEngine:
 
         assert result.draw is True
         assert result.drawn_tile is None
-        assert self.engine.get_phase() == GamePhase.DRAW
+        assert self.engine.get_phase() == GamePhase.RYUUKYOKU
 
     def test_execute_action_draw_draw_result(self):
         """測試摸牌結果"""

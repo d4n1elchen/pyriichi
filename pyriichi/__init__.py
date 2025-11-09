@@ -10,7 +10,7 @@ __version__ = "0.1.0"
 from pyriichi.tiles import Tile, Suit, TileSet
 from pyriichi.hand import Hand, Meld, MeldType
 from pyriichi.game_state import GameState, Wind
-from pyriichi.rules import RuleEngine, GameAction, GamePhase, ActionResult, WinResult, DrawResult
+from pyriichi.rules import RuleEngine, GameAction, GamePhase, ActionResult, WinResult, RyuukyokuResult, RyuukyokuType
 from pyriichi.yaku import YakuChecker, YakuResult, Yaku
 from pyriichi.scoring import ScoreCalculator, ScoreResult
 from pyriichi.rules_config import RulesetConfig
@@ -33,7 +33,8 @@ __all__ = [
     "GamePhase",
     "ActionResult",
     "WinResult",
-    "DrawResult",
+    "RyuukyokuResult",
+    "RyuukyokuType",
     "YakuChecker",
     "YakuResult",
     "Yaku",

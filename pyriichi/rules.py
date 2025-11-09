@@ -38,11 +38,11 @@ class GamePhase(TranslatableEnum):
     DEALING = ("dealing", "發牌", "配牌", "Dealing")
     PLAYING = ("playing", "對局中", "対局中", "Playing")
     WINNING = ("winning", "和牌處理", "和了処理", "Winning")
-    DRAW = ("draw", "流局", "流局", "Draw")
+    RYUUKYOKU = ("ryuukyoku", "流局", "流局", "Ryuukyoku")
     ENDED = ("ended", "結束", "終了", "Ended")
 
 
-class DrawType(TranslatableEnum):
+class RyuukyokuType(TranslatableEnum):
     """流局類型"""
 
     SUUFON_RENDA = ("suufon_renda", "四風連打", "四風連打", "Suufon Renda")
@@ -50,6 +50,7 @@ class DrawType(TranslatableEnum):
     SUUKANTSU = ("suukantsu", "四槓散了", "四槓散了", "Suukantsu")
     EXHAUSTED = ("exhausted", "牌山耗盡", "牌山が尽きる", "Exhausted Wall")
     SUUCHA_RIICHI = ("suucha_riichi", "四家立直", "四家立直", "Suucha Riichi")
+    KYUUSHU_KYUUHAI = ("kyuushu_kyuuhai", "九種九牌", "九種九牌", "Kyuushu Kyuuhai")
 
 
 @dataclass
@@ -74,7 +75,7 @@ class ActionResult:
     drawn_tile: Optional[Tile] = None
     is_last_tile: Optional[bool] = None
     draw: Optional[bool] = None
-    draw_type: Optional[DrawType] = None
+    draw_type: Optional[RyuukyokuType] = None
     discarded: Optional[bool] = None
     riichi: Optional[bool] = None
     chankan: Optional[bool] = None
@@ -89,13 +90,12 @@ class ActionResult:
 
 
 @dataclass
-class DrawResult:
+class RyuukyokuResult:
     """流局結果"""
 
-    draw: bool
-    draw_type: Optional[DrawType] = None
+    ryuukyoku: bool
+    ryuukyoku_type: Optional[RyuukyokuType] = None
     flow_mangan_players: List[int] = field(default_factory=list)
-    kyuushu_kyuuhai: Optional[bool] = None
     kyuushu_kyuuhai_player: Optional[int] = None
 
 
@@ -292,7 +292,7 @@ class RuleEngine:
             if self._tile_set.is_exhausted():
                 result.is_last_tile = True
         else:
-            self._phase = GamePhase.DRAW
+            self._phase = GamePhase.RYUUKYOKU
             result.draw = True
         return result
 
@@ -426,9 +426,9 @@ class RuleEngine:
                 self._phase = GamePhase.WINNING
             return True
 
-        self._phase = GamePhase.DRAW
+        self._phase = GamePhase.RYUUKYOKU
         result.draw = True
-        result.draw_type = DrawType.EXHAUSTED
+        result.draw_type = RyuukyokuType.EXHAUSTED
         return False
 
     def _apply_discard_effects(self, player: int, tile: Tile, result: ActionResult) -> None:
@@ -536,7 +536,7 @@ class RuleEngine:
             rinshan=is_rinshan or None,
         )
 
-    def check_draw(self) -> Optional[DrawType]:
+    def check_ryuukyoku(self) -> Optional[RyuukyokuType]:
         """
         檢查是否流局
 
@@ -545,31 +545,31 @@ class RuleEngine:
         """
         # 檢查四風連打（優先檢查，因為可以在第一巡發生）
         if self._check_suufon_renda():
-            return DrawType.SUUFON_RENDA
+            return RyuukyokuType.SUUFON_RENDA
 
         # 檢查三家和了（多人和牌流局）
         if self._check_sancha_ron():
-            return DrawType.SANCHA_RON
+            return RyuukyokuType.SANCHA_RON
 
         # 檢查四槓散了（四個槓之後流局）
         if self._kan_count >= 4 and not self._ignore_suukantsu:
-            return DrawType.SUUKANTSU
+            return RyuukyokuType.SUUKANTSU
 
         # 牌山耗盡流局
         if self._tile_set and self._tile_set.is_exhausted():
-            return DrawType.EXHAUSTED
+            return RyuukyokuType.EXHAUSTED
 
         # 檢查是否所有玩家都聽牌（全員聽牌流局）
-        return DrawType.SUUCHA_RIICHI if self._check_all_tenpai() else None
+        return RyuukyokuType.SUUCHA_RIICHI if self._check_all_riichi() else None
 
-    def _check_all_tenpai(self) -> bool:
-        """檢查是否所有玩家都聽牌"""
+    def _check_all_riichi(self) -> bool:
+        """檢查是否所有玩家都立直"""
         if self._phase != GamePhase.PLAYING:
             return False
 
-        return all(hand.is_tenpai() for hand in self._hands)
+        return all(hand.is_riichi for hand in self._hands)
 
-    def check_kyuushu_kyuuhai(self, player: int) -> bool:
+    def _check_kyuushu_kyuuhai(self, player: int) -> bool:
         """
         檢查是否九種九牌（九種幺九牌）
 
@@ -725,25 +725,24 @@ class RuleEngine:
         hand = self._hands[player]
         return [seq.copy() for seq in hand.can_chi(self._last_discarded_tile, from_player=0)]
 
-    def handle_draw(self) -> DrawResult:
+    def handle_ryuukyoku(self) -> RyuukyokuResult:
         """
         處理流局
 
         Returns:
             流局結果，包含流局類型、流局滿貫玩家等
         """
-        draw_type = self.check_draw()
-        if not draw_type:
-            return DrawResult(draw=False)
+        ryuukyoku_type = self.check_ryuukyoku()
+        if not ryuukyoku_type:
+            return RyuukyokuResult(ryuukyoku=False)
 
-        result = DrawResult(
-            draw=True,
-            draw_type=draw_type,
-            flow_mangan_players=[],
+        result = RyuukyokuResult(
+            ryuukyoku=True,
+            ryuukyoku_type=ryuukyoku_type,
         )
 
         # 檢查流局滿貫
-        if draw_type == DrawType.EXHAUSTED:
+        if ryuukyoku_type == RyuukyokuType.EXHAUSTED:
             for i in range(self._num_players):
                 if self.check_flow_mangan(i):
                     result.flow_mangan_players.append(i)
@@ -757,21 +756,21 @@ class RuleEngine:
         # 檢查九種九牌在第一巡時可以流局
         if self._is_first_turn_after_deal:
             for i in range(self._num_players):
-                if self.check_kyuushu_kyuuhai(i):
-                    result.kyuushu_kyuuhai = True
+                if self._check_kyuushu_kyuuhai(i):
+                    result.ryuukyoku_type = RyuukyokuType.KYUUSHU_KYUUHAI
                     result.kyuushu_kyuuhai_player = i
                     # 九種九牌流局時，莊家連莊
                     break
 
         # 處理全員聽牌流局
-        if draw_type == DrawType.SUUCHA_RIICHI:
+        if ryuukyoku_type == RyuukyokuType.SUUCHA_RIICHI:
             # 全員聽牌流局時，莊家支付 300 點給每個閒家
             dealer = self._game_state.dealer
             for i in range(self._num_players):
                 if i != dealer:
                     self._game_state.transfer_points(dealer, i, 300)
 
-        self._phase = GamePhase.DRAW
+        self._phase = GamePhase.RYUUKYOKU
         return result
 
     def end_round(self, winner: Optional[int] = None) -> None:
