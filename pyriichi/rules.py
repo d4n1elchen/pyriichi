@@ -53,6 +53,21 @@ class DrawType(TranslatableEnum):
 
 
 @dataclass
+class WinResult:
+    """和牌結果"""
+
+    win: bool
+    player: int
+    yaku: List[YakuResult]
+    han: int
+    fu: int
+    points: int
+    score_result: ScoreResult
+    chankan: Optional[bool] = None
+    rinshan: Optional[bool] = None
+
+
+@dataclass
 class ActionResult:
     """動作執行結果"""
 
@@ -67,25 +82,10 @@ class ActionResult:
     rinshan_tile: Optional[Tile] = None
     kan: Optional[bool] = None
     ankan: Optional[bool] = None
-    rinshan_win: Optional["WinResult"] = None
+    rinshan_win: Optional[WinResult] = None
     meld: Optional[Meld] = None
     called_action: Optional[GameAction] = None
     called_tile: Optional[Tile] = None
-
-
-@dataclass
-class WinResult:
-    """和牌結果"""
-
-    win: bool
-    player: int
-    yaku: List[YakuResult]
-    han: int
-    fu: int
-    points: int
-    score_result: ScoreResult
-    chankan: Optional[bool] = None
-    rinshan: Optional[bool] = None
 
 
 @dataclass
@@ -411,6 +411,7 @@ class RuleEngine:
     def _draw_rinshan_tile(self, player: int, result: ActionResult, *, kan_type: MeldType) -> bool:
         if not self._tile_set:
             return False
+
         if rinshan_tile := self._tile_set.draw_wall_tile():
             self._hands[player].add_tile(rinshan_tile)
             result.rinshan_tile = rinshan_tile
@@ -419,7 +420,7 @@ class RuleEngine:
             else:
                 result.ankan = True
 
-            if rinshan_win := self.check_rinshan_win(player, rinshan_tile):
+            if rinshan_win := self._check_rinshan_win(player, rinshan_tile):
                 result.rinshan_win = rinshan_win
                 self._ignore_suukantsu = True
                 self._phase = GamePhase.WINNING
@@ -543,11 +544,11 @@ class RuleEngine:
             流局類型，否則返回 None
         """
         # 檢查四風連打（優先檢查，因為可以在第一巡發生）
-        if self.check_suufon_renda():
+        if self._check_suufon_renda():
             return DrawType.SUUFON_RENDA
 
         # 檢查三家和了（多人和牌流局）
-        if self.check_sancha_ron():
+        if self._check_sancha_ron():
             return DrawType.SANCHA_RON
 
         # 檢查四槓散了（四個槓之後流局）
@@ -592,7 +593,7 @@ class RuleEngine:
         # 如果有9種或以上不同種類的幺九牌，則為九種九牌
         return len(terminal_and_honor_tiles) >= 9
 
-    def check_suufon_renda(self) -> bool:
+    def _check_suufon_renda(self) -> bool:
         """
         檢查是否四風連打（前四捨牌都是同一風牌）
 
@@ -846,7 +847,7 @@ class RuleEngine:
 
         return winners
 
-    def check_sancha_ron(self) -> bool:
+    def _check_sancha_ron(self) -> bool:
         """
         檢查是否三家和了（多人和牌流局）
 
@@ -870,7 +871,7 @@ class RuleEngine:
         # 如果三個或以上玩家和牌，則為三家和了
         return len(winning_players) >= 3
 
-    def check_rinshan_win(self, player: int, rinshan_tile: Tile) -> Optional[WinResult]:
+    def _check_rinshan_win(self, player: int, rinshan_tile: Tile) -> Optional[WinResult]:
         """
         檢查嶺上開花（槓後摸牌和牌）
 
