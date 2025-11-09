@@ -411,13 +411,6 @@ class RuleEngine:
         if tile is None:
             raise ValueError("明槓必須指定被槓的牌")
 
-        self._pending_kan_tile = (player, tile)
-        if chankan_winners := self._check_chankan(player, tile):
-            result.chankan = True
-            result.winners = chankan_winners
-            self._pending_kan_tile = None
-            return result
-
         meld = self._hands[player].kan(tile)
         self._kan_count += 1
 
@@ -427,12 +420,33 @@ class RuleEngine:
 
     def _handle_ankan(self, player: int, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
         result = ActionResult()
-        meld = self._hands[player].kan(None)
+        hand = self._hands[player]
+
+        candidates = hand.can_kan(None)
+        if not candidates:
+            raise ValueError("手牌無法暗槓")
+
+        # TODO: 支援多個暗槓選擇（玩家可以選擇要暗槓哪一張牌）
+        selected = candidates[0]
+        is_add_kan = selected.meld_type == MeldType.KAN and selected.called_tile is not None
+
+        if is_add_kan:
+            kan_tile = selected.tiles[0]
+            self._pending_kan_tile = (player, kan_tile)
+            if chankan_winners := self._check_chankan(player, kan_tile):
+                result.chankan = True
+                result.winners = chankan_winners
+                self._pending_kan_tile = None
+                return result
+
+        meld = hand.kan(None)
         if meld:
             self._kan_count += 1
         kan_type = meld.meld_type if meld else MeldType.ANKAN
 
         self._draw_rinshan_tile(player, result, kan_type=kan_type)
+        if self._pending_kan_tile:
+            self._pending_kan_tile = None
         return result
 
     def _remove_last_discard(self, discarder: int, tile: Tile) -> None:

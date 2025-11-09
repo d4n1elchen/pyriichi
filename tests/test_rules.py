@@ -529,33 +529,32 @@ class TestRuleEngine:
         assert result.ryuukyoku.ryuukyoku_type == RyuukyokuType.EXHAUSTED
         assert self.engine._phase == GamePhase.RYUUKYOKU
 
-    def test_execute_action_kan_chankan_detailed(self):
-        """測試明槓搶槓處理（詳細測試）"""
+    def test_execute_action_ankan_chankan_detailed(self):
+        """測試加槓搶槓處理（詳細測試）"""
         self._init_game()
 
-        # 設置玩家0可以明槓
+        # 設置玩家0可以加槓
         kan_tile = Tile(Suit.MANZU, 1)
-        # 手牌：111234567m 123p 4p
+        # 111m 234m 567m 123p 4p
         kan_tiles = parse_tiles("1m1m1m2m3m4m5m6m7m1p2p3p4p")
         hand0 = Hand(kan_tiles)
+        hand0.pon(kan_tile)
+        hand0.add_tile(kan_tile)
         self.engine._hands[0] = hand0
         self.engine._current_player = 0
-        self.engine._last_discarded_tile = kan_tile
-        self.engine._last_discarded_player = 1
+        self.engine._last_discarded_tile = None
+        self.engine._last_discarded_player = None
 
         # 設置玩家1可以搶槓和
-        # 手牌：123m 456m 789m 123p 4p
-        test_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
-        test_hand = Hand(test_tiles)
-        self.engine._hands[1] = test_hand
+        # 23m 456m 789p 123p 44p（缺 1m）
+        test_tiles = parse_tiles("2m3m4m5m6m7p8p9p1p2p3p4p4p")
+        self.engine._hands[1] = Hand(test_tiles)
 
-        # 執行明槓，應該檢查搶槓（249-252行）
-        if self._has_action(0, GameAction.KAN):
-            result = self.engine.execute_action(0, GameAction.KAN, tile=kan_tile)
-            # 如果有搶槓，應該有 chankan 標記
-            if result.chankan is not None:
-                assert result.chankan == True
-                assert result.winners is not None
+        assert self._has_action(0, GameAction.ANKAN)
+        result = self.engine.execute_action(0, GameAction.ANKAN)
+        assert result.chankan is not None
+        assert result.chankan == True
+        assert result.winners is not None
 
     def test_execute_action_kan_rinshan_win_detailed(self):
         """測試明槓後嶺上開花（詳細測試）"""
@@ -735,23 +734,27 @@ class TestRuleEngine:
         """測試明槓搶槓完整場景"""
         self._init_game()
 
-        # 設置玩家0可以明槓（有三張1m，需要一張1m來明槓）
+        # 設置玩家0可以加槓（已有碰，增加第四張1m）
         # 手牌：111234567m 123p 4p
         kan_tiles = parse_tiles("1m1m1m2m3m4m5m6m7m1p2p3p4p")
         hand0 = Hand(kan_tiles)
+        kan_tile = Tile(Suit.MANZU, 1)
+        hand0.pon(kan_tile)
+        hand0.add_tile(kan_tile)
         self.engine._hands[0] = hand0
         self.engine._current_player = 0
+        self.engine._last_discarded_tile = None
+        self.engine._last_discarded_player = None
 
         # 設置玩家1可以搶槓和（聽1m）
-        # 手牌：123m 456m 789m 123p 4p
-        test_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
+        # 手牌：23m 456m 789p 123p 44p（缺 1m）
+        test_tiles = parse_tiles("2m3m4m5m6m7p8p9p1p2p3p4p4p")
         test_hand = Hand(test_tiles)
         self.engine._hands[1] = test_hand
 
-        # 執行明槓，應該檢查搶槓
-        kan_tile = Tile(Suit.MANZU, 1)
-        if self._has_action(0, GameAction.KAN):
-            result = self.engine.execute_action(0, GameAction.KAN, tile=kan_tile)
+        # 執行加槓，應該檢查搶槓
+        if self._has_action(0, GameAction.ANKAN):
+            result = self.engine.execute_action(0, GameAction.ANKAN)
             # 如果有搶槓，應該有 chankan 標記
             if result.chankan is not None:
                 assert result.chankan == True
@@ -822,15 +825,18 @@ class TestRuleEngine:
 
         # 手牌：444s 234m 567m 123p 4p
         hand0_tiles = parse_tiles("4s4s4s2m3m4m5m6m7m1p2p3p4p")
-        self.engine._hands[0] = Hand(hand0_tiles)
-        self.engine._last_discarded_tile = kan_tile
-        self.engine._last_discarded_player = 3
+        hand0 = Hand(hand0_tiles)
+        hand0.pon(kan_tile)
+        hand0.add_tile(kan_tile)
+        self.engine._hands[0] = hand0
+        self.engine._last_discarded_tile = None
+        self.engine._last_discarded_player = None
 
-        # 手牌：99p 234m 567m 789p 23s
-        winning_tiles = parse_tiles("9p9p2m3m4m5m6m7m7p8p9p2s3s")
+        # 手牌：23s 234m 567m 789p 44p（缺 4s）
+        winning_tiles = parse_tiles("2s3s2m3m4m5m6m7m7p8p9p4p4p")
         self.engine._hands[1] = Hand(winning_tiles)
 
-        result = self.engine.execute_action(0, GameAction.KAN, tile=kan_tile)
+        result = self.engine.execute_action(0, GameAction.ANKAN)
         assert result.chankan is True
         assert self.engine._kan_count == 3
         assert self.engine.check_ryuukyoku() is None
@@ -1005,7 +1011,7 @@ class TestRuleEngine:
         # 檢查結果中是否有 drawn_tile 或 is_last_tile
         assert result.drawn_tile is not None or result.is_last_tile is not None or result.ryuukyoku is not None
 
-    # TODO Rename this here and in `test_check_draw`, `test_check_sancha_ron`, `test_check_chankan`, `test_check_rinshan_win`, `test_check_win_chankan`, `test_check_win_rinshan`, `test_pon_action_claims_last_discard`, `test_chi_action_uses_sequence_and_resets_turn`, `test_handle_draw`, `test_check_win_no_combinations`, `test_check_win_no_yaku`, `test_check_draw_suufon_renda`, `test_check_draw_sancha_ron`, `test_check_draw_suukantsu`, `test_check_draw_exhausted`, `test_check_draw_suucha_riichi`, `test_check_all_tenpai`, `test_check_kyuushu_kyuuhai`, `test_check_suucha_riichi`, `test_count_dora`, `test_get_hand_invalid_player`, `test_get_discards_invalid_player`, `test_handle_draw_exhausted_with_flow_mangan`, `test_handle_draw_kyuushu_kyuuhai`, `test_handle_draw_suucha_riichi`, `test_get_available_actions_default_empty`, `test_execute_action_discard_tile_none`, `test_execute_action_kan_tile_none`, `test_check_win_payment_from_ron`, `test_execute_action_draw_no_tile_set`, `test_execute_action_discard_no_tile`, `test_execute_action_discard_no_tile_set`, `test_execute_action_riichi`, `test_execute_action_kan_no_tile`, `test_execute_action_discard_last_tile`, `test_execute_action_draw_last_tile`, `test_execute_action_discard_history`, `test_execute_action_discard_history_limit`, `test_get_available_actions_kan`, `test_get_available_actions_ankan`, `test_execute_action_draw_no_tile_drawn_detailed`, `test_execute_action_kan_chankan_detailed`, `test_execute_action_kan_rinshan_win_detailed`, `test_execute_action_ankan_rinshan_win_detailed`, `test_check_win_payment_from_chankan`, `test_check_flow_mangan`, `test_end_round_with_winner`, `test_end_round_draw`, `test_get_dora_tiles`, `test_get_ura_dora_tiles`, `test_check_sancha_ron_detailed`, `test_execute_action_riichi_turns_update`, `test_execute_action_kan_chankan_complete`, `test_execute_action_kan_rinshan_win`, `test_execute_action_kan_wall_exhausted`, `test_execute_action_ankan_rinshan_win`, `test_execute_action_ankan_wall_exhausted`, `test_execute_action_discard_is_last_tile`, `test_get_available_actions_draw_requires_current_player`, `test_execute_action_draw_exhausted`, `test_execute_action_draw_no_tile_drawn` and `test_execute_action_draw_draw_result`
+    # TODO Rename this here and in `test_check_draw`, `test_check_sancha_ron`, `test_check_chankan`, `test_check_rinshan_win`, `test_check_win_chankan`, `test_check_win_rinshan`, `test_pon_action_claims_last_discard`, `test_chi_action_uses_sequence_and_resets_turn`, `test_handle_draw`, `test_check_win_no_combinations`, `test_check_win_no_yaku`, `test_check_draw_suufon_renda`, `test_check_draw_sancha_ron`, `test_check_draw_suukantsu`, `test_check_draw_exhausted`, `test_check_draw_suucha_riichi`, `test_check_all_tenpai`, `test_check_kyuushu_kyuuhai`, `test_check_suucha_riichi`, `test_count_dora`, `test_get_hand_invalid_player`, `test_get_discards_invalid_player`, `test_handle_draw_exhausted_with_flow_mangan`, `test_handle_draw_kyuushu_kyuuhai`, `test_handle_draw_suucha_riichi`, `test_get_available_actions_default_empty`, `test_execute_action_discard_tile_none`, `test_execute_action_kan_tile_none`, `test_check_win_payment_from_ron`, `test_execute_action_draw_no_tile_set`, `test_execute_action_discard_no_tile`, `test_execute_action_discard_no_tile_set`, `test_execute_action_riichi`, `test_execute_action_kan_no_tile`, `test_execute_action_discard_last_tile`, `test_execute_action_draw_last_tile`, `test_execute_action_discard_history`, `test_execute_action_discard_history_limit`, `test_get_available_actions_kan`, `test_get_available_actions_ankan`, `test_execute_action_draw_no_tile_drawn_detailed`, `test_execute_action_ankan_chankan_detailed`, `test_execute_action_kan_rinshan_win_detailed`, `test_execute_action_ankan_rinshan_win_detailed`, `test_check_win_payment_from_chankan`, `test_check_flow_mangan`, `test_end_round_with_winner`, `test_end_round_draw`, `test_get_dora_tiles`, `test_get_ura_dora_tiles`, `test_check_sancha_ron_detailed`, `test_execute_action_riichi_turns_update`, `test_execute_action_kan_chankan_complete`, `test_execute_action_kan_rinshan_win`, `test_execute_action_kan_wall_exhausted`, `test_execute_action_ankan_rinshan_win`, `test_execute_action_ankan_wall_exhausted`, `test_execute_action_discard_is_last_tile`, `test_get_available_actions_draw_requires_current_player`, `test_execute_action_draw_exhausted`, `test_execute_action_draw_no_tile_drawn` and `test_execute_action_draw_draw_result`
     def _init_game(self):
         self.engine.start_game()
         self.engine.start_round()
