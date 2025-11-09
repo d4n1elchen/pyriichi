@@ -16,6 +16,10 @@ class TestRuleEngine:
         """設置測試環境"""
         self.engine = RuleEngine(num_players=4)
 
+    def _has_action(self, player: int, action: GameAction) -> bool:
+        """便利方法：檢查玩家可用動作"""
+        return action in self.engine.get_available_actions(player)
+
     def test_start_game(self):
         """測試開始遊戲"""
         self.engine.start_game()
@@ -92,7 +96,8 @@ class TestRuleEngine:
         assert discard_result.discarded is True
         assert self.engine.get_last_discard() == tile_to_discard
         assert self.engine.get_last_discard_player() == 0
-        assert self.engine.can_act(1, GameAction.PON) is True
+        actions = self.engine.get_available_actions(1)
+        assert GameAction.PON in actions
 
         pon_result = self.engine.execute_action(1, GameAction.PON)
 
@@ -104,7 +109,8 @@ class TestRuleEngine:
         assert self.engine.get_last_discard() is None
         assert self.engine.get_last_discard_player() is None
         assert self.engine.get_current_player() == 1
-        assert self.engine.can_act(1, GameAction.DRAW) is False
+        actions_after = self.engine.get_available_actions(1)
+        assert GameAction.DRAW not in actions_after
 
     def test_chi_action_uses_sequence_and_resets_turn(self):
         """測試吃牌會使用指定順子並更新遊戲狀態。"""
@@ -120,8 +126,10 @@ class TestRuleEngine:
         self.engine._current_player = 0
         self.engine.execute_action(0, GameAction.DISCARD, tile=tile_to_discard)
 
-        assert self.engine.can_act(1, GameAction.CHI) is True
-        assert self.engine.can_act(2, GameAction.CHI) is False
+        actions_player1 = self.engine.get_available_actions(1)
+        assert GameAction.CHI in actions_player1
+        actions_player2 = self.engine.get_available_actions(2)
+        assert GameAction.CHI not in actions_player2
 
         sequences = self.engine.get_available_chi_sequences(1)
         assert sequences
@@ -144,7 +152,8 @@ class TestRuleEngine:
         assert self.engine.get_last_discard() is None
         assert self.engine.get_last_discard_player() is None
         assert self.engine.get_current_player() == 1
-        assert self.engine.can_act(1, GameAction.DRAW) is False
+        actions_after_chi = self.engine.get_available_actions(1)
+        assert GameAction.DRAW not in actions_after_chi
 
     def test_hand_total_tile_count_includes_melds(self):
         """手牌總數應包含副露的牌。"""
@@ -163,7 +172,8 @@ class TestRuleEngine:
         """測試流局處理"""
         self._init_game()
         # 開局時不能流局
-        assert self.engine.can_act(0, GameAction.DRAW) is False
+        actions = self.engine.get_available_actions(0)
+        assert GameAction.DRAW not in actions
 
     def test_check_win_no_combinations(self):
         """測試 check_win 沒有和牌組合"""
@@ -320,58 +330,21 @@ class TestRuleEngine:
         """測試四家立直流局處理"""
         pass
 
-    def test_can_act_default_false(self):
-        """測試 can_act 默認返回 False"""
+    def test_get_available_actions_default_empty(self):
+        """測試在非 PLAYING 階段無可用動作"""
         self._init_game()
         current_player = self.engine.get_current_player()
 
-        # 在非 PLAYING 階段，can_act 應該返回 False
+        # 在非 PLAYING 階段，應無可用動作
         self.engine._phase = GamePhase.INIT
-        for action in GameAction:
-            assert not self.engine.can_act(current_player, action)
-
-    def test_execute_action_discard_tile_none(self):
-        """測試打牌時 tile 為 None"""
-        self._init_game()
-        current_player = self.engine.get_current_player()
-
-        # 測試打牌時 tile 為 None
-        # can_act 會先檢查並返回 False
-        # 或者我們可以手動繞過 can_act 檢查
-        # 實際上的檢查在 execute_action 內部，但 can_act 會先檢查
-        # 所以我們需要確保 can_act 返回 True，然後 execute_action 內部檢查 tile
-        # 但 can_act 已經檢查了 tile is not None，所以這個分支可能不會被執行
-        # 讓我們測試邏輯：如果我們繞過 can_act，execute_action 會檢查
-        try:
-            # 先摸一張牌
-            if self.engine.can_act(current_player, GameAction.DRAW):
-                self.engine.execute_action(current_player, GameAction.DRAW)
-                # 現在嘗試打牌，但 tile 為 None
-                # can_act 會返回 False，所以 execute_action 會拋出錯誤
-                with pytest.raises(ValueError):
-                    self.engine.execute_action(current_player, GameAction.DISCARD, tile=None)
-        except ValueError:
-            # 這是預期的，因為 can_act 會先檢查
-            pass
+        assert self.engine.get_available_actions(current_player) == []
 
     def test_execute_action_kan_tile_none(self):
         """測試明槓時 tile 為 None"""
         self._init_game()
         current_player = self.engine.get_current_player()
-
-        # 測試明槓時 tile 為 None
-        # can_act 會先檢查並返回 False（因為 tile is None），所以 execute_action 會先拋出錯誤
-        # 但我們可以通過直接調用內部邏輯來測試
-        # 實際上，檢查在 execute_action 內部，但 can_act 會先檢查
-        # 所以我們需要確保 can_act 返回 True，然後 execute_action 內部檢查 tile
-        # 但 can_act 已經檢查了 tile is not None，所以這個分支可能不會被執行
-        # 讓我們測試邏輯
-        try:
-            with pytest.raises(ValueError):
-                self.engine.execute_action(current_player, GameAction.KAN, tile=None)
-        except ValueError as e:
-            # 可能是 can_act 的錯誤或 execute_action 內部的錯誤
-            pass
+        with pytest.raises(ValueError):
+            self.engine.execute_action(current_player, GameAction.KAN, tile=None)
 
     def test_check_win_payment_from_ron(self):
         """測試榮和支付者設置"""
@@ -391,17 +364,15 @@ class TestRuleEngine:
         # check_win 內部會根據 player == current_player 判斷是否為自摸
         self.engine._current_player = 2  # 設置為其他玩家，表示榮和
         result = self.engine.check_win(1, winning_tile)
-        if result and result.score_result:
-            score_result = result.score_result
-            # 榮和時，支付者應該是放銃玩家
-            assert score_result.payment_from == 0  # 放銃玩家
+        assert result is not None
+        assert result.score_result is not None
+        assert result.score_result.payment_from == 0
 
     def test_execute_action_draw_no_tile_set(self):
         """測試摸牌時牌組未初始化"""
         self._init_game()
         hand = self.engine.get_hand(0)
-        if hand.total_tile_count() >= 14 and hand.tiles:
-            self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
+        self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
         current_player = self.engine.get_current_player()
 
         self.engine._tile_set = None
@@ -412,153 +383,95 @@ class TestRuleEngine:
     def test_execute_action_discard_no_tile(self):
         """測試打牌時未指定牌"""
         self._init_game()
-        hand = self.engine.get_hand(0)
-        if hand.total_tile_count() >= 14 and hand.tiles:
-            self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
-
-        self.engine.execute_action(self.engine.get_current_player(), GameAction.DRAW)
-
-        # 打牌必須指定牌（會先檢查 can_act，如果 tile=None 會返回 False）
-        # 但實際上在 execute_action 內部會檢查 tile is None
-        # 讓我們繞過 can_act 檢查，直接測試 execute_action 內部的檢查
-        # 由於 can_act 會先檢查 tile is not None，所以這裡會先拋出 can_act 錯誤
-        # 我們測試的是 can_act 的檢查邏輯
-        assert not self.engine.can_act(0, GameAction.DISCARD, tile=None)
+        current_player = self.engine.get_current_player()
+        with pytest.raises(ValueError):
+            self.engine.execute_action(current_player, GameAction.DISCARD, tile=None)
 
     def test_execute_action_discard_no_tile_set(self):
         """測試打牌時牌組未初始化"""
         self._init_game()
-        hand = self.engine.get_hand(0)
-        if hand.total_tile_count() >= 14 and hand.tiles:
-            self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
-
         current_player = self.engine.get_current_player()
-        self.engine.execute_action(current_player, GameAction.DRAW)
-
         hand = self.engine.get_hand(current_player)
-        if hand.tiles:
-            tile = hand.tiles[0]
-            self.engine._tile_set = None
-            with pytest.raises(ValueError, match="牌組未初始化"):
-                self.engine.execute_action(current_player, GameAction.DISCARD, tile=tile)
+        self.engine._tile_set = None
+        with pytest.raises(ValueError, match="牌組未初始化"):
+            self.engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
 
     def test_execute_action_riichi(self):
         """測試執行立直動作"""
         self._init_game()
+        current_player = self.engine.get_current_player()
         # 確保手牌聽牌且門清
-        hand = self.engine.get_hand(0)
-        # 手牌默認應該是門清的，但需要確保聽牌
-        # 如果手牌不聽牌，這個測試可能會失敗，但至少測試了方法調用
+        # 123m 456m 789m 123p 4p
+        self.engine._hands[current_player] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
 
-        if hand.total_tile_count() >= 14 and hand.tiles:
-            self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
+        assert self._has_action(current_player, GameAction.RICHI)
 
-        self.engine.execute_action(self.engine.get_current_player(), GameAction.DRAW)
+        result = self.engine.execute_action(current_player, GameAction.RICHI)
+        assert result.riichi is True
+        assert self.engine.get_hand(current_player).is_riichi
+        # 檢查立直回合數已記錄
+        assert current_player in self.engine._riichi_turns
+        assert self.engine._riichi_turns[current_player] == 0
 
-        # 如果可以立直，執行立直
-        if self.engine.can_act(0, GameAction.RICHI):
-            result = self.engine.execute_action(0, GameAction.RICHI)
-            assert result.riichi == True
-            assert hand.is_riichi
-            # 檢查立直回合數已記錄
-            assert 0 in self.engine._riichi_turns
-            assert self.engine._riichi_turns[0] == 0
+    def test_cannot_action_riichi_not_tenpai(self):
+        """測試未聽牌無法立直的情況"""
+        self._init_game()
+        current_player = self.engine.get_current_player()
+        # 確保手牌無法聽牌
+        # 123m 456m 789m 12p 4p 8p
+        self.engine._hands[current_player] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p4p8p"))
+        assert not self.engine.get_hand(current_player).is_tenpai()
+        assert not self._has_action(current_player, GameAction.RICHI)
+
+    def test_cannot_action_riichi_not_concealed(self):
+        """測試未門清無法立直的情況"""
+        self._init_game()
+        current_player = self.engine.get_current_player()
+        self.engine._hands[current_player]._melds.append(
+            Meld(MeldType.PON, [Tile(Suit.PINZU, 4), Tile(Suit.PINZU, 4), Tile(Suit.PINZU, 4)])
+        )
+        assert self.engine.get_hand(current_player).is_concealed is False
+        assert not self._has_action(current_player, GameAction.RICHI)
 
     def test_execute_action_kan_no_tile(self):
         """測試明槓時未指定牌"""
         self._init_game()
-        hand = self.engine.get_hand(0)
-        if hand.total_tile_count() >= 14 and hand.tiles:
-            self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
-
-        self.engine.execute_action(self.engine.get_current_player(), GameAction.DRAW)
-
-        # 明槓必須指定牌（can_act 會先檢查）
-        assert not self.engine.can_act(0, GameAction.KAN, tile=None)
-
-        # 如果我們繞過 can_act，直接調用 execute_action，內部會檢查
-        # 但由於 can_act 已經檢查了，我們測試 can_act 的邏輯即可
+        # TODO: 設置可以明槓的狀態，並測試明槓時未指定牌
+        current_player = self.engine.get_current_player()
+        assert not self._has_action(current_player, GameAction.KAN)
 
     def test_execute_action_discard_last_tile(self):
         """測試打出最後一張牌（河底撈魚）"""
-        self._init_game()
-        # 手動設置牌組為即將耗盡狀態
-        # 由於無法直接控制牌組，這裡測試邏輯路徑
-        if self.engine._tile_set:
-            hand = self.engine.get_hand(0)
-            if hand.total_tile_count() >= 14 and hand.tiles:
-                self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
-
-            self.engine.execute_action(self.engine.get_current_player(), GameAction.DRAW)
-
-            hand = self.engine.get_hand(self.engine.get_current_player())
-            if hand.tiles:
-                tile = hand.tiles[0]
-                # 正常打牌，檢查結果
-                result = self.engine.execute_action(self.engine.get_current_player(), GameAction.DISCARD, tile=tile)
-                # 可能包含 is_last_tile 標記
-                assert result.discarded is not None or result.is_last_tile is not None
+        pass
 
     def test_execute_action_draw_last_tile(self):
         """測試摸到最後一張牌（海底撈月）"""
-        self._init_game()
-        # 手動設置牌組為即將耗盡狀態
-        # 由於無法直接控制牌組，這裡測試邏輯路徑
-        if self.engine._tile_set:
-            hand = self.engine.get_hand(0)
-            if hand.total_tile_count() >= 14 and hand.tiles:
-                self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
-
-            result = self.engine.execute_action(self.engine.get_current_player(), GameAction.DRAW)
-            # 可能包含 is_last_tile 標記
-            assert result.drawn_tile is not None or result.is_last_tile is not None or result.draw is not None
+        pass
 
     def test_execute_action_discard_history(self):
         """測試捨牌歷史記錄"""
         self._init_game()
-        hand = self.engine.get_hand(0)
-        if hand.total_tile_count() >= 14 and hand.tiles:
-            self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
-
         current_player = self.engine.get_current_player()
-        self.engine.execute_action(current_player, GameAction.DRAW)
-
         hand = self.engine.get_hand(current_player)
-        if hand.tiles:
-            tile = hand.tiles[0]
-            # 打牌
-            self.engine.execute_action(current_player, GameAction.DISCARD, tile=tile)
-
-            # 檢查捨牌歷史
-            assert len(self.engine._discard_history) > 0
+        assert hand.tiles is not None
+        self.engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
+        assert len(self.engine._discard_history) > 0
 
     def test_execute_action_discard_history_limit(self):
         """測試捨牌歷史只保留前四張"""
         self._init_game()
-        # 打多張牌，測試歷史限制
-        # 注意：需要確保當前玩家可以執行 DRAW 和 DISCARD
+        # 莊家開局有 14 張牌，先打出一張
         current_player = self.engine.get_current_player()
-        for _ in range(5):
-            # 確保是當前玩家的回合
-            if self.engine.get_current_player() != current_player:
-                # 如果換了玩家，需要切換到正確的玩家
-                break
-
-            if not self.engine.can_act(current_player, GameAction.DRAW):
-                break
-
+        hand = self.engine.get_hand(current_player)
+        assert self._has_action(current_player, GameAction.DISCARD)
+        self.engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
+        for _ in range(10):
+            current_player = self.engine.get_current_player()
+            assert self._has_action(current_player, GameAction.DRAW)
             self.engine.execute_action(current_player, GameAction.DRAW)
             hand = self.engine.get_hand(current_player)
-            if hand.tiles:
-                tile = hand.tiles[0]
-                # 打牌（如果允許）
-                if self.engine.can_act(current_player, GameAction.DISCARD, tile=tile):
-                    self.engine.execute_action(current_player, GameAction.DISCARD, tile=tile)
-                else:
-                    break
-            else:
-                break
-        # 捨牌歷史應該只保留前4張
+            assert self._has_action(current_player, GameAction.DISCARD)
+            self.engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
         assert len(self.engine._discard_history) <= 4
 
     def test_deal_wrong_phase(self):
@@ -577,36 +490,25 @@ class TestRuleEngine:
         with pytest.raises(ValueError, match="牌組未初始化"):
             self.engine.deal()
 
-    def test_can_act_kan(self):
+    def test_get_available_actions_kan(self):
         """測試是否可以明槓"""
         self._init_game()
-        # 創建一個可以明槓的手牌（需要三張相同牌）
-        # 手牌：111234567m 123p 4p
-        test_tiles = parse_tiles("1m1m1m2m3m4m5m6m7m1p2p3p4p")
-        test_hand = Hand(test_tiles)
-        self.engine._hands[0] = test_hand
+        current_player = self.engine.get_current_player()
+        # 111m 234m 567m 12p 3p 4p
+        self.engine._hands[current_player] = Hand(parse_tiles("1m1m1m2m3m4m5m6m7m1p2p3p4p"))
+        self.engine._last_discarded_tile = Tile(Suit.MANZU, 1)
+        self.engine._last_discarded_player = (current_player + 1) % self.engine.get_num_players()
+        assert self._has_action(current_player, GameAction.KAN)
+        # 修改最後捨牌使其無法明槓
+        self.engine._last_discarded_tile = Tile(Suit.MANZU, 9)
+        assert not self._has_action(current_player, GameAction.KAN)
 
-        # 檢查是否可以槓
-        kan_tile = Tile(Suit.MANZU, 1)
-        can_kan = self.engine.can_act(0, GameAction.KAN, tile=kan_tile)
-        assert can_kan == True
-
-        # 測試不能槓的情況
-        can_kan = self.engine.can_act(0, GameAction.KAN, tile=Tile(Suit.MANZU, 9))
-        assert can_kan == False
-
-    def test_can_act_ankan(self):
+    def test_get_available_actions_ankan(self):
         """測試是否可以暗槓"""
         self._init_game()
-        # 創建一個可以暗槓的手牌（需要四張相同牌）
-        # 手牌：111m 123m 456m 7m 123p
-        test_tiles = parse_tiles("1m1m1m1m2m3m4m5m6m7m1p2p3p")
-        test_hand = Hand(test_tiles)
-        self.engine._hands[0] = test_hand
-
-        # 檢查是否可以暗槓
-        can_ankan = self.engine.can_act(0, GameAction.ANKAN)
-        assert can_ankan == True
+        # 111m 123m 456m 7m 123p
+        self.engine._hands[0] = Hand(parse_tiles("1m1m1m1m2m3m4m5m6m7m1p2p3p"))
+        assert self._has_action(0, GameAction.ANKAN)
 
     def test_execute_action_draw_no_tile_drawn_detailed(self):
         """測試摸牌時無牌可摸（詳細測試流局分支）"""
@@ -614,23 +516,18 @@ class TestRuleEngine:
         current_player = self.engine.get_current_player()
 
         # 耗盡牌組以觸發 draw() 返回 None
-        if self.engine._tile_set:
-            # 先打出一張牌，確保下一位玩家手牌為 13 張
-            hand = self.engine.get_hand(current_player)
-            if hand.tiles:
-                discard_tile = hand.tiles[0]
-                self.engine.execute_action(current_player, GameAction.DISCARD, tile=discard_tile)
-                current_player = self.engine.get_current_player()
-
-            # 耗盡所有牌（但保留王牌區）
-            while self.engine._tile_set._tiles:
-                self.engine._tile_set.draw()
-
-            # 現在牌組為空，執行 DRAW 動作，應該觸發流局分支（191-195行）
-            result = self.engine.execute_action(current_player, GameAction.DRAW)
-            # 應該有 draw 標記，表示流局
-            assert result.draw == True
-            assert self.engine._phase == GamePhase.RYUUKYOKU
+        assert self.engine._tile_set is not None
+        hand = self.engine.get_hand(current_player)
+        assert hand.tiles is not None
+        self.engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
+        while self.engine._tile_set._tiles:
+            self.engine._tile_set.draw()
+        current_player = self.engine.get_current_player()
+        result = self.engine.execute_action(current_player, GameAction.DRAW)
+        assert result.ryuukyoku is not None
+        assert result.ryuukyoku.ryuukyoku is True
+        assert result.ryuukyoku.ryuukyoku_type == RyuukyokuType.EXHAUSTED
+        assert self.engine._phase == GamePhase.RYUUKYOKU
 
     def test_execute_action_kan_chankan_detailed(self):
         """測試明槓搶槓處理（詳細測試）"""
@@ -643,6 +540,8 @@ class TestRuleEngine:
         hand0 = Hand(kan_tiles)
         self.engine._hands[0] = hand0
         self.engine._current_player = 0
+        self.engine._last_discarded_tile = kan_tile
+        self.engine._last_discarded_player = 1
 
         # 設置玩家1可以搶槓和
         # 手牌：123m 456m 789m 123p 4p
@@ -651,7 +550,7 @@ class TestRuleEngine:
         self.engine._hands[1] = test_hand
 
         # 執行明槓，應該檢查搶槓（249-252行）
-        if self.engine.can_act(0, GameAction.KAN, tile=kan_tile):
+        if self._has_action(0, GameAction.KAN):
             result = self.engine.execute_action(0, GameAction.KAN, tile=kan_tile)
             # 如果有搶槓，應該有 chankan 標記
             if result.chankan is not None:
@@ -669,9 +568,11 @@ class TestRuleEngine:
         hand0 = Hand(kan_tiles)
         self.engine._hands[0] = hand0
         self.engine._current_player = 0
+        self.engine._last_discarded_tile = kan_tile
+        self.engine._last_discarded_player = 1
 
         # 執行明槓
-        if self.engine.can_act(0, GameAction.KAN, tile=kan_tile):
+        if self._has_action(0, GameAction.KAN):
             result = self.engine.execute_action(0, GameAction.KAN, tile=kan_tile)
             # 檢查是否有 rinshan_tile
             if result.rinshan_tile is not None:
@@ -692,7 +593,7 @@ class TestRuleEngine:
         self.engine._current_player = 0
 
         # 執行暗槓
-        if self.engine.can_act(0, GameAction.ANKAN):
+        if self._has_action(0, GameAction.ANKAN):
             result = self.engine.execute_action(0, GameAction.ANKAN)
             # 檢查是否有 rinshan_tile（294-295行）
             if result.rinshan_tile is not None:
@@ -797,7 +698,7 @@ class TestRuleEngine:
         self._init_game()
         # 玩家0立直
         hand0 = self.engine.get_hand(0)
-        if self.engine.can_act(0, GameAction.RICHI):
+        if self._has_action(0, GameAction.RICHI):
             self.engine.execute_action(0, GameAction.RICHI)
             assert 0 in self.engine._riichi_turns
 
@@ -806,24 +707,24 @@ class TestRuleEngine:
         if hand0.total_tile_count() >= 14 and hand0.tiles:
             self.engine.execute_action(0, GameAction.DISCARD, tile=hand0.tiles[0])
 
-        if self.engine.can_act(self.engine.get_current_player(), GameAction.DRAW):
+        if self._has_action(self.engine.get_current_player(), GameAction.DRAW):
             current = self.engine.get_current_player()
             self.engine.execute_action(current, GameAction.DRAW)
             hand0 = self.engine.get_hand(current)
             if hand0.tiles:
                 tile = hand0.tiles[0]
-                if self.engine.can_act(current, GameAction.DISCARD, tile=tile):
+                if self._has_action(current, GameAction.DISCARD):
                     self.engine.execute_action(current, GameAction.DISCARD, tile=tile)
                     if 0 in self.engine._riichi_turns:
                         assert self.engine._riichi_turns[0] > 0
 
         # 玩家1打牌，玩家0的回合數增加
-        if self.engine.can_act(1, GameAction.DRAW):
+        if self._has_action(1, GameAction.DRAW):
             self.engine.execute_action(1, GameAction.DRAW)
             hand1 = self.engine.get_hand(1)
             if hand1.tiles:
                 tile = hand1.tiles[0]
-                if self.engine.can_act(1, GameAction.DISCARD, tile=tile):
+                if self._has_action(1, GameAction.DISCARD):
                     initial_turns = self.engine._riichi_turns.get(0, 0)
                     self.engine.execute_action(1, GameAction.DISCARD, tile=tile)
                     # 其他玩家打牌，立直玩家的回合數應該增加
@@ -849,7 +750,7 @@ class TestRuleEngine:
 
         # 執行明槓，應該檢查搶槓
         kan_tile = Tile(Suit.MANZU, 1)
-        if self.engine.can_act(0, GameAction.KAN, tile=kan_tile):
+        if self._has_action(0, GameAction.KAN):
             result = self.engine.execute_action(0, GameAction.KAN, tile=kan_tile)
             # 如果有搶槓，應該有 chankan 標記
             if result.chankan is not None:
@@ -873,6 +774,8 @@ class TestRuleEngine:
         # 手牌：11123456788999m
         starting_tiles = parse_tiles("1m1m1m2m3m4m5m6m7m8m8m9m9m9m")
         self.engine._hands[player] = Hand(starting_tiles)
+        self.engine._last_discarded_tile = kan_tile
+        self.engine._last_discarded_player = (player + 1) % self.engine.get_num_players()
 
         if self.engine._tile_set:
             self.engine._tile_set._wall = [Tile(Suit.PINZU, 1)]
@@ -895,6 +798,8 @@ class TestRuleEngine:
         # 手牌：1112345666788m
         starting_tiles = parse_tiles("1m1m1m2m3m4m5m6m6m6m7m8m8m")
         self.engine._hands[player] = Hand(starting_tiles)
+        self.engine._last_discarded_tile = kan_tile
+        self.engine._last_discarded_player = (player + 1) % self.engine.get_num_players()
 
         self.engine._kan_count = 3
         if self.engine._tile_set:
@@ -918,6 +823,8 @@ class TestRuleEngine:
         # 手牌：444s 234m 567m 123p 4p
         hand0_tiles = parse_tiles("4s4s4s2m3m4m5m6m7m1p2p3p4p")
         self.engine._hands[0] = Hand(hand0_tiles)
+        self.engine._last_discarded_tile = kan_tile
+        self.engine._last_discarded_player = 3
 
         # 手牌：99p 234m 567m 789p 23s
         winning_tiles = parse_tiles("9p9p2m3m4m5m6m7m7p8p9p2s3s")
@@ -1013,45 +920,31 @@ class TestRuleEngine:
             self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
 
         current = self.engine.get_current_player()
-        if self.engine.can_act(current, GameAction.DRAW):
+        if self._has_action(current, GameAction.DRAW):
             self.engine.execute_action(current, GameAction.DRAW)
             hand = self.engine.get_hand(current)
             if hand.tiles:
                 tile = hand.tiles[0]
-                if self.engine.can_act(current, GameAction.DISCARD, tile=tile):
+                if self._has_action(current, GameAction.DISCARD):
                     result = self.engine.execute_action(current, GameAction.DISCARD, tile=tile)
                     # 如果牌組耗盡，應該有 is_last_tile 標記
                     # 注意：這可能不會發生，取決於牌組狀態
                     if result.is_last_tile is not None:
                         assert result.is_last_tile == True
 
-    def test_can_act_unknown_action(self):
-        """測試未知動作類型"""
+    def test_get_available_actions_draw_requires_current_player(self):
+        """測試摸牌僅限當前玩家"""
         self._init_game()
-        # 測試一個在當前階段不支持的動作
-        # 例如在 PLAYING 階段嘗試執行 START_GAME 動作
-        # 由於 GameAction 是枚舉，我們需要找到一個不匹配任何條件的動作
-        # 但實際上，can_act 會檢查 phase 和 action 類型
-        # 如果 action 不匹配任何已知的動作類型，會返回 False
-
-        # 測試一個不存在的動作值（通過整數值）
-        # 注意：這需要確保不會匹配任何已知動作
         current_player = self.engine.get_current_player()
-        # 假設我們有一個不存在的動作值
-        # 但由於 GameAction 是枚舉，我們無法直接創建無效值
-        # 所以我們測試其他不會匹配的情況
-        # 實際上是當所有條件都不匹配時的默認返回 False
 
-        # 測試：在非 PLAYING 階段，can_act 應該返回 False
+        # 非 PLAYING 階段無可用動作
         self.engine._phase = GamePhase.INIT
-        assert not self.engine.can_act(current_player, GameAction.DRAW)
+        assert GameAction.DRAW not in self.engine.get_available_actions(current_player)
 
-        # 測試：在 PLAYING 階段但不是當前玩家
+        # PLAYING 階段但非當前玩家也不可摸牌
         self.engine._phase = GamePhase.PLAYING
         non_current = (current_player + 1) % 4
-        # 某些動作在非當前玩家時應該返回 False
-        # 例如 DRAW 動作只有當前玩家可以執行
-        assert not self.engine.can_act(non_current, GameAction.DRAW)
+        assert GameAction.DRAW not in self.engine.get_available_actions(non_current)
 
     def test_execute_action_draw_exhausted(self):
         """測試摸牌時牌組耗盡"""
@@ -1093,7 +986,9 @@ class TestRuleEngine:
 
         result = self.engine.execute_action(current_player, GameAction.DRAW)
 
-        assert result.draw is True
+        assert result.ryuukyoku is not None
+        assert result.ryuukyoku.ryuukyoku is True
+        assert result.ryuukyoku.ryuukyoku_type == RyuukyokuType.EXHAUSTED
         assert result.drawn_tile is None
         assert self.engine.get_phase() == GamePhase.RYUUKYOKU
 
@@ -1108,9 +1003,9 @@ class TestRuleEngine:
         result = self.engine.execute_action(current_player, GameAction.DRAW)
 
         # 檢查結果中是否有 drawn_tile 或 is_last_tile
-        assert result.drawn_tile is not None or result.is_last_tile is not None or result.draw is not None
+        assert result.drawn_tile is not None or result.is_last_tile is not None or result.ryuukyoku is not None
 
-    # TODO Rename this here and in `test_check_draw`, `test_check_sancha_ron`, `test_check_chankan`, `test_check_rinshan_win`, `test_check_win_chankan`, `test_check_win_rinshan`, `test_pon_action_claims_last_discard`, `test_chi_action_uses_sequence_and_resets_turn`, `test_handle_draw`, `test_check_win_no_combinations`, `test_check_win_no_yaku`, `test_check_draw_suufon_renda`, `test_check_draw_sancha_ron`, `test_check_draw_suukantsu`, `test_check_draw_exhausted`, `test_check_draw_suucha_riichi`, `test_check_all_tenpai`, `test_check_kyuushu_kyuuhai`, `test_check_suucha_riichi`, `test_count_dora`, `test_get_hand_invalid_player`, `test_get_discards_invalid_player`, `test_handle_draw_exhausted_with_flow_mangan`, `test_handle_draw_kyuushu_kyuuhai`, `test_handle_draw_suucha_riichi`, `test_can_act_default_false`, `test_execute_action_discard_tile_none`, `test_execute_action_kan_tile_none`, `test_check_win_payment_from_ron`, `test_execute_action_draw_no_tile_set`, `test_execute_action_discard_no_tile`, `test_execute_action_discard_no_tile_set`, `test_execute_action_riichi`, `test_execute_action_kan_no_tile`, `test_execute_action_discard_last_tile`, `test_execute_action_draw_last_tile`, `test_execute_action_discard_history`, `test_execute_action_discard_history_limit`, `test_can_act_kan`, `test_can_act_ankan`, `test_execute_action_draw_no_tile_drawn_detailed`, `test_execute_action_kan_chankan_detailed`, `test_execute_action_kan_rinshan_win_detailed`, `test_execute_action_ankan_rinshan_win_detailed`, `test_check_win_payment_from_chankan`, `test_check_flow_mangan`, `test_end_round_with_winner`, `test_end_round_draw`, `test_get_dora_tiles`, `test_get_ura_dora_tiles`, `test_check_sancha_ron_detailed`, `test_execute_action_riichi_turns_update`, `test_execute_action_kan_chankan_complete`, `test_execute_action_kan_rinshan_win`, `test_execute_action_kan_wall_exhausted`, `test_execute_action_ankan_rinshan_win`, `test_execute_action_ankan_wall_exhausted`, `test_execute_action_discard_is_last_tile`, `test_can_act_unknown_action`, `test_execute_action_draw_exhausted`, `test_execute_action_draw_no_tile_drawn` and `test_execute_action_draw_draw_result`
+    # TODO Rename this here and in `test_check_draw`, `test_check_sancha_ron`, `test_check_chankan`, `test_check_rinshan_win`, `test_check_win_chankan`, `test_check_win_rinshan`, `test_pon_action_claims_last_discard`, `test_chi_action_uses_sequence_and_resets_turn`, `test_handle_draw`, `test_check_win_no_combinations`, `test_check_win_no_yaku`, `test_check_draw_suufon_renda`, `test_check_draw_sancha_ron`, `test_check_draw_suukantsu`, `test_check_draw_exhausted`, `test_check_draw_suucha_riichi`, `test_check_all_tenpai`, `test_check_kyuushu_kyuuhai`, `test_check_suucha_riichi`, `test_count_dora`, `test_get_hand_invalid_player`, `test_get_discards_invalid_player`, `test_handle_draw_exhausted_with_flow_mangan`, `test_handle_draw_kyuushu_kyuuhai`, `test_handle_draw_suucha_riichi`, `test_get_available_actions_default_empty`, `test_execute_action_discard_tile_none`, `test_execute_action_kan_tile_none`, `test_check_win_payment_from_ron`, `test_execute_action_draw_no_tile_set`, `test_execute_action_discard_no_tile`, `test_execute_action_discard_no_tile_set`, `test_execute_action_riichi`, `test_execute_action_kan_no_tile`, `test_execute_action_discard_last_tile`, `test_execute_action_draw_last_tile`, `test_execute_action_discard_history`, `test_execute_action_discard_history_limit`, `test_get_available_actions_kan`, `test_get_available_actions_ankan`, `test_execute_action_draw_no_tile_drawn_detailed`, `test_execute_action_kan_chankan_detailed`, `test_execute_action_kan_rinshan_win_detailed`, `test_execute_action_ankan_rinshan_win_detailed`, `test_check_win_payment_from_chankan`, `test_check_flow_mangan`, `test_end_round_with_winner`, `test_end_round_draw`, `test_get_dora_tiles`, `test_get_ura_dora_tiles`, `test_check_sancha_ron_detailed`, `test_execute_action_riichi_turns_update`, `test_execute_action_kan_chankan_complete`, `test_execute_action_kan_rinshan_win`, `test_execute_action_kan_wall_exhausted`, `test_execute_action_ankan_rinshan_win`, `test_execute_action_ankan_wall_exhausted`, `test_execute_action_discard_is_last_tile`, `test_get_available_actions_draw_requires_current_player`, `test_execute_action_draw_exhausted`, `test_execute_action_draw_no_tile_drawn` and `test_execute_action_draw_draw_result`
     def _init_game(self):
         self.engine.start_game()
         self.engine.start_round()

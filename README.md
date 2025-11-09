@@ -402,7 +402,7 @@ while engine.get_phase() == GamePhase.PLAYING and turn_count < max_turns:
             break
 
     # 檢查是否可以立直
-    if engine.can_act(current_player, GameAction.RICHI):
+    if GameAction.RICHI in engine.get_available_actions(current_player):
         # 這裡可以加入玩家的立直決策邏輯
         # 例如：if hand.is_tenpai() and player_decision():
         pass

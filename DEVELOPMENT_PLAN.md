@@ -234,7 +234,7 @@
 - [x] 流局滿貫判定（check_flow_mangan）
 
 #### 6.4 特殊規則
-- [x] 立直規則（can_act, execute_action）
+- [x] 立直規則（get_available_actions, execute_action）
 - [x] 一發規則 - 已完成（基於立直後回合數追蹤）
 - [x] 搶槓規則 - 已完成（明槓時檢查其他玩家是否可以和牌）
 - [x] 嶺上開花 - 已完成（槓後摸牌和牌判定）

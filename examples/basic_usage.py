@@ -84,7 +84,8 @@ def example_game_flow():
     print(f"當前玩家: {engine.get_current_player()}")
 
     current_player = engine.get_current_player()
-    if engine.can_act(current_player, GameAction.DRAW):
+    available_actions = engine.get_available_actions(current_player)
+    if GameAction.DRAW in available_actions:
         draw_result = engine.execute_action(current_player, GameAction.DRAW)
         if draw_result.drawn_tile is not None:
             print(f"玩家 {current_player} 摸到: {draw_result.drawn_tile}")
@@ -96,7 +97,7 @@ def example_game_flow():
     print(f"玩家 {current_player} 的手牌: {format_tiles(hand.tiles)}")
 
     # 打牌
-    if hand.tiles and engine.can_act(current_player, GameAction.DISCARD):
+    if hand.tiles and GameAction.DISCARD in available_actions:
         discard_tile = hand.tiles[0]
         engine.execute_action(current_player, GameAction.DISCARD, tile=discard_tile)
         print(f"玩家 {current_player} 打出: {discard_tile}")
@@ -104,7 +105,7 @@ def example_game_flow():
     next_player = engine.get_current_player()
     print(f"下一回合玩家: {next_player}")
 
-    if engine.can_act(next_player, GameAction.DRAW):
+    if GameAction.DRAW in engine.get_available_actions(next_player):
         next_draw = engine.execute_action(next_player, GameAction.DRAW)
         if next_draw.drawn_tile is not None:
             print(f"玩家 {next_player} 摸到: {next_draw.drawn_tile}")

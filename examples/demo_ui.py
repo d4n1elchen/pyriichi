@@ -86,6 +86,10 @@ class MahjongDemoUI:
 
         self.start_new_round()
 
+    def _has_action(self, player: int, action: GameAction) -> bool:
+        """檢查指定玩家是否可以執行某動作。"""
+        return action in self.engine.get_available_actions(player)
+
     # ------------------------------------------------------------------
     # 遊戲流程控制
     # ------------------------------------------------------------------
@@ -133,7 +137,7 @@ class MahjongDemoUI:
             return
 
         hand = self.engine.get_hand(self.human_player)
-        if hand.total_tile_count() < 14 and self.engine.can_act(self.human_player, GameAction.DRAW):
+        if hand.total_tile_count() < 14 and self._has_action(self.human_player, GameAction.DRAW):
             self.draw_tile()
         else:
             # 若無法自動摸牌，恢復玩家手動操作
@@ -174,7 +178,7 @@ class MahjongDemoUI:
             self.log("手牌已達 14 張，請先打出一張牌。")
             return
 
-        if not self.engine.can_act(self.human_player, GameAction.DRAW):
+        if not self._has_action(self.human_player, GameAction.DRAW):
             self.log("目前無法摸牌。")
             return
 
@@ -201,7 +205,7 @@ class MahjongDemoUI:
     def discard_tile(self, tile) -> None:
         """玩家打出一張牌。"""
 
-        if not self.engine.can_act(self.human_player, GameAction.DISCARD, tile=tile):
+        if not self._has_action(self.human_player, GameAction.DISCARD):
             self.log("目前無法打牌。")
             return
 
@@ -232,7 +236,7 @@ class MahjongDemoUI:
             return
 
         hand = self.engine.get_hand(player)
-        if len(hand.tiles) < 14 and self.engine.can_act(player, GameAction.DRAW):
+        if len(hand.tiles) < 14 and self._has_action(player, GameAction.DRAW):
             result = self.engine.execute_action(player, GameAction.DRAW)
             if result.draw:
                 self.log(f"玩家 {player} 嶺上摸牌失敗，流局。")
@@ -282,7 +286,7 @@ class MahjongDemoUI:
                     return True
                 continue
 
-            if self.engine.can_act(caller, GameAction.KAN, tile=last_tile):
+            if self._has_action(caller, GameAction.KAN):
                 self.clear_reaction_options()
                 result = self.engine.execute_action(caller, GameAction.KAN, tile=last_tile)
                 self.log(f"玩家 {caller} 槓了 {tile_label}")
@@ -296,7 +300,7 @@ class MahjongDemoUI:
                     self.schedule_next_turn()
                 return True
 
-            if self.engine.can_act(caller, GameAction.PON):
+            if self._has_action(caller, GameAction.PON):
                 self.clear_reaction_options()
                 self.engine.execute_action(caller, GameAction.PON)
                 self.log(f"玩家 {caller} 碰了 {tile_label}")
@@ -409,7 +413,7 @@ class MahjongDemoUI:
         action_container = tk.Frame(bottom_container)
         action_container.pack(side=tk.LEFT, padx=8)
 
-        if enable and self.engine.can_act(self.human_player, GameAction.ANKAN):
+        if enable and self._has_action(self.human_player, GameAction.ANKAN):
             ankan_btn = tk.Button(
                 action_container,
                 text="暗槓",
@@ -543,7 +547,7 @@ class MahjongDemoUI:
     def _build_human_reaction_options(self, last_tile: Tile, tile_label: str, offset: int) -> list:
         options = []
 
-        if self.engine.can_act(self.human_player, GameAction.KAN, tile=last_tile):
+        if self._has_action(self.human_player, GameAction.KAN):
             options.append(
                 {
                     "action": GameAction.KAN,
@@ -552,7 +556,7 @@ class MahjongDemoUI:
                 }
             )
 
-        if self.engine.can_act(self.human_player, GameAction.PON):
+        if self._has_action(self.human_player, GameAction.PON):
             options.append({"action": GameAction.PON, "label": f"碰 {tile_label}"})
 
         if offset == 1:
@@ -582,7 +586,7 @@ class MahjongDemoUI:
         return options
 
     def perform_ankan(self) -> None:
-        if not self.engine.can_act(self.human_player, GameAction.ANKAN):
+        if not self._has_action(self.human_player, GameAction.ANKAN):
             self.log("目前無法暗槓。")
             return
 
@@ -696,7 +700,7 @@ class MahjongDemoUI:
             self.draw_button.config(state=tk.DISABLED)
             return
 
-        can_draw = self.engine.get_phase() == GamePhase.PLAYING and self.engine.can_act(
+        can_draw = self.engine.get_phase() == GamePhase.PLAYING and self._has_action(
             self.human_player, GameAction.DRAW
         )
         self.draw_button.config(state=tk.NORMAL if can_draw else tk.DISABLED)

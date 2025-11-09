@@ -68,7 +68,7 @@
 - `deal()`: 發牌
 - `get_current_player()`: 獲取當前玩家
 - `get_phase()`: 獲取遊戲階段
-- `can_act(player, action, tile)`: 檢查是否可以執行動作
+- `get_available_actions(player)`: 取得玩家可執行的動作列表
 - `execute_action(player, action, tile)`: 執行動作
 - `check_win(player, winning_tile)`: 檢查和牌
 - `check_draw()`: 檢查流局

@@ -67,13 +67,22 @@ class WinResult:
 
 
 @dataclass
+class RyuukyokuResult:
+    """流局結果"""
+
+    ryuukyoku: bool
+    ryuukyoku_type: Optional[RyuukyokuType] = None
+    flow_mangan_players: List[int] = field(default_factory=list)
+    kyuushu_kyuuhai_player: Optional[int] = None
+
+
+@dataclass
 class ActionResult:
     """動作執行結果"""
 
     drawn_tile: Optional[Tile] = None
     is_last_tile: Optional[bool] = None
-    draw: Optional[bool] = None
-    draw_type: Optional[RyuukyokuType] = None
+    ryuukyoku: Optional[RyuukyokuResult] = None
     discarded: Optional[bool] = None
     riichi: Optional[bool] = None
     chankan: Optional[bool] = None
@@ -85,16 +94,6 @@ class ActionResult:
     meld: Optional[Meld] = None
     called_action: Optional[GameAction] = None
     called_tile: Optional[Tile] = None
-
-
-@dataclass
-class RyuukyokuResult:
-    """流局結果"""
-
-    ryuukyoku: bool
-    ryuukyoku_type: Optional[RyuukyokuType] = None
-    flow_mangan_players: List[int] = field(default_factory=list)
-    kyuushu_kyuuhai_player: Optional[int] = None
 
 
 class RuleEngine:
@@ -191,70 +190,104 @@ class RuleEngine:
         """獲取當前遊戲階段"""
         return self._phase
 
-    def can_act(self, player: int, action: GameAction, tile: Optional[Tile] = None, **kwargs) -> bool:
+    def get_available_actions(self, player: int) -> List[GameAction]:
         """
-        檢查玩家是否可以執行某個動作
+        取得指定玩家當前可執行的動作列表
 
         Args:
             player: 玩家位置
-            action: 動作類型
-            tile: 相關的牌
-            **kwargs: 其他參數
 
         Returns:
-            是否可以執行
+            可執行的動作列表
         """
         if self._phase != GamePhase.PLAYING:
+            return []
+
+        if not (0 <= player < len(self._hands)):
+            return []
+
+        actions: List[GameAction] = []
+
+        if self._can_draw(player):
+            actions.append(GameAction.DRAW)
+
+        if self._can_discard(player):
+            actions.append(GameAction.DISCARD)
+
+        if self._can_pon(player):
+            actions.append(GameAction.PON)
+
+        if self._can_chi(player):
+            actions.append(GameAction.CHI)
+
+        if self._can_riichi(player):
+            actions.append(GameAction.RICHI)
+
+        if self._can_kan(player):
+            actions.append(GameAction.KAN)
+
+        if self._can_ankan(player):
+            actions.append(GameAction.ANKAN)
+
+        return actions
+
+    def _can_draw(self, player: int) -> bool:
+        if player != self._current_player:
             return False
+        hand = self._hands[player]
+        return hand.total_tile_count() < 14
 
-        if action == GameAction.DRAW:
-            if player != self._current_player:
-                return False
-            if not (0 <= player < len(self._hands)):
-                return False
-            return self._hands[player].total_tile_count() < 14
+    def _can_discard(self, player: int) -> bool:
+        if player != self._current_player:
+            return False
+        hand = self._hands[player]
+        return hand.total_tile_count() > 0
 
-        if action == GameAction.PON:
-            if self._last_discarded_tile is None or self._last_discarded_player is None:
-                return False
-            if player == self._last_discarded_player:
-                return False
-            hand = self._hands[player]
-            return hand.can_pon(self._last_discarded_tile)
+    def _can_pon(self, player: int) -> bool:
+        if self._last_discarded_tile is None or self._last_discarded_player is None:
+            return False
+        if player == self._last_discarded_player:
+            return False
+        hand = self._hands[player]
+        return hand.can_pon(self._last_discarded_tile)
 
-        if action == GameAction.CHI:
-            if self._last_discarded_tile is None or self._last_discarded_player is None:
-                return False
-            if (player - self._last_discarded_player) % self._num_players != 1:
-                return False  # 只能吃上家
-            hand = self._hands[player]
-            sequences = hand.can_chi(self._last_discarded_tile, from_player=0)
-            return len(sequences) > 0
+    def _can_chi(self, player: int) -> bool:
+        if self._last_discarded_tile is None or self._last_discarded_player is None:
+            return False
+        if (player - self._last_discarded_player) % self._num_players != 1:
+            return False
+        hand = self._hands[player]
+        sequences = hand.can_chi(self._last_discarded_tile, from_player=0)
+        return len(sequences) > 0
 
-        if action == GameAction.DISCARD:
-            return player == self._current_player and tile is not None
+    def _can_riichi(self, player: int) -> bool:
+        hand = self._hands[player]
+        if not hand.is_concealed:
+            return False
+        if hand.is_riichi:
+            return False
+        return hand.is_tenpai()
 
-        if action == GameAction.RICHI:
-            hand = self._hands[player]
-            return hand.is_concealed and not hand.is_riichi and hand.is_tenpai()
+    def _can_kan(self, player: int) -> bool:
+        hand = self._hands[player]
 
-        if action == GameAction.KAN:
-            if tile is None:
-                return False
-            if (
-                self._last_discarded_tile is not None
-                and tile == self._last_discarded_tile
-                and player == self._last_discarded_player
-            ):
-                return False
-            hand = self._hands[player]
-            return len(hand.can_kan(tile)) > 0
+        # 他家捨牌可進行大明槓
+        if self._last_discarded_tile is not None and self._last_discarded_player is not None:
+            if self._last_discarded_player != player and hand.can_kan(self._last_discarded_tile):
+                return True
 
-        if action == GameAction.ANKAN:
-            hand = self._hands[player]
-            return len(hand.can_kan(None)) > 0
+        # 自家加槓（需為當前玩家）
+        if player == self._current_player:
+            # 加槓：現有碰升級
+            for meld in hand.can_kan(None):
+                if meld.meld_type == MeldType.KAN and meld.called_tile is not None:
+                    return True
 
         return False
+
+    def _can_ankan(self, player: int) -> bool:
+        hand = self._hands[player]
+        return bool(hand.can_kan(None))
 
     def execute_action(self, player: int, action: GameAction, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
         """
@@ -269,7 +302,8 @@ class RuleEngine:
         Returns:
             動作執行結果
         """
-        if not self.can_act(player, action, tile, **kwargs):
+        available_actions = self.get_available_actions(player)
+        if action not in available_actions:
             raise ValueError(f"玩家 {player} 不能執行動作 {action}")
 
         handler = self._action_handlers.get(action)
@@ -291,7 +325,7 @@ class RuleEngine:
                 result.is_last_tile = True
         else:
             self._phase = GamePhase.RYUUKYOKU
-            result.draw = True
+            result.ryuukyoku = RyuukyokuResult(ryuukyoku=True, ryuukyoku_type=RyuukyokuType.EXHAUSTED)
         return result
 
     def _handle_discard(self, player: int, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
@@ -425,8 +459,7 @@ class RuleEngine:
             return True
 
         self._phase = GamePhase.RYUUKYOKU
-        result.draw = True
-        result.draw_type = RyuukyokuType.EXHAUSTED
+        result.ryuukyoku = RyuukyokuResult(ryuukyoku=True, ryuukyoku_type=RyuukyokuType.EXHAUSTED)
         return False
 
     def _apply_discard_effects(self, player: int, tile: Tile, result: ActionResult) -> None:

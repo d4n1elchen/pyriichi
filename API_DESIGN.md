@@ -791,19 +791,15 @@ class RuleEngine:
         """獲取當前遊戲階段"""
         pass
 
-    def can_act(self, player: int, action: GameAction,
-                tile: Optional[Tile] = None, **kwargs) -> bool:
+    def get_available_actions(self, player: int) -> List[GameAction]:
         """
-        檢查玩家是否可以執行某個動作
+        取得玩家目前可執行的動作列表
 
         Args:
             player: 玩家位置
-            action: 動作類型
-            tile: 相關的牌
-            **kwargs: 其他參數
 
         Returns:
-            是否可以執行
+            可執行的動作列表
         """
         pass
 

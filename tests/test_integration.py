@@ -153,7 +153,7 @@ class TestCompleteGameFlow:
                 current_player = engine.get_current_player()
                 hand = engine.get_hand(current_player)
 
-            if engine.can_act(current_player, GameAction.DRAW):
+            if GameAction.DRAW in engine.get_available_actions(current_player):
                 result = engine.execute_action(current_player, GameAction.DRAW)
                 if result.drawn_tile is not None:
                     hand = engine.get_hand(current_player)
@@ -182,7 +182,7 @@ class TestCompleteGameFlow:
             engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
             current_player = engine.get_current_player()
 
-        if engine.can_act(current_player, GameAction.DRAW):
+        if GameAction.DRAW in engine.get_available_actions(current_player):
             engine.execute_action(current_player, GameAction.DRAW)
         hand = engine.get_hand(current_player)
 
@@ -216,9 +216,9 @@ class TestSpecialRulesFlow:
         # 檢查是否可以立直（需要門清且聽牌）
         if hand.is_concealed:
             # 嘗試立直
-            result = engine.can_act(current_player, GameAction.RICHI)
+            result = engine.get_available_actions(current_player)
             # 如果聽牌，應該可以立直
-            if result:
+            if GameAction.RICHI in result:
                 engine.execute_action(current_player, GameAction.RICHI)
                 # 驗證立直狀態（通過檢查 _riichi_turns 字典）
                 assert current_player in engine._riichi_turns
@@ -235,9 +235,8 @@ class TestSpecialRulesFlow:
 
         # 檢查是否可以暗槓（需要手牌中有4張相同的牌）
         # 這裡只是測試流程結構
-        result = engine.can_act(current_player, GameAction.ANKAN)
+        engine.get_available_actions(current_player)
         # 結果取決於手牌，但流程應該正常執行
-        assert isinstance(result, bool)
 
 
 class TestDrawScenarios:
