@@ -323,14 +323,12 @@ class TestRuleEngine:
     def test_can_act_default_false(self):
         """測試 can_act 默認返回 False"""
         self._init_game()
-        # 測試一個不匹配任何已知動作的情況
-        # 由於 GameAction 是枚舉，我們測試其他不會匹配的情況
-        # 實際上是當所有條件都不匹配時的默認返回
         current_player = self.engine.get_current_player()
 
         # 在非 PLAYING 階段，can_act 應該返回 False
         self.engine._phase = GamePhase.INIT
-        assert not self.engine.can_act(current_player, GameAction.DRAW)
+        for action in GameAction:
+            assert not self.engine.can_act(current_player, action)
 
     def test_execute_action_discard_tile_none(self):
         """測試打牌時 tile 為 None"""

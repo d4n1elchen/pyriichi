@@ -25,10 +25,8 @@ class GameAction(TranslatableEnum):
     KAN = ("kan", "明槓", "カン", "Kan")
     ANKAN = ("ankan", "暗槓", "暗槓", "Ankan")
     RICHI = ("riichi", "立直", "リーチ", "Riichi")
-    WIN = ("win", "和牌", "和了", "Win")
     TSUMO = ("tsumo", "自摸", "ツモ和", "Tsumo")
     RON = ("ron", "榮和", "ロン", "Ron")
-    PASS = ("pass", "過", "パス", "Pass")
 
 
 class GamePhase(TranslatableEnum):
