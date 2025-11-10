@@ -653,8 +653,7 @@ class MahjongDemoUI:
         if win_result.yaku:
             self.log("役種:")
             for yaku in win_result.yaku:
-                name = getattr(yaku, "name_cn", None) or getattr(yaku, "name", "")
-                self.log(f"  - {name} ({yaku.han} 翻)")
+                self.log(f"  - {yaku.yaku.zh} ({yaku.han} 翻)")
 
         score = win_result.score_result
         if score:
