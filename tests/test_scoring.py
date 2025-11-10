@@ -65,7 +65,7 @@ class TestScoreCalculator:
 
         if combinations:
             yaku_results = self.yaku_checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
             )
             fu = self.calculator.calculate_fu(
                 hand, winning_tile, list(combinations[0]), yaku_results, self.game_state, False
@@ -100,7 +100,7 @@ class TestScoreCalculator:
 
         if combinations:
             yaku_results = self.yaku_checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
             )
             score_result = self.calculator.calculate(
                 hand, winning_tile, list(combinations[0]), yaku_results, 0, self.game_state, False
@@ -147,7 +147,7 @@ class TestScoreCalculator:
 
         if combinations:
             yaku_results = self.yaku_checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
             )
             score_result = self.calculator.calculate(
                 hand, winning_tile, list(combinations[0]), yaku_results, 0, self.game_state, False
@@ -699,7 +699,7 @@ class TestScoreCalculator:
         if combinations:
             # 檢查是否有平和
             yaku_results = self.yaku_checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=True, turns_after_riichi=-1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=True, is_ippatsu=None
             )
             is_pinfu = any(r.yaku == Yaku.PINFU for r in yaku_results)
 
@@ -722,7 +722,7 @@ class TestScoreCalculator:
         if combinations:
             # 檢查是否有平和
             yaku_results = self.yaku_checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
             )
             is_pinfu = any(r.yaku == Yaku.PINFU for r in yaku_results)
 

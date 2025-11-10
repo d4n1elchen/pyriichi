@@ -102,8 +102,8 @@
 
 #### `YakuChecker`
 役種判定器
-- `check_all(hand, winning_tile, winning_combination, game_state, is_tsumo=False, turns_after_riichi=-1, is_first_turn=False, is_last_tile=False, player_position=0, is_rinshan=False)`: 檢查所有役種
-- `check_riichi(hand, game_state)`: 檢查立直
+- `check_all(hand, winning_tile, winning_combination, game_state, is_tsumo=False, is_ippatsu=None, is_first_turn=False, is_last_tile=False, player_position=0, is_rinshan=False)`: 檢查所有役種
+- `check_riichi(hand, game_state, is_ippatsu=None)`: 檢查立直與一發
 - `check_tanyao(hand, winning_combination)`: 檢查斷么九
 - `check_pinfu(hand, winning_combination)`: 檢查平和
 - 其他役種檢查方法...

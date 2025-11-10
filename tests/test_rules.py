@@ -4,7 +4,7 @@ RuleEngine 的單元測試
 
 import pytest
 from pyriichi.hand import Hand, Meld, MeldType
-from pyriichi.rules import RuleEngine, GameAction, GamePhase, RyuukyokuType, RyuukyokuResult
+from pyriichi.rules import ActionResult, RuleEngine, GameAction, GamePhase, RyuukyokuType, RyuukyokuResult
 from pyriichi.tiles import Tile, Suit, TileSet
 from pyriichi.utils import parse_tiles
 
@@ -413,9 +413,9 @@ class TestRuleEngine:
         result = self.engine.execute_action(current_player, GameAction.RICHI)
         assert result.riichi is True
         assert self.engine.get_hand(current_player).is_riichi
-        # 檢查立直回合數已記錄
-        assert current_player in self.engine._riichi_turns
-        assert self.engine._riichi_turns[current_player] == 0
+        # 檢查一發狀態已記錄
+        assert current_player in self.engine._riichi_ippatsu
+        assert self.engine._riichi_ippatsu[current_player] is True
 
     def test_cannot_action_riichi_not_tenpai(self):
         """測試未聽牌無法立直的情況"""
@@ -586,7 +586,7 @@ class TestRuleEngine:
         self.engine.end_round(winner)
 
         # 檢查遊戲狀態是否更新
-        assert self.engine._phase in [GamePhase.PLAYING, GamePhase.ENDED]
+        assert self.engine._phase == GamePhase.ENDED
 
     def test_end_round_draw(self):
         """測試結束一局（流局）"""
@@ -595,16 +595,16 @@ class TestRuleEngine:
         self.engine.end_round(None)
 
         # 檢查遊戲狀態是否更新
-        assert self.engine._phase in [GamePhase.PLAYING, GamePhase.ENDED]
+        assert self.engine._phase == GamePhase.ENDED
 
     def test_get_dora_tiles(self):
         """測試獲取表寶牌"""
         self._init_game()
-        # 測試有牌組的情況（667-675行）
+        # 測試有牌組的情況
         dora_tiles = self.engine.get_dora_tiles()
         assert dora_tiles is not None
 
-        # 測試沒有牌組的情況（667行）
+        # 測試沒有牌組的情況
         self.engine._tile_set = None
         dora_tiles = self.engine.get_dora_tiles()
         assert dora_tiles == []
@@ -612,11 +612,11 @@ class TestRuleEngine:
     def test_get_ura_dora_tiles(self):
         """測試獲取裡寶牌"""
         self._init_game()
-        # 測試有牌組的情況（684-692行）
+        # 測試有牌組的情況
         ura_dora_tiles = self.engine.get_ura_dora_tiles()
         assert ura_dora_tiles is not None
 
-        # 測試沒有牌組的情況（684行）
+        # 測試沒有牌組的情況
         self.engine._tile_set = None
         ura_dora_tiles = self.engine.get_ura_dora_tiles()
         assert ura_dora_tiles == []
@@ -630,55 +630,32 @@ class TestRuleEngine:
         self.engine._last_discarded_tile = winning_tile
         self.engine._last_discarded_player = 0
 
-        # 設置三個玩家都可以和牌（736行）
-        # 手牌：123m 456m 789m 123p 4p
-        test_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
-        for i in range(1, 4):
-            test_hand = Hand(test_tiles)
-            self.engine._hands[i] = test_hand
+        # 設置三個玩家都可以和牌
+        # 123m 456m 789m 123p 4p (聽 4p)
+        self.engine._hands[0] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
+        self.engine._hands[1] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
+        self.engine._hands[2] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
 
-        # 檢查三家和了（402行）
+        # 檢查三家和了
         result = self.engine._check_sancha_ron()
-        # 如果三個玩家都可以和牌，應該返回 True
         assert result is True
 
-    def test_execute_action_riichi_turns_update(self):
-        """測試立直回合數更新"""
+    def test_execute_action_riichi_ippatsu_update(self):
+        """測試立直後一發狀態更新"""
         self._init_game()
         # 玩家0立直
-        hand0 = self.engine.get_hand(0)
-        if self._has_action(0, GameAction.RICHI):
-            self.engine.execute_action(0, GameAction.RICHI)
-            assert 0 in self.engine._riichi_turns
+        # 123m 456m 789m 123p 4p (聽 4p)
+        self.engine._hands[0] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
+        assert self._has_action(0, GameAction.RICHI)
+        self.engine.execute_action(0, GameAction.RICHI)
+        assert 0 in self.engine._riichi_ippatsu
+        assert self.engine._riichi_ippatsu[0] is True
 
-        # 玩家0打牌，自己的回合數增加
-        hand0 = self.engine.get_hand(0)
-        if hand0.total_tile_count() >= 14 and hand0.tiles:
-            self.engine.execute_action(0, GameAction.DISCARD, tile=hand0.tiles[0])
-
-        if self._has_action(self.engine.get_current_player(), GameAction.DRAW):
-            current = self.engine.get_current_player()
-            self.engine.execute_action(current, GameAction.DRAW)
-            hand0 = self.engine.get_hand(current)
-            if hand0.tiles:
-                tile = hand0.tiles[0]
-                if self._has_action(current, GameAction.DISCARD):
-                    self.engine.execute_action(current, GameAction.DISCARD, tile=tile)
-                    if 0 in self.engine._riichi_turns:
-                        assert self.engine._riichi_turns[0] > 0
-
-        # 玩家1打牌，玩家0的回合數增加
-        if self._has_action(1, GameAction.DRAW):
-            self.engine.execute_action(1, GameAction.DRAW)
-            hand1 = self.engine.get_hand(1)
-            if hand1.tiles:
-                tile = hand1.tiles[0]
-                if self._has_action(1, GameAction.DISCARD):
-                    initial_turns = self.engine._riichi_turns.get(0, 0)
-                    self.engine.execute_action(1, GameAction.DISCARD, tile=tile)
-                    # 其他玩家打牌，立直玩家的回合數應該增加
-                    if 0 in self.engine._riichi_turns:
-                        assert self.engine._riichi_turns[0] > initial_turns
+        # 任一玩家捨牌後，一發狀態應失效
+        discard_tile = self.engine.get_hand(0).tiles[0]
+        self.engine._apply_discard_effects(0, discard_tile, ActionResult())
+        assert 0 in self.engine._riichi_ippatsu
+        assert self.engine._riichi_ippatsu[0] is False
 
     def test_execute_action_kan_chankan_complete(self):
         """測試明槓搶槓完整場景"""

@@ -220,8 +220,8 @@ class TestSpecialRulesFlow:
             # 如果聽牌，應該可以立直
             if GameAction.RICHI in result:
                 engine.execute_action(current_player, GameAction.RICHI)
-                # 驗證立直狀態（通過檢查 _riichi_turns 字典）
-                assert current_player in engine._riichi_turns
+                # 驗證立直狀態（通過檢查一發旗標字典）
+                assert current_player in engine._riichi_ippatsu
 
     def test_kan_flow(self):
         """測試槓的完整流程"""

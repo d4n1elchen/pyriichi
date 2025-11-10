@@ -239,9 +239,9 @@ if winning_combinations:
         print(f"{result.yaku.zh} ({result.yaku.ja}): {result.han} 翻")
 
 # 檢查特定役種
-riichi_result = yaku_checker.check_riichi(hand, game_state)
-if riichi_result:
-    print(f"立直: {riichi_result.han} 翻")
+riichi_results = yaku_checker.check_riichi(hand, game_state, is_ippatsu=True)
+for result in riichi_results:
+    print(f"{result.yaku.zh}: {result.han} 翻")
 ```
 
 ### 得分計算

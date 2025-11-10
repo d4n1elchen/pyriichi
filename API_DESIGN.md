@@ -433,7 +433,7 @@ class YakuChecker:
                   winning_combination: List,
                   game_state: 'GameState',
                   is_tsumo: bool = False,
-                  turns_after_riichi: int = -1,
+                  is_ippatsu: Optional[bool] = None,
                   is_first_turn: bool = False,
                   is_last_tile: bool = False,
                   player_position: int = 0,
@@ -447,7 +447,7 @@ class YakuChecker:
             winning_combination: 和牌組合（標準型）或 None（特殊型如七對子）
             game_state: 遊戲狀態
             is_tsumo: 是否自摸
-            turns_after_riichi: 立直後經過的回合數（-1 表示未立直）
+            is_ippatsu: 是否為一發（None 表示未追蹤）
             is_first_turn: 是否為第一巡
             is_last_tile: 是否為最後一張牌（海底撈月/河底撈魚）
             player_position: 玩家位置（用於判定自風）
@@ -458,12 +458,10 @@ class YakuChecker:
         """
         pass
 
-    def check_riichi(self, hand: Hand, game_state: 'GameState') -> Optional[YakuResult]:
-        """檢查立直"""
-        pass
-
-    def check_ippatsu(self, hand: Hand, game_state: 'GameState') -> Optional[YakuResult]:
-        """檢查一發"""
+    def check_riichi(
+        self, hand: Hand, game_state: 'GameState', is_ippatsu: Optional[bool] = None
+    ) -> List[YakuResult]:
+        """檢查立直與一發"""
         pass
 
     def check_menzen_tsumo(self, hand: Hand, game_state: 'GameState') -> Optional[YakuResult]:

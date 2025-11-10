@@ -163,7 +163,7 @@ class YakuChecker:
         winning_combination: List[Combination],
         game_state: GameState,
         is_tsumo: bool = False,
-        turns_after_riichi: int = -1,
+        is_ippatsu: Optional[bool] = None,
         is_first_turn: bool = False,
         is_last_tile: bool = False,
         player_position: int = 0,
@@ -182,7 +182,7 @@ class YakuChecker:
             所有符合的役種列表
         """
         # 檢查特殊和牌型（七對子、國士無雙）
-        all_tiles = hand.tiles + [winning_tile] if len(hand.tiles) == 13 else hand.tiles
+        all_tiles = hand.tiles if is_tsumo else hand.tiles + [winning_tile]
 
         # 天和、地和、人和判定（優先檢查，因為是役滿）
         if result := self.check_tenhou(hand, is_tsumo, is_first_turn, player_position, game_state):
@@ -199,8 +199,7 @@ class YakuChecker:
             if self.check_kokushi_musou_juusanmen(hand, all_tiles):
                 results[0] = YakuResult(Yaku.KOKUSHI_MUSOU_JUUSANMEN, 26, True)
             # 國士無雙可以與立直複合（但天和、地和、人和不能與立直複合）
-            if hand.is_riichi:
-                results.insert(0, YakuResult(Yaku.RIICHI, 1, False))
+            results.extend(self.check_riichi(hand, game_state, is_ippatsu))
             return results
 
         # 七對子判定
@@ -210,13 +209,38 @@ class YakuChecker:
                 results.insert(0, YakuResult(Yaku.RIICHI, 1, False))
             return results
 
+        # 其他役滿檢查（優先檢查，因為役滿會覆蓋其他役種）
+        # 注意：某些役滿可以同時存在（如四暗刻+字一色）
+        yakuman_results = []
+        if result := self.check_daisangen(hand, winning_combination):
+            yakuman_results.append(result)
+        if result := self.check_suukantsu(hand, winning_combination):
+            yakuman_results.append(result)
+        if result := self.check_suuankou(hand, winning_combination, winning_tile, game_state):
+            yakuman_results.append(result)
+        if result := self.check_shousuushi(hand, winning_combination):
+            yakuman_results.append(result)
+        if result := self.check_daisuushi(hand, winning_combination):
+            yakuman_results.append(result)
+        if result := self.check_chinroutou(hand, winning_combination):
+            yakuman_results.append(result)
+        if result := self.check_tsuuiisou(hand, winning_combination):
+            yakuman_results.append(result)
+        if result := self.check_ryuuiisou(hand, winning_combination):
+            yakuman_results.append(result)
+        if result := self.check_chuuren_poutou(hand, all_tiles, game_state):
+            yakuman_results.append(result)
+
+        # 如果有役滿，只返回役滿（役滿不與其他役種複合，但可以多個役滿複合）
+        if yakuman_results:
+            # 役滿可以與立直複合
+            yakuman_results.extend(self.check_riichi(hand, game_state, is_ippatsu))
+            return yakuman_results
+
         results = []
 
         # 基本役
-        if result := self.check_riichi(hand, game_state):
-            results.append(result)
-        if result := self.check_ippatsu(hand, game_state, turns_after_riichi):
-            results.append(result)
+        results.extend(self.check_riichi(hand, game_state, is_ippatsu))
         if result := self.check_menzen_tsumo(hand, game_state, is_tsumo):
             results.append(result)
         if result := self.check_haitei_raoyue(hand, is_tsumo, is_last_tile):
@@ -263,35 +287,6 @@ class YakuChecker:
             results.append(result)
         if result := self.check_ryanpeikou(hand, winning_combination):
             results.append(result)
-
-        # 役滿檢查（優先檢查，因為役滿會覆蓋其他役種）
-        # 注意：某些役滿可以同時存在（如四暗刻+字一色）
-        yakuman_results = []
-        if result := self.check_daisangen(hand, winning_combination):
-            yakuman_results.append(result)
-        if result := self.check_suukantsu(hand, winning_combination):
-            yakuman_results.append(result)
-        if result := self.check_suuankou(hand, winning_combination, winning_tile, game_state):
-            yakuman_results.append(result)
-        if result := self.check_shousuushi(hand, winning_combination):
-            yakuman_results.append(result)
-        if result := self.check_daisuushi(hand, winning_combination):
-            yakuman_results.append(result)
-        if result := self.check_chinroutou(hand, winning_combination):
-            yakuman_results.append(result)
-        if result := self.check_tsuuiisou(hand, winning_combination):
-            yakuman_results.append(result)
-        if result := self.check_ryuuiisou(hand, winning_combination):
-            yakuman_results.append(result)
-        if result := self.check_chuuren_poutou(hand, all_tiles, game_state):
-            yakuman_results.append(result)
-
-        # 如果有役滿，只返回役滿（役滿不與其他役種複合，但可以多個役滿複合）
-        if yakuman_results:
-            # 役滿可以與立直複合
-            if hand.is_riichi:
-                yakuman_results.insert(0, YakuResult(Yaku.RIICHI, 1, False))
-            return yakuman_results
 
         # 役種衝突檢測和過濾
         results = self._filter_conflicting_yaku(results, winning_combination, game_state)
@@ -385,25 +380,23 @@ class YakuChecker:
 
         return filtered
 
-    def check_riichi(self, hand: Hand, game_state: GameState) -> Optional[YakuResult]:
-        """檢查立直"""
-        return YakuResult(Yaku.RIICHI, 1, False) if hand.is_riichi else None
-
-    def check_ippatsu(self, hand: Hand, game_state: GameState, turns_after_riichi: int = -1) -> Optional[YakuResult]:
+    def check_riichi(self, hand: Hand, game_state: GameState, is_ippatsu: Optional[bool] = None) -> List[YakuResult]:
         """
-        檢查一發
+        檢查立直與一發
 
         一發：立直後一巡內和牌（立直後的第一個自己的回合）
         """
+        results: List[YakuResult] = []
+
         if not hand.is_riichi:
-            return None
+            return results
 
-        # 如果 turns_after_riichi 為 -1，表示未追蹤，無法判定
-        if turns_after_riichi < 0:
-            return None
+        results.append(YakuResult(Yaku.RIICHI, 1, False))
 
-        # 一發：立直後一巡內和牌（turns_after_riichi == 0）
-        return YakuResult(Yaku.IPPATSU, 1, False) if turns_after_riichi == 0 else None
+        if is_ippatsu:
+            results.append(YakuResult(Yaku.IPPATSU, 1, False))
+
+        return results
 
     def check_menzen_tsumo(self, hand: Hand, game_state: GameState, is_tsumo: bool = False) -> Optional[YakuResult]:
         """

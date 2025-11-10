@@ -119,7 +119,7 @@ class RuleEngine:
         self._last_drawn_tile: Optional[Tuple[int, Tile]] = None
 
         # 狀態追蹤
-        self._riichi_turns: Dict[int, int] = {}  # {player_id: turns_after_riichi}
+        self._riichi_ippatsu: Dict[int, bool] = {}  # {player_id: is_ippatsu}
         self._is_first_round: bool = True  # 是否為第一巡
         self._discard_history: List[Tuple[int, Tile]] = []  # [(player, tile), ...] 捨牌歷史
         self._kan_count: int = 0  # 槓的總次數
@@ -153,7 +153,7 @@ class RuleEngine:
         self._last_discarded_player = None
 
         # 重置狀態追蹤
-        self._riichi_turns = {}
+        self._riichi_ippatsu = {}
         self._is_first_round = True
         self._discard_history = []
         self._kan_count = 0
@@ -408,7 +408,7 @@ class RuleEngine:
         self._hands[player].set_riichi(True)
         self._game_state.add_riichi_stick()
         self._game_state.update_score(player, -1000)
-        self._riichi_turns[player] = 0
+        self._riichi_ippatsu[player] = True
         result.riichi = True
         return result
 
@@ -492,11 +492,9 @@ class RuleEngine:
         if len(self._discard_history) > 4:
             self._discard_history.pop(0)
 
-        for p in list(self._riichi_turns.keys()):
-            if p != player:
-                self._riichi_turns[p] += 1
-        if player in self._riichi_turns:
-            self._riichi_turns[player] += 1
+        if self._riichi_ippatsu:
+            for p in list(self._riichi_ippatsu.keys()):
+                self._riichi_ippatsu[p] = False
 
         if self._tile_set and self._tile_set.is_exhausted():
             result.is_last_tile = True
@@ -550,8 +548,8 @@ class RuleEngine:
         print("check yaku results")
 
         # 檢查役種
-        # 獲取立直後的回合數
-        turns_after_riichi = self._riichi_turns.get(player, -1)
+        # 判定是否符合一發
+        is_ippatsu = self._riichi_ippatsu.get(player)
         # 檢查是否為第一巡
         is_first_turn = self._is_first_turn_after_deal
         # 檢查是否為最後一張牌（需要檢查牌山狀態）
@@ -562,7 +560,7 @@ class RuleEngine:
             winning_combination,
             self._game_state,
             is_tsumo,
-            turns_after_riichi,
+            is_ippatsu,
             is_first_turn,
             is_last_tile,
             player,

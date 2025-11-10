@@ -40,10 +40,11 @@ class TestYakuChecker:
         hand = Hand(tiles)
         hand.set_riichi(True)
 
-        result = self.checker.check_riichi(hand, self.game_state)
-        assert result is not None
-        assert result.yaku == Yaku.RIICHI
-        assert result.han == 1
+        results = self.checker.check_riichi(hand, self.game_state)
+        assert results
+        riichi = [r for r in results if r.yaku == Yaku.RIICHI]
+        assert len(riichi) == 1
+        assert riichi[0].han == 1
 
     def test_tanyao(self):
         """測試斷么九"""
@@ -198,12 +199,10 @@ class TestYakuChecker:
                 list(combinations[0]) if combinations else [],
                 self.game_state,
                 is_tsumo=False,
-                turns_after_riichi=-1,
+                is_ippatsu=None,
             )
         else:
-            results = self.checker.check_all(
-                hand, winning_tile, [], self.game_state, is_tsumo=False, turns_after_riichi=-1
-            )
+            results = self.checker.check_all(hand, winning_tile, [], self.game_state, is_tsumo=False, is_ippatsu=None)
         # 檢查是否有七對子
         has_chiitoitsu = any(r.yaku == Yaku.CHIITOITSU for r in results)
         assert has_chiitoitsu
@@ -317,7 +316,7 @@ class TestYakuChecker:
 
         if combinations:
             results = self.checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
             )
             yakuman = [r for r in results if r.is_yakuman]
             assert len(yakuman) > 0
@@ -339,7 +338,7 @@ class TestYakuChecker:
             triplets = sum(1 for m in list(combinations[0]) if m.type in {CombinationType.TRIPLET, CombinationType.KAN})
             if triplets == 4:
                 results = self.checker.check_all(
-                    hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+                    hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
                 )
                 yakuman = [r for r in results if r.is_yakuman]
                 # 標準競技規則：四暗刻單騎為雙倍役滿（26翻）
@@ -366,7 +365,7 @@ class TestYakuChecker:
 
         if combinations:
             results = self.checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
             )
             yakuman = [r for r in results if r.is_yakuman]
             # 標準競技規則：四暗刻單騎為雙倍役滿（26翻）
@@ -395,7 +394,7 @@ class TestYakuChecker:
                 list(combinations[0]) if combinations else [],
                 self.game_state,
                 is_tsumo=False,
-                turns_after_riichi=-1,
+                is_ippatsu=None,
             )
             yakuman = [r for r in results if r.is_yakuman]
             assert len(yakuman) > 0
@@ -414,7 +413,7 @@ class TestYakuChecker:
 
         if combinations:
             results = self.checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
             )
             yakuman = [r for r in results if r.is_yakuman]
             assert len(yakuman) > 0
@@ -445,7 +444,7 @@ class TestYakuChecker:
         if combinations:
             # 測試自摸情況
             results = self.checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=True, turns_after_riichi=-1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=True, is_ippatsu=None
             )
             menzen_tsumo = [r for r in results if r.yaku == Yaku.MENZEN_TSUMO]
             assert len(menzen_tsumo) > 0
@@ -453,7 +452,7 @@ class TestYakuChecker:
 
             # 測試榮和情況（不應該有門清自摸）
             results = self.checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
             )
             menzen_tsumo = [r for r in results if r.yaku == Yaku.MENZEN_TSUMO]
             assert len(menzen_tsumo) == 0
@@ -469,17 +468,17 @@ class TestYakuChecker:
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
-            # 測試立直後一巡內和牌（turns_after_riichi == 0）
+            # 測試立直後一巡內和牌（is_ippatsu 為 True）
             results = self.checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=0
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=True
             )
             ippatsu = [r for r in results if r.yaku == Yaku.IPPATSU]
             assert len(ippatsu) > 0
             assert ippatsu[0].han == 1
 
-            # 測試立直後超過一巡（turns_after_riichi > 0）
+            # 測試立直後超過一巡（is_ippatsu 為 False）
             results = self.checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=False
             )
             ippatsu = [r for r in results if r.yaku == Yaku.IPPATSU]
             assert len(ippatsu) == 0
@@ -495,7 +494,7 @@ class TestYakuChecker:
 
         if combinations:
             results = self.checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
             )
             yakuman = [r for r in results if r.is_yakuman]
             assert len(yakuman) > 0
@@ -560,7 +559,7 @@ class TestYakuChecker:
 
         if combinations:
             results = self.checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
             )
             assert len(results) > 0
             # 檢查是否有立直
@@ -580,7 +579,7 @@ class TestYakuChecker:
 
         if combinations:
             results = self.checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
             )
             # 如果有役牌，不應該有平和
             has_pinfu = any(r.yaku == Yaku.PINFU for r in results)
@@ -600,7 +599,7 @@ class TestYakuChecker:
 
         if combinations:
             results = self.checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
             )
             # 一気通貫包含1和9，所以不能有斷么九
             has_tanyao = any(r.yaku == Yaku.TANYAO for r in results)
@@ -619,7 +618,7 @@ class TestYakuChecker:
 
         if combinations:
             results = self.checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
             )
             # 對對和全部是刻子，不能有三色同順
             has_toitoi = any(r.yaku == Yaku.TOITOI for r in results)
@@ -637,7 +636,7 @@ class TestYakuChecker:
 
         if combinations:
             results = self.checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
             )
             # 如果有二盃口，不應該有一盃口
             has_iipeikou = any(r.yaku == Yaku.IIPEIKOU for r in results)
@@ -669,7 +668,7 @@ class TestYakuChecker:
 
         if combinations:
             results = self.checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
             )
             yakuman = [r for r in results if r.is_yakuman]
             assert len(yakuman) > 0
@@ -695,7 +694,7 @@ class TestYakuChecker:
 
         if combinations:
             results = self.checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
             )
             yakuman = [r for r in results if r.is_yakuman]
             assert len(yakuman) > 0
@@ -721,7 +720,7 @@ class TestYakuChecker:
 
         if combinations:
             results = self.checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
             )
             yakuman = [r for r in results if r.is_yakuman]
             assert len(yakuman) > 0
@@ -906,7 +905,7 @@ class TestYakuChecker:
             [],
             self.game_state,
             is_tsumo=False,
-            turns_after_riichi=-1,
+            is_ippatsu=None,
         )
         # 檢查是否有國士無雙十三面
         kokushi = [r for r in results if r.yaku == Yaku.KOKUSHI_MUSOU or r.yaku == Yaku.KOKUSHI_MUSOU_JUUSANMEN]
