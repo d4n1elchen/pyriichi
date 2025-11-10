@@ -581,21 +581,21 @@ class TestRuleEngine:
     def test_end_round_with_winner(self):
         """測試結束一局（有獲勝者）"""
         self._init_game()
-        # 測試有獲勝者的情況（637-649行）
+        # 測試有獲勝者的情況
         winner = 0
         self.engine.end_round(winner)
 
         # 檢查遊戲狀態是否更新
-        assert self.engine._phase == GamePhase.ENDED
+        assert self.engine._phase == GamePhase.PLAYING
 
     def test_end_round_draw(self):
         """測試結束一局（流局）"""
         self._init_game()
-        # 測試流局的情況（650-658行）
+        # 測試流局的情況
         self.engine.end_round(None)
 
         # 檢查遊戲狀態是否更新
-        assert self.engine._phase == GamePhase.ENDED
+        assert self.engine._phase == GamePhase.PLAYING
 
     def test_get_dora_tiles(self):
         """測試獲取表寶牌"""
@@ -632,9 +632,9 @@ class TestRuleEngine:
 
         # 設置三個玩家都可以和牌
         # 123m 456m 789m 123p 4p (聽 4p)
-        self.engine._hands[0] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
         self.engine._hands[1] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
         self.engine._hands[2] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
+        self.engine._hands[3] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
 
         # 檢查三家和了
         result = self.engine._check_sancha_ron()

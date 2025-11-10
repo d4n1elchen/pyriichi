@@ -515,9 +515,8 @@ class TestYakuChecker:
         tiles = parse_tiles("1m1m1m2m3m4m5m6m7m8m9m9m9m")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 1)
-        all_tiles = hand.tiles + [winning_tile]
 
-        result = self.checker.check_chuuren_poutou(hand, all_tiles)
+        result = self.checker.check_chuuren_poutou(hand, winning_tile)
         assert result is not None
         assert result.yaku in {Yaku.CHUUREN_POUTOU, Yaku.CHUUREN_POUTOU_PURE}
         assert result.han >= 13
@@ -891,29 +890,14 @@ class TestYakuChecker:
         # 手牌：1m 9m 1p 9p 1s 9s 123z 456z 7z
         tiles = parse_tiles("1m9m1p9p1s9s1z2z3z4z5z6z7z")
         hand = Hand(tiles)
-        all_tiles = hand.tiles + [Tile(Suit.JIHAI, 7)]  # 和牌牌
+        winning_tile = Tile(Suit.JIHAI, 7)
 
         # 檢查是否為十三面聽牌
-        is_juusanmen = self.checker.check_kokushi_musou_juusanmen(hand, all_tiles)
-        # 如果重複的牌是聽牌，則為十三面
-        assert isinstance(is_juusanmen, bool)
-
-        # 測試完整的國士無雙十三面判定
-        results = self.checker.check_all(
-            hand,
-            Tile(Suit.JIHAI, 7),
-            [],
-            self.game_state,
-            is_tsumo=False,
-            is_ippatsu=None,
-        )
-        # 檢查是否有國士無雙十三面
-        kokushi = [r for r in results if r.yaku == Yaku.KOKUSHI_MUSOU or r.yaku == Yaku.KOKUSHI_MUSOU_JUUSANMEN]
-        if kokushi:
-            # 檢查是否為十三面
-            juusanmen = [r for r in results if r.yaku == Yaku.KOKUSHI_MUSOU_JUUSANMEN]
-            if juusanmen:
-                assert juusanmen[0].han == 26  # 雙倍役滿
+        result = self.checker.check_kokushi_musou(hand, winning_tile)
+        assert result is not None
+        assert result.yaku == Yaku.KOKUSHI_MUSOU_JUUSANMEN
+        assert result.han == 26
+        assert result.is_yakuman
 
     def test_chuuren_poutou_junsei_direct(self):
         """測試純正九蓮寶燈直接判定"""
@@ -926,8 +910,7 @@ class TestYakuChecker:
         # 測試和牌牌是1-9中的任意一張（九面聽）
         for winning_rank in range(1, 10):
             winning_tile = Tile(Suit.MANZU, winning_rank)
-            all_tiles = hand.tiles + [winning_tile]
-            result = self.checker.check_chuuren_poutou(hand, all_tiles, self.game_state)
+            result = self.checker.check_chuuren_poutou(hand, winning_tile, self.game_state)
             if result:
                 # 標準競技規則：如果是純正九蓮寶燈，應該是26翻（雙倍役滿）
                 if result.yaku == Yaku.CHUUREN_POUTOU_PURE:

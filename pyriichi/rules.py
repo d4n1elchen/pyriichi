@@ -529,12 +529,8 @@ class RuleEngine:
             if last_player == player and last_tile == winning_tile:
                 is_tsumo = True
 
-        print("check winning hand")
-
         if not hand.is_winning_hand(winning_tile, is_tsumo):
             return None
-
-        print("check winning combinations")
 
         # 獲取和牌組合
         combinations = hand.get_winning_combinations(winning_tile, is_tsumo)
@@ -544,8 +540,6 @@ class RuleEngine:
         # 使用第一個組合進行役種判定
         # TODO: 支援多個和牌組合
         winning_combination = combinations[0] if combinations else []
-
-        print("check yaku results")
 
         # 檢查役種
         # 判定是否符合一發

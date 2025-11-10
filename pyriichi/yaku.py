@@ -181,9 +181,6 @@ class YakuChecker:
         Returns:
             所有符合的役種列表
         """
-        # 檢查特殊和牌型（七對子、國士無雙）
-        all_tiles = hand.tiles if is_tsumo else hand.tiles + [winning_tile]
-
         # 天和、地和、人和判定（優先檢查，因為是役滿）
         if result := self.check_tenhou(hand, is_tsumo, is_first_turn, player_position, game_state):
             return [result]
@@ -193,17 +190,14 @@ class YakuChecker:
             return [result]
 
         # 國士無雙判定（優先檢查，因為是役滿）
-        if result := self.check_kokushi_musou(hand, all_tiles):
+        if result := self.check_kokushi_musou(hand, winning_tile):
             results = [result]
-            # 檢查是否為十三面聽牌
-            if self.check_kokushi_musou_juusanmen(hand, all_tiles):
-                results[0] = YakuResult(Yaku.KOKUSHI_MUSOU_JUUSANMEN, 26, True)
-            # 國士無雙可以與立直複合（但天和、地和、人和不能與立直複合）
+            # 國士無雙可以與立直複合
             results.extend(self.check_riichi(hand, game_state, is_ippatsu))
             return results
 
         # 七對子判定
-        if result := self.check_chiitoitsu(hand, all_tiles):
+        if result := self.check_chiitoitsu(hand, winning_tile):
             results = [result]
             if hand.is_riichi:
                 results.insert(0, YakuResult(Yaku.RIICHI, 1, False))
@@ -228,7 +222,7 @@ class YakuChecker:
             yakuman_results.append(result)
         if result := self.check_ryuuiisou(hand, winning_combination):
             yakuman_results.append(result)
-        if result := self.check_chuuren_poutou(hand, all_tiles, game_state):
+        if result := self.check_chuuren_poutou(hand, winning_tile, game_state):
             yakuman_results.append(result)
 
         # 如果有役滿，只返回役滿（役滿不與其他役種複合，但可以多個役滿複合）
@@ -720,21 +714,21 @@ class YakuChecker:
 
         return None
 
-    def check_chiitoitsu(self, hand: Hand, all_tiles: List[Tile]) -> Optional[YakuResult]:
+    def check_chiitoitsu(self, hand: Hand, winning_tile: Optional[Tile] = None) -> Optional[YakuResult]:
         """
         檢查七對子
 
         七對子：七組對子（特殊和牌型）
         注意：七對子不會有標準的和牌組合，需要特殊處理
         """
+        all_tiles = hand.tiles + [winning_tile] if winning_tile else hand.tiles
         if not hand.is_concealed or len(all_tiles) != 14:
             return None
 
-        counts: Dict[Tuple[Suit, int], int] = {}
+        counts: Dict[Tile, int] = {}
         for tile in all_tiles:
-            key = (tile.suit, tile.rank)
-            counts[key] = counts.get(key, 0) + 1
-            if counts[key] > 2:
+            counts[tile] = counts.get(tile, 0) + 1
+            if counts[tile] > 2:
                 return None
 
         pairs = [count for count in counts.values() if count == 2]
@@ -1028,7 +1022,7 @@ class YakuChecker:
 
         return None
 
-    def check_kokushi_musou(self, hand: Hand, all_tiles: List[Tile]) -> Optional[YakuResult]:
+    def check_kokushi_musou(self, hand: Hand, winning_tile: Optional[Tile] = None) -> Optional[YakuResult]:
         """
         檢查國士無雙
 
@@ -1038,52 +1032,46 @@ class YakuChecker:
         if not hand.is_concealed:
             return None
 
-        if len(all_tiles) != 14:
+        tiles = hand.tiles + [winning_tile] if winning_tile else hand.tiles
+        if len(tiles) != 14:
             return None
 
         # 需要的13種幺九牌
         required_tiles = [
-            (Suit.MANZU, 1),
-            (Suit.MANZU, 9),
-            (Suit.PINZU, 1),
-            (Suit.PINZU, 9),
-            (Suit.SOZU, 1),
-            (Suit.SOZU, 9),
-            (Suit.JIHAI, 1),
-            (Suit.JIHAI, 2),
-            (Suit.JIHAI, 3),
-            (Suit.JIHAI, 4),
-            (Suit.JIHAI, 5),
-            (Suit.JIHAI, 6),
-            (Suit.JIHAI, 7),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 9),
+            Tile(Suit.SOZU, 1),
+            Tile(Suit.SOZU, 9),
+            Tile(Suit.JIHAI, 1),
+            Tile(Suit.JIHAI, 2),
+            Tile(Suit.JIHAI, 3),
+            Tile(Suit.JIHAI, 4),
+            Tile(Suit.JIHAI, 5),
+            Tile(Suit.JIHAI, 6),
+            Tile(Suit.JIHAI, 7),
         ]
 
         # 統計每種牌
         counts = {}
-        for tile in all_tiles:
-            key = (tile.suit, tile.rank)
-            counts[key] = counts.get(key, 0) + 1
-
-        # 檢查是否包含所有需要的牌
-        has_all = True
-        for req in required_tiles:
-            if req not in counts or counts[req] == 0:
-                has_all = False
-                break
-
-        if not has_all:
-            return None
+        for tile in tiles:
+            counts[tile] = counts.get(tile, 0) + 1
 
         # 檢查是否只有一張重複
         pairs = 0
         for key, count in counts.items():
-            if key in required_tiles and count == 2:
-                pairs += 1
-            elif key not in required_tiles:
+            if key not in required_tiles:
                 return None  # 有非幺九牌
+            if count == 2:
+                if pairs != 0:
+                    return None  # 有兩張重複
+                pairs += 1
 
-        # 必須有一張重複（且只有一張重複）
-        return YakuResult(Yaku.KOKUSHI_MUSOU, 13, True) if pairs == 1 else None
+        if hand.tiles == required_tiles:
+            return YakuResult(Yaku.KOKUSHI_MUSOU_JUUSANMEN, 26, True)
+        else:
+            return YakuResult(Yaku.KOKUSHI_MUSOU, 13, True)
 
     def check_shousuushi(self, hand: Hand, winning_combination: List) -> Optional[YakuResult]:
         """
@@ -1207,7 +1195,7 @@ class YakuChecker:
         return YakuResult(Yaku.RYUIISOU, 13, True)
 
     def check_chuuren_poutou(
-        self, hand: Hand, all_tiles: List[Tile], game_state: Optional[GameState] = None
+        self, hand: Hand, winning_tile: Tile, game_state: Optional[GameState] = None
     ) -> Optional[YakuResult]:
         """
         檢查九蓮寶燈
@@ -1219,11 +1207,13 @@ class YakuChecker:
         if not hand.is_concealed:
             return None
 
+        all_tiles = hand.tiles + [winning_tile] if winning_tile else hand.tiles
+
         if len(all_tiles) != 14:
             return None
 
         # 檢查是否為同一種數牌花色
-        suits = set()
+        suits = set[Suit]()
         for tile in all_tiles:
             if tile.suit != Suit.JIHAI:  # 只檢查數牌
                 suits.add(tile.suit)
@@ -1234,32 +1224,17 @@ class YakuChecker:
         if len(suits) != 1:
             return None
 
-        suit = list(suits)[0]
+        suit = suits.pop()
 
         # 統計該花色的牌數
-        counts = {}
+        counts: Dict[int, int] = {}
         for tile in all_tiles:
             if tile.suit == suit:
                 counts[tile.rank] = counts.get(tile.rank, 0) + 1
 
-        # 檢查是否符合九蓮寶燈模式：1112345678999 + 任意一張
-        # 必須有：1（至少3張）、2（至少1張）、3（至少1張）、4（至少1張）、
-        #         5（至少1張）、6（至少1張）、7（至少1張）、8（至少1張）、9（至少3張）
-        required = {
-            1: 3,  # 至少3張
-            2: 1,
-            3: 1,
-            4: 1,
-            5: 1,
-            6: 1,
-            7: 1,
-            8: 1,
-            9: 3,  # 至少3張
-        }
-
-        # 檢查是否符合要求
-        for rank, min_count in required.items():
-            if rank not in counts or counts[rank] < min_count:
+        # 檢查 1 & 9 至少 3 張，其他至少 1 張
+        for rank, count in counts.items():
+            if (rank in {1, 9} and count < 3) or (rank not in {1, 9} and count < 1):
                 return None
 
         # 檢查總數是否為14張（1-9各至少要求的數量，加上額外的1張）
@@ -1267,19 +1242,23 @@ class YakuChecker:
         if total != 14:
             return None
 
-        # 檢查是否為純正九蓮寶燈（聽牌為九面聽）
-        # 純正九蓮寶燈：1112345678999 + 任意一張，且該張牌是聽牌
-        # 簡化處理：如果多出的那張牌是1-9中的任意一張且數量為2，則為純正
-        # TODO: 需要更精確的判定
-        for rank in range(1, 10):
-            if counts.get(rank, 0) == 4:
-                # 有4張相同的牌，可能是純正九蓮寶燈
-                # 根據規則配置決定是否為雙倍役滿
-                ruleset = game_state.ruleset if game_state else None
-                if ruleset and ruleset.chuuren_pure_double:
-                    return YakuResult(Yaku.CHUUREN_POUTOU_PURE, 26, True)
-                else:
-                    return YakuResult(Yaku.CHUUREN_POUTOU_PURE, 13, True)
+        # 檢查是否為純正九蓮寶燈
+        is_pure = True
+        hand_counts: Dict[int, int] = {}
+        for tile in hand.tiles:
+            hand_counts[tile.rank] = hand_counts.get(tile.rank, 0) + 1
+            if (tile.rank in {1, 9} and hand_counts[tile.rank] > 3) or (
+                tile.rank not in {1, 9} and hand_counts[tile.rank] > 1
+            ):
+                is_pure = False
+                break
+
+        if is_pure:
+            ruleset = game_state.ruleset if game_state else None
+            if ruleset and ruleset.chuuren_pure_double:
+                return YakuResult(Yaku.CHUUREN_POUTOU_PURE, 26, True)
+            else:
+                return YakuResult(Yaku.CHUUREN_POUTOU_PURE, 13, True)
 
         return YakuResult(Yaku.CHUUREN_POUTOU, 13, True)
 
@@ -1409,59 +1388,6 @@ class YakuChecker:
         嶺上開花：槓後從嶺上摸牌和牌（1翻）
         """
         return YakuResult(Yaku.RINSHAN, 1, False) if is_rinshan else None
-
-    def check_kokushi_musou_juusanmen(self, hand: Hand, all_tiles: List[Tile]) -> bool:
-        """
-        檢查國士無雙十三面
-
-        國士無雙十三面：13種幺九牌各一張，再有一張幺九牌，且該牌為聽牌
-        實際上，如果重複的牌正好是13種中的任意一種，且該牌可以是聽牌，則為十三面
-        """
-        if not hand.is_concealed:
-            return False
-
-        if len(all_tiles) != 14:
-            return False
-
-        # 需要的13種幺九牌
-        required_tiles = [
-            (Suit.MANZU, 1),
-            (Suit.MANZU, 9),
-            (Suit.PINZU, 1),
-            (Suit.PINZU, 9),
-            (Suit.SOZU, 1),
-            (Suit.SOZU, 9),
-            (Suit.JIHAI, 1),
-            (Suit.JIHAI, 2),
-            (Suit.JIHAI, 3),
-            (Suit.JIHAI, 4),
-            (Suit.JIHAI, 5),
-            (Suit.JIHAI, 6),
-            (Suit.JIHAI, 7),
-        ]
-
-        # 統計每種牌
-        counts = {}
-        for tile in all_tiles:
-            key = (tile.suit, tile.rank)
-            counts[key] = counts.get(key, 0) + 1
-
-        # 檢查是否包含所有需要的牌，且每種牌至少1張
-        for req in required_tiles:
-            if req not in counts or counts[req] == 0:
-                return False
-
-        # 檢查是否只有一張重複，且重複的牌是13種中的一種
-        pairs = 0
-        for key, count in counts.items():
-            if key in required_tiles and count == 2:
-                pairs += 1
-            elif key not in required_tiles:
-                return False  # 有非幺九牌
-
-        # 必須有且只有一張重複，且該重複牌是13種中的一種
-        # 在這種情況下，任何一張幺九牌都可以和，所以是十三面聽牌
-        return pairs == 1
 
     def _determine_waiting_type(self, winning_tile: Tile, winning_combination: List) -> WaitingType:
         """
