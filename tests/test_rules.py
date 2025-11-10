@@ -845,37 +845,15 @@ class TestRuleEngine:
         self.engine._hands[player] = Hand(starting_tiles)
 
         self.engine._kan_count = 3
-        if self.engine._tile_set:
-            self.engine._tile_set._wall = [Tile(Suit.SOZU, 5)]
-            self.engine._tile_set._tiles = []
+        assert self.engine._tile_set is not None
+        self.engine._tile_set._wall = [Tile(Suit.SOZU, 5)]
+        self.engine._tile_set._tiles = []
 
         result = self.engine.execute_action(player, GameAction.ANKAN)
 
         assert result.ankan is True
         assert self.engine._kan_count == 4
         assert self.engine.check_ryuukyoku() == RyuukyokuType.SUUKANTSU
-
-    def test_execute_action_discard_is_last_tile(self):
-        """測試打牌時最後一張牌檢查"""
-        self._init_game()
-        # 測試 is_last_tile 標記
-        # 當牌組耗盡時，打牌應該設置 is_last_tile
-        hand = self.engine.get_hand(0)
-        if hand.total_tile_count() >= 14 and hand.tiles:
-            self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
-
-        current = self.engine.get_current_player()
-        if self._has_action(current, GameAction.DRAW):
-            self.engine.execute_action(current, GameAction.DRAW)
-            hand = self.engine.get_hand(current)
-            if hand.tiles:
-                tile = hand.tiles[0]
-                if self._has_action(current, GameAction.DISCARD):
-                    result = self.engine.execute_action(current, GameAction.DISCARD, tile=tile)
-                    # 如果牌組耗盡，應該有 is_last_tile 標記
-                    # 注意：這可能不會發生，取決於牌組狀態
-                    if result.is_last_tile is not None:
-                        assert result.is_last_tile == True
 
     def test_get_available_actions_draw_requires_current_player(self):
         """測試摸牌僅限當前玩家"""
@@ -891,40 +869,37 @@ class TestRuleEngine:
         non_current = (current_player + 1) % 4
         assert GameAction.DRAW not in self.engine.get_available_actions(non_current)
 
-    def test_execute_action_draw_exhausted(self):
-        """測試摸牌時牌組耗盡"""
-        self._init_game()
-        current_player = self.engine.get_current_player()
-
-        # 測試 is_last_tile 標記
-        # 如果牌組耗盡，應該設置 is_last_tile
-        # 但由於實際耗盡牌組需要很多步驟，我們測試邏輯
-        # 當 is_exhausted() 返回 True 時，應該設置 is_last_tile
-
-        # 先執行一次摸牌，檢查結果
-        hand = self.engine.get_hand(current_player)
-        if hand.total_tile_count() >= 14 and hand.tiles:
-            self.engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
-
-        result = self.engine.execute_action(self.engine.get_current_player(), GameAction.DRAW)
-
-        # 如果牌組耗盡，應該有 is_last_tile 標記
-        # 注意：這可能不會發生，取決於牌組狀態
-        if result.is_last_tile is not None:
-            assert result.is_last_tile == True
-
-    def test_execute_action_draw_draw_result(self):
-        """測試摸牌結果"""
+    def test_execute_action_discard_is_last_tile(self):
+        """測試摸牌最後一張牌檢查"""
         self._init_game()
         current_player = self.engine.get_current_player()
         hand = self.engine.get_hand(current_player)
-        if hand.total_tile_count() >= 14 and hand.tiles:
-            self.engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
-            current_player = self.engine.get_current_player()
+        assert hand.tiles
+        assert hand.total_tile_count() == 14
+        self.engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
+
+        # 模擬牌山只剩一張牌
+        assert self.engine._tile_set is not None
+        self.engine._tile_set._tiles = [Tile(Suit.MANZU, 1)]
+
+        current_player = self.engine.get_current_player()
         result = self.engine.execute_action(current_player, GameAction.DRAW)
+        assert result.is_last_tile is True
 
-        # 檢查結果中是否有 drawn_tile 或 is_last_tile
-        assert result.drawn_tile is not None or result.is_last_tile is not None or result.ryuukyoku is not None
+    def test_execute_action_draw_exhausted(self):
+        """測試捨牌時牌組耗盡"""
+        self._init_game()
+
+        # 模擬牌山耗盡
+        assert self.engine._tile_set is not None
+        self.engine._tile_set._tiles = []
+
+        current_player = self.engine.get_current_player()
+        hand = self.engine.get_hand(current_player)
+        assert hand.tiles
+        assert hand.total_tile_count() == 14
+        result = self.engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
+        assert result.is_last_tile is True
 
     def _init_game(self):
         self.engine.start_game()
