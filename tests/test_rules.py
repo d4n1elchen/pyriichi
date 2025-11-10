@@ -102,6 +102,7 @@ class TestRuleEngine:
         self.engine._last_drawn_tile = None
         result = self.engine.check_win(winner, winning_tile)
         assert result is not None
+        assert result.score_result is not None
         assert result.score_result.is_tsumo is False
         assert result.score_result.payment_from == discarder
 
@@ -371,28 +372,6 @@ class TestRuleEngine:
         with pytest.raises(ValueError):
             self.engine.execute_action(current_player, GameAction.KAN, tile=None)
 
-    def test_check_win_payment_from_ron(self):
-        """測試榮和支付者設置"""
-        self._init_game()
-        # 設置一個和牌型手牌
-        # 手牌：123m 456m 789m 123p 4p
-        test_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
-        test_hand = Hand(test_tiles)
-        self.engine._hands[1] = test_hand
-
-        # 設置最後捨牌玩家
-        winning_tile = Tile(Suit.PINZU, 4)
-        self.engine._last_discarded_tile = winning_tile
-        self.engine._last_discarded_player = 0
-
-        # 檢查榮和（設置 current_player 為其他玩家，表示榮和）
-        # check_win 內部會根據 player == current_player 判斷是否為自摸
-        self.engine._current_player = 2  # 設置為其他玩家，表示榮和
-        result = self.engine.check_win(1, winning_tile)
-        assert result is not None
-        assert result.score_result is not None
-        assert result.score_result.payment_from == 0
-
     def test_execute_action_draw_no_tile_set(self):
         """測試摸牌時牌組未初始化"""
         self._init_game()
@@ -553,33 +532,6 @@ class TestRuleEngine:
         assert result.ryuukyoku.ryuukyoku is True
         assert result.ryuukyoku.ryuukyoku_type == RyuukyokuType.EXHAUSTED
         assert self.engine._phase == GamePhase.RYUUKYOKU
-
-    def test_execute_action_ankan_chankan(self):
-        """測試加槓搶槓處理"""
-        self._init_game()
-
-        # 設置玩家0可以加槓
-        kan_tile = Tile(Suit.MANZU, 1)
-        # 111m 234m 567m 123p 4p
-        kan_tiles = parse_tiles("1m1m1m2m3m4m5m6m7m1p2p3p4p")
-        hand0 = Hand(kan_tiles)
-        hand0.pon(kan_tile)
-        hand0.add_tile(kan_tile)
-        self.engine._hands[0] = hand0
-        self.engine._current_player = 0
-        self.engine._last_discarded_tile = None
-        self.engine._last_discarded_player = None
-
-        # 設置玩家1可以搶槓和
-        # 23m 456m 789p 123p 44p（缺 1m）
-        test_tiles = parse_tiles("2m3m4m5m6m7p8p9p1p2p3p4p4p")
-        self.engine._hands[1] = Hand(test_tiles)
-
-        assert self._has_action(0, GameAction.ANKAN)
-        result = self.engine.execute_action(0, GameAction.ANKAN)
-        assert result.chankan is not None
-        assert result.chankan == True
-        assert result.winners is not None
 
     def test_execute_action_kan_rinshan_win(self):
         """測試明槓後嶺上開花"""
@@ -776,19 +728,18 @@ class TestRuleEngine:
         self.engine._hands[1] = test_hand
 
         # 執行加槓，應該檢查搶槓
-        if self._has_action(0, GameAction.ANKAN):
-            result = self.engine.execute_action(0, GameAction.ANKAN)
-            # 如果有搶槓，應該有 chankan 標記
-            if result.chankan is not None:
-                assert result.chankan == True
-                assert result.winners is not None
-                assert len(result.winners) > 0
-                # 檢查搶槓和結果
-                if result.winners:
-                    winner = result.winners[0]
-                    if win_result := self.engine.check_win(winner, kan_tile, is_chankan=True):
-                        assert win_result.win == True
-                        assert win_result.chankan == True
+        assert self._has_action(0, GameAction.ANKAN)
+        result = self.engine.execute_action(0, GameAction.ANKAN)
+        # 應該觸發搶槓和
+        assert result.chankan is not None
+        assert result.chankan is True
+        assert result.winners is not None
+        assert len(result.winners) > 0
+        winner = result.winners[0]
+        win_result = self.engine.check_win(winner, kan_tile, is_chankan=True)
+        assert win_result is not None
+        assert win_result.win is True
+        assert win_result.chankan is True
 
     def test_execute_action_kan_wall_exhausted(self):
         """測試明槓觸發四槓散了"""
