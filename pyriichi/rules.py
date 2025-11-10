@@ -116,6 +116,7 @@ class RuleEngine:
         self._score_calculator = ScoreCalculator()
         self._last_discarded_tile: Optional[Tile] = None
         self._last_discarded_player: Optional[int] = None
+        self._last_drawn_tile: Optional[Tuple[int, Tile]] = None
 
         # 狀態追蹤
         self._riichi_turns: Dict[int, int] = {}  # {player_id: turns_after_riichi}
@@ -161,6 +162,7 @@ class RuleEngine:
         self._pending_kan_tile = None
         self._winning_players = []
         self._ignore_suukantsu = False
+        self._last_drawn_tile = None
 
     def deal(self) -> Dict[int, List[Tile]]:
         """
@@ -280,7 +282,7 @@ class RuleEngine:
         if player == self._current_player:
             # 加槓：現有碰升級
             for meld in hand.can_kan(None):
-                if meld.meld_type == MeldType.KAN and meld.called_tile is not None:
+                if meld.type == MeldType.KAN and meld.called_tile is not None:
                     return True
 
         return False
@@ -321,6 +323,7 @@ class RuleEngine:
         if drawn_tile := self._tile_set.draw():
             hand.add_tile(drawn_tile)
             result.drawn_tile = drawn_tile
+            self._last_drawn_tile = (player, drawn_tile)
             if self._tile_set.is_exhausted():
                 result.is_last_tile = True
         else:
@@ -336,6 +339,7 @@ class RuleEngine:
             raise ValueError("牌組未初始化")
         if self._hands[player].discard(tile):
             self._apply_discard_effects(player, tile, result)
+            self._last_drawn_tile = None
         return result
 
     def _handle_pon(self, player: int, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
@@ -362,6 +366,7 @@ class RuleEngine:
         self._last_discarded_tile = None
         self._last_discarded_player = None
         self._is_first_turn_after_deal = False
+        self._last_drawn_tile = None
         return result
 
     def _handle_chi(self, player: int, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
@@ -395,6 +400,7 @@ class RuleEngine:
         self._last_discarded_tile = None
         self._last_discarded_player = None
         self._is_first_turn_after_deal = False
+        self._last_drawn_tile = None
         return result
 
     def _handle_riichi(self, player: int, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
@@ -413,8 +419,9 @@ class RuleEngine:
 
         meld = self._hands[player].kan(tile)
         self._kan_count += 1
+        self._last_drawn_tile = None
 
-        if self._draw_rinshan_tile(player, result, kan_type=meld.meld_type):
+        if self._draw_rinshan_tile(player, result, kan_type=meld.type):
             self._pending_kan_tile = None
         return result
 
@@ -428,7 +435,7 @@ class RuleEngine:
 
         # TODO: 支援多個暗槓選擇（玩家可以選擇要暗槓哪一張牌）
         selected = candidates[0]
-        is_add_kan = selected.meld_type == MeldType.KAN and selected.called_tile is not None
+        is_add_kan = selected.type == MeldType.KAN and selected.called_tile is not None
 
         if is_add_kan:
             kan_tile = selected.tiles[0]
@@ -442,11 +449,12 @@ class RuleEngine:
         meld = hand.kan(None)
         if meld:
             self._kan_count += 1
-        kan_type = meld.meld_type if meld else MeldType.ANKAN
+        kan_type = meld.type if meld else MeldType.ANKAN
 
         self._draw_rinshan_tile(player, result, kan_type=kan_type)
         if self._pending_kan_tile:
             self._pending_kan_tile = None
+        self._last_drawn_tile = None
         return result
 
     def _remove_last_discard(self, discarder: int, tile: Tile) -> None:
@@ -461,6 +469,7 @@ class RuleEngine:
         if rinshan_tile := self._tile_set.draw_wall_tile():
             self._hands[player].add_tile(rinshan_tile)
             result.rinshan_tile = rinshan_tile
+            self._last_drawn_tile = (player, rinshan_tile)
             if kan_type == MeldType.KAN:
                 result.kan = True
             else:
@@ -515,19 +524,32 @@ class RuleEngine:
         """
         hand = self._hands[player]
 
-        if not hand.is_winning_hand(winning_tile):
+        last_draw = self._last_drawn_tile
+        is_tsumo = is_rinshan
+        if not is_tsumo and last_draw is not None:
+            last_player, last_tile = last_draw
+            if last_player == player and last_tile == winning_tile:
+                is_tsumo = True
+
+        print("check winning hand")
+
+        if not hand.is_winning_hand(winning_tile, is_tsumo):
             return None
 
+        print("check winning combinations")
+
         # 獲取和牌組合
-        combinations = hand.get_winning_combinations(winning_tile)
+        combinations = hand.get_winning_combinations(winning_tile, is_tsumo)
         if not combinations:
             return None
 
         # 使用第一個組合進行役種判定
-        winning_combination = list(combinations[0]) if combinations[0] else []
+        # TODO: 支援多個和牌組合
+        winning_combination = combinations[0] if combinations else []
+
+        print("check yaku results")
 
         # 檢查役種
-        is_tsumo = player == self._current_player or is_rinshan
         # 獲取立直後的回合數
         turns_after_riichi = self._riichi_turns.get(player, -1)
         # 檢查是否為第一巡

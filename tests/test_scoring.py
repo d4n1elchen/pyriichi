@@ -3,12 +3,26 @@ ScoreCalculator 的單元測試
 """
 
 import pytest
-from pyriichi.hand import Hand, CombinationType
-from pyriichi.tiles import Tile, Suit
+from pyriichi.hand import Combination, CombinationType, Hand
+from pyriichi.tiles import Suit, Tile
 from pyriichi.utils import parse_tiles
-from pyriichi.yaku import YakuChecker, YakuResult, Yaku, WaitingType
+from pyriichi.yaku import WaitingType, Yaku, YakuChecker, YakuResult
 from pyriichi.scoring import ScoreCalculator, ScoreResult
 from pyriichi.game_state import GameState, Wind
+
+
+def make_combination(combo_type: CombinationType, suit: Suit, rank: int) -> Combination:
+    if combo_type == CombinationType.SEQUENCE:
+        tiles = [Tile(suit, rank + i) for i in range(3)]
+    elif combo_type == CombinationType.TRIPLET:
+        tiles = [Tile(suit, rank) for _ in range(3)]
+    elif combo_type == CombinationType.KAN:
+        tiles = [Tile(suit, rank) for _ in range(4)]
+    elif combo_type == CombinationType.PAIR:
+        tiles = [Tile(suit, rank) for _ in range(2)]
+    else:
+        raise ValueError(f"Unsupported combination type: {combo_type}")
+    return Combination(combo_type, tiles)
 
 
 class TestScoreCalculator:
@@ -409,10 +423,10 @@ class TestScoreCalculator:
 
         # 手動構建包含幺九暗槓的組合
         combo_with_kan = [
-            (CombinationType.KAN, (Suit.MANZU, 1)),  # 幺九暗槓
-            (CombinationType.SEQUENCE, (Suit.MANZU, 4)),
-            (CombinationType.SEQUENCE, (Suit.PINZU, 1)),
-            (CombinationType.PAIR, (Suit.PINZU, 3)),
+            make_combination(CombinationType.KAN, Suit.MANZU, 1),  # 幺九暗槓
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 4),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 1),
+            make_combination(CombinationType.PAIR, Suit.PINZU, 3),
         ]
 
         yaku_results = []
@@ -436,10 +450,10 @@ class TestScoreCalculator:
 
         # 手動構建包含幺九明槓的組合
         combo_with_kan = [
-            (CombinationType.KAN, (Suit.MANZU, 9)),  # 幺九明槓（通過 hand.is_concealed 判斷為明槓）
-            (CombinationType.SEQUENCE, (Suit.MANZU, 2)),
-            (CombinationType.SEQUENCE, (Suit.PINZU, 1)),
-            (CombinationType.PAIR, (Suit.PINZU, 3)),
+            make_combination(CombinationType.KAN, Suit.MANZU, 9),  # 幺九明槓（通過 hand.is_concealed 判斷為明槓）
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 2),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 1),
+            make_combination(CombinationType.PAIR, Suit.PINZU, 3),
         ]
 
         yaku_results = []
@@ -456,10 +470,10 @@ class TestScoreCalculator:
 
         # 手動構建包含中張暗槓的組合
         combo_with_kan = [
-            (CombinationType.KAN, (Suit.MANZU, 5)),  # 中張暗槓
-            (CombinationType.SEQUENCE, (Suit.MANZU, 2)),
-            (CombinationType.SEQUENCE, (Suit.PINZU, 1)),
-            (CombinationType.PAIR, (Suit.PINZU, 3)),
+            make_combination(CombinationType.KAN, Suit.MANZU, 5),  # 中張暗槓
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 2),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 1),
+            make_combination(CombinationType.PAIR, Suit.PINZU, 3),
         ]
 
         yaku_results = []
@@ -483,10 +497,10 @@ class TestScoreCalculator:
 
         # 手動構建包含中張明槓的組合
         combo_with_kan = [
-            (CombinationType.KAN, (Suit.MANZU, 5)),  # 中張明槓
-            (CombinationType.SEQUENCE, (Suit.MANZU, 2)),
-            (CombinationType.SEQUENCE, (Suit.PINZU, 1)),
-            (CombinationType.PAIR, (Suit.PINZU, 3)),
+            make_combination(CombinationType.KAN, Suit.MANZU, 5),  # 中張明槓
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 2),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 1),
+            make_combination(CombinationType.PAIR, Suit.PINZU, 3),
         ]
 
         yaku_results = []
@@ -499,10 +513,10 @@ class TestScoreCalculator:
         # 測試 1-2-3 聽 1 的情況（rank=1）
         winning_tile = Tile(Suit.MANZU, 1)
         combo = [
-            (CombinationType.SEQUENCE, (Suit.MANZU, 1)),  # 1-2-3 順子
-            (CombinationType.SEQUENCE, (Suit.MANZU, 4)),
-            (CombinationType.SEQUENCE, (Suit.MANZU, 7)),
-            (CombinationType.PAIR, (Suit.PINZU, 1)),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 1),  # 1-2-3 順子
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 4),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 7),
+            make_combination(CombinationType.PAIR, Suit.PINZU, 1),
         ]
         waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
         assert waiting_type == WaitingType.PENCHAN
@@ -512,10 +526,10 @@ class TestScoreCalculator:
         # 測試 7-8-9 聽 9 的情況（rank=7）
         winning_tile = Tile(Suit.MANZU, 9)
         combo = [
-            (CombinationType.SEQUENCE, (Suit.MANZU, 7)),  # 7-8-9 順子
-            (CombinationType.SEQUENCE, (Suit.MANZU, 4)),
-            (CombinationType.SEQUENCE, (Suit.MANZU, 1)),
-            (CombinationType.PAIR, (Suit.PINZU, 1)),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 7),  # 7-8-9 順子
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 4),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 1),
+            make_combination(CombinationType.PAIR, Suit.PINZU, 1),
         ]
         waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
         assert waiting_type == WaitingType.PENCHAN
@@ -525,10 +539,10 @@ class TestScoreCalculator:
         # 測試 2-3-4 聽 3 的情況（rank+1，中間張）
         winning_tile = Tile(Suit.MANZU, 3)
         combo = [
-            (CombinationType.SEQUENCE, (Suit.MANZU, 2)),  # 2-3-4 順子，和牌牌是中間張（rank+1=3）
-            (CombinationType.SEQUENCE, (Suit.MANZU, 5)),
-            (CombinationType.SEQUENCE, (Suit.MANZU, 8)),
-            (CombinationType.PAIR, (Suit.PINZU, 1)),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 2),  # 2-3-4 順子，和牌牌是中間張（rank+1=3）
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 5),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 6),
+            make_combination(CombinationType.PAIR, Suit.PINZU, 1),
         ]
         waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
         assert waiting_type == WaitingType.KANCHAN
@@ -538,24 +552,24 @@ class TestScoreCalculator:
         # 測試其他嵌張聽的情況（rank=2, rank+2=4）
         winning_tile = Tile(Suit.MANZU, 4)
         combo = [
-            (CombinationType.SEQUENCE, (Suit.MANZU, 2)),  # 2-3-4 順子，和牌牌是最後一張但不是邊張
-            (CombinationType.SEQUENCE, (Suit.MANZU, 5)),
-            (CombinationType.SEQUENCE, (Suit.MANZU, 8)),
-            (CombinationType.PAIR, (Suit.PINZU, 1)),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 2),  # 2-3-4 順子，和牌牌是最後一張但不是邊張
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 5),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 6),
+            make_combination(CombinationType.PAIR, Suit.PINZU, 1),
         ]
         waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
-        # 應該是嵌張或邊張，取決於具體實現
-        assert waiting_type in {WaitingType.KANCHAN, WaitingType.PENCHAN}
+        # 新邏輯視為兩面聽
+        assert waiting_type == WaitingType.RYANMEN
 
     def test_waiting_type_not_in_sequence(self):
         """測試不在順子中的聽牌類型判定"""
         # 和牌牌不在任何順子中，且不是對子的一部分，應該返回兩面聽
         winning_tile = Tile(Suit.PINZU, 5)
         combo = [
-            (CombinationType.SEQUENCE, (Suit.MANZU, 1)),  # 1-2-3 順子（萬子）
-            (CombinationType.SEQUENCE, (Suit.MANZU, 4)),  # 4-5-6 順子（萬子）
-            (CombinationType.SEQUENCE, (Suit.MANZU, 7)),  # 7-8-9 順子（萬子）
-            (CombinationType.PAIR, (Suit.PINZU, 1)),  # 對子是 1p，不是 5p
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 1),  # 1-2-3 順子（萬子）
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 4),  # 4-5-6 順子（萬子）
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 7),  # 7-8-9 順子（萬子）
+            make_combination(CombinationType.PAIR, Suit.PINZU, 1),  # 對子是 1p，不是 5p
         ]
         # 和牌牌 5p 不在任何順子中（因為順子都是萬子），也不是對子的一部分
         waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
@@ -780,10 +794,10 @@ class TestScoreCalculator:
 
         # 手動構建包含幺九明刻的組合
         combo_with_triplet = [
-            (CombinationType.TRIPLET, (Suit.MANZU, 9)),  # 幺九明刻
-            (CombinationType.SEQUENCE, (Suit.MANZU, 2)),
-            (CombinationType.SEQUENCE, (Suit.PINZU, 1)),
-            (CombinationType.PAIR, (Suit.PINZU, 3)),
+            make_combination(CombinationType.TRIPLET, Suit.MANZU, 9),  # 幺九明刻
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 2),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 1),
+            make_combination(CombinationType.PAIR, Suit.PINZU, 3),
         ]
 
         yaku_results = []
@@ -807,10 +821,10 @@ class TestScoreCalculator:
 
         # 手動構建包含中張明刻的組合
         combo_with_triplet = [
-            (CombinationType.TRIPLET, (Suit.MANZU, 5)),  # 中張明刻
-            (CombinationType.SEQUENCE, (Suit.MANZU, 1)),
-            (CombinationType.SEQUENCE, (Suit.PINZU, 1)),
-            (CombinationType.PAIR, (Suit.PINZU, 3)),
+            make_combination(CombinationType.TRIPLET, Suit.MANZU, 5),  # 中張明刻
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 1),
+            make_combination(CombinationType.PAIR, Suit.PINZU, 3),
         ]
 
         yaku_results = []
@@ -823,14 +837,14 @@ class TestScoreCalculator:
         # 測試 rank=2, winning_tile.rank == rank（第一張）但不是 rank=1 的情況
         winning_tile = Tile(Suit.MANZU, 2)
         combo = [
-            (CombinationType.SEQUENCE, (Suit.MANZU, 2)),  # 2-3-4 順子，和牌牌是第一張
-            (CombinationType.SEQUENCE, (Suit.MANZU, 5)),
-            (CombinationType.SEQUENCE, (Suit.MANZU, 8)),
-            (CombinationType.PAIR, (Suit.PINZU, 1)),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 2),  # 2-3-4 順子，和牌牌是第一張
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 5),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 6),
+            make_combination(CombinationType.PAIR, Suit.PINZU, 1),
         ]
         waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
-        # 應該是嵌張（因為 rank != 1）
-        assert waiting_type == WaitingType.KANCHAN
+        # 新邏輯視為兩面聽
+        assert waiting_type == WaitingType.RYANMEN
 
     def test_waiting_type_in_sequence_check(self):
         """測試在順子中的檢查邏輯"""
@@ -838,10 +852,10 @@ class TestScoreCalculator:
         # 使用一個不會被前面邏輯提前返回的情況
         winning_tile = Tile(Suit.MANZU, 4)  # 在 3-4-5 順子中
         combo = [
-            (CombinationType.SEQUENCE, (Suit.MANZU, 3)),  # 3-4-5 順子，和牌牌在中間
-            (CombinationType.SEQUENCE, (Suit.MANZU, 6)),  # 6-7-8 順子
-            (CombinationType.SEQUENCE, (Suit.MANZU, 9)),  # 這個順子不會被處理（因為會 break）
-            (CombinationType.PAIR, (Suit.PINZU, 1)),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 3),  # 3-4-5 順子，和牌牌在中間
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 6),  # 6-7-8 順子
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 7),  # 額外順子
+            make_combination(CombinationType.PAIR, Suit.PINZU, 1),
         ]
         # winning_tile 4m 在 3-4-5 順子中的檢查和 break
         waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
@@ -868,10 +882,10 @@ class TestScoreCalculator:
         winning_tile = Tile(Suit.PINZU, 3)
         # 手動構建組合，確保不是平和（有刻子）
         combo = [
-            (CombinationType.TRIPLET, (Suit.MANZU, 1)),  # 刻子（不是平和）
-            (CombinationType.SEQUENCE, (Suit.MANZU, 2)),
-            (CombinationType.SEQUENCE, (Suit.MANZU, 5)),
-            (CombinationType.PAIR, (Suit.PINZU, 3)),
+            make_combination(CombinationType.TRIPLET, Suit.MANZU, 1),  # 刻子（不是平和）
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 2),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 5),
+            make_combination(CombinationType.PAIR, Suit.PINZU, 3),
         ]
 
         yaku_results = []  # 空列表，確保不是平和
@@ -882,10 +896,10 @@ class TestScoreCalculator:
         # winning_tile 在順子中，但前面的邏輯沒有提前返回，執行到最後
         winning_tile = Tile(Suit.MANZU, 4)
         combo = [
-            (CombinationType.SEQUENCE, (Suit.MANZU, 3)),  # 3-4-5 順子，和牌牌在中間
-            (CombinationType.SEQUENCE, (Suit.MANZU, 6)),  # 6-7-8 順子
-            (CombinationType.SEQUENCE, (Suit.MANZU, 9)),  # 9-10-11 順子（但只有 1-9，所以這個不會匹配）
-            (CombinationType.PAIR, (Suit.PINZU, 1)),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 3),  # 3-4-5 順子，和牌牌在中間
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 6),  # 6-7-8 順子
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 7),  # 額外順子
+            make_combination(CombinationType.PAIR, Suit.PINZU, 1),
         ]
         # winning_tile 4m 在 3-4-5 順子中，會觸發 in_sequence = True
         # 但由於前面的邏輯可能已經處理過，需要確保執行到最後的 return
@@ -906,10 +920,10 @@ class TestScoreCalculator:
         # 這裡用一個簡化的例子：兩個對子，聽其中一個
         winning_tile = Tile(Suit.MANZU, 1)
         combo = [
-            (CombinationType.TRIPLET, (Suit.MANZU, 3)),  # 刻子
-            (CombinationType.TRIPLET, (Suit.MANZU, 5)),  # 刻子
-            (CombinationType.TRIPLET, (Suit.PINZU, 1)),  # 刻子
-            (CombinationType.PAIR, (Suit.MANZU, 1)),  # 對子（和牌牌）
+            make_combination(CombinationType.TRIPLET, Suit.MANZU, 3),  # 刻子
+            make_combination(CombinationType.TRIPLET, Suit.MANZU, 5),  # 刻子
+            make_combination(CombinationType.TRIPLET, Suit.PINZU, 1),  # 刻子
+            make_combination(CombinationType.PAIR, Suit.MANZU, 1),  # 對子（和牌牌）
         ]
         # 注意：雙碰聽的判定較複雜，這裡主要測試符數計算
         # 如果判定為雙碰聽，應該不增加符數

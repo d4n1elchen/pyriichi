@@ -77,6 +77,25 @@ class TestHand:
         combinations = hand.get_winning_combinations(winning_tile)
         assert len(combinations) > 0
 
+    def test_winning_hand_with_kan(self):
+        """測試含有槓牌的和牌判定"""
+
+        # 手牌：1111m + 234m + 345p + 67s + 77z（聽 8s）
+        tiles = parse_tiles("1m1m1m1m2m3m4m3p4p5p6s7s7z7z")
+        hand = Hand(tiles)
+
+        # 宣告暗槓 1111m
+        hand.kan(None)
+
+        winning_tile = Tile(Suit.SOZU, 8)
+
+        waiting_tiles = hand.get_waiting_tiles()
+        assert winning_tile in waiting_tiles
+
+        assert hand.is_winning_hand(winning_tile)
+        combinations = hand.get_winning_combinations(winning_tile)
+        assert len(combinations) > 0
+
     def test_seven_pairs(self):
         """測試七對子"""
         # 七對子： 11m 22m 33m 44m 55m 66m 77m（和牌牌 7m）
@@ -175,7 +194,7 @@ class TestHand:
         assert hand.can_pon(tile)
 
         meld = hand.pon(tile)
-        assert meld.meld_type == MeldType.PON
+        assert meld.type == MeldType.PON
         assert len(meld.tiles) == 3
         assert not hand.is_concealed
 
@@ -190,7 +209,7 @@ class TestHand:
         assert len(sequences) > 0
 
         meld = hand.chi(tile, sequences[0])
-        assert meld.meld_type == MeldType.CHI
+        assert meld.type == MeldType.CHI
         assert len(meld.tiles) == 3
         assert not hand.is_concealed
 
@@ -236,7 +255,7 @@ class TestHand:
 
         melds = hand.can_kan()
         assert len(melds) > 0
-        assert any(meld.meld_type == MeldType.KAN for meld in melds)
+        assert any(meld.type == MeldType.KAN for meld in melds)
 
     def test_meld_invalid_chi(self):
         """測試無效的吃操作"""
@@ -274,7 +293,7 @@ class TestHand:
         initial_tile_count = len(hand.tiles)
 
         meld = hand.kan(None)
-        assert meld.meld_type == MeldType.ANKAN
+        assert meld.type == MeldType.ANKAN
         assert len(meld.tiles) == 4
         # 暗槓後，手牌應該減少4張
         assert len(hand.tiles) == initial_tile_count - 4
@@ -288,7 +307,7 @@ class TestHand:
         kan_tile = Tile(Suit.MANZU, 1)
 
         meld = hand.kan(kan_tile)
-        assert meld.meld_type == MeldType.KAN
+        assert meld.type == MeldType.KAN
         assert len(meld.tiles) == 4
         assert meld.called_tile == kan_tile
         # 明槓後，手牌應該減少3張（被槓的牌來自外部，不包含在初始手牌中）
@@ -305,7 +324,7 @@ class TestHand:
         initial_tile_count = len(hand.tiles)
 
         meld = hand.kan(None)
-        assert meld.meld_type == MeldType.KAN
+        assert meld.type == MeldType.KAN
         assert len(meld.tiles) == 4
         assert meld.called_tile == kan_tile
         # 加槓後，手牌應該會少一張摸到的加槓牌

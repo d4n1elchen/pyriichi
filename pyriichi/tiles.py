@@ -259,7 +259,7 @@ class TileSet:
         Returns:
             摸到的牌，如果牌山為空則返回 None
         """
-        return self._tiles.pop(0) if self._tiles else None
+        return self._tiles.pop() if self._tiles else None
 
     def draw_wall_tile(self) -> Optional[Tile]:
         """
@@ -268,7 +268,7 @@ class TileSet:
         Returns:
             摸到的牌，如果王牌區為空則返回 None
         """
-        return self._wall.pop(0) if self._wall else None
+        return self._wall.pop() if self._wall else None
 
     @property
     def remaining(self) -> int:

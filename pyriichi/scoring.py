@@ -6,7 +6,7 @@
 
 from typing import List, Optional, Tuple
 from dataclasses import dataclass
-from pyriichi.hand import Hand, CombinationType
+from pyriichi.hand import Hand, CombinationType, Combination
 from pyriichi.tiles import Tile, Suit
 from pyriichi.game_state import GameState, Wind
 from pyriichi.yaku import YakuResult, Yaku, WaitingType
@@ -102,6 +102,33 @@ class ScoreResult:
 
 class ScoreCalculator:
     """得分計算器"""
+
+    @staticmethod
+    def _group_combinations(winning_combination: Optional[List[Combination]]) -> dict:
+        groups = {
+            CombinationType.PAIR: [],
+            CombinationType.SEQUENCE: [],
+            CombinationType.TRIPLET: [],
+            CombinationType.KAN: [],
+        }
+        if not winning_combination:
+            return groups
+
+        for combination in winning_combination:
+            if combination is None:
+                continue
+            groups.setdefault(combination.type, []).append(combination)
+
+        return groups
+
+    @staticmethod
+    def _extract_pair(winning_combination: Optional[List[Combination]]) -> Optional[Combination]:
+        if not winning_combination:
+            return None
+        for combination in winning_combination:
+            if combination.type == CombinationType.PAIR:
+                return combination
+        return None
 
     def calculate(
         self,
@@ -203,47 +230,39 @@ class ScoreCalculator:
         elif hand.is_concealed or is_tsumo:
             fu += 2  # 門清自摸
         # 面子符
-        for meld in winning_combination:
-            if isinstance(meld, tuple) and len(meld) == 2:
-                meld_type, (suit, rank) = meld
-                tile = Tile(suit, rank)
+        for combination in winning_combination:
+            tiles = sorted(combination.tiles)
+            tile = tiles[0]
 
-                if meld_type == CombinationType.KAN:
-                    # 槓子符（需要判斷是明槓還是暗槓）
-                    # TODO: 需要從 Meld 中獲取是否為暗槓
-                    if (tile.is_terminal or tile.is_honor) and hand.is_concealed:
-                        fu += 32  # 暗槓
-                    elif tile.is_terminal or tile.is_honor or hand.is_concealed:
-                        fu += 16  # 明槓
-                    else:
-                        fu += 8  # 明槓
+            if combination.type == CombinationType.KAN:
+                # 槓子符（需要判斷是明槓還是暗槓）
+                # TODO: 需要從 Meld 中獲取是否為暗槓
+                if (tile.is_terminal or tile.is_honor) and hand.is_concealed:
+                    fu += 32  # 暗槓
+                elif tile.is_terminal or tile.is_honor or hand.is_concealed:
+                    fu += 16  # 明槓
+                else:
+                    fu += 8  # 明槓
 
-                elif meld_type == CombinationType.TRIPLET:
-                    # 刻子符
-                    if (tile.is_terminal or tile.is_honor) and hand.is_concealed:
-                        fu += 8  # 暗刻
-                    elif tile.is_terminal or tile.is_honor or hand.is_concealed:
-                        fu += 4  # 明刻
-                    else:
-                        fu += 2  # 明刻
+            elif combination.type == CombinationType.TRIPLET:
+                # 刻子符
+                if (tile.is_terminal or tile.is_honor) and hand.is_concealed:
+                    fu += 8  # 暗刻
+                elif tile.is_terminal or tile.is_honor or hand.is_concealed:
+                    fu += 4  # 明刻
+                else:
+                    fu += 2  # 明刻
 
         # 雀頭符
-        pair = None
-        for meld in winning_combination:
-            if isinstance(meld, tuple) and len(meld) == 2:
-                meld_type, (suit, rank) = meld
-                if meld_type == CombinationType.PAIR:
-                    pair = (suit, rank)
-                    break
+        pair_combination = self._extract_pair(winning_combination)
 
-        if pair:
-            suit, rank = pair
-            pair_tile = Tile(suit, rank)
+        if pair_combination:
+            pair_tile = sorted(pair_combination.tiles)[0]
 
             # 役牌對子 +2 符
-            if suit == Suit.JIHAI:
+            if pair_tile.suit == Suit.JIHAI:
                 # 三元牌
-                if rank in [5, 6, 7]:  # 白、發、中
+                if pair_tile.rank in [5, 6, 7]:  # 白、發、中
                     fu += 2
                 # 場風
                 round_wind = game_state.round_wind
@@ -253,7 +272,7 @@ class ScoreCalculator:
                     3: Wind.WEST,
                     4: Wind.NORTH,
                 }
-                if round_wind == round_wind_mapping.get(rank):
+                if round_wind == round_wind_mapping.get(pair_tile.rank):
                     fu += 2
                 # 自風
                 player_winds = game_state.player_winds
@@ -265,7 +284,7 @@ class ScoreCalculator:
                         3: Wind.WEST,
                         4: Wind.NORTH,
                     }
-                    if player_wind == player_wind_mapping.get(rank):
+                    if player_wind == player_wind_mapping.get(pair_tile.rank):
                         fu += 2
 
         # 聽牌符
@@ -291,27 +310,37 @@ class ScoreCalculator:
         if not winning_combination:
             return WaitingType.RYANMEN  # 默認為兩面聽
 
-        # 檢查是否為單騎聽（winning_tile 是對子的一部分）
-        for meld in winning_combination:
-            if isinstance(meld, tuple) and len(meld) == 2:
-                meld_type, (suit, rank) = meld
-                if meld_type == CombinationType.PAIR and (winning_tile.suit == suit and winning_tile.rank == rank):
-                    return WaitingType.TANKI  # 單騎聽
+        pair_combination = self._extract_pair(winning_combination)
+        if pair_combination and any(tile == winning_tile for tile in pair_combination.tiles):
+            return WaitingType.TANKI
 
-        # 檢查是否為順子聽（兩面、邊張、嵌張）
-        for meld in winning_combination:
-            if isinstance(meld, tuple) and len(meld) == 2:
-                meld_type, (suit, rank) = meld
-                if meld_type == CombinationType.SEQUENCE:
-                    if winning_tile.suit == suit and rank <= winning_tile.rank <= rank + 2:
-                        if winning_tile.rank == rank == 1:
-                            return WaitingType.PENCHAN
-                        if winning_tile.rank == rank + 2 and rank == 7:
-                            return WaitingType.PENCHAN
-                        if winning_tile.rank == rank + 1:
-                            return WaitingType.KANCHAN
-                        if winning_tile.rank in (rank, rank + 2):
-                            return WaitingType.KANCHAN
+        for combination in winning_combination:
+            if combination.type != CombinationType.SEQUENCE:
+                continue
+
+            if winning_tile not in combination.tiles:
+                continue
+
+            tiles = sorted(combination.tiles)
+            try:
+                index = tiles.index(winning_tile)
+            except ValueError:
+                index = next(
+                    (i for i, tile in enumerate(tiles) if tile.suit == winning_tile.suit and tile.rank == winning_tile.rank),
+                    -1,
+                )
+                if index == -1:
+                    continue
+
+            if index == 1:
+                return WaitingType.KANCHAN
+
+            first_rank = tiles[0].rank
+            last_rank = tiles[-1].rank
+            if index in {0, 2}:
+                if first_rank == 1 or last_rank == 9:
+                    return WaitingType.PENCHAN
+                return WaitingType.RYANMEN
 
         return WaitingType.RYANMEN
 

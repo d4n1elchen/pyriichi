@@ -335,7 +335,7 @@ class TestMultiModuleIntegration:
 
         # 驗證副露已添加
         assert len(hand._melds) == 1
-        assert meld.meld_type == MeldType.PON
+        assert meld.type == MeldType.PON
         assert not hand.is_concealed  # 有副露，不是門清
 
         # 驗證手牌數量（13-2=11張，但被碰的牌不加入手牌，所以實際是10張）

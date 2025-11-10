@@ -3,11 +3,25 @@ YakuChecker 的單元測試
 """
 
 import pytest
-from pyriichi.hand import Hand, CombinationType
-from pyriichi.tiles import Tile, Suit
-from pyriichi.yaku import YakuChecker, Yaku
+from pyriichi.hand import Combination, CombinationType, Hand
+from pyriichi.tiles import Suit, Tile
+from pyriichi.yaku import Yaku, YakuChecker
 from pyriichi.game_state import GameState, Wind
 from pyriichi.utils import parse_tiles
+
+
+def make_combination(combo_type: CombinationType, suit: Suit, rank: int) -> Combination:
+    if combo_type == CombinationType.SEQUENCE:
+        tiles = [Tile(suit, rank + i) for i in range(3)]
+    elif combo_type == CombinationType.TRIPLET:
+        tiles = [Tile(suit, rank) for _ in range(3)]
+    elif combo_type == CombinationType.KAN:
+        tiles = [Tile(suit, rank) for _ in range(4)]
+    elif combo_type == CombinationType.PAIR:
+        tiles = [Tile(suit, rank) for _ in range(2)]
+    else:
+        raise ValueError(f"Unsupported combination type: {combo_type}")
+    return Combination(combo_type, tiles)
 
 
 class TestYakuChecker:
@@ -322,11 +336,7 @@ class TestYakuChecker:
 
         if combinations:
             # 檢查組合中是否有4個刻子
-            triplets = sum(
-                1
-                for m in list(combinations[0])
-                if isinstance(m, tuple) and len(m) == 2 and m[0] == CombinationType.TRIPLET
-            )
+            triplets = sum(1 for m in list(combinations[0]) if m.type in {CombinationType.TRIPLET, CombinationType.KAN})
             if triplets == 4:
                 results = self.checker.check_all(
                     hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, turns_after_riichi=-1
@@ -528,10 +538,10 @@ class TestYakuChecker:
         # 三槓子需要通過 Hand 的 melds 來實現
         # 這裡測試判定邏輯
         combo_with_kan = [
-            (CombinationType.KAN, (Suit.MANZU, 1)),
-            (CombinationType.KAN, (Suit.PINZU, 2)),
-            (CombinationType.KAN, (Suit.SOZU, 3)),
-            (CombinationType.PAIR, (Suit.JIHAI, 1)),
+            make_combination(CombinationType.KAN, Suit.MANZU, 1),
+            make_combination(CombinationType.KAN, Suit.PINZU, 2),
+            make_combination(CombinationType.KAN, Suit.SOZU, 3),
+            make_combination(CombinationType.PAIR, Suit.JIHAI, 1),
         ]
         result = self.checker.check_sankantsu(hand, combo_with_kan)
         assert result is not None
@@ -864,11 +874,11 @@ class TestYakuChecker:
 
         # 手動構建包含四個槓子的組合
         combo_with_kan = [
-            (CombinationType.KAN, (Suit.MANZU, 1)),
-            (CombinationType.KAN, (Suit.MANZU, 2)),
-            (CombinationType.KAN, (Suit.MANZU, 3)),
-            (CombinationType.KAN, (Suit.PINZU, 1)),
-            (CombinationType.PAIR, (Suit.PINZU, 2)),
+            make_combination(CombinationType.KAN, Suit.MANZU, 1),
+            make_combination(CombinationType.KAN, Suit.MANZU, 2),
+            make_combination(CombinationType.KAN, Suit.MANZU, 3),
+            make_combination(CombinationType.KAN, Suit.PINZU, 1),
+            make_combination(CombinationType.PAIR, Suit.PINZU, 2),
         ]
         result = self.checker.check_suukantsu(hand, combo_with_kan)
         assert result is not None
