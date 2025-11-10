@@ -560,44 +560,19 @@ class TestRuleEngine:
         self._init_game()
 
         # 設置玩家0可以暗槓
-        # 手牌：111m 123m 456m 7m 123p
-        ankan_tiles = parse_tiles("1m1m1m1m2m3m4m5m6m7m1p2p3p")
-        hand0 = Hand(ankan_tiles)
-        self.engine._hands[0] = hand0
+        ten_tile = Tile(Suit.PINZU, 4)
+        # 1111m 234m 567m 123p 4p (聽 4p)
+        ankan_tiles = parse_tiles("1m1m1m1m2m3m4m5m6m7m1p2p3p4p")
+        self.engine._hands[0] = Hand(ankan_tiles)
         self.engine._current_player = 0
+        assert self.engine._tile_set is not None
+        self.engine._tile_set._wall[-1] = ten_tile
 
         # 執行暗槓
-        if self._has_action(0, GameAction.ANKAN):
-            result = self.engine.execute_action(0, GameAction.ANKAN)
-            # 檢查是否有 rinshan_tile（294-295行）
-            if result.rinshan_tile is not None:
-                rinshan_tile = result.rinshan_tile
-                # 檢查是否有嶺上開花
-                if result.rinshan_win is not None:
-                    assert result.rinshan_win is not None
-
-    def test_check_win_payment_from_chankan(self):
-        """測試搶槓和支付者設置"""
-        self._init_game()
-        # 設置 pending_kan_tile
-
-        kan_tile = Tile(Suit.MANZU, 1)
-        self.engine._pending_kan_tile = (0, kan_tile)
-
-        # 設置一個可以搶槓和的手牌
-        # 手牌：123m 456m 789m 123p 4p
-        test_tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
-        test_hand = Hand(test_tiles)
-        self.engine._hands[1] = test_hand
-
-        if result := self.engine.check_win(1, kan_tile, is_chankan=True):
-            # 檢查支付者設置
-            if result.score_result is not None:
-                score_result = result.score_result
-                assert score_result.payment_from == 0  # 槓牌玩家
-                # 檢查 chankan 標記（383行）
-                assert result.chankan is not None
-                assert result.chankan == True
+        assert self._has_action(0, GameAction.ANKAN)
+        result = self.engine.execute_action(0, GameAction.ANKAN)
+        assert result.rinshan_tile is not None
+        assert result.rinshan_win is not None
 
     def test_check_flow_mangan(self):
         """測試流局滿貫判定"""
@@ -736,10 +711,14 @@ class TestRuleEngine:
         assert result.winners is not None
         assert len(result.winners) > 0
         winner = result.winners[0]
+        # check_win 需要 pending_kan_tile 來設定支付者
+        self.engine._pending_kan_tile = (0, kan_tile)
         win_result = self.engine.check_win(winner, kan_tile, is_chankan=True)
         assert win_result is not None
         assert win_result.win is True
         assert win_result.chankan is True
+        assert win_result.score_result is not None
+        assert win_result.score_result.payment_from == 0
 
     def test_execute_action_kan_wall_exhausted(self):
         """測試明槓觸發四槓散了"""
@@ -748,16 +727,16 @@ class TestRuleEngine:
         player = self.engine.get_current_player()
         kan_tile = Tile(Suit.MANZU, 6)
 
-        # 手牌：1112345666788m
+        # 111m 2345m 6666m 7m 88m
         starting_tiles = parse_tiles("1m1m1m2m3m4m5m6m6m6m7m8m8m")
         self.engine._hands[player] = Hand(starting_tiles)
         self.engine._last_discarded_tile = kan_tile
         self.engine._last_discarded_player = (player + 1) % self.engine.get_num_players()
 
         self.engine._kan_count = 3
-        if self.engine._tile_set:
-            self.engine._tile_set._wall = [Tile(Suit.PINZU, 2)]
-            self.engine._tile_set._tiles = []
+        assert self.engine._tile_set is not None
+        self.engine._tile_set._wall = [Tile(Suit.PINZU, 2)]
+        self.engine._tile_set._tiles = []
 
         result = self.engine.execute_action(player, GameAction.KAN, tile=kan_tile)
 
@@ -773,7 +752,7 @@ class TestRuleEngine:
         self.engine._current_player = 0
         kan_tile = Tile(Suit.SOZU, 4)
 
-        # 手牌：444s 234m 567m 123p 4p
+        # 444s 234m 567m 123p 4p
         hand0_tiles = parse_tiles("4s4s4s2m3m4m5m6m7m1p2p3p4p")
         hand0 = Hand(hand0_tiles)
         hand0.pon(kan_tile)
