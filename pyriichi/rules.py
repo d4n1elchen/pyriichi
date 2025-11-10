@@ -784,6 +784,14 @@ class RuleEngine:
         """取得玩家數量。"""
         return self._num_players
 
+    def get_wall_remaining(self) -> Optional[int]:
+        """取得牌山剩餘張數。"""
+        return self._tile_set.remaining if self._tile_set else None
+
+    def get_revealed_dora_indicators(self) -> List[Tile]:
+        """取得目前公開的寶牌指示牌。"""
+        return self._tile_set.get_dora_indicators() if self._tile_set else []
+
     def get_available_chi_sequences(self, player: int) -> List[List[Tile]]:
         """取得玩家可用的吃牌組合（僅限上家捨牌）。"""
 

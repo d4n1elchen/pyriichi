@@ -4,9 +4,6 @@ PyRiichi Demo UI
 提供一個最小化的 Tkinter 視覺介面示例，演示如何使用 PyRiichi
 的 `RuleEngine` 進行基本的摸打流程。玩家（0 號）透過介面操作，
 其餘三名對手僅會隨機摸牌並打出一張牌。
-
-注意：此示例只cover最基本的流程，未實作鳴牌、和牌等完整規則，
-僅供快速體驗 API 使用方式。
 """
 
 import random
@@ -633,26 +630,8 @@ class MahjongDemoUI:
         self._finalize_win(result, method_label="榮和", tile_label=tile_label)
 
     def _compute_win_result(self, player: int, tile: Tile, remove_tile: bool) -> Optional[WinResult]:
-        hand = self.engine.get_hand(player)
-        removed = False
-
-        if remove_tile:
-            for idx, t in enumerate(getattr(hand, "_tiles", [])):
-                if t == tile:
-                    hand._tiles.pop(idx)  # type: ignore[attr-defined]
-                    hand._tile_counts_cache = None  # type: ignore[attr-defined]
-                    removed = True
-                    break
-            if not removed:
-                return None
-
-        try:
-            return self.engine.check_win(player, tile)
-        finally:
-            if remove_tile and removed:
-                hand._tiles.append(tile)  # type: ignore[attr-defined]
-                hand._tiles.sort()  # type: ignore[attr-defined]
-                hand._tile_counts_cache = None  # type: ignore[attr-defined]
+        # TODO: RuleEngine 若需支援「模擬移除手牌後再檢查和牌」的情境，應提供對應公開 API。
+        return self.engine.check_win(player, tile)
 
     def _finalize_win(self, win_result: WinResult, method_label: str, tile_label: Optional[str]) -> None:
         message = f"你{method_label}!"
@@ -661,10 +640,6 @@ class MahjongDemoUI:
         self.log(message)
 
         self._log_win_result(win_result)
-
-        self.engine._phase = GamePhase.WINNING  # type: ignore[attr-defined]
-        self.engine._last_discarded_tile = None  # type: ignore[attr-defined]
-        self.engine._last_discarded_player = None  # type: ignore[attr-defined]
 
         self.last_drawn_tile = None
         self._cached_tsumo_result = None
@@ -713,15 +688,13 @@ class MahjongDemoUI:
             f"局風: {game_state.round_wind.name} | 局數: {game_state.round_number} | "
             f"莊家: {game_state.dealer} | 當前玩家: {current} | 階段: {phase.value}"
         )
-        tile_set = getattr(self.engine, "_tile_set", None)
-        if tile_set:
-            info += f" | 牌山剩餘: {tile_set.remaining}"
-            indicators = []
-            for indicator in getattr(tile_set, "_dora_indicators", []):
-                if indicator is not None:
-                    indicators.append(indicator.zh)
-            if indicators:
-                info += " | 寶牌指示: " + " ".join(indicators)
+        remaining = self.engine.get_wall_remaining()
+        if remaining is not None:
+            info += f" | 牌山剩餘: {remaining}"
+
+        dora_indicators = self.engine.get_revealed_dora_indicators()
+        if dora_indicators:
+            info += " | 寶牌指示: " + " ".join(tile.zh for tile in dora_indicators)
         self.info_label.config(text=info)
 
     # ------------------------------------------------------------------
