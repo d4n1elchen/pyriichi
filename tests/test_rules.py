@@ -584,18 +584,16 @@ class TestRuleEngine:
         # 測試有獲勝者的情況
         winner = 0
         self.engine.end_round(winner)
-
-        # 檢查遊戲狀態是否更新
         assert self.engine._phase == GamePhase.PLAYING
+        # TODO: 測試遊戲結束條件
 
     def test_end_round_draw(self):
         """測試結束一局（流局）"""
         self._init_game()
         # 測試流局的情況
         self.engine.end_round(None)
-
-        # 檢查遊戲狀態是否更新
         assert self.engine._phase == GamePhase.PLAYING
+        # TODO: 測試遊戲結束條件
 
     def test_get_dora_tiles(self):
         """測試獲取表寶牌"""
@@ -651,11 +649,79 @@ class TestRuleEngine:
         assert 0 in self.engine._riichi_ippatsu
         assert self.engine._riichi_ippatsu[0] is True
 
-        # 任一玩家捨牌後，一發狀態應失效
+        # 自己捨牌不應中斷一發
         discard_tile = self.engine.get_hand(0).tiles[0]
         self.engine._apply_discard_effects(0, discard_tile, ActionResult())
         assert 0 in self.engine._riichi_ippatsu
+        assert self.engine._riichi_ippatsu[0] is True
+
+    def test_interrupt_riichi_ippatsu_on_chi(self):
+        """測試吃牌會中斷一發"""
+        self._init_game()
+        self.engine._riichi_ippatsu = {0: True}
+        self.engine._riichi_ippatsu_discard = {0: 0}
+
+        chi_tile = Tile(Suit.MANZU, 4)
+        self.engine._hands[0] = Hand(parse_tiles("1m1m2m2m3m3m4m4m5m5m6m6m7m7m"))
+        self.engine._hands[1] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p5p"))
+        self.engine._current_player = 0
+
+        self.engine.execute_action(0, GameAction.DISCARD, tile=chi_tile)
+        sequences = self.engine.get_available_chi_sequences(1)
+        assert sequences
+        target_sequence = next(
+            (seq for seq in sequences if sorted(tile.rank for tile in seq) == [2, 3]),
+            None,
+        )
+        assert target_sequence is not None
+        self.engine.execute_action(1, GameAction.CHI, sequence=target_sequence)
         assert self.engine._riichi_ippatsu[0] is False
+
+    def test_interrupt_riichi_ippatsu_on_pon(self):
+        """測試碰牌會中斷一發"""
+        self._init_game()
+        self.engine._riichi_ippatsu = {0: True}
+        self.engine._riichi_ippatsu_discard = {0: 0}
+
+        pon_tile = Tile(Suit.PINZU, 7)
+        self.engine._hands[0] = Hand(parse_tiles("7p1m1m1m2m2m3m3m4m4m5m5m6m6m"))
+        self.engine._hands[2] = Hand(parse_tiles("7p7p1p1p2p2p3p3p4p4p5p5p6p"))
+        self.engine._current_player = 0
+
+        self.engine.execute_action(0, GameAction.DISCARD, tile=pon_tile)
+        assert GameAction.PON in self.engine.get_available_actions(2)
+        self.engine.execute_action(2, GameAction.PON)
+        assert self.engine._riichi_ippatsu[0] is False
+
+    def test_interrupt_riichi_ippatsu_on_kan(self):
+        """測試明槓會中斷一發"""
+        self._init_game()
+        self.engine._riichi_ippatsu = {0: True}
+        self.engine._riichi_ippatsu_discard = {0: 0}
+
+        kan_tile = Tile(Suit.SOZU, 9)
+        self.engine._hands[0] = Hand(parse_tiles("9s1m1m2m2m3m3m4m4m5m5m6m6m7m"))
+        self.engine._hands[1] = Hand(parse_tiles("9s9s9s1s1s2s2s3s3s4s4s5s5s"))
+        self.engine._current_player = 0
+
+        self.engine.execute_action(0, GameAction.DISCARD, tile=kan_tile)
+        assert GameAction.KAN in self.engine.get_available_actions(1)
+        self.engine.execute_action(1, GameAction.KAN, tile=kan_tile)
+        assert self.engine._riichi_ippatsu[0] is False
+
+    def test_interrupt_riichi_ippatsu_on_ankan(self):
+        """測試暗槓會中斷一發"""
+        self._init_game()
+        self.engine._riichi_ippatsu = {0: True, 1: True}
+        self.engine._riichi_ippatsu_discard = {0: 0, 1: 0}
+
+        self.engine._hands[3] = Hand(parse_tiles("1m1m1m1m2m3m4m5m6m7m8m9m1p"))
+        self.engine._current_player = 3
+
+        assert GameAction.ANKAN in self.engine.get_available_actions(3)
+        result = self.engine.execute_action(3, GameAction.ANKAN)
+        assert result.ankan is True or result.kan is True
+        assert all(flag is False for flag in self.engine._riichi_ippatsu.values())
 
     def test_execute_action_kan_chankan_complete(self):
         """測試明槓搶槓完整場景"""

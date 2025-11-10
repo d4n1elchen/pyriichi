@@ -119,15 +119,16 @@ class RuleEngine:
         self._last_drawn_tile: Optional[Tuple[int, Tile]] = None
 
         # 狀態追蹤
-        self._riichi_ippatsu: Dict[int, bool] = {}  # {player_id: is_ippatsu}
-        self._is_first_round: bool = True  # 是否為第一巡
-        self._discard_history: List[Tuple[int, Tile]] = []  # [(player, tile), ...] 捨牌歷史
-        self._kan_count: int = 0  # 槓的總次數
-        self._turn_count: int = 0  # 回合數
-        self._is_first_turn_after_deal: bool = True  # 發牌後是否為第一回合
-        self._pending_kan_tile: Optional[Tuple[int, Tile]] = None  # (player, tile) 待處理的槓牌，用於搶槓判定
-        self._winning_players: List[int] = []  # 多人和牌時的玩家列表（用於三家和了）
-        self._ignore_suukantsu: bool = False  # 是否忽略四槓散了判定
+        self._riichi_ippatsu: Dict[int, bool] = {}
+        self._riichi_ippatsu_discard: Dict[int, int] = {}
+        self._is_first_round: bool = True
+        self._discard_history: List[Tuple[int, Tile]] = []
+        self._kan_count: int = 0
+        self._turn_count: int = 0
+        self._is_first_turn_after_deal: bool = True
+        self._pending_kan_tile: Optional[Tuple[int, Tile]] = None
+        self._winning_players: List[int] = []
+        self._ignore_suukantsu: bool = False
         self._action_handlers = {
             GameAction.DRAW: self._handle_draw,
             GameAction.DISCARD: self._handle_discard,
@@ -154,6 +155,7 @@ class RuleEngine:
 
         # 重置狀態追蹤
         self._riichi_ippatsu = {}
+        self._riichi_ippatsu_discard = {}
         self._is_first_round = True
         self._discard_history = []
         self._kan_count = 0
@@ -362,6 +364,8 @@ class RuleEngine:
         result.called_action = GameAction.PON
         result.called_tile = tile_to_claim
 
+        self._interrupt_ippatsu(GameAction.PON, acting_player=player)
+
         self._current_player = player
         self._last_discarded_tile = None
         self._last_discarded_player = None
@@ -396,6 +400,8 @@ class RuleEngine:
         result.called_action = GameAction.CHI
         result.called_tile = tile_to_claim
 
+        self._interrupt_ippatsu(GameAction.CHI, acting_player=player)
+
         self._current_player = player
         self._last_discarded_tile = None
         self._last_discarded_player = None
@@ -409,6 +415,7 @@ class RuleEngine:
         self._game_state.add_riichi_stick()
         self._game_state.update_score(player, -1000)
         self._riichi_ippatsu[player] = True
+        self._riichi_ippatsu_discard[player] = 0
         result.riichi = True
         return result
 
@@ -420,6 +427,8 @@ class RuleEngine:
         meld = self._hands[player].kan(tile)
         self._kan_count += 1
         self._last_drawn_tile = None
+
+        self._interrupt_ippatsu(GameAction.KAN, acting_player=player)
 
         if self._draw_rinshan_tile(player, result, kan_type=meld.type):
             self._pending_kan_tile = None
@@ -450,6 +459,8 @@ class RuleEngine:
         if meld:
             self._kan_count += 1
         kan_type = meld.type if meld else MeldType.ANKAN
+
+        self._interrupt_ippatsu(GameAction.ANKAN, acting_player=player)
 
         self._draw_rinshan_tile(player, result, kan_type=kan_type)
         if self._pending_kan_tile:
@@ -492,10 +503,10 @@ class RuleEngine:
         if len(self._discard_history) > 4:
             self._discard_history.pop(0)
 
-        if self._riichi_ippatsu:
-            for p in list(self._riichi_ippatsu.keys()):
-                self._riichi_ippatsu[p] = False
-
+        if self._riichi_ippatsu and player in self._riichi_ippatsu:
+            if self._riichi_ippatsu_discard.get(player) == 1:
+                self._riichi_ippatsu[player] = False
+            self._riichi_ippatsu_discard[player] += 1
         if self._tile_set and self._tile_set.is_exhausted():
             result.is_last_tile = True
 
@@ -904,6 +915,21 @@ class RuleEngine:
                 winners.append(player)
 
         return winners
+
+    def _interrupt_ippatsu(self, action: GameAction, acting_player: int) -> None:
+        """處理副露或槓造成的一發中斷。"""
+        if not self._riichi_ippatsu:
+            return
+
+        if action not in {GameAction.CHI, GameAction.PON, GameAction.KAN, GameAction.ANKAN}:
+            return
+
+        if not self._game_state.ruleset.ippatsu_interrupt_on_meld_or_kan:
+            return
+
+        for player in self._riichi_ippatsu.keys():
+            self._riichi_ippatsu[player] = False
+            self._riichi_ippatsu_discard[player] = 0
 
     def _check_sancha_ron(self) -> bool:
         """
