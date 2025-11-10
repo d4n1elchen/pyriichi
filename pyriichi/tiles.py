@@ -221,9 +221,12 @@ class TileSet:
         # 初始化王牌區（最後 14 張）
         self._wall = self._tiles[-14:]
         self._tiles = self._tiles[:-14]
-        # 設置寶牌指示牌（王牌區倒數第 5 張開始）
-        self._dora_indicators = [self._wall[4]]  # 表寶牌
-        # 裡寶牌在立直時才顯示
+        # 設置嶺上牌
+        self._rinshan_tiles = self._wall[:4]
+        # 設置寶牌指示牌
+        self._dora_indicators = self._wall[4:8]
+        # 設置裡寶牌指示牌
+        self._ura_dora_indicators = self._wall[8:12]
 
     def deal(self, num_players: int = 4) -> List[List[Tile]]:
         """
@@ -259,16 +262,16 @@ class TileSet:
         Returns:
             摸到的牌，如果牌山為空則返回 None
         """
-        return self._tiles.pop() if self._tiles else None
+        return self._tiles.pop(0) if self._tiles else None
 
-    def draw_wall_tile(self) -> Optional[Tile]:
+    def draw_rinshan(self) -> Optional[Tile]:
         """
-        從王牌區摸一張牌（用於槓後摸牌）
+        從嶺上牌摸一張牌（用於槓後摸牌）
 
         Returns:
-            摸到的牌，如果王牌區為空則返回 None
+            摸到的牌，如果嶺上牌為空則返回 None
         """
-        return self._wall.pop() if self._wall else None
+        return self._rinshan_tiles.pop(0) if self._rinshan_tiles else None
 
     @property
     def remaining(self) -> int:
@@ -284,20 +287,37 @@ class TileSet:
         """檢查牌山是否耗盡"""
         return len(self._tiles) == 0
 
-    def get_dora_indicator(self, index: int = 0) -> Optional[Tile]:
+    def get_dora_indicators(self, count: Optional[int] = None) -> List[Tile]:
         """
         獲取寶牌指示牌
 
         Args:
-            index: 指示牌索引（0 為表寶牌，1+ 為裡寶牌）
+            count: 指示牌數量（如果為 None，則依照嶺上牌數量推斷）
 
         Returns:
-            指示牌，如果不存在則返回 None
+            指示牌，如果不足則引發 ValueError
         """
-        if index < len(self._dora_indicators):
-            return self._dora_indicators[index]
-        # 裡寶牌在王牌區倒數第 2 張開始
-        return self._wall[-2] if index == 1 and len(self._wall) >= 2 else None
+        if count is None:
+            count = 5 - len(self._rinshan_tiles)
+        if count > len(self._dora_indicators):
+            raise ValueError(f"寶牌指示牌不足，需要 {count} 張，只有 {len(self._dora_indicators)} 張")
+        return self._dora_indicators[:count]
+
+    def get_ura_dora_indicators(self, count: Optional[int] = None) -> List[Tile]:
+        """
+        獲取裡寶牌指示牌
+
+        Args:
+            count: 指示牌數量（如果為 None，則依照嶺上牌數量推斷）
+
+        Returns:
+            指示牌，如果不足則引發 ValueError
+        """
+        if count is None:
+            count = 5 - len(self._rinshan_tiles)
+        if count > len(self._ura_dora_indicators):
+            raise ValueError(f"裡寶牌指示牌不足，需要 {count} 張，只有 {len(self._ura_dora_indicators)} 張")
+        return self._ura_dora_indicators[:count]
 
     def get_dora(self, indicator: Tile) -> Tile:
         """

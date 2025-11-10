@@ -31,7 +31,7 @@ def format_tiles_chinese(tiles: Iterable[Tile]) -> str:
 
 
 def meld_to_chinese(meld: Meld) -> str:
-    kind = meld.meld_type.zh
+    kind = meld.type.zh
     tiles_text = " ".join(tile.zh for tile in meld.tiles)
     return f"{kind}({tiles_text})"
 
@@ -157,7 +157,7 @@ class MahjongDemoUI:
         if extra_message:
             self.log(extra_message)
 
-        if phase == GamePhase.DRAW:
+        if phase == GamePhase.RYUUKYOKU:
             self.log("本局流局，請重新開始。")
         elif phase == GamePhase.WINNING:
             self.log("出現和牌，示例在此結束。")
@@ -183,7 +183,7 @@ class MahjongDemoUI:
             return
 
         result = self.engine.execute_action(self.human_player, GameAction.DRAW)
-        if result.draw:
+        if result.ryuukyoku:
             self.log("牌山耗盡，流局！")
             self.last_drawn_tile = None
             self._cached_tsumo_result = None
@@ -238,7 +238,7 @@ class MahjongDemoUI:
         hand = self.engine.get_hand(player)
         if len(hand.tiles) < 14 and self._has_action(player, GameAction.DRAW):
             result = self.engine.execute_action(player, GameAction.DRAW)
-            if result.draw:
+            if result.ryuukyoku:
                 self.log(f"玩家 {player} 嶺上摸牌失敗，流局。")
                 self.end_round_if_needed()
                 return
@@ -700,9 +700,7 @@ class MahjongDemoUI:
             self.draw_button.config(state=tk.DISABLED)
             return
 
-        can_draw = self.engine.get_phase() == GamePhase.PLAYING and self._has_action(
-            self.human_player, GameAction.DRAW
-        )
+        can_draw = self.engine.get_phase() == GamePhase.PLAYING and self._has_action(self.human_player, GameAction.DRAW)
         self.draw_button.config(state=tk.NORMAL if can_draw else tk.DISABLED)
 
     def update_info_label(self) -> None:

@@ -168,20 +168,20 @@ class TestTileSet:
         tile = tile_set.draw()
         assert tile is None
 
-    def test_tileset_draw_wall_tile(self):
-        """測試從王牌區摸牌"""
+    def test_tileset_draw_rinshan_tile(self):
+        """測試從嶺上牌摸牌"""
         tile_set = TileSet()
         tile_set.shuffle()
-        # 從王牌區摸牌
-        if tile_set._wall:
-            tile = tile_set.draw_wall_tile()
+        # 從嶺上牌摸牌
+        if tile_set._rinshan_tiles:
+            tile = tile_set.draw_rinshan()
             assert tile is not None
 
-        # 耗盡王牌區
-        while tile_set._wall:
-            tile_set.draw_wall_tile()
+        # 耗盡嶺上牌
+        while tile_set._rinshan_tiles:
+            tile_set.draw_rinshan()
         # 現在應該返回 None
-        tile = tile_set.draw_wall_tile()
+        tile = tile_set.draw_rinshan()
         assert tile is None
 
     def test_tileset_remaining(self):
@@ -193,17 +193,6 @@ class TestTileSet:
 
         tile_set.draw()
         assert tile_set.remaining == initial_remaining - 1
-
-    def test_tileset_wall_remaining(self):
-        """測試王牌區剩餘牌數"""
-        tile_set = TileSet()
-        tile_set.shuffle()
-        wall_remaining = tile_set.wall_remaining
-        assert wall_remaining == 14  # 王牌區應該有 14 張牌
-
-        if tile_set._wall:
-            tile_set.draw_wall_tile()
-            assert tile_set.wall_remaining == wall_remaining - 1
 
     def test_tileset_is_exhausted(self):
         """測試牌組是否耗盡"""
@@ -221,18 +210,15 @@ class TestTileSet:
         tile_set = TileSet()
         tile_set.shuffle()
 
-        # 獲取表寶牌（index=0）
-        indicator0 = tile_set.get_dora_indicator(0)
-        assert indicator0 is not None
+        # 獲取表寶牌
+        indicators = tile_set.get_dora_indicators()
+        assert indicators is not None
+        assert len(indicators) == 1
 
-        # 獲取裡寶牌（index=1，如果可用）
-        indicator1 = tile_set.get_dora_indicator(1)
-        # 如果王牌區不足 2 張，應該返回 None
-        # 否則返回裡寶牌指示牌
-
-        # 測試無效 index
-        indicator_invalid = tile_set.get_dora_indicator(2)
-        assert indicator_invalid is None
+        # 獲取裡寶牌
+        ura_indicators = tile_set.get_ura_dora_indicators()
+        assert ura_indicators is not None
+        assert len(ura_indicators) == 1
 
     def test_tileset_get_dora(self):
         """測試根據指示牌獲取寶牌"""

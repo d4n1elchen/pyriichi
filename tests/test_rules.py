@@ -112,7 +112,7 @@ class TestRuleEngine:
         tile_to_discard = Tile(Suit.MANZU, 3)
 
         self.engine._hands[0] = Hand(parse_tiles("1m3m5m6m7m8m9m1p2p3p4p1s2s3s"))
-        # 手牌：33m 567p 89p 456s 789s
+        # 33m 567p 89p 456s 789s
         self.engine._hands[1] = Hand(parse_tiles("3m3m5p6p7p8p9p4s5s6s7s8s9s"))
 
         self.engine._current_player = 0
@@ -144,9 +144,9 @@ class TestRuleEngine:
         tile_to_discard = Tile(Suit.MANZU, 4)
 
         self.engine._hands[0] = Hand(parse_tiles("4m7m8m9m1p2p3p4p5p1s2s3s4s5s"))
-        # 手牌：23m 56m 678p 9p 678s 9s 5s
+        # 23m 56m 678p 9p 678s 9s 5s
         self.engine._hands[1] = Hand(parse_tiles("2m3m5m6m6p7p8p9p6s7s8s9s5s"))
-        # 手牌：11m 11p 112345678s
+        # 11m 11p 112345678s
         self.engine._hands[2] = Hand(parse_tiles("1m1m1p1p1s1s2s3s4s5s6s7s8s"))
 
         self.engine._current_player = 0
@@ -183,7 +183,7 @@ class TestRuleEngine:
 
     def test_hand_total_tile_count_includes_melds(self):
         """手牌總數應包含副露的牌。"""
-        # 手牌：11123m 456p 77899s
+        # 11m 123m 456p 77s 8s 99s
         tiles = parse_tiles("1m1m1m2m3m4p5p6p7s7s8s9s9s")
 
         hand = Hand(tiles)
@@ -205,7 +205,7 @@ class TestRuleEngine:
         """測試 check_win 沒有和牌組合"""
         self._init_game()
         # 創建一個不和牌的手牌
-        # 手牌：123m 456m 78m 123p 45p
+        # 123m 456m 78m 123p 45p
         test_tiles = parse_tiles("1m2m3m4m5m6m7m8m1p2p3p4p5p")
         test_hand = Hand(test_tiles)
         self.engine._hands[0] = test_hand
@@ -216,20 +216,13 @@ class TestRuleEngine:
         assert result is None
 
     def test_check_win_no_yaku(self):
-        """測試 check_win 沒有役"""
+        """測試無役"""
         self._init_game()
-        # 創建一個標準和牌型，但構造為「無役」：
-        # - 4 個順子 + 1 個對子
-        # - 包含 7-8-9（含幺九）使「斷么九」不成立
-        # - 原設計以「嵌張」避免平和，但目前實作未嚴格檢查兩面聽
-        #   因此下方額外設為「非門清」以杜絕平和誤判
-        # - 對子為非役牌，且不產生其他役
-        # 手牌：234m 567789m 2p 4p 22s
+        # 234m 567m 789m 2p 4p 22s
         tiles = parse_tiles("2m3m4m5m6m7m7m8m9m2p4p2s2s")
 
         hand = Hand(tiles)
-        # 將手牌設為非門清，避免平和（實作目前未檢查兩面聽，防止誤判平和）
-        # 手牌：111s
+        # 將手牌設為非門清
         hand._melds.append(Meld(MeldType.PON, parse_tiles("1s1s1s")))
         # 設定最後捨牌為 3p，測試榮和
         winning_tile = Tile(Suit.PINZU, 3)
@@ -238,7 +231,7 @@ class TestRuleEngine:
 
         # 將手牌放到玩家0
         self.engine._hands[0] = hand
-        self.engine._current_player = 2  # 當前輪到其他玩家，表示榮和
+        self.engine._current_player = 2
 
         # 檢查和牌（非門清且無其他役，應該返回 None）
         result = self.engine.check_win(0, winning_tile)
@@ -291,31 +284,24 @@ class TestRuleEngine:
         assert ryuukyoku_type is not None
         assert ryuukyoku_type == RyuukyokuType.EXHAUSTED
 
-    def test_count_dora(self):
-        """測試寶牌計算"""
+    def test_count_dora_zero(self):
+        """測試無寶牌計算"""
         self._init_game()
-        # 測試沒有牌組的情況
-        self.engine._tile_set = None
-        # 手牌：1m
-        test_hand = Hand(parse_tiles("1m"))
-        self.engine._hands[0] = test_hand
-        dora_count = self.engine._count_dora(0, Tile(Suit.MANZU, 1), [])
+        self.engine._hands[0] = Hand(parse_tiles("1m1m1m1m2m3m4m5m6m7m9m9m9m"))
+        dora_count = self.engine._count_dora(0, Tile(Suit.MANZU, 1))
         assert dora_count == 0
 
-        # 恢復牌組
-        self.engine._tile_set = TileSet()
-        self.engine._tile_set.shuffle()
-
-        # 測試有牌組的情況
-        # 手牌：1m
-        test_hand = Hand(parse_tiles("1m"))
+    def test_count_dora_one(self):
+        """測試有寶牌計算"""
+        self._init_game()
+        test_hand = Hand(parse_tiles("1m1m1m1m2m3m4m5m6m7m9m9m9m"))
         self.engine._hands[0] = test_hand
-        dora_count = self.engine._count_dora(0, Tile(Suit.MANZU, 1), [])
+        dora_count = self.engine._count_dora(0, Tile(Suit.MANZU, 1))
         assert dora_count >= 0
 
         # 測試立直時的裡寶牌
         test_hand.set_riichi(True)
-        dora_count = self.engine._count_dora(0, Tile(Suit.MANZU, 1), [])
+        dora_count = self.engine._count_dora(0, Tile(Suit.MANZU, 1))
         assert dora_count >= 0
 
         # 測試紅寶牌
@@ -324,7 +310,7 @@ class TestRuleEngine:
         red_tile = red_tiles[0]
         test_hand = Hand(red_tiles)
         self.engine._hands[0] = test_hand
-        dora_count = self.engine._count_dora(0, Tile(Suit.PINZU, 5), [])
+        dora_count = self.engine._count_dora(0, Tile(Suit.PINZU, 5))
         assert dora_count >= 1  # 至少有一個紅寶牌
 
     def test_get_hand_invalid_player(self):
@@ -547,7 +533,7 @@ class TestRuleEngine:
         self.engine._last_discarded_tile = kan_tile
         self.engine._last_discarded_player = 1
         assert self.engine._tile_set is not None
-        self.engine._tile_set._wall[-1] = ten_tile
+        self.engine._tile_set._rinshan_tiles[0] = ten_tile
 
         # 執行明槓
         assert self._has_action(0, GameAction.KAN)
@@ -566,7 +552,7 @@ class TestRuleEngine:
         self.engine._hands[0] = Hand(ankan_tiles)
         self.engine._current_player = 0
         assert self.engine._tile_set is not None
-        self.engine._tile_set._wall[-1] = ten_tile
+        self.engine._tile_set._rinshan_tiles[0] = ten_tile
 
         # 執行暗槓
         assert self._has_action(0, GameAction.ANKAN)
@@ -594,30 +580,6 @@ class TestRuleEngine:
         self.engine.end_round(None)
         assert self.engine._phase == GamePhase.PLAYING
         # TODO: 測試遊戲結束條件
-
-    def test_get_dora_tiles(self):
-        """測試獲取表寶牌"""
-        self._init_game()
-        # 測試有牌組的情況
-        dora_tiles = self.engine.get_dora_tiles()
-        assert dora_tiles is not None
-
-        # 測試沒有牌組的情況
-        self.engine._tile_set = None
-        dora_tiles = self.engine.get_dora_tiles()
-        assert dora_tiles == []
-
-    def test_get_ura_dora_tiles(self):
-        """測試獲取裡寶牌"""
-        self._init_game()
-        # 測試有牌組的情況
-        ura_dora_tiles = self.engine.get_ura_dora_tiles()
-        assert ura_dora_tiles is not None
-
-        # 測試沒有牌組的情況
-        self.engine._tile_set = None
-        ura_dora_tiles = self.engine.get_ura_dora_tiles()
-        assert ura_dora_tiles == []
 
     def test_check_sancha_ron(self):
         """測試三家和了檢查"""

@@ -268,17 +268,18 @@ class RuleEngine:
         hand = self._hands[player]
         if not hand.is_concealed:
             return False
-        if hand.is_riichi:
-            return False
-        return hand.is_tenpai()
+        return False if hand.is_riichi else hand.is_tenpai()
 
     def _can_kan(self, player: int) -> bool:
         hand = self._hands[player]
 
         # 他家捨牌可進行大明槓
-        if self._last_discarded_tile is not None and self._last_discarded_player is not None:
-            if self._last_discarded_player != player and hand.can_kan(self._last_discarded_tile):
-                return True
+        if (
+            self._last_discarded_tile is not None
+            and self._last_discarded_player is not None
+            and (self._last_discarded_player != player and hand.can_kan(self._last_discarded_tile))
+        ):
+            return True
 
         # 自家加槓（需為當前玩家）
         if player == self._current_player:
@@ -477,7 +478,7 @@ class RuleEngine:
         if not self._tile_set:
             return False
 
-        if rinshan_tile := self._tile_set.draw_wall_tile():
+        if rinshan_tile := self._tile_set.draw_rinshan():
             self._hands[player].add_tile(rinshan_tile)
             result.rinshan_tile = rinshan_tile
             self._last_drawn_tile = (player, rinshan_tile)
@@ -576,7 +577,7 @@ class RuleEngine:
             return None  # 沒有役不能和牌
 
         # 計算寶牌數量
-        dora_count = self._count_dora(player, winning_tile, winning_combination)
+        dora_count = self._count_dora(player, winning_tile)
 
         score_result = self._score_calculator.calculate(
             hand, winning_tile, winning_combination, yaku_results, dora_count, self._game_state, is_tsumo, player
@@ -713,14 +714,13 @@ class RuleEngine:
         else:
             return False
 
-    def _count_dora(self, player: int, winning_tile: Tile, winning_combination: List) -> int:
+    def _count_dora(self, player: int, winning_tile: Optional[Tile] = None) -> int:
         """
         計算寶牌數量
 
         Args:
             player: 玩家位置
             winning_tile: 和牌牌
-            winning_combination: 和牌組合
 
         Returns:
             寶牌翻數（表寶牌 + 裡寶牌 + 紅寶牌）
@@ -732,22 +732,21 @@ class RuleEngine:
         hand = self._hands[player]
 
         # 收集所有牌（手牌 + 和牌牌）
-        all_tiles = hand.tiles + [winning_tile]
+        all_tiles = hand.tiles + [winning_tile] if winning_tile else hand.tiles
 
         # 表寶牌
-        dora_indicator = self._tile_set.get_dora_indicator(0)
-        if dora_indicator:
-            dora_tile = self._tile_set.get_dora(dora_indicator)
-            for tile in all_tiles:
-                if tile.suit == dora_tile.suit and tile.rank == dora_tile.rank:
+        if dora_indicators := self._tile_set.get_dora_indicators(self._kan_count):
+            for dora_indicator in dora_indicators:
+                dora_tile = self._tile_set.get_dora(dora_indicator)
+                if dora_tile in all_tiles:
                     dora_count += 1
 
         # 裡寶牌（立直時）
         if hand.is_riichi:
-            if ura_indicator := self._tile_set.get_dora_indicator(1):
-                ura_dora_tile = self._tile_set.get_dora(ura_indicator)
-                for tile in all_tiles:
-                    if tile.suit == ura_dora_tile.suit and tile.rank == ura_dora_tile.rank:
+            if ura_indicators := self._tile_set.get_ura_dora_indicators(self._kan_count):
+                for ura_indicator in ura_indicators:
+                    ura_dora_tile = self._tile_set.get_dora(ura_indicator)
+                    if ura_dora_tile in all_tiles:
                         dora_count += 1
 
         # 紅寶牌
@@ -870,30 +869,6 @@ class RuleEngine:
             has_next = self._game_state.next_round()
             if not has_next:
                 self._phase = GamePhase.ENDED
-
-    def get_dora_tiles(self) -> List[Tile]:
-        """
-        獲取所有表寶牌
-
-        Returns:
-            表寶牌列表
-        """
-        return self._get_dora_tiles_by_indicator(0)
-
-    def get_ura_dora_tiles(self) -> List[Tile]:
-        """
-        獲取所有裡寶牌（僅在立直時顯示）
-
-        Returns:
-            裡寶牌列表
-        """
-        return self._get_dora_tiles_by_indicator(1)
-
-    def _get_dora_tiles_by_indicator(self, indicator_index: int) -> List[Tile]:
-        if not self._tile_set:
-            return []
-        indicator = self._tile_set.get_dora_indicator(indicator_index)
-        return [self._tile_set.get_dora(indicator)] if indicator else []
 
     def _check_chankan(self, kan_player: int, kan_tile: Tile) -> List[int]:
         """
