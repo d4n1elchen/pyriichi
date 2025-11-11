@@ -3,25 +3,11 @@ YakuChecker 的單元測試
 """
 
 import pytest
-from pyriichi.hand import Combination, CombinationType, Hand
+from pyriichi.hand import Combination, CombinationType, Hand, make_combination
 from pyriichi.tiles import Suit, Tile
 from pyriichi.yaku import Yaku, YakuChecker
 from pyriichi.game_state import GameState, Wind
 from pyriichi.utils import parse_tiles
-
-
-def make_combination(combo_type: CombinationType, suit: Suit, rank: int) -> Combination:
-    if combo_type == CombinationType.SEQUENCE:
-        tiles = [Tile(suit, rank + i) for i in range(3)]
-    elif combo_type == CombinationType.TRIPLET:
-        tiles = [Tile(suit, rank) for _ in range(3)]
-    elif combo_type == CombinationType.KAN:
-        tiles = [Tile(suit, rank) for _ in range(4)]
-    elif combo_type == CombinationType.PAIR:
-        tiles = [Tile(suit, rank) for _ in range(2)]
-    else:
-        raise ValueError(f"Unsupported combination type: {combo_type}")
-    return Combination(combo_type, tiles)
 
 
 class TestYakuChecker:

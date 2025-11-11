@@ -50,6 +50,40 @@ class Combination:
         return self._tiles
 
 
+def make_combination(combo_type: CombinationType, suit: Suit, rank: int) -> Combination:
+    """
+    根據給定類型與花色/數值快速建立 `Combination`。
+
+    Args:
+        combo_type: 組合類型。
+        suit: 牌的花色。
+        rank: 數牌的點數或字牌編號。
+
+    Returns:
+        對應的 `Combination` 實例。
+
+    Raises:
+        ValueError: 當組合類型不支援或順子參數無效時。
+    """
+
+    if combo_type == CombinationType.SEQUENCE:
+        if suit == Suit.JIHAI:
+            raise ValueError("字牌不能組成順子")
+        if not (1 <= rank <= 7):
+            raise ValueError("順子起始點數必須介於 1 到 7 之間")
+        tiles = [Tile(suit, rank + i) for i in range(3)]
+    elif combo_type == CombinationType.TRIPLET:
+        tiles = [Tile(suit, rank) for _ in range(3)]
+    elif combo_type == CombinationType.KAN:
+        tiles = [Tile(suit, rank) for _ in range(4)]
+    elif combo_type == CombinationType.PAIR:
+        tiles = [Tile(suit, rank) for _ in range(2)]
+    else:
+        raise ValueError(f"不支援的組合類型：{combo_type}")
+
+    return Combination(combo_type, tiles)
+
+
 class MeldType(TranslatableEnum):
     """副露類型"""
 

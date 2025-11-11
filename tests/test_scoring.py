@@ -3,26 +3,12 @@ ScoreCalculator 的單元測試
 """
 
 import pytest
-from pyriichi.hand import Combination, CombinationType, Hand
+from pyriichi.hand import Combination, CombinationType, Hand, make_combination
 from pyriichi.tiles import Suit, Tile
 from pyriichi.utils import parse_tiles
 from pyriichi.yaku import WaitingType, Yaku, YakuChecker, YakuResult
 from pyriichi.scoring import ScoreCalculator, ScoreResult
 from pyriichi.game_state import GameState, Wind
-
-
-def make_combination(combo_type: CombinationType, suit: Suit, rank: int) -> Combination:
-    if combo_type == CombinationType.SEQUENCE:
-        tiles = [Tile(suit, rank + i) for i in range(3)]
-    elif combo_type == CombinationType.TRIPLET:
-        tiles = [Tile(suit, rank) for _ in range(3)]
-    elif combo_type == CombinationType.KAN:
-        tiles = [Tile(suit, rank) for _ in range(4)]
-    elif combo_type == CombinationType.PAIR:
-        tiles = [Tile(suit, rank) for _ in range(2)]
-    else:
-        raise ValueError(f"Unsupported combination type: {combo_type}")
-    return Combination(combo_type, tiles)
 
 
 class TestScoreCalculator:
