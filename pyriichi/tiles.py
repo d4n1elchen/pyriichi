@@ -206,11 +206,16 @@ class TileSet:
 
     @staticmethod
     def _create_standard_set() -> List[Tile]:
-        """創建標準 136 張牌"""
+        """創建標準 136 張牌（含紅寶牌）"""
         tiles = []
         # 數牌：萬、筒、條各 36 張（1-9 各 4 張）
         for suit in [Suit.MANZU, Suit.PINZU, Suit.SOZU]:
-            tiles.extend(Tile(suit, rank) for rank, _ in itertools.product(range(1, 10), range(4)))
+            for rank in range(1, 10):
+                if rank == 5:
+                    tiles.extend(Tile(suit, rank) for _ in range(3))
+                    tiles.append(Tile(suit, rank, is_red=True))
+                else:
+                    tiles.extend(Tile(suit, rank) for _ in range(4))
         # 字牌：風牌 16 張（東南西北各 4 張），三元牌 12 張（白發中各 4 張）
         tiles.extend(Tile(Suit.JIHAI, rank) for rank, _ in itertools.product(range(1, 8), range(4)))
         return tiles
