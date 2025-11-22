@@ -21,6 +21,7 @@ class Yaku(TranslatableEnum):
     """所有役種枚舉"""
 
     RIICHI = ("riichi", "立直", "立直", "Riichi")
+    DOUBLE_RIICHI = ("double_riichi", "雙立直", "ダブルリーチ", "Double Riichi")
     IPPATSU = ("ippatsu", "一發", "一発", "Ippatsu")
     MENZEN_TSUMO = ("menzen_tsumo", "門清自摸", "門前清自摸和", "Menzen Tsumo")
     TANYAO = ("tanyao", "斷么九", "断么九", "Tanyao")
@@ -199,14 +200,22 @@ class YakuChecker:
         if result := self.check_kokushi_musou(hand, winning_tile):
             results = [result]
             # 國士無雙可以與立直複合
-            results.extend(self.check_riichi(hand, game_state, is_ippatsu))
+            is_double_riichi = is_first_turn and hand.is_concealed
+            results.extend(self.check_riichi(hand, game_state, is_ippatsu, is_double_riichi))
             return results
 
         # 七對子判定
         if result := self.check_chiitoitsu(hand, winning_tile):
             results = [result]
             if hand.is_riichi:
-                results.insert(0, YakuResult(Yaku.RIICHI, 1, False))
+                # 雙立直優先於普通立直
+                is_double_riichi = is_first_turn and hand.is_concealed
+                if is_double_riichi:
+                    results.insert(0, YakuResult(Yaku.DOUBLE_RIICHI, 2, False))
+                else:
+                    results.insert(0, YakuResult(Yaku.RIICHI, 1, False))
+                if is_ippatsu:
+                    results.insert(1, YakuResult(Yaku.IPPATSU, 1, False))
             return results
 
         # 其他役滿檢查（優先檢查，因為役滿會覆蓋其他役種）
@@ -234,13 +243,15 @@ class YakuChecker:
         # 如果有役滿，只返回役滿（役滿不與其他役種複合，但可以多個役滿複合）
         if yakuman_results:
             # 役滿可以與立直複合
-            yakuman_results.extend(self.check_riichi(hand, game_state, is_ippatsu))
+            is_double_riichi = is_first_turn and hand.is_concealed
+            yakuman_results.extend(self.check_riichi(hand, game_state, is_ippatsu, is_double_riichi))
             return yakuman_results
 
         results = []
 
         # 基本役
-        results.extend(self.check_riichi(hand, game_state, is_ippatsu))
+        is_double_riichi = is_first_turn and hand.is_concealed
+        results.extend(self.check_riichi(hand, game_state, is_ippatsu, is_double_riichi))
         if result := self.check_menzen_tsumo(hand, game_state, is_tsumo):
             results.append(result)
         if result := self.check_haitei_raoyue(hand, is_tsumo, is_last_tile):
@@ -380,10 +391,12 @@ class YakuChecker:
 
         return filtered
 
-    def check_riichi(self, hand: Hand, game_state: GameState, is_ippatsu: Optional[bool] = None) -> List[YakuResult]:
+    def check_riichi(self, hand: Hand, game_state: GameState, is_ippatsu: Optional[bool] = None, is_double_riichi: bool = False) -> List[YakuResult]:
         """
-        檢查立直與一發
+        檢查立直、雙立直與一發
 
+        立直：聽牌時宣告立直（1翻）
+        雙立直：第一巡宣告立直（2翻，取代普通立直）
         一發：立直後一巡內和牌（立直後的第一個自己的回合）
         """
         results: List[YakuResult] = []
@@ -391,7 +404,11 @@ class YakuChecker:
         if not hand.is_riichi:
             return results
 
-        results.append(YakuResult(Yaku.RIICHI, 1, False))
+        # 雙立直優先於普通立直
+        if is_double_riichi:
+            results.append(YakuResult(Yaku.DOUBLE_RIICHI, 2, False))
+        else:
+            results.append(YakuResult(Yaku.RIICHI, 1, False))
 
         if is_ippatsu:
             results.append(YakuResult(Yaku.IPPATSU, 1, False))

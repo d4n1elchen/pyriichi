@@ -904,6 +904,81 @@ class TestYakuChecker:
                     assert result.is_yakuman
                     break
 
+    def test_double_riichi(self):
+        """測試雙立直"""
+        # 雙立直：第一巡宣告立直
+        # 手牌：234m 567m 345p 678p 4s
+        tiles = parse_tiles("2m3m4m5m6m7m3p4p5p6p7p8p4s")
+        hand = Hand(tiles)
+        hand.set_riichi(True)
+        winning_tile = Tile(Suit.SOZU, 4)
+        combinations = hand.get_winning_combinations(winning_tile)
+
+        if combinations:
+            # 測試第一巡立直（雙立直）
+            results = self.checker.check_all(
+                hand, winning_tile, list(combinations[0]), self.game_state,
+                is_tsumo=False, is_ippatsu=False, is_first_turn=True
+            )
+            double_riichi = [r for r in results if r.yaku == Yaku.DOUBLE_RIICHI]
+            assert len(double_riichi) > 0
+            assert double_riichi[0].han == 2
+            # 不應該同時有普通立直
+            normal_riichi = [r for r in results if r.yaku == Yaku.RIICHI]
+            assert len(normal_riichi) == 0
+
+            # 測試非第一巡立直（普通立直）
+            results = self.checker.check_all(
+                hand, winning_tile, list(combinations[0]), self.game_state,
+                is_tsumo=False, is_ippatsu=False, is_first_turn=False
+            )
+            normal_riichi = [r for r in results if r.yaku == Yaku.RIICHI]
+            assert len(normal_riichi) > 0
+            assert normal_riichi[0].han == 1
+            # 不應該有雙立直
+            double_riichi = [r for r in results if r.yaku == Yaku.DOUBLE_RIICHI]
+            assert len(double_riichi) == 0
+
+    def test_double_riichi_with_ippatsu(self):
+        """測試雙立直與一發複合"""
+        # 雙立直 + 一發
+        tiles = parse_tiles("2m3m4m5m6m7m3p4p5p6p7p8p4s")
+        hand = Hand(tiles)
+        hand.set_riichi(True)
+        winning_tile = Tile(Suit.SOZU, 4)
+        combinations = hand.get_winning_combinations(winning_tile)
+
+        if combinations:
+            results = self.checker.check_all(
+                hand, winning_tile, list(combinations[0]), self.game_state,
+                is_tsumo=False, is_ippatsu=True, is_first_turn=True
+            )
+            double_riichi = [r for r in results if r.yaku == Yaku.DOUBLE_RIICHI]
+            ippatsu = [r for r in results if r.yaku == Yaku.IPPATSU]
+            assert len(double_riichi) > 0
+            assert len(ippatsu) > 0
+            assert double_riichi[0].han == 2
+            assert ippatsu[0].han == 1
+
+    def test_double_riichi_with_chiitoitsu(self):
+        """測試雙立直與七對子複合"""
+        # 七對子 + 雙立直
+        tiles = parse_tiles("1m1m2m2m3m3m4m4m5m5m6m6m7m")
+        hand = Hand(tiles)
+        hand.set_riichi(True)
+        winning_tile = Tile(Suit.MANZU, 7)
+
+        results = self.checker.check_all(
+            hand, winning_tile, [], self.game_state,
+            is_tsumo=False, is_ippatsu=False, is_first_turn=True
+        )
+        chiitoitsu = [r for r in results if r.yaku == Yaku.CHIITOITSU]
+        double_riichi = [r for r in results if r.yaku == Yaku.DOUBLE_RIICHI]
+        assert len(chiitoitsu) > 0
+        assert len(double_riichi) > 0
+        assert double_riichi[0].han == 2
+
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
