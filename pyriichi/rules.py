@@ -1028,17 +1028,20 @@ class RuleEngine:
         # 清空本場 (如果是自摸或莊家榮和? 不，通常由 next_dealer 處理)
         # 這裡只處理分數更新
 
-    def end_round(self, winner: Optional[int] = None) -> None:
+    def end_round(self, winners: Optional[List[int]] = None) -> None:
         """
         結束一局
 
         Args:
-            winner: 獲勝玩家（如果為 None，則為流局）
+            winners: 獲勝玩家列表（如果為 None，則為流局）
+                    - 單人榮和/自摸：[player_id]
+                    - 雙響/三響：[player1, player2, player3]
         """
-        if winner is not None:
+        if winners is not None and len(winners) > 0:
             # 和牌處理
             dealer = self._game_state.dealer
-            dealer_won = winner == dealer
+            # 如果任一贏家是莊家，則連莊
+            dealer_won = dealer in winners
 
             # 更新莊家
             self._game_state.next_dealer(dealer_won)

@@ -570,7 +570,7 @@ class TestRuleEngine:
         self._init_game()
         # 測試有獲勝者的情況
         winner = 0
-        self.engine.end_round(winner)
+        self.engine.end_round([winner])
         assert self.engine._phase == GamePhase.PLAYING
         # TODO: 測試遊戲結束條件
 
@@ -1224,7 +1224,7 @@ class TestRuleEngine:
         assert self.engine._game_state.scores[1] == -1000
 
         # 調用 end_round (傳入 winner=0)
-        self.engine.end_round(0)
+        self.engine.end_round([0])
 
         # 驗證遊戲結束
         assert self.engine.get_phase() == GamePhase.ENDED
@@ -1243,7 +1243,7 @@ class TestRuleEngine:
 
         assert self.engine._game_state.scores[1] < 0
 
-        self.engine.end_round(0)
+        self.engine.end_round([0])
         assert self.engine.get_phase() == GamePhase.ENDED
 
     def test_tobi_noten_bappu(self):
@@ -1281,7 +1281,7 @@ class TestRuleEngine:
         self.engine._game_state.scores[1] = -1000
 
         # 結束回合
-        self.engine.end_round(0)
+        self.engine.end_round([0])
 
         # 驗證遊戲未結束（進入下一局或下一風）
         # 這裡假設不是最後一局
@@ -1341,7 +1341,7 @@ class TestRuleEngine:
         self.engine.apply_win_score(result)
 
         # 執行 end_round
-        self.engine.end_round(0)
+        self.engine.end_round([0])
 
         # 驗證分數變化
         # 大三元自摸：32000 (莊家48000)
@@ -1388,7 +1388,7 @@ class TestRuleEngine:
         # 執行榮和
         result = self.engine.check_win(0, winning_tile)
         self.engine.apply_win_score(result)
-        self.engine.end_round(0)
+        self.engine.end_round([0])
 
         # 驗證分數變化
         # 莊家大三元榮和：48000
@@ -1427,7 +1427,7 @@ class TestRuleEngine:
         # 執行榮和
         result = self.engine.check_win(0, winning_tile)
         self.engine.apply_win_score(result)
-        self.engine.end_round(0)
+        self.engine.end_round([0])
 
         # 驗證分數變化
         # 莊家大三元榮和：48000
