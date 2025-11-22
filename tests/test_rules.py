@@ -1194,6 +1194,99 @@ class TestRuleEngine:
             assert self.engine._game_state.scores[i] == initial_scores[i]
 
 
+    def test_tobi_ron(self):
+        """測試擊飛：榮和導致點數 < 0"""
+        self._init_game()
+
+        # 啟用擊飛規則
+        self.engine._game_state.ruleset.tobi_enabled = True
+
+        # 設置玩家1點數很少 (直接修改 _scores)
+        self.engine._game_state._scores[1] = 1000
+
+        # 玩家0聽牌，榮和玩家1
+        # 123m 456m 789m 123p 4p (聽 4p)
+        self.engine._hands[0] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
+
+        # 玩家1打出 4p
+        winning_tile = Tile(Suit.PINZU, 4)
+        self.engine._last_discarded_tile = winning_tile
+        self.engine._last_discarded_player = 1
+        self.engine._current_player = 0
+
+        # 執行榮和
+        # 模擬分數更新：玩家1支付 2000 點（假設）
+        self.engine._game_state.update_score(1, -2000)
+        self.engine._game_state.update_score(0, 2000)
+
+        # 玩家1現在是 -1000 點
+        assert self.engine._game_state.scores[1] == -1000
+
+        # 調用 end_round (傳入 winner=0)
+        self.engine.end_round(0)
+
+        # 驗證遊戲結束
+        assert self.engine.get_phase() == GamePhase.ENDED
+
+    def test_tobi_tsumo(self):
+        """測試擊飛：自摸導致點數 < 0"""
+        self._init_game()
+        self.engine._game_state.ruleset.tobi_enabled = True
+
+        # 設置玩家1, 2, 3點數很少
+        self.engine._game_state._scores[1] = 1000
+
+        # 玩家0自摸，每人支付 1000
+        self.engine._game_state.update_score(1, -2000) # 假設大牌
+        self.engine._game_state.update_score(0, 6000)
+
+        assert self.engine._game_state.scores[1] < 0
+
+        self.engine.end_round(0)
+        assert self.engine.get_phase() == GamePhase.ENDED
+
+    def test_tobi_noten_bappu(self):
+        """測試擊飛：不聽罰符導致點數 < 0"""
+        self._init_game()
+        self.engine._game_state.ruleset.tobi_enabled = True
+
+        # 設置玩家1點數很少
+        self.engine._game_state._scores[1] = 500
+
+        # 設置玩家0聽牌，其他人不聽
+        tenpai_hand = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
+        noten_hand = Hand(parse_tiles("1m2m4m5m7m8m1p2p4p5p7s8s1z"))
+
+        self.engine._hands[0] = tenpai_hand
+        for i in range(1, 4):
+            self.engine._hands[i] = noten_hand
+
+        # 模擬流局
+        self.engine._tile_set._tiles = []
+        self.engine.end_round(None)
+
+        # 玩家1支付 1000，變成 -500
+        assert self.engine._game_state.scores[1] == -500
+
+        # 驗證遊戲結束
+        assert self.engine.get_phase() == GamePhase.ENDED
+
+    def test_tobi_disabled(self):
+        """測試擊飛：禁用擊飛規則"""
+        self._init_game()
+        self.engine._game_state.ruleset.tobi_enabled = False
+
+        # 設置玩家1點數為負
+        self.engine._game_state.scores[1] = -1000
+
+        # 結束回合
+        self.engine.end_round(0)
+
+        # 驗證遊戲未結束（進入下一局或下一風）
+        # 這裡假設不是最後一局
+        assert self.engine.get_phase() != GamePhase.ENDED
+
+
     def _init_game(self):
         self.engine.start_game()
         self.engine.start_round()

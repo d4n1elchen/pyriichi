@@ -880,6 +880,11 @@ class RuleEngine:
             # 更新莊家
             self._game_state.next_dealer(dealer_won)
 
+            # 檢查擊飛
+            if self._check_tobi():
+                self._phase = GamePhase.ENDED
+                return
+
             # 如果莊家未獲勝，進入下一局
             if not dealer_won:
                 has_next = self._game_state.next_round()
@@ -890,6 +895,11 @@ class RuleEngine:
             # 如果是牌山耗盡流局，計算不聽罰符
             if self._tile_set and self._tile_set.is_exhausted():
                 self._calculate_noten_bappu()
+
+            # 檢查擊飛
+            if self._check_tobi():
+                self._phase = GamePhase.ENDED
+                return
 
             dealer_won = False  # 流局時莊家不連莊（除非九種九牌）
             self._game_state.next_dealer(dealer_won)
@@ -1092,3 +1102,18 @@ class RuleEngine:
             self.check_furiten_temp(player) or
             self.check_furiten_riichi(player)
         )
+    def _check_tobi(self) -> bool:
+        """
+        檢查是否觸發擊飛
+
+        Returns:
+            是否觸發擊飛
+        """
+        if not self._game_state.ruleset.tobi_enabled:
+            return False
+
+        for score in self._game_state.scores:
+            if score < 0:
+                return True
+
+        return False

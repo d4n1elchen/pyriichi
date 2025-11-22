@@ -94,6 +94,14 @@ class RulesetConfig:
     - False: 按正常基本點計算（標準競技規則）
     """
 
+    # 擊飛規則
+    tobi_enabled: bool = True
+    """
+    擊飛規則：
+    - True: 當玩家點數 < 0 時遊戲結束
+    - False: 遊戲繼續直到局數結束
+    """
+
     @classmethod
     def standard(cls) -> "RulesetConfig":
         """
@@ -114,4 +122,5 @@ class RulesetConfig:
             suuankou_tanki_double=True,
             chuuren_pure_double=True,
             kiriage_mangan=False,
+            tobi_enabled=True,
         )
