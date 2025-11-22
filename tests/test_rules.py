@@ -1070,6 +1070,130 @@ class TestRuleEngine:
         assert result is None or result.win is False
 
 
+    def test_noten_bappu_one_tenpai(self):
+        """測試不聽罰符：一人聽牌 (+3000 / -1000)"""
+        self._init_game()
+
+        # 設置玩家0聽牌
+        # 123m 456m 789m 123p 4p
+        self.engine._hands[0] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
+
+        # 設置其他玩家不聽牌
+        # 12m 45m 78m 12p 45p 78s 1z
+        noten_hand = Hand(parse_tiles("1m2m4m5m7m8m1p2p4p5p7s8s1z"))
+        for i in range(1, 4):
+            self.engine._hands[i] = noten_hand
+
+        # 記錄初始分數
+        initial_scores = self.engine._game_state.scores.copy()
+
+        # 模擬流局（牌山耗盡）
+        self.engine._tile_set._tiles = []
+        # 確保 check_ryuukyoku 返回 EXHAUSTED
+        # 注意：check_ryuukyoku 依賴於 _tile_set.is_exhausted()
+
+        # 我們直接調用 end_round(None)
+        # 預期 end_round 會檢測到流局並計算罰符
+        self.engine.end_round(None)
+
+        # 驗證分數變化
+        # 玩家0: +3000
+        assert self.engine._game_state.scores[0] == initial_scores[0] + 3000
+        # 其他玩家: -1000
+        for i in range(1, 4):
+            assert self.engine._game_state.scores[i] == initial_scores[i] - 1000
+
+    def test_noten_bappu_two_tenpai(self):
+        """測試不聽罰符：兩人聽牌 (+1500 / -1500)"""
+        self._init_game()
+
+        # 設置玩家0, 1聽牌
+        tenpai_hand = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
+        self.engine._hands[0] = tenpai_hand
+        self.engine._hands[1] = tenpai_hand
+
+        # 設置玩家2, 3不聽牌
+        noten_hand = Hand(parse_tiles("1m2m4m5m7m8m1p2p4p5p7s8s1z"))
+        self.engine._hands[2] = noten_hand
+        self.engine._hands[3] = noten_hand
+
+        initial_scores = self.engine._game_state.scores.copy()
+
+        # 模擬流局
+        self.engine._tile_set._tiles = []
+        self.engine.end_round(None)
+
+        # 驗證分數變化
+        assert self.engine._game_state.scores[0] == initial_scores[0] + 1500
+        assert self.engine._game_state.scores[1] == initial_scores[1] + 1500
+        assert self.engine._game_state.scores[2] == initial_scores[2] - 1500
+        assert self.engine._game_state.scores[3] == initial_scores[3] - 1500
+
+    def test_noten_bappu_three_tenpai(self):
+        """測試不聽罰符：三人聽牌 (+1000 / -3000)"""
+        self._init_game()
+
+        # 設置玩家0, 1, 2聽牌
+        tenpai_hand = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
+        self.engine._hands[0] = tenpai_hand
+        self.engine._hands[1] = tenpai_hand
+        self.engine._hands[2] = tenpai_hand
+
+        # 設置玩家3不聽牌
+        noten_hand = Hand(parse_tiles("1m2m4m5m7m8m1p2p4p5p7s8s1z"))
+        self.engine._hands[3] = noten_hand
+
+        initial_scores = self.engine._game_state.scores.copy()
+
+        # 模擬流局
+        self.engine._tile_set._tiles = []
+        self.engine.end_round(None)
+
+        # 驗證分數變化
+        assert self.engine._game_state.scores[0] == initial_scores[0] + 1000
+        assert self.engine._game_state.scores[1] == initial_scores[1] + 1000
+        assert self.engine._game_state.scores[2] == initial_scores[2] + 1000
+        assert self.engine._game_state.scores[3] == initial_scores[3] - 3000
+
+    def test_noten_bappu_all_tenpai(self):
+        """測試不聽罰符：全員聽牌 (0)"""
+        self._init_game()
+
+        # 設置所有玩家聽牌
+        tenpai_hand = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
+        for i in range(4):
+            self.engine._hands[i] = tenpai_hand
+
+        initial_scores = self.engine._game_state.scores.copy()
+
+        # 模擬流局
+        self.engine._tile_set._tiles = []
+        self.engine.end_round(None)
+
+        # 驗證分數無變化
+        for i in range(4):
+            assert self.engine._game_state.scores[i] == initial_scores[i]
+
+    def test_noten_bappu_no_tenpai(self):
+        """測試不聽罰符：無人聽牌 (0)"""
+        self._init_game()
+
+        # 設置所有玩家不聽牌
+        noten_hand = Hand(parse_tiles("1m2m4m5m7m8m1p2p4p5p7s8s1z"))
+        for i in range(4):
+            self.engine._hands[i] = noten_hand
+
+        initial_scores = self.engine._game_state.scores.copy()
+
+        # 模擬流局
+        self.engine._tile_set._tiles = []
+        self.engine.end_round(None)
+
+        # 驗證分數無變化
+        for i in range(4):
+            assert self.engine._game_state.scores[i] == initial_scores[i]
+
+
     def _init_game(self):
         self.engine.start_game()
         self.engine.start_round()

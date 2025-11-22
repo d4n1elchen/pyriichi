@@ -886,6 +886,11 @@ class RuleEngine:
                 if not has_next:
                     self._phase = GamePhase.ENDED
         else:
+            # 流局處理
+            # 如果是牌山耗盡流局，計算不聽罰符
+            if self._tile_set and self._tile_set.is_exhausted():
+                self._calculate_noten_bappu()
+
             dealer_won = False  # 流局時莊家不連莊（除非九種九牌）
             self._game_state.next_dealer(dealer_won)
 
@@ -965,6 +970,53 @@ class RuleEngine:
             和牌結果，如果不能和則返回 None
         """
         return self.check_win(player, rinshan_tile, is_rinshan=True)
+
+    def _calculate_noten_bappu(self) -> Dict[int, int]:
+        """
+        計算不聽罰符
+
+        Returns:
+            玩家分數變化字典 {player_index: score_change}
+        """
+        tenpai_players = []
+        for i in range(self._num_players):
+            if self._hands[i].is_tenpai():
+                tenpai_players.append(i)
+
+        num_tenpai = len(tenpai_players)
+        changes = {}
+
+        if num_tenpai == 0 or num_tenpai == 4:
+            return {}
+
+        if num_tenpai == 1:
+            # 1人聽：+3000 / -1000
+            winner = tenpai_players[0]
+            changes[winner] = 3000
+            for i in range(self._num_players):
+                if i != winner:
+                    changes[i] = -1000
+
+        elif num_tenpai == 2:
+            # 2人聽：+1500 / -1500
+            for i in range(self._num_players):
+                if i in tenpai_players:
+                    changes[i] = 1500
+                else:
+                    changes[i] = -1500
+
+        elif num_tenpai == 3:
+            # 3人聽：+1000 / -3000
+            loser = [i for i in range(self._num_players) if i not in tenpai_players][0]
+            changes[loser] = -3000
+            for i in tenpai_players:
+                changes[i] = 1000
+
+        # 應用分數變更
+        for player, delta in changes.items():
+            self._game_state.update_score(player, delta)
+
+        return changes
 
     def check_furiten_discards(self, player: int) -> bool:
         """
