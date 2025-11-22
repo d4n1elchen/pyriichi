@@ -649,6 +649,68 @@ class RuleEngine:
             rinshan=is_rinshan or None,
         )
 
+    def check_multiple_ron(self, discarded_tile: Tile, discarder: int) -> List[int]:
+        """
+        檢查多個玩家是否可以榮和同一張牌
+
+        根據配置返回可以榮和的玩家列表：
+        - head_bump_only=True: 只返回下家
+        - allow_double_ron=True: 最多返回2人
+        - allow_triple_ron=False且檢測到3人: 返回空列表（觸發流局）
+        - allow_triple_ron=True且檢測到3人: 返回3人
+
+        Args:
+            discarded_tile: 被打出的牌
+            discarder: 打牌者
+
+        Returns:
+            可以榮和的玩家列表（按逆時針順序，下家優先）
+        """
+        # 收集所有可以榮和的玩家（除了打牌者）
+        potential_winners = []
+
+        for offset in range(1, self._num_players):
+            player = (discarder + offset) % self._num_players
+
+            # 檢查此玩家是否可以榮和
+            win_result = self.check_win(player, discarded_tile, is_chankan=False, is_rinshan=False)
+            if win_result is not None:
+                potential_winners.append(player)
+
+        # 如果沒有人能榮和，直接返回
+        if not potential_winners:
+            return []
+
+        # 如果只有一人，直接返回
+        if len(potential_winners) == 1:
+            return potential_winners
+
+        # 多人可以榮和的情況，根據配置處理
+        ruleset = self._game_state.ruleset
+
+        # 首先檢查三家和了（優先級最高，因為可能觸發流局）
+        if len(potential_winners) >= 3:
+            # 如果禁用三響，返回空列表（將觸發三家和了流局）
+            if not ruleset.allow_triple_ron:
+                return []  # 觸發流局
+            # 如果啟用三響，返回所有玩家（最多3人）
+            return potential_winners[:3]
+
+        # 頭跳模式：只允許下家榮和（適用於2人的情況）
+        if ruleset.head_bump_only:
+            # 返回第一個玩家（下家，逆時針最近）
+            return [potential_winners[0]]
+
+        # 雙響情況（2人），且 head_bump_only=False
+        if len(potential_winners) == 2:
+            if ruleset.allow_double_ron:
+                return potential_winners
+            else:
+                # 禁用雙響但不是頭跳模式，返回下家
+                return [potential_winners[0]]
+
+        return potential_winners
+
     def check_ryuukyoku(self) -> Optional[RyuukyokuType]:
         """
         檢查是否流局

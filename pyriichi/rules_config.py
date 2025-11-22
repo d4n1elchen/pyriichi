@@ -102,6 +102,30 @@ class RulesetConfig:
     - False: 遊戲繼續直到局數結束
     """
 
+    # 頭跳/雙響/三響規則
+    head_bump_only: bool = True
+    """
+    頭跳規則（只允許下家榮和）：
+    - True: 多人可榮和時，只有放銃者下家（逆時針最近者）可以榮和
+    - False: 允許多人榮和（需配合 allow_double_ron 或 allow_triple_ron）
+    """
+
+    allow_double_ron: bool = False
+    """
+    雙響規則：
+    - True: 允許兩家同時榮和
+    - False: 禁止雙響（可能觸發頭跳或流局）
+    注意：需要 head_bump_only = False
+    """
+
+    allow_triple_ron: bool = False
+    """
+    三響規則：
+    - True: 允許三家同時榮和
+    - False: 三家可榮和時導致流局（三家和了）
+    注意：需要 head_bump_only = False 且 allow_double_ron = True
+    """
+
     @classmethod
     def standard(cls) -> "RulesetConfig":
         """

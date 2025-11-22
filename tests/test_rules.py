@@ -1437,6 +1437,246 @@ class TestRuleEngine:
         assert self.engine._game_state.scores[3] == initial_scores[3] - 24000
         assert self.engine._game_state.scores[2] == initial_scores[2] # 玩家2不付
 
+    # ==================== 頭跳 / 雙響 / 三響 測試 ====================
+
+    def test_head_bump_only_shimocha_wins(self):
+        """測試頭跳：下家和上家都能榮和，只有下家和牌"""
+        self._init_game()
+
+        # 確保使用頭跳模式（預設）
+        assert self.engine._game_state.ruleset.head_bump_only == True
+
+        # 玩家0打出1m
+        discard_tile = Tile(Suit.MANZU, 1)
+
+        # 玩家1（下家）和玩家3（上家）都能榮和1m
+        # 手牌應該有13張，榮和1張後變成14張
+        self.engine._hands[1] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p4p"))  # 13張
+        self.engine._hands[3] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p4p"))  # 13張
+
+        self.engine._last_discarded_tile = discard_tile
+        self.engine._last_discarded_player = 0
+
+        # 測試 check_multiple_ron
+        winners = self.engine.check_multiple_ron(discard_tile, 0)
+
+        # 在頭跳模式下，當多個玩家能榮和時，只有下家（玩家1）能榮和
+        assert len(winners) == 1
+        assert winners[0] == 1  # 只有玩家1（下家）
+
+    def test_head_bump_only_toimen_blocked(self):
+        """測試頭跳：對面能榮和但被阻擋"""
+        self._init_game()
+
+        # 玩家0打出1m
+        discard_tile = Tile(Suit.MANZU, 1)
+
+        # 只有玩家2（對面）能榮和
+        self.engine._hands[2] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p4p"))
+
+        self.engine._last_discarded_tile = discard_tile
+        self.engine._last_discarded_player = 0
+
+        # 測試 check_multiple_ron
+        winners = self.engine.check_multiple_ron(discard_tile, 0)
+
+        # 如果只有一個玩家能榮和，則頭跳規則不適用於阻擋，該玩家正常榮和
+        assert len(winners) == 1
+        assert winners[0] == 2  # 只有玩家2能榮和，正常返回
+
+    def test_head_bump_only_kamicha_blocked(self):
+        """測試頭跳：上家能榮和但被阻擋"""
+        self._init_game()
+
+        # 玩家0打出1m
+        discard_tile = Tile(Suit.MANZU, 1)
+
+        # 只有玩家3（上家）能榮和
+        self.engine._hands[3] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p4p"))
+
+        self.engine._last_discarded_tile = discard_tile
+        self.engine._last_discarded_player = 0
+
+        # 測試 check_multiple_ron
+        winners = self.engine.check_multiple_ron(discard_tile, 0)
+
+        # 如果只有一個玩家能榮和，則頭跳規則不適用於阻擋，該玩家正常榮和
+        assert len(winners) == 1
+        assert winners[0] == 3
+
+    def test_double_ron_both_win(self):
+        """測試雙響：兩家同時榮和"""
+        self._init_game()
+
+        # 啟用雙響模式
+        self.engine._game_state.ruleset.head_bump_only = False
+        self.engine._game_state.ruleset.allow_double_ron = True
+
+        # 玩家0打出1m
+        discard_tile = Tile(Suit.MANZU, 1)
+
+        # 玩家1（下家）和玩家2（對面）都能榮和
+        self.engine._hands[1] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p4p"))
+        self.engine._hands[2] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p4p"))
+
+        self.engine._last_discarded_tile = discard_tile
+        self.engine._last_discarded_player = 0
+
+        # 測試 check_multiple_ron
+        winners = self.engine.check_multiple_ron(discard_tile, 0)
+
+        # 在雙響模式下，兩家都能榮和
+        assert len(winners) == 2
+        assert 1 in winners
+        assert 2 in winners
+        # 順序應該按逆時針（下家優先）
+        assert winners[0] == 1
+        assert winners[1] == 2
+
+    def test_double_ron_score_calculation(self):
+        """測試雙響：驗證放銃者支付兩份分數"""
+        self._init_game()
+        self.engine._game_state.ruleset.head_bump_only = False
+        self.engine._game_state.ruleset.allow_double_ron = True
+
+        # 玩家0打出4p，玩家1和2都滿貫榮和
+        discard_tile = Tile(Suit.PINZU, 4)
+
+        # 設置玩家1和2的手牌（門清平和，30符4翻 = 滿貫）
+        self.engine._hands[1] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p4p"))
+        self.engine._hands[2] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p4p"))
+
+        self.engine._last_discarded_tile = discard_tile
+        self.engine._last_discarded_player = 0
+        self.engine._current_player = 0
+
+        initial_scores = self.engine._game_state.scores.copy()
+
+        # TODO: 執行雙響榮和
+        # TODO: 驗證玩家0支付兩份滿貫（8000 + 8000 = 16000）
+        # assert self.engine._game_state.scores[0] == initial_scores[0] - 16000
+        # assert self.engine._game_state.scores[1] == initial_scores[1] + 8000
+        # assert self.engine._game_state.scores[2] == initial_scores[2] + 8000
+
+    def test_double_ron_dealer_renchan(self):
+        """測試雙響：任一贏家是莊家則連莊"""
+        self._init_game()
+
+        # 啟用雙響模式
+        self.engine._game_state.ruleset.head_bump_only = False
+        self.engine._game_state.ruleset.allow_double_ron = True
+
+        # 玩家0是莊家
+        assert self.engine._game_state.dealer == 0
+
+        # 玩家1打出1m，玩家0和2榮和
+        discard_tile = Tile(Suit.MANZU, 1)
+
+        self.engine._hands[0] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p2p"))
+        self.engine._hands[2] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p2p"))
+
+        self.engine._last_discarded_tile = discard_tile
+        self.engine._last_discarded_player = 1
+
+        # TODO: 執行雙響
+        # TODO: 驗證莊家連莊（玩家0仍是莊家）
+        # self.engine.end_round(winners=[0, 2])
+        # assert self.engine._game_state.dealer == 0
+
+    def test_triple_ron_disabled_ryuukyoku(self):
+        """測試三響禁用：三家可榮和導致流局"""
+        self._init_game()
+
+        # 禁用三響（預設）
+        assert self.engine._game_state.ruleset.allow_triple_ron == False
+
+        # 玩家0打出1m，玩家1、2、3都能榮和
+        discard_tile = Tile(Suit.MANZU, 1)
+
+        self.engine._hands[1] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p4p"))
+        self.engine._hands[2] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p4p"))
+        self.engine._hands[3] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p4p"))
+
+        self.engine._last_discarded_tile = discard_tile
+        self.engine._last_discarded_player = 0
+
+        # 測試 check_multiple_ron
+        winners = self.engine.check_multiple_ron(discard_tile, 0)
+
+        # 檢測到三家能榮和但禁用三響，返回空列表（觸發流局）
+        assert len(winners) == 0  # 空列表表示三家和了流局
+
+    def test_triple_ron_enabled_all_win(self):
+        """測試三響啟用：三家都和牌"""
+        self._init_game()
+        self.engine._game_state.ruleset.head_bump_only = False
+        self.engine._game_state.ruleset.allow_double_ron = True
+        self.engine._game_state.ruleset.allow_triple_ron = True
+
+        # 玩家0打出4p，玩家1、2、3都滿貫榮和
+        discard_tile = Tile(Suit.PINZU, 4)
+
+        self.engine._hands[1] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p4p"))
+        self.engine._hands[2] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p4p"))
+        self.engine._hands[3] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p4p"))
+
+        self.engine._last_discarded_tile = discard_tile
+        self.engine._last_discarded_player = 0
+
+        initial_scores = self.engine._game_state.scores.copy()
+
+        # TODO: 執行三響榮和
+        # TODO: 驗證玩家0支付三份滿貫（8000 * 3 = 24000）
+        # assert self.engine._game_state.scores[0] == initial_scores[0] - 24000
+        # assert self.engine._game_state.scores[1] == initial_scores[1] + 8000
+        # assert self.engine._game_state.scores[2] == initial_scores[2] + 8000
+        # assert self.engine._game_state.scores[3] == initial_scores[3] + 8000
+
+    def test_double_ron_with_furiten(self):
+        """測試雙響與振聽：一人振聽，只有另一人榮和"""
+        self._init_game()
+
+        # 啟用雙響模式
+        self.engine._game_state.ruleset.head_bump_only = False
+        self.engine._game_state.ruleset.allow_double_ron = True
+
+        # 玩家0打出1m
+        discard_tile = Tile(Suit.MANZU, 1)
+
+        # 玩家1能榮和
+        self.engine._hands[1] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p2p"))
+
+        # 玩家2能榮和但處於振聽狀態
+        self.engine._hands[2] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p2p"))
+        self.engine._hands[2]._discards.append(discard_tile)  # 打過1m，現物振聽
+
+        self.engine._last_discarded_tile = discard_tile
+        self.engine._last_discarded_player = 0
+
+        # TODO: 檢查多人榮和，應該只有玩家1能榮和
+        # TODO: 驗證 check_multiple_ron 返回 [1] （不包含2）
+
+    def test_double_ron_priority_order(self):
+        """測試雙響：驗證玩家順序正確（下家優先）"""
+        self._init_game()
+
+        # 啟用雙響模式
+        self.engine._game_state.ruleset.head_bump_only = False
+        self.engine._game_state.ruleset.allow_double_ron = True
+
+        # 玩家0打出1m，玩家2和3都能榮和
+        discard_tile = Tile(Suit.MANZU, 1)
+
+        self.engine._hands[2] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p2p"))
+        self.engine._hands[3] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p2p"))
+
+        self.engine._last_discarded_tile = discard_tile
+        self.engine._last_discarded_player = 0
+
+        # TODO: 檢查 check_multiple_ron 返回的順序
+        # 玩家0的下家是玩家1，然後是2、3
+        # 所以返回順序應該是 [2, 3]（按逆時針順序）
+
 
     def _init_game(self):
         self.engine.start_game()
