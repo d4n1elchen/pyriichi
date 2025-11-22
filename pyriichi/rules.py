@@ -25,7 +25,7 @@ class GameAction(TranslatableEnum):
     KAN = ("kan", "明槓", "カン", "Kan")
     ANKAN = ("ankan", "暗槓", "暗槓", "Ankan")
     RICHI = ("riichi", "立直", "リーチ", "Riichi")
-    TSUMO = ("tsumo", "自摸", "ツモ和", "Tsumo")
+    TSUMO = ("tsumo", "自摸", "ツモ", "Tsumo")
     RON = ("ron", "榮和", "ロン", "Ron")
 
 
