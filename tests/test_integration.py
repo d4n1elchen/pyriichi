@@ -242,6 +242,7 @@ class TestSpecialRulesFlow:
 class TestDrawScenarios:
     """測試流局場景"""
 
+    @pytest.mark.skip(reason="TODO: Implement kyuushu kyuuhai flow test")
     def test_kyuushu_kyuuhai_flow(self):
         """測試九種九牌流局流程"""
         pass

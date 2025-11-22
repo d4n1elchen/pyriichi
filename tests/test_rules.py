@@ -54,6 +54,7 @@ class TestRuleEngine:
         draw_type = self.engine.check_ryuukyoku()
         assert draw_type is None
 
+    @pytest.mark.skip(reason="TODO: Implement chankan check test")
     def test_check_chankan(self):
         """測試搶槓檢查"""
         pass
@@ -255,6 +256,7 @@ class TestRuleEngine:
         assert ryuukyoku_type is not None
         assert ryuukyoku_type == RyuukyokuType.SUUFON_RENDA
 
+    @pytest.mark.skip(reason="TODO: Implement sancha ron check test")
     def test_check_draw_sancha_ron(self):
         """測試三家和了流局檢查"""
         pass
@@ -334,11 +336,13 @@ class TestRuleEngine:
         with pytest.raises(ValueError, match="玩家位置必須在"):
             self.engine.get_discards(4)
 
+    @pytest.mark.skip(reason="TODO: Implement kyuushu kyuuhai handling")
     def test_handle_draw_kyuushu_kyuuhai(self):
         """測試九種九牌流局處理"""
         # TODO: 新增九種九牌流局 action
         pass
 
+    @pytest.mark.skip(reason="TODO: Implement suucha riichi handling")
     def test_handle_draw_suucha_riichi(self):
         """測試四家立直流局處理"""
         pass
@@ -431,10 +435,12 @@ class TestRuleEngine:
         current_player = self.engine.get_current_player()
         assert not self._has_action(current_player, GameAction.KAN)
 
+    @pytest.mark.skip(reason="TODO: Implement last tile discard test")
     def test_execute_action_discard_last_tile(self):
         """測試打出最後一張牌（河底撈魚）"""
         pass
 
+    @pytest.mark.skip(reason="TODO: Implement last tile draw test")
     def test_execute_action_draw_last_tile(self):
         """測試摸到最後一張牌（海底撈月）"""
         pass
@@ -561,6 +567,7 @@ class TestRuleEngine:
         assert result.rinshan_tile is not None
         assert result.rinshan_win is not None
 
+    @pytest.mark.skip(reason="TODO: Implement flow mangan check test")
     def test_check_flow_mangan(self):
         """測試流局滿貫判定"""
         pass
@@ -793,6 +800,7 @@ class TestRuleEngine:
         assert win_result is not None
         assert self.engine.check_ryuukyoku() is None
 
+    @pytest.mark.skip(reason="TODO: Implement fourth kan test")
     def test_fourth_kan_rinshan_win_does_not_trigger_suukantsu(self):
         """第四次槓後嶺上開花，不算四槓散了"""
         pass
@@ -1533,6 +1541,8 @@ class TestRuleEngine:
         assert winners[0] == 1
         assert winners[1] == 2
 
+
+    @pytest.mark.skip(reason="TODO: Requires execute_action integration for score distribution")
     def test_double_ron_score_calculation(self):
         """測試雙響：驗證放銃者支付兩份分數"""
         self._init_game()
@@ -1558,6 +1568,8 @@ class TestRuleEngine:
         # assert self.engine._game_state.scores[1] == initial_scores[1] + 8000
         # assert self.engine._game_state.scores[2] == initial_scores[2] + 8000
 
+
+    @pytest.mark.skip(reason="TODO: Requires execute_action integration for renchan verification")
     def test_double_ron_dealer_renchan(self):
         """測試雙響：任一贏家是莊家則連莊"""
         self._init_game()
