@@ -147,6 +147,8 @@ class RuleEngine:
             GameAction.RICHI: self._handle_riichi,
             GameAction.KAN: self._handle_kan,
             GameAction.ANKAN: self._handle_ankan,
+            GameAction.TSUMO: self._handle_tsumo,
+            GameAction.RON: self._handle_ron,
         }
 
     def start_game(self) -> None:
@@ -250,6 +252,12 @@ class RuleEngine:
         if self._can_ankan(player):
             actions.append(GameAction.ANKAN)
 
+        if self._can_tsumo(player):
+            actions.append(GameAction.TSUMO)
+
+        if self._can_ron(player):
+            actions.append(GameAction.RON)
+
         return actions
 
     def _can_draw(self, player: int) -> bool:
@@ -310,6 +318,35 @@ class RuleEngine:
     def _can_ankan(self, player: int) -> bool:
         hand = self._hands[player]
         return bool(hand.can_kan(None))
+
+    def _can_tsumo(self, player: int) -> bool:
+        """檢查玩家是否可以自摸"""
+        if player != self._current_player:
+            return False
+
+        # 檢查是否剛摸到牌
+        if self._last_drawn_tile is None:
+            return False
+
+        last_player, last_tile = self._last_drawn_tile
+        if last_player != player:
+            return False
+
+        # 檢查是否能和牌
+        return self.check_win(player, last_tile, is_rinshan=False) is not None
+
+    def _can_ron(self, player: int) -> bool:
+        """檢查玩家是否可以榮和"""
+        if self._last_discarded_tile is None or self._last_discarded_player is None:
+            return False
+
+        if player == self._last_discarded_player:
+            return False  # 不能榮和自己打的牌
+
+        # 使用 check_multiple_ron 檢查
+        winners = self.check_multiple_ron(self._last_discarded_tile, self._last_discarded_player)
+        return player in winners
+
 
     def execute_action(self, player: int, action: GameAction, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
         """
@@ -485,6 +522,100 @@ class RuleEngine:
             self._pending_kan_tile = None
         self._last_drawn_tile = None
         return result
+
+    def _handle_tsumo(self, player: int, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
+        """
+        處理自摸和牌
+
+        Args:
+            player: 和牌玩家
+            tile: 和牌牌（應該是剛摸的牌）
+
+        Returns:
+            包含和牌結果的 ActionResult
+        """
+        result = ActionResult()
+
+        # 獲取和牌牌（應該是player剛摸的牌）
+        if tile is None:
+            # 使用最後摸的牌
+            if self._last_drawn_tile and self._last_drawn_tile[0] == player:
+                tile = self._last_drawn_tile[1]
+            else:
+                raise ValueError("無法確定自摸的牌")
+
+        # 檢查是否能自摸和牌
+        is_rinshan = kwargs.get('is_rinshan', False)
+        win_result = self.check_win(player, tile, is_rinshan=is_rinshan)
+
+        if win_result is None:
+            raise ValueError(f"玩家 {player} 無法用 {tile} 自摸和牌")
+
+        # 應用分數變化
+        self.apply_win_score(win_result)
+
+        # 設置結果
+        result.winners = [player]
+        result.rinshan_win = win_result if is_rinshan else None
+
+        # 切換到和牌階段
+        self._phase = GamePhase.WINNING
+
+        return result
+
+    def _handle_ron(self, player: int, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
+        """
+        處理榮和（支持多人榮和）
+
+        Args:
+            player: 聲明榮和的玩家（可能是多人之一）
+            tile: 和牌牌（應該是最後打出的牌）
+
+        Returns:
+            包含和牌結果的 ActionResult
+        """
+        result = ActionResult()
+
+        # 獲取被榮和的牌（最後打出的牌）
+        if self._last_discarded_tile is None or self._last_discarded_player is None:
+            raise ValueError("沒有可榮和的捨牌")
+
+        winning_tile = self._last_discarded_tile
+        discarder = self._last_discarded_player
+
+        # 檢查多人榮和情況
+        potential_winners = self.check_multiple_ron(winning_tile, discarder)
+
+        # 檢查是否觸發三家和了流局
+        if len(potential_winners) == 0:
+            # 空列表表示三家和了，觸發流局
+            from pyriichi.enums import RyuukyokuType
+            result.ryuukyoku = RyuukyokuResult(
+                ryuukyoku=True,
+                ryuukyoku_type=RyuukyokuType.SANCHA_RON
+            )
+            self._phase = GamePhase.RYUUKYOKU
+            return result
+
+        # 驗證聲明榮和的玩家在允許列表中
+        if player not in potential_winners:
+            raise ValueError(f"玩家 {player} 不能榮和（配置限制或振聽）")
+
+        # 處理所有贏家
+        winners = potential_winners
+        for winner in winners:
+            win_result = self.check_win(winner, winning_tile, is_chankan=False)
+            if win_result:
+                self.apply_win_score(win_result)
+
+        # 設置結果
+        result.winners = winners
+
+        # 切換到和牌階段
+        self._phase = GamePhase.WINNING
+
+        return result
+
 
     def _remove_last_discard(self, discarder: int, tile: Tile) -> None:
         self._hands[discarder].remove_last_discard(tile)
