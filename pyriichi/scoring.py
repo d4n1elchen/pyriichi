@@ -30,6 +30,8 @@ class ScoreResult:
     honba_bonus: int = 0  # 本場獎勵
     riichi_sticks_bonus: int = 0  # 供託分配
     kiriage_mangan_enabled: bool = False  # 是否啟用切上滿貫
+    pao_player: Optional[int] = None  # 包牌者位置
+    pao_payment: int = 0  # 包牌者支付金額
 
     def __post_init__(self):
         """計算最終得分"""
@@ -65,6 +67,11 @@ class ScoreResult:
         榮和支付：
         - 支付者支付全部 total_points（包含本場）
 
+        包牌支付（役滿）：
+        - 自摸：包牌者支付全部
+        - 榮和（包牌者放銃）：包牌者支付全部
+        - 榮和（非包牌者放銃）：包牌者與放銃者各支付一半
+
         本場獎勵：
         - 每個本場 +300 點（自摸時每人支付，榮和時放銃者支付）
 
@@ -80,28 +87,121 @@ class ScoreResult:
         # 基本點數（不含本場和供託）
         base_payment = self.total_points
 
+        # 處理包牌
+        if self.pao_player is not None and self.is_yakuman:
+            if self.is_tsumo:
+                # 自摸：包牌者全付
+                # 重新計算總點數
+                if self.payment_to == game_state.dealer:
+                    # 莊家自摸：16000 all -> 48000
+                    total_win = base_payment * 6
+                else:
+                    # 閒家自摸：8000/16000 -> 32000
+                    total_win = base_payment * 4
+
+                # 加上本場 (自摸時本場是每人支付 100*honba，共 300*honba)
+                total_honba = game_state.honba * 300
+
+                self.total_points = total_win + total_honba + self.riichi_sticks_bonus
+
+                # 設置包牌支付
+                self.pao_payment = total_win + total_honba
+                self.dealer_payment = 0
+                self.non_dealer_payment = 0
+                return
+
+            else:
+                # 榮和
+                if self.payment_to == game_state.dealer:
+                    total_win = base_payment * 6
+                else:
+                    total_win = base_payment * 4
+
+                total_honba = game_state.honba * 300
+                self.total_points = total_win + total_honba + self.riichi_sticks_bonus
+
+                if self.payment_from != self.pao_player:
+                    # 包牌者與放銃者分擔 (折半)
+                    # 總支付額 = total_win + total_honba
+                    total_pay = total_win + total_honba
+                    half_pay = total_pay // 2
+
+                    self.pao_payment = half_pay
+                    # 放銃者支付剩下的 (通常也是一半)
+                    # 這裡我們不設置 dealer/non_dealer，而是依賴調用者處理 payment_from 的支付
+                    # 我們可以利用 dealer_payment 暫存放銃者支付額嗎？不，語義不符。
+                    # 我們可以修改 total_points 嗎？不，total_points 是贏家獲得的。
+                    # 我們需要一個字段表示 "放銃者支付額"
+                    # 但標準榮和是 "放銃者支付 total_points - riichi_sticks"
+                    # 這裡放銃者支付 half_pay
+                    # 我們可以設置一個標誌或利用現有字段
+                    # 讓我們添加 ron_payment 字段
+                    pass
+                else:
+                    # 包牌者放銃：正常支付
+                    self.pao_payment = 0 # 由 payment_from (即 pao_player) 支付，不視為額外包牌支付
+
+                self.dealer_payment = 0
+                self.non_dealer_payment = 0
+                return
+
         if self.is_tsumo:
             # 自摸支付
             # 每人需要支付：base_payment + honba_bonus
-            payment_per_person = base_payment + self.honba_bonus
+            # 注意：這裡 base_payment 是基本點（如 8000 滿貫）
+            # 實際支付：
+            # 莊家自摸：閒家支付 4000 (base/2) ? 不，如果是滿貫 2000點
+            # 這裡的 base_points 和 total_points 計算有點混亂
+            # __post_init__ 中：
+            # 滿貫 total_points = 2000 (這是基本點嗎？不，滿貫是 2000/4000 或 4000 all)
+            # 實際上 total_points 在 __post_init__ 中被設為 2000 (滿貫)
+            # 但滿貫的定義是：
+            # 閒家：自摸 2000/4000，榮和 8000
+            # 莊家：自摸 4000 all，榮和 12000
+            # 所以 __post_init__ 中的 total_points = 2000 是什麼？
+            # 它是 "基本點" (Basic Points) 嗎？
+            # 滿貫的基本點是 2000。
+            # 支付計算：
+            # 閒家自摸：莊家 2*Basic, 閒家 1*Basic
+            # 莊家自摸：閒家 2*Basic
+            # 榮和：閒家 4*Basic, 莊家 6*Basic
+
+            # 所以 base_payment = self.total_points (即 Basic Points)
+
+            payment_per_person = base_payment + self.honba_bonus # 這裡 honba_bonus 是 300 * honba
+            # 等等，本場費是固定的，不是乘以 Basic Points
+            # 閒家自摸：莊家 2*Basic + 300*honba, 閒家 1*Basic + 300*honba ?
+            # 不，通常是每人支付 100 * honba (總共 300 * honba)
+            # 如果 honba_bonus = honba * 300，那這是總本場費
+            # 每人支付 honba * 100
+
+            honba_per_person = game_state.honba * 100
 
             if self.payment_to == game_state.dealer:
-                # 莊家自摸：每個閒家支付 payment_per_person
-                self.dealer_payment = payment_per_person  # 每個閒家支付
-                self.non_dealer_payment = 0
-                self.total_points = payment_per_person * 3 + self.riichi_sticks_bonus  # 3個閒家支付 + 供託
+                # 莊家自摸：每個閒家支付 2 * Basic + honba
+                self.dealer_payment = 0
+                self.non_dealer_payment = 2 * base_payment + honba_per_person
+                self.total_points = self.non_dealer_payment * 3 + self.riichi_sticks_bonus
             else:
-                # 閒家自摸：莊家支付 2 * payment_per_person，其他閒家支付 payment_per_person
-                self.dealer_payment = 2 * payment_per_person
-                self.non_dealer_payment = payment_per_person
-                # 計算總支付（莊家1個 + 閒家2個）+ 供託
+                # 閒家自摸：莊家 2 * Basic + honba, 閒家 1 * Basic + honba
+                self.dealer_payment = 2 * base_payment + honba_per_person
+                self.non_dealer_payment = base_payment + honba_per_person
                 self.total_points = self.dealer_payment + self.non_dealer_payment * 2 + self.riichi_sticks_bonus
         else:
-            # 榮和支付：放銃者支付全部（包含本場和供託）
+            # 榮和支付
+            # 閒家榮和：4 * Basic + 300 * honba
+            # 莊家榮和：6 * Basic + 300 * honba
+
+            total_honba = game_state.honba * 300
+
+            if self.payment_to == game_state.dealer:
+                win_points = 6 * base_payment
+            else:
+                win_points = 4 * base_payment
+
+            self.total_points = win_points + total_honba + self.riichi_sticks_bonus
             self.dealer_payment = 0
-            self.non_dealer_payment = 0
-            # total_points 已經是全部支付，加上本場和供託
-            self.total_points = base_payment + self.honba_bonus + self.riichi_sticks_bonus
+            self.non_dealer_payment = 0 # 榮和時由 payment_from 支付，這裡不設置 dealer/non_dealer payment
 
 
 class ScoreCalculator:
@@ -144,6 +244,7 @@ class ScoreCalculator:
         game_state: GameState,
         is_tsumo: bool,
         player_position: int = 0,
+        pao_player: Optional[int] = None,
     ) -> ScoreResult:
         """
         計算得分
@@ -156,12 +257,11 @@ class ScoreCalculator:
             dora_count: 寶牌數量
             game_state: 遊戲狀態
             is_tsumo: 是否自摸
-            player_position: 玩家位置（用於計算自風對子符數）
-
-        Returns:
-            得分計算結果
+            player_position: 玩家位置
+            pao_player: 包牌者位置
         """
-        # 計算符數（需要傳入 yaku_results 來判斷是否為平和）
+        # ... (計算 fu, han, yakuman)
+        # 計算符數
         fu = self.calculate_fu(
             hand, winning_tile, winning_combination, yaku_results, game_state, is_tsumo, player_position
         )
@@ -185,10 +285,10 @@ class ScoreCalculator:
             yakuman_count=yakuman_count,
             is_tsumo=is_tsumo,
             kiriage_mangan_enabled=game_state.ruleset.kiriage_mangan,
+            pao_player=pao_player,
         )
 
-        # 計算支付方式（在 RuleEngine 中會根據本場和供託進一步調整）
-        # 這裡先計算基本支付
+        # 計算支付方式
         result.calculate_payments(game_state)
 
         return result

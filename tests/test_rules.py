@@ -6,6 +6,7 @@ import pytest
 from pyriichi.hand import Hand, Meld, MeldType
 from pyriichi.rules import ActionResult, RuleEngine, GameAction, GamePhase, RyuukyokuType, RyuukyokuResult
 from pyriichi.tiles import Tile, Suit
+from pyriichi.yaku import Yaku
 from pyriichi.utils import parse_tiles
 
 
@@ -1285,6 +1286,156 @@ class TestRuleEngine:
         # 驗證遊戲未結束（進入下一局或下一風）
         # 這裡假設不是最後一局
         assert self.engine.get_phase() != GamePhase.ENDED
+
+
+    def test_pao_daisangen_tsumo(self):
+        """測試包牌：大三元自摸，包牌者全付"""
+        self._init_game()
+
+        # 玩家0：大三元聽牌 (已碰白、發)
+        # 手牌：11m 99m
+        # 副露：白白白 發發發
+
+        # 模擬副露狀態
+        # 假設玩家1打出白，玩家0碰
+        # 假設玩家2打出發，玩家0碰
+        # 假設玩家3打出中，玩家0碰 (觸發包牌)
+
+        # 為了測試，我們需要手動設置狀態，因為 _handle_pon 還沒實現包牌邏輯
+        # 但我們正在寫測試，所以我們假設它會工作，或者我們手動設置 _pao_daisangen
+
+        # 設置玩家0手牌
+        # For tsumo, hand must include the winning tile (14 tiles total)
+        # 3 melds (9 tiles) + 5 tiles in hand = 14 tiles
+        # Hand: 1m1m1m 9m9m (winning tile 1m already in hand for is_winning_hand check)
+        self.engine._hands[0] = Hand(parse_tiles("1m1m1m9m9m")) # 111m 99m
+
+        # 設置副露
+        meld_haku = Meld(MeldType.PON, [Tile(Suit.JIHAI, 5)] * 3, 1) # 碰白 (from 1)
+        meld_hatsu = Meld(MeldType.PON, [Tile(Suit.JIHAI, 6)] * 3, 2) # 碰發 (from 2)
+        meld_chun = Meld(MeldType.PON, [Tile(Suit.JIHAI, 7)] * 3, 3) # 碰中 (from 3) - 觸發包牌
+
+        self.engine._hands[0]._melds = [meld_haku, meld_hatsu, meld_chun]
+
+        # 設置包牌狀態 (玩家3包牌)
+        # 注意：這需要我們在 rules.py 中添加 _pao_daisangen 屬性
+        # 由於屬性還沒添加，這裡會報錯，這是預期的 (Red Phase)
+        self.engine._pao_daisangen[0] = 3
+
+        # 玩家0自摸1m (此牌已在手牌中，用於 is_winning_hand 檢查)
+        winning_tile = Tile(Suit.MANZU, 1)
+        self.engine._current_player = 0
+        self.engine._last_drawn_tile = (0, winning_tile)
+
+        # 記錄初始分數
+        initial_scores = self.engine._game_state.scores.copy()
+
+        # 執行自摸
+        # 我們需要調用 check_win 確保它是大三元
+        result = self.engine.check_win(0, winning_tile)
+        assert result is not None, "check_win should return a result"
+        assert result.win
+        assert any(y.yaku == Yaku.DAISANGEN for y in result.yaku)
+
+        # 應用分數
+        self.engine.apply_win_score(result)
+
+        # 執行 end_round
+        self.engine.end_round(0)
+
+        # 驗證分數變化
+        # 大三元自摸：32000 (莊家48000)
+        # 這裡是親家 (Player 0 is dealer initially) -> 48000
+        # 包牌者 (Player 3) 支付全部 48000
+
+        assert self.engine._game_state.scores[0] == initial_scores[0] + 48000
+        assert self.engine._game_state.scores[3] == initial_scores[3] - 48000
+        assert self.engine._game_state.scores[1] == initial_scores[1] # 其他人不付
+        assert self.engine._game_state.scores[2] == initial_scores[2] # 其他人不付
+
+    def test_pao_daisangen_ron_pao_player(self):
+        """測試包牌：大三元榮和包牌者（正常支付）"""
+        self._init_game()
+
+        # 設置玩家0手牌
+        self.engine._hands[0] = Hand(parse_tiles("1m1m9m9m"))
+
+        # 設置副露
+        meld_haku = Meld(MeldType.PON, [Tile(Suit.JIHAI, 5)] * 3, 1)
+        meld_hatsu = Meld(MeldType.PON, [Tile(Suit.JIHAI, 6)] * 3, 2)
+        meld_chun = Meld(MeldType.PON, [Tile(Suit.JIHAI, 7)] * 3, 3) # 碰中 (from 3) - 觸發包牌
+
+        self.engine._hands[0]._melds = [meld_haku, meld_hatsu, meld_chun]
+
+        # 設置包牌狀態 (玩家3包牌)
+        self.engine._pao_daisangen[0] = 3
+
+        # 玩家3打出中 (包牌者放銃)
+        # winning_tile = Tile(Suit.JIHAI, 7) # 實際上應該是打出 1m 或 5z，因為 5z 已經碰了，所以打出 1m
+        # 等等，手牌是 11m 55z，碰了 567z
+        # 聽牌是 1m, 5z (單騎?) 不對，碰了三個刻子，手牌剩 11m 55z?
+        # 13張牌：3*3=9張副露，剩4張。
+        # 11m 55z -> 聽 1m, 5z (雙碰)
+        # 假設玩家3打出 1m
+        winning_tile = Tile(Suit.MANZU, 1)
+
+        self.engine._last_discarded_tile = winning_tile
+        self.engine._last_discarded_player = 3
+        self.engine._current_player = 0
+
+        initial_scores = self.engine._game_state.scores.copy()
+
+        # 執行榮和
+        result = self.engine.check_win(0, winning_tile)
+        self.engine.apply_win_score(result)
+        self.engine.end_round(0)
+
+        # 驗證分數變化
+        # 莊家大三元榮和：48000
+        # 放銃者 (Player 3) 支付 48000
+        assert self.engine._game_state.scores[0] == initial_scores[0] + 48000
+        assert self.engine._game_state.scores[3] == initial_scores[3] - 48000
+
+    def test_pao_daisangen_ron_other(self):
+        """測試包牌：大三元榮和其他人（包牌者與放銃者分擔）"""
+        self._init_game()
+
+        # 設置玩家0手牌
+        # 3副露 (9張) + 4張手牌 = 13張
+        # 手牌: 1m1m 9m9m
+        self.engine._hands[0] = Hand(parse_tiles("1m1m9m9m"))
+
+        # 設置副露
+        meld_haku = Meld(MeldType.PON, [Tile(Suit.JIHAI, 5)] * 3, 1)
+        meld_hatsu = Meld(MeldType.PON, [Tile(Suit.JIHAI, 6)] * 3, 2)
+        meld_chun = Meld(MeldType.PON, [Tile(Suit.JIHAI, 7)] * 3, 3) # 碰中 (from 3) - 觸發包牌
+
+        self.engine._hands[0]._melds = [meld_haku, meld_hatsu, meld_chun]
+
+        # 設置包牌狀態 (玩家3包牌)
+        self.engine._pao_daisangen[0] = 3
+
+        # 玩家1打出 1m (非包牌者放銃)
+        winning_tile = Tile(Suit.MANZU, 1)
+
+        self.engine._last_discarded_tile = winning_tile
+        self.engine._last_discarded_player = 1
+        self.engine._current_player = 0
+
+        initial_scores = self.engine._game_state.scores.copy()
+
+        # 執行榮和
+        result = self.engine.check_win(0, winning_tile)
+        self.engine.apply_win_score(result)
+        self.engine.end_round(0)
+
+        # 驗證分數變化
+        # 莊家大三元榮和：48000
+        # 包牌者 (Player 3) 和 放銃者 (Player 1) 各支付一半 (24000)
+        assert self.engine._game_state.scores[0] == initial_scores[0] + 48000
+        assert self.engine._game_state.scores[1] == initial_scores[1] - 24000
+        assert self.engine._game_state.scores[3] == initial_scores[3] - 24000
+        assert self.engine._game_state.scores[2] == initial_scores[2] # 玩家2不付
 
 
     def _init_game(self):

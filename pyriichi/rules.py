@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from pyriichi.tiles import Tile, TileSet, Suit
 from pyriichi.hand import Hand, Meld, MeldType
 from pyriichi.game_state import GameState
-from pyriichi.yaku import YakuChecker, YakuResult
+from pyriichi.yaku import YakuChecker, YakuResult, Yaku
 from pyriichi.scoring import ScoreCalculator, ScoreResult
 from pyriichi.enum_utils import TranslatableEnum
 
@@ -135,6 +135,10 @@ class RuleEngine:
         self._furiten_temp: Dict[int, bool] = {}       # 同巡振聽（臨時）
         self._furiten_temp_round: Dict[int, int] = {}  # 同巡振聽發生的回合
 
+        # 包牌狀態追蹤 {player_index: pao_player_index}
+        self._pao_daisangen: Dict[int, int] = {}
+        self._pao_daisuushi: Dict[int, int] = {}
+
         self._action_handlers = {
             GameAction.DRAW: self._handle_draw,
             GameAction.DISCARD: self._handle_discard,
@@ -176,6 +180,8 @@ class RuleEngine:
         self._furiten_permanent = {}
         self._furiten_temp = {}
         self._furiten_temp_round = {}
+        self._pao_daisangen = {}
+        self._pao_daisuushi = {}
 
     def deal(self) -> Dict[int, List[Tile]]:
         """
@@ -594,8 +600,29 @@ class RuleEngine:
         # 計算寶牌數量
         dora_count = self._count_dora(player, winning_tile)
 
+        # 確定包牌者
+        pao_player = None
+        for result in yaku_results:
+            if result.yaku == Yaku.DAISANGEN:
+                pao_player = self._pao_daisangen.get(player)
+                if pao_player is not None:
+                    break
+            elif result.yaku == Yaku.DAISUUSHI:
+                pao_player = self._pao_daisuushi.get(player)
+                if pao_player is not None:
+                    break
+
+        # 計算得分
         score_result = self._score_calculator.calculate(
-            hand, winning_tile, winning_combination, yaku_results, dora_count, self._game_state, is_tsumo, player
+            hand,
+            winning_tile,
+            winning_combination,
+            yaku_results,
+            dora_count,
+            self._game_state,
+            is_tsumo,
+            player,
+            pao_player=pao_player,
         )
 
         score_result.payment_to = player
@@ -864,6 +891,80 @@ class RuleEngine:
 
         self._phase = GamePhase.RYUUKYOKU
         return result
+
+    def apply_win_score(self, win_result: WinResult) -> None:
+        """
+        應用和牌分數
+
+        Args:
+            win_result: 和牌結果
+        """
+        score_result = win_result.score_result
+        if not score_result:
+            return
+
+        winner = win_result.player if hasattr(win_result, "player") else self._current_player
+        # 注意：WinResult 可能沒有 player 字段，如果沒有則假設是當前玩家
+        # 但 check_win 返回的 WinResult 沒有 player 字段，我們需要確保它有
+        # 或者從外部傳入。這裡我們假設調用者會確保上下文正確。
+        # 實際上 check_win 返回的 WinResult 確實沒有 player 字段 (在之前的 edit 中被移除了?)
+        # 讓我們檢查 check_win 的返回值。
+        # 是的，我移除了 player=player。所以這裡我們需要依賴 score_result.payment_to
+
+        winner = score_result.payment_to
+
+        # 增加贏家分數
+        self._game_state.update_score(winner, score_result.total_points)
+
+        # 扣除輸家分數
+        if score_result.is_tsumo:
+            # 自摸
+            if score_result.pao_player is not None and score_result.pao_payment > 0:
+                # 包牌自摸：包牌者全付
+                self._game_state.update_score(score_result.pao_player, -score_result.pao_payment)
+            else:
+                # 正常自摸
+                dealer = self._game_state.dealer
+                for i in range(self._num_players):
+                    if i == winner:
+                        continue
+
+                    payment = 0
+                    if i == dealer:
+                        payment = score_result.dealer_payment
+                    else:
+                        payment = score_result.non_dealer_payment
+
+                    self._game_state.update_score(i, -payment)
+        else:
+            # 榮和
+            loser = score_result.payment_from
+
+            if score_result.pao_player is not None and score_result.pao_payment > 0:
+                # 包牌榮和（分擔）
+                # 包牌者支付 pao_payment
+                self._game_state.update_score(score_result.pao_player, -score_result.pao_payment)
+
+                # 放銃者支付剩下的
+                # 總支付 = total_points - riichi_sticks
+                total_pay = score_result.total_points - score_result.riichi_sticks_bonus
+                remaining_pay = total_pay - score_result.pao_payment
+                self._game_state.update_score(loser, -remaining_pay)
+            else:
+                # 正常榮和
+                # 放銃者支付 total_points - riichi_sticks
+                # 注意：total_points 包含供託，但供託是從場上拿的，不是放銃者出的
+                # 放銃者只支付 (base + honba)
+                # score_result.total_points = base + honba + sticks
+                payment = score_result.total_points - score_result.riichi_sticks_bonus
+                self._game_state.update_score(loser, -payment)
+
+        # 清空供託
+        if score_result.riichi_sticks_bonus > 0:
+            self._game_state._riichi_sticks = 0
+
+        # 清空本場 (如果是自摸或莊家榮和? 不，通常由 next_dealer 處理)
+        # 這裡只處理分數更新
 
     def end_round(self, winner: Optional[int] = None) -> None:
         """
