@@ -956,6 +956,108 @@ class TestScoreCalculator:
             # 門清榮和：20 + 10 = 30，自風對子 +2 = 32，進位到 40
             assert fu >= 30
 
+    def test_kiriage_mangan_30fu_4han(self):
+        """測試切上滿貫：30符4翻"""
+        from pyriichi.rules_config import RulesetConfig
+
+        # 創建啟用切上滿貫的規則配置
+        config_enabled = RulesetConfig(kiriage_mangan=True)
+        game_state_enabled = GameState(ruleset=config_enabled)
+
+        # 創建 30符4翻 的結果
+        result_enabled = ScoreResult(
+            han=4,
+            fu=30,
+            base_points=0,
+            total_points=0,
+            payment_from=0,
+            payment_to=0,
+            is_yakuman=False,
+            yakuman_count=0,
+            kiriage_mangan_enabled=True,
+        )
+        # 30符4翻 應該被計為滿貫 (2000基本點)
+        assert result_enabled.total_points == 2000
+
+        # 測試不啟用切上滿貫
+        result_disabled = ScoreResult(
+            han=4,
+            fu=30,
+            base_points=0,
+            total_points=0,
+            payment_from=0,
+            payment_to=0,
+            is_yakuman=False,
+            yakuman_count=0,
+            kiriage_mangan_enabled=False,
+        )
+        # 30符4翻 正常計算 = 30 * 2^6 = 1920
+        assert result_disabled.total_points == 1920
+
+    def test_kiriage_mangan_60fu_3han(self):
+        """測試切上滿貫：60符3翻"""
+        # 創建 60符3翻 的結果（啟用切上滿貫）
+        result_enabled = ScoreResult(
+            han=3,
+            fu=60,
+            base_points=0,
+            total_points=0,
+            payment_from=0,
+            payment_to=0,
+            is_yakuman=False,
+            yakuman_count=0,
+            kiriage_mangan_enabled=True,
+        )
+        # 60符3翻 應該被計為滿貫 (2000基本點)
+        assert result_enabled.total_points == 2000
+
+        # 測試不啟用切上滿貫
+        result_disabled = ScoreResult(
+            han=3,
+            fu=60,
+            base_points=0,
+            total_points=0,
+            payment_from=0,
+            payment_to=0,
+            is_yakuman=False,
+            yakuman_count=0,
+            kiriage_mangan_enabled=False,
+        )
+        # 60符3翻 正常計算 = 60 * 2^5 = 1920
+        assert result_disabled.total_points == 1920
+
+    def test_kiriage_mangan_not_applicable(self):
+        """測試切上滿貫不適用的情況"""
+        # 40符4翻 已經是滿貫,不需要切上
+        result = ScoreResult(
+            han=4,
+            fu=40,
+            base_points=0,
+            total_points=0,
+            payment_from=0,
+            payment_to=0,
+            is_yakuman=False,
+            yakuman_count=0,
+            kiriage_mangan_enabled=True,
+        )
+        # 40符4翻 = 滿貫
+        assert result.total_points == 2000
+
+        # 30符3翻 不符合切上滿貫條件
+        result2 = ScoreResult(
+            han=3,
+            fu=30,
+            base_points=0,
+            total_points=0,
+            payment_from=0,
+            payment_to=0,
+            is_yakuman=False,
+            yakuman_count=0,
+            kiriage_mangan_enabled=True,
+        )
+        # 30符3翻 = 30 * 2^5 = 960
+        assert result2.total_points == 960
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

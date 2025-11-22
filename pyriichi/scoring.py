@@ -29,6 +29,7 @@ class ScoreResult:
     non_dealer_payment: int = 0  # 閒家支付（自摸時）
     honba_bonus: int = 0  # 本場獎勵
     riichi_sticks_bonus: int = 0  # 供託分配
+    kiriage_mangan_enabled: bool = False  # 是否啟用切上滿貫
 
     def __post_init__(self):
         """計算最終得分"""
@@ -43,6 +44,9 @@ class ScoreResult:
         elif self.han >= 6:
             self.total_points = 3000  # 跳滿
         elif self.han >= 5 or (self.han == 4 and self.fu >= 40):
+            self.total_points = 2000  # 滿貫
+        elif self.kiriage_mangan_enabled and ((self.han == 4 and self.fu == 30) or (self.han == 3 and self.fu == 60)):
+            # 切上滿貫：30符4翻 或60符3翻 計為滿貫
             self.total_points = 2000  # 滿貫
         else:
             # 基本點計算
@@ -180,6 +184,7 @@ class ScoreCalculator:
             is_yakuman=is_yakuman,
             yakuman_count=yakuman_count,
             is_tsumo=is_tsumo,
+            kiriage_mangan_enabled=game_state.ruleset.kiriage_mangan,
         )
 
         # 計算支付方式（在 RuleEngine 中會根據本場和供託進一步調整）

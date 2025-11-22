@@ -86,6 +86,14 @@ class RulesetConfig:
     - False: 單倍役滿（13翻）
     """
 
+    # 切上滿貫規則
+    kiriage_mangan: bool = False
+    """
+    切上滿貫規則：
+    - True: 30符4翻 或 60符3翻 計為滿貫（可選規則）
+    - False: 按正常基本點計算（標準競技規則）
+    """
+
     @classmethod
     def standard(cls) -> "RulesetConfig":
         """
@@ -105,4 +113,5 @@ class RulesetConfig:
             junchan_closed_han=3,
             suuankou_tanki_double=True,
             chuuren_pure_double=True,
+            kiriage_mangan=False,
         )
