@@ -242,10 +242,37 @@ class TestSpecialRulesFlow:
 class TestDrawScenarios:
     """測試流局場景"""
 
-    @pytest.mark.skip(reason="TODO: Implement kyuushu kyuuhai flow test")
     def test_kyuushu_kyuuhai_flow(self):
         """測試九種九牌流局流程"""
-        pass
+        engine = RuleEngine(num_players=4)
+        engine.start_game()
+        engine.start_round()
+        engine.deal()
+
+        # 設置玩家0的手牌為九種九牌
+        # 1m 9m 1p 9p 1s 9s 1z 2z 3z 4z 5z 6z 7z + 1m (14張)
+        # 這裡有13種幺九牌，滿足條件
+        tiles = parse_tiles("1m9m1p9p1s9s1z2z3z4z5z6z7z1m")
+        engine._hands[0] = Hand(tiles)
+
+        # 確保是玩家0的回合且是第一巡
+        engine._current_player = 0
+        engine._is_first_turn_after_deal = True
+        engine._melds = [[] for _ in range(4)]
+
+        # 檢查可用動作
+        actions = engine.get_available_actions(0)
+        assert GameAction.KYUUSHU_KYUUHAI in actions
+
+        # 執行九種九牌流局
+        result = engine.execute_action(0, GameAction.KYUUSHU_KYUUHAI)
+
+        # 驗證結果
+        assert result.ryuukyoku is not None
+        assert result.ryuukyoku.ryuukyoku is True
+        assert result.ryuukyoku.ryuukyoku_type == RyuukyokuType.KYUUSHU_KYUUHAI
+        assert result.ryuukyoku.kyuushu_kyuuhai_player == 0
+        assert engine._phase == GamePhase.RYUUKYOKU
 
 
 class TestMultiModuleIntegration:

@@ -129,6 +129,13 @@ class Tile:
         """對象表示"""
         return f"Tile({self._suit.name}, {self._rank}, red={self._is_red})"
 
+    @property
+    def is_yaochuu(self) -> bool:
+        """是否為幺九牌（1, 9, 字牌）"""
+        if self._suit == Suit.JIHAI:
+            return True
+        return self._rank == 1 or self._rank == 9
+
     def _format_name(self, locale: str) -> str:
         if locale not in {"zh", "ja", "en"}:
             raise ValueError(f"Unsupported locale: {locale}")

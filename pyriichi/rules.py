@@ -27,6 +27,7 @@ class GameAction(TranslatableEnum):
     RICHI = ("riichi", "立直", "リーチ", "Riichi")
     TSUMO = ("tsumo", "自摸", "ツモ", "Tsumo")
     RON = ("ron", "榮和", "ロン", "Ron")
+    KYUUSHU_KYUUHAI = ("kyuushu_kyuuhai", "九種九牌", "九種九牌", "Kyuushu Kyuuhai")
 
 
 class GamePhase(TranslatableEnum):
@@ -149,6 +150,7 @@ class RuleEngine:
             GameAction.ANKAN: self._handle_ankan,
             GameAction.TSUMO: self._handle_tsumo,
             GameAction.RON: self._handle_ron,
+            GameAction.KYUUSHU_KYUUHAI: self._handle_kyuushu_kyuuhai,
         }
 
     def start_game(self) -> None:
@@ -183,7 +185,11 @@ class RuleEngine:
         self._furiten_temp = {}
         self._furiten_temp_round = {}
         self._pao_daisangen = {}
+        self._pao_daisangen = {}
         self._pao_daisuushi = {}
+
+        # 流局滿貫追蹤：記錄玩家的捨牌是否被鳴牌
+        self._has_called_discard = {i: False for i in range(self._num_players)}
 
     def deal(self) -> Dict[int, List[Tile]]:
         """
@@ -257,6 +263,9 @@ class RuleEngine:
 
         if self._can_ron(player):
             actions.append(GameAction.RON)
+
+        if self._check_kyuushu_kyuuhai(player):
+            actions.append(GameAction.KYUUSHU_KYUUHAI)
 
         return actions
 
@@ -616,11 +625,29 @@ class RuleEngine:
 
         return result
 
+    def _handle_kyuushu_kyuuhai(self, player: int, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
+        """
+        處理九種九牌流局
+        """
+        if not self._check_kyuushu_kyuuhai(player):
+            raise ValueError("不滿足九種九牌流局條件")
+
+        result = ActionResult()
+        result.ryuukyoku = RyuukyokuResult(
+            ryuukyoku=True,
+            ryuukyoku_type=RyuukyokuType.KYUUSHU_KYUUHAI,
+            kyuushu_kyuuhai_player=player
+        )
+        self._phase = GamePhase.RYUUKYOKU
+        return result
+
 
     def _remove_last_discard(self, discarder: int, tile: Tile) -> None:
         self._hands[discarder].remove_last_discard(tile)
         if self._discard_history and self._discard_history[-1] == (discarder, tile):
             self._discard_history.pop()
+        # 標記該玩家有捨牌被鳴牌（影響流局滿貫）
+        self._has_called_discard[discarder] = True
 
     def _draw_rinshan_tile(self, player: int, result: ActionResult, *, kan_type: MeldType) -> bool:
         if not self._tile_set:
@@ -842,6 +869,33 @@ class RuleEngine:
 
         return potential_winners
 
+    def _check_kyuushu_kyuuhai(self, player: int) -> bool:
+        """
+        檢查是否滿足九種九牌流局條件
+
+        條件：
+        1. 必須是第一巡（玩家自己的第一巡）
+        2. 場上無人鳴牌（包括暗槓）
+        3. 手牌有9種以上幺九牌
+        """
+        # 必須是自己的回合
+        if player != self._current_player:
+            return False
+
+        # 必須是第一巡（自己尚未打過牌）
+        if len(self._hands[player].discards) > 0:
+            return False
+
+        # 場上不能有副露（包括暗槓）
+        for i in range(self._num_players):
+            if len(self._hands[i].melds) > 0:
+                return False
+
+        # 手牌必須有9種以上幺九牌
+        hand = self._hands[player]
+        unique_yaochuu = {t for t in hand.tiles if t.is_yaochuu}
+        return len(unique_yaochuu) >= 9
+
     def check_ryuukyoku(self) -> Optional[RyuukyokuType]:
         """
         檢查是否流局
@@ -875,29 +929,7 @@ class RuleEngine:
 
         return all(hand.is_riichi for hand in self._hands)
 
-    def _check_kyuushu_kyuuhai(self, player: int) -> bool:
-        """
-        檢查是否九種九牌（九種幺九牌）
 
-        條件：第一巡且手牌有9種或以上不同種類的幺九牌
-
-        Args:
-            player: 玩家位置
-
-        Returns:
-            是否為九種九牌
-        """
-        # 必須是第一巡
-        if not self._is_first_turn_after_deal:
-            return False
-
-        hand = self._hands[player]
-        if len(hand.tiles) != 13:
-            return False
-
-        terminal_and_honor_tiles = {(tile.suit, tile.rank) for tile in hand.tiles if tile.is_terminal or tile.is_honor}
-        # 如果有9種或以上不同種類的幺九牌，則為九種九牌
-        return len(terminal_and_honor_tiles) >= 9
 
     def _check_suufon_renda(self) -> bool:
         """
@@ -919,35 +951,28 @@ class RuleEngine:
 
         return not any(tile.suit != Suit.JIHAI or tile.rank != first_tile.rank for _, tile in self._discard_history[:4])
 
-    def check_flow_mangan(self, player: int) -> bool:
+    def _check_nagashi_mangan(self, player: int) -> bool:
         """
-        檢查流局滿貫
+        檢查是否滿足流局滿貫條件
 
-        流局滿貫條件：
-        1. 流局時聽牌
-        2. 聽牌牌必須是幺九牌或字牌
-        3. 沒有副露（門清）
-
-        Args:
-            player: 玩家位置
-
-        Returns:
-            是否為流局滿貫
+        條件：
+        1. 捨牌全部是幺九牌
+        2. 捨牌沒有被鳴牌（碰、吃、槓）
         """
+        # 檢查是否有捨牌被鳴牌
+        if self._has_called_discard[player]:
+            return False
+
         hand = self._hands[player]
+        discards = hand.discards
 
-        # 必須是門清
-        if not hand.is_concealed:
+        # 必須有捨牌
+        if not discards:
             return False
 
-        # 必須聽牌
-        if not hand.is_tenpai():
-            return False
+        # 檢查所有捨牌是否都是幺九牌
+        return all(tile.is_yaochuu for tile in discards)
 
-        if waiting_tiles := hand.get_waiting_tiles():
-            return all((tile.is_terminal or tile.is_honor) for tile in waiting_tiles)
-        else:
-            return False
 
     def _count_dora(self, player: int, winning_tile: Optional[Tile] = None) -> int:
         """
@@ -1189,9 +1214,35 @@ class RuleEngine:
                     self._phase = GamePhase.ENDED
         else:
             # 流局處理
-            # 如果是牌山耗盡流局，計算不聽罰符
+            # 如果是牌山耗盡流局，檢查流局滿貫和不聽罰符
             if self._tile_set and self._tile_set.is_exhausted():
-                self._calculate_noten_bappu()
+                # 檢查流局滿貫
+                flow_mangan_players = []
+                for i in range(self._num_players):
+                    if self._check_nagashi_mangan(i):
+                        flow_mangan_players.append(i)
+
+                if flow_mangan_players:
+                    # 處理流局滿貫分數
+                    for winner in flow_mangan_players:
+                        is_dealer = (winner == self._game_state.dealer)
+                        payment = 4000 if is_dealer else 2000
+
+                        # 所有人支付（除了贏家）
+                        for i in range(self._num_players):
+                            if i == winner:
+                                continue
+
+                            # 莊家支付更多（如果贏家不是莊家）
+                            pay_amount = payment
+                            if not is_dealer and i == self._game_state.dealer:
+                                pay_amount = 4000
+
+                            self._game_state.update_score(i, -pay_amount)
+                            self._game_state.update_score(winner, pay_amount)
+                else:
+                    # 如果沒有流局滿貫，才計算不聽罰符
+                    self._calculate_noten_bappu()
 
             # 檢查擊飛
             if self._check_tobi():

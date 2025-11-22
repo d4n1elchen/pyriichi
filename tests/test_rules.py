@@ -336,16 +336,35 @@ class TestRuleEngine:
         with pytest.raises(ValueError, match="玩家位置必須在"):
             self.engine.get_discards(4)
 
-    @pytest.mark.skip(reason="TODO: Implement kyuushu kyuuhai handling")
     def test_handle_draw_kyuushu_kyuuhai(self):
         """測試九種九牌流局處理"""
-        # TODO: 新增九種九牌流局 action
-        pass
+        self._init_game()
+        player = self.engine.get_current_player()
 
-    @pytest.mark.skip(reason="TODO: Implement suucha riichi handling")
+        # 設置九種九牌
+        tiles = parse_tiles("1m9m1p9p1s9s1z2z3z4z5z6z7z1m")
+        self.engine._hands[player] = Hand(tiles)
+        self.engine._is_first_turn_after_deal = True
+
+        # 執行動作
+        result = self.engine.execute_action(player, GameAction.KYUUSHU_KYUUHAI)
+
+        assert result.ryuukyoku is not None
+        assert result.ryuukyoku.ryuukyoku is True
+        assert result.ryuukyoku.ryuukyoku_type == RyuukyokuType.KYUUSHU_KYUUHAI
+        assert result.ryuukyoku.kyuushu_kyuuhai_player == player
+
     def test_handle_draw_suucha_riichi(self):
         """測試四家立直流局處理"""
-        pass
+        self._init_game()
+
+        # 設置所有玩家立直
+        for i in range(4):
+            self.engine._hands[i].set_riichi(True)
+
+        # 檢查流局
+        ryuukyoku_type = self.engine.check_ryuukyoku()
+        assert ryuukyoku_type == RyuukyokuType.SUUCHA_RIICHI
 
     def test_get_available_actions_default_empty(self):
         """測試在非 PLAYING 階段無可用動作"""
@@ -567,10 +586,34 @@ class TestRuleEngine:
         assert result.rinshan_tile is not None
         assert result.rinshan_win is not None
 
-    @pytest.mark.skip(reason="TODO: Implement flow mangan check test")
-    def test_check_flow_mangan(self):
+    def test_check_nagashi_mangan(self):
         """測試流局滿貫判定"""
-        pass
+        self._init_game()
+        player = 0
+
+        # 1. 正常流局滿貫：捨牌全為幺九牌，且未被鳴牌
+        yaochuu_tiles = [
+            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1), Tile(Suit.PINZU, 9),
+            Tile(Suit.SOZU, 1), Tile(Suit.SOZU, 9),
+            Tile(Suit.JIHAI, 1), Tile(Suit.JIHAI, 2),
+            Tile(Suit.JIHAI, 3), Tile(Suit.JIHAI, 4),
+            Tile(Suit.JIHAI, 5), Tile(Suit.JIHAI, 6),
+            Tile(Suit.JIHAI, 7)
+        ]
+
+        self.engine._hands[player]._discards = yaochuu_tiles
+        self.engine._has_called_discard[player] = False
+        assert self.engine._check_nagashi_mangan(player) is True
+
+        # 2. 失敗情況：有非幺九牌
+        self.engine._hands[player]._discards.append(Tile(Suit.MANZU, 5))
+        assert self.engine._check_nagashi_mangan(player) is False
+
+        # 3. 失敗情況：捨牌被鳴牌
+        self.engine._hands[player]._discards = yaochuu_tiles  # 重置為全幺九
+        self.engine._has_called_discard[player] = True
+        assert self.engine._check_nagashi_mangan(player) is False
 
     def test_end_round_with_winner(self):
         """測試結束一局（有獲勝者）"""
