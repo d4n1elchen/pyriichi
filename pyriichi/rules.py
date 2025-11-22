@@ -129,6 +129,12 @@ class RuleEngine:
         self._pending_kan_tile: Optional[Tuple[int, Tile]] = None
         self._winning_players: List[int] = []
         self._ignore_suukantsu: bool = False
+
+        # 振聽狀態追蹤
+        self._furiten_permanent: Dict[int, bool] = {}  # 立直振聽（永久）
+        self._furiten_temp: Dict[int, bool] = {}       # 同巡振聽（臨時）
+        self._furiten_temp_round: Dict[int, int] = {}  # 同巡振聽發生的回合
+
         self._action_handlers = {
             GameAction.DRAW: self._handle_draw,
             GameAction.DISCARD: self._handle_discard,
@@ -165,6 +171,11 @@ class RuleEngine:
         self._winning_players = []
         self._ignore_suukantsu = False
         self._last_drawn_tile = None
+
+        # 重置振聽狀態
+        self._furiten_permanent = {}
+        self._furiten_temp = {}
+        self._furiten_temp_round = {}
 
     def deal(self) -> Dict[int, List[Tile]]:
         """
@@ -547,6 +558,10 @@ class RuleEngine:
         # 獲取和牌組合
         combinations = hand.get_winning_combinations(winning_tile, is_tsumo)
         if not combinations:
+            return None
+
+        # 榮和時檢查振聽（振聽玩家不能榮和，但可以自摸）
+        if not is_tsumo and self.is_furiten(player):
             return None
 
         # 使用第一個組合進行役種判定
@@ -950,3 +965,78 @@ class RuleEngine:
             和牌結果，如果不能和則返回 None
         """
         return self.check_win(player, rinshan_tile, is_rinshan=True)
+
+    def check_furiten_discards(self, player: int) -> bool:
+        """
+        檢查現物振聽：玩家打過的牌包含在聽牌牌中
+
+        Args:
+            player: 玩家位置
+
+        Returns:
+            是否為現物振聽
+        """
+        hand = self._hands[player]
+
+        # 未聽牌不算振聽
+        if not hand.is_tenpai():
+            return False
+
+        # 獲取聽牌牌
+        waiting_tiles = hand.get_waiting_tiles()
+        if not waiting_tiles:
+            return False
+
+        # 檢查玩家的捨牌歷史
+        for discard in hand.discards:
+            # 如果打過的牌在聽牌牌中，則為現物振聽
+            if any(discard.suit == wt.suit and discard.rank == wt.rank for wt in waiting_tiles):
+                return True
+
+        return False
+
+    def check_furiten_temp(self, player: int) -> bool:
+        """
+        檢查同巡振聽：同巡內放過榮和機會
+
+        Args:
+            player: 玩家位置
+
+        Returns:
+            是否為同巡振聽
+        """
+        # 檢查是否設置了同巡振聽
+        if not self._furiten_temp.get(player, False):
+            return False
+
+        # 檢查是否是同一回合
+        furiten_round = self._furiten_temp_round.get(player, -1)
+        return furiten_round == self._turn_count
+
+    def check_furiten_riichi(self, player: int) -> bool:
+        """
+        檢查立直振聽：立直後放過榮和機會
+
+        Args:
+            player: 玩家位置
+
+        Returns:
+            是否為立直振聽
+        """
+        return self._furiten_permanent.get(player, False)
+
+    def is_furiten(self, player: int) -> bool:
+        """
+        綜合檢查玩家是否處於振聽狀態
+
+        Args:
+            player: 玩家位置
+
+        Returns:
+            是否處於振聽狀態
+        """
+        return (
+            self.check_furiten_discards(player) or
+            self.check_furiten_temp(player) or
+            self.check_furiten_riichi(player)
+        )

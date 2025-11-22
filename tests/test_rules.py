@@ -810,6 +810,8 @@ class TestRuleEngine:
         assert self.engine._tile_set is not None
         self.engine._tile_set._wall = [Tile(Suit.SOZU, 5)]
         self.engine._tile_set._tiles = []
+        # 確保嶺上牌不是和牌牌（手牌聽牌型比較特殊，給一個無關的字牌確保不和）
+        self.engine._tile_set._rinshan_tiles = [Tile(Suit.JIHAI, 1)] * 4
 
         result = self.engine.execute_action(player, GameAction.ANKAN)
 
@@ -862,6 +864,211 @@ class TestRuleEngine:
         assert hand.total_tile_count() == 14
         result = self.engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
         assert result.is_last_tile is True
+
+    def test_furiten_discards_cannot_ron(self):
+        """測試現物振聽：玩家打過的牌在聽牌牌中，不能榮和"""
+        self._init_game()
+
+        # 設置玩家0聽牌（聽 3p）
+        # 手牌：123m 456m 789m 12p 33p (聽3p)
+        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p3p")
+        self.engine._hands[0] = Hand(tiles)
+
+        # 玩家0之前打過 3p（現在在捨牌堆中）
+        discard_tile = Tile(Suit.PINZU, 3)
+        self.engine._hands[0]._discards.append(discard_tile)
+
+        # 其他玩家打出 3p
+        self.engine._last_discarded_tile = discard_tile
+        self.engine._last_discarded_player = 1
+        self.engine._current_player = 0
+        self.engine._last_drawn_tile = None
+
+        # 檢查振聽狀態
+        assert self.engine.check_furiten_discards(0) is True
+        assert self.engine.is_furiten(0) is True
+
+        # 嘗試榮和，應該失敗
+        result = self.engine.check_win(0, discard_tile)
+        assert result is None or result.win is False
+
+    def test_furiten_discards_can_tsumo(self):
+        """測試現物振聽：雖然振聽，但可以自摸"""
+        self._init_game()
+
+        # 設置玩家0聽牌（聽 3p）
+        # 手牌：123m 456m 789m 12p 33p (13張，聽3p)
+        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p3p")
+        self.engine._hands[0] = Hand(tiles)
+
+        # 玩家0之前打過 3p
+        discard_tile = Tile(Suit.PINZU, 3)
+        self.engine._hands[0]._discards.append(discard_tile)
+
+        # 檢查振聽狀態（此時是13張，應該是振聽）
+        assert self.engine.check_furiten_discards(0) is True
+
+        # 模擬自摸 3p
+        self.engine._current_player = 0
+        self.engine._last_drawn_tile = (0, discard_tile)
+        self.engine._last_discarded_tile = None
+
+        # 自摸需要手牌有14張
+        self.engine._hands[0].add_tile(discard_tile)
+
+        # 自摸應該成功
+        result = self.engine.check_win(0, discard_tile)
+        assert result is not None
+        assert result.win is True
+
+    def test_furiten_temp_same_turn_cannot_ron(self):
+        """測試同巡振聽：同巡內放過和牌機會後不能榮和"""
+        self._init_game()
+
+        # 設置玩家0聽牌（聽 4p）
+        # 手牌：123m 456m 789m 123p 4p
+        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
+        self.engine._hands[0] = Hand(tiles)
+
+        winning_tile = Tile(Suit.PINZU, 4)
+
+        # 設置同巡振聽狀態（玩家0在當前回合放過榮和）
+        self.engine._furiten_temp[0] = True
+        self.engine._furiten_temp_round[0] = self.engine._turn_count
+
+        # 其他玩家打出 4p
+        self.engine._last_discarded_tile = winning_tile
+        self.engine._last_discarded_player = 1
+        self.engine._current_player = 0
+        self.engine._last_drawn_tile = None
+
+        # 檢查振聽狀態
+        assert self.engine.check_furiten_temp(0) is True
+        assert self.engine.is_furiten(0) is True
+
+        # 嘗試榮和，應該失敗
+        result = self.engine.check_win(0, winning_tile)
+        assert result is None or result.win is False
+
+    def test_furiten_temp_next_turn_can_ron(self):
+        """測試同巡振聽：下一巡可以榮和"""
+        self._init_game()
+
+        # 設置玩家0聽牌（聽 4p）
+        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
+        self.engine._hands[0] = Hand(tiles)
+
+        winning_tile = Tile(Suit.PINZU, 4)
+
+        # 設置同巡振聽狀態（上一回合）
+        self.engine._furiten_temp[0] = True
+        self.engine._furiten_temp_round[0] = 0
+        self.engine._turn_count = 2  # 已經過了兩巡
+
+        # 其他玩家打出 4p
+        self.engine._last_discarded_tile = winning_tile
+        self.engine._last_discarded_player = 1
+        self.engine._current_player = 0
+        self.engine._last_drawn_tile = None
+
+        # 檢查振聽狀態（不應該是同巡振聽）
+        assert self.engine.check_furiten_temp(0) is False
+
+        # 應該可以榮和（如果沒有其他振聽）
+        # 注意：這裡只測試同巡振聽被解除，實際榮和還需要檢查其他條件
+
+    def test_furiten_riichi_permanent(self):
+        """測試立直振聽：立直後放過榮和，永久振聽"""
+        self._init_game()
+
+        # 設置玩家0立直且聽牌（聽 4p）
+        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
+        self.engine._hands[0] = Hand(tiles)
+        self.engine._hands[0].set_riichi(True)
+
+        winning_tile = Tile(Suit.PINZU, 4)
+
+        # 設置立直振聽狀態（玩家0在立直後放過榮和）
+        self.engine._furiten_permanent[0] = True
+
+        # 其他玩家打出 4p
+        self.engine._last_discarded_tile = winning_tile
+        self.engine._last_discarded_player = 1
+        self.engine._current_player = 0
+        self.engine._last_drawn_tile = None
+
+        # 檢查振聽狀態
+        assert self.engine.check_furiten_riichi(0) is True
+        assert self.engine.is_furiten(0) is True
+
+        # 嘗試榮和，應該失敗
+        result = self.engine.check_win(0, winning_tile)
+        assert result is None or result.win is False
+
+    def test_furiten_riichi_can_tsumo(self):
+        """測試立直振聽：雖然永久振聽，但可以自摸"""
+        self._init_game()
+
+        # 設置玩家0立直且聽牌（聽 4p）
+        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p4p")
+        self.engine._hands[0] = Hand(tiles)
+        self.engine._hands[0].set_riichi(True)
+
+        winning_tile = Tile(Suit.PINZU, 4)
+
+        # 設置立直振聽狀態
+        self.engine._furiten_permanent[0] = True
+
+        # 模擬自摸 4p
+        self.engine._current_player = 0
+        self.engine._last_drawn_tile = (0, winning_tile)
+        self.engine._last_discarded_tile = None
+
+        # 檢查振聽狀態（還是振聽）
+        assert self.engine.check_furiten_riichi(0) is True
+
+        # 自摸應該成功
+        result = self.engine.check_win(0, winning_tile)
+        assert result is not None
+        assert result.win is True
+
+    def test_furiten_not_tenpai_returns_false(self):
+        """測試未聽牌時振聽檢查返回 False"""
+        self._init_game()
+
+        # 設置玩家0不聽牌
+        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p5p")
+        self.engine._hands[0] = Hand(tiles)
+
+        # 檢查振聽狀態（未聽牌不算振聽）
+        assert self.engine.check_furiten_discards(0) is False
+        assert self.engine.is_furiten(0) is False
+
+    def test_furiten_multiple_waiting_tiles(self):
+        """測試多面聽牌時的現物振聽"""
+        self._init_game()
+
+        # 設置玩家0多面聽（聽 4p 5p）
+        # 手牌：123m 456m 789m 44p 55p (雙碰聽 4p 5p)
+        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m4p5p4p5p")
+        self.engine._hands[0] = Hand(tiles)
+
+        # 玩家0之前打過 4p（聽牌牌之一）
+        self.engine._hands[0]._discards.append(Tile(Suit.PINZU, 4))
+
+        # 檢查振聽狀態（打過其中一個聽牌牌）
+        assert self.engine.check_furiten_discards(0) is True
+
+        # 即使打出的是另一個聽牌牌 5p，也不能榮和
+        winning_tile = Tile(Suit.PINZU, 5)
+        self.engine._last_discarded_tile = winning_tile
+        self.engine._last_discarded_player = 1
+        self.engine._current_player = 0
+        self.engine._last_drawn_tile = None
+
+        result = self.engine.check_win(0, winning_tile)
+        assert result is None or result.win is False
+
 
     def _init_game(self):
         self.engine.start_game()
