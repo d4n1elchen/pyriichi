@@ -8,6 +8,7 @@ from enum import Enum
 from typing import List, Optional
 from pyriichi.rules_config import RulesetConfig
 from pyriichi.enum_utils import TranslatableEnum
+from pyriichi.tiles import Suit, Tile
 
 
 class Wind(TranslatableEnum):
@@ -17,6 +18,19 @@ class Wind(TranslatableEnum):
     SOUTH = ("s", "南", "南", "South")
     WEST = ("w", "西", "西", "West")
     NORTH = ("n", "北", "北", "North")
+
+    @property
+    def tile(self) -> Tile:
+        if self == Wind.EAST:
+            return Tile(Suit.JIHAI, 1)
+        elif self == Wind.SOUTH:
+            return Tile(Suit.JIHAI, 2)
+        elif self == Wind.WEST:
+            return Tile(Suit.JIHAI, 3)
+        elif self == Wind.NORTH:
+            return Tile(Suit.JIHAI, 4)
+        else:
+            raise ValueError(f"Invalid wind: {self}")
 
 
 class GameState:

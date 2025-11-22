@@ -163,7 +163,7 @@ class YakuChecker:
         winning_combination: List[Combination],
         game_state: GameState,
         is_tsumo: bool = False,
-        is_ippatsu: Optional[bool] = None,
+        is_ippatsu: bool = False,
         is_first_turn: bool = False,
         is_last_tile: bool = False,
         player_position: int = 0,
@@ -177,6 +177,12 @@ class YakuChecker:
             winning_tile: 和牌牌
             winning_combination: 和牌組合（標準型）或 None（特殊型如七對子）
             game_state: 遊戲狀態
+            is_tsumo: 是否自摸
+            is_ippatsu: 是否為一發
+            is_first_turn: 是否為第一巡
+            is_last_tile: 是否為最後一張牌（海底撈月/河底撈魚）
+            player_position: 玩家位置（用於判定自風）
+            is_rinshan: 是否為嶺上開花
 
         Returns:
             所有符合的役種列表

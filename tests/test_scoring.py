@@ -3,7 +3,7 @@ ScoreCalculator 的單元測試
 """
 
 import pytest
-from pyriichi.hand import Combination, CombinationType, Hand, make_combination
+from pyriichi.hand import CombinationType, Hand, make_combination
 from pyriichi.tiles import Suit, Tile
 from pyriichi.utils import parse_tiles
 from pyriichi.yaku import WaitingType, Yaku, YakuChecker, YakuResult
@@ -23,43 +23,27 @@ class TestScoreCalculator:
 
     def test_calculate_fu_basic(self):
         """測試基本符數計算"""
-        # 門清榮和：20 + 10 = 30 符（只有順子，無刻子）
-        # 但這個手牌實際上有刻子，所以會更多
-        # 手牌：234m 567m 345p 678p 4s
+        # 20 + 10 (門清榮和) + 2 (單騎聽) = 32 (40) 符
+        # 234m 567m 345p 678p 4s
         tiles = parse_tiles("2m3m4m5m6m7m3p4p5p6p7p8p4s")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.SOZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
-
-        if combinations:
-            yaku_results = []
-            fu = self.calculator.calculate_fu(
-                hand, winning_tile, list(combinations[0]), yaku_results, self.game_state, False
-            )
-            # 門清榮和：20 + 10 = 30 符（只有順子，無刻子）
-            # 但實際可能有刻子組合，所以至少 30 符
-            assert fu >= 30
+        assert combinations
+        fu = self.calculator.calculate_fu(hand, winning_tile, combinations[0], [], self.game_state, False)
+        assert fu == 40
 
     def test_calculate_fu_triplet(self):
         """測試刻子符數"""
-        # 對對和：有刻子
-        # 手牌：111222333m 4445p
-        tiles = parse_tiles("1m1m1m2m2m2m3m3m3m4p4p4p5p")
+        # 20 + 10 (門清榮和) + 2 (單騎聽) + 8 (幺九暗刻) + 4 (暗刻) * 2 = 48 (50) 符
+        # 111m 222m 333m 123p 5p
+        tiles = parse_tiles("1m1m1m2m2m2m3m3m3m1p2p3p5p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.PINZU, 5)
         combinations = hand.get_winning_combinations(winning_tile)
-
-        if combinations:
-            yaku_results = self.yaku_checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
-            )
-            fu = self.calculator.calculate_fu(
-                hand, winning_tile, list(combinations[0]), yaku_results, self.game_state, False
-            )
-            # 門清榮和：20 + 10 = 30
-            # 4個中張暗刻：4 * 4 = 16
-            # 總計：30 + 16 = 46，進位到 50
-            assert fu >= 40  # 至少 40 符
+        assert combinations
+        fu = self.calculator.calculate_fu(hand, winning_tile, combinations[0], [], self.game_state, False)
+        assert fu == 50
 
     def test_calculate_han(self):
         """測試翻數計算"""
@@ -86,10 +70,10 @@ class TestScoreCalculator:
 
         if combinations:
             yaku_results = self.yaku_checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
+                hand, winning_tile, combinations[0], self.game_state, is_tsumo=False
             )
             score_result = self.calculator.calculate(
-                hand, winning_tile, list(combinations[0]), yaku_results, 0, self.game_state, False
+                hand, winning_tile, combinations[0], yaku_results, 0, self.game_state, False
             )
 
             assert score_result.han > 0
@@ -115,7 +99,7 @@ class TestScoreCalculator:
 
         if combinations:
             score_result = self.calculator.calculate(
-                hand, winning_tile, list(combinations[0]), yaku_results, 0, self.game_state, False
+                hand, winning_tile, combinations[0], yaku_results, 0, self.game_state, False
             )
             # 5翻應該是滿貫（2000點），6翻是跳滿（3000點）
             if score_result.han == 5:
@@ -133,10 +117,10 @@ class TestScoreCalculator:
 
         if combinations:
             yaku_results = self.yaku_checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
+                hand, winning_tile, combinations[0], self.game_state, is_tsumo=False
             )
             score_result = self.calculator.calculate(
-                hand, winning_tile, list(combinations[0]), yaku_results, 0, self.game_state, False
+                hand, winning_tile, combinations[0], yaku_results, 0, self.game_state, False
             )
 
             # 對對和至少 2 翻
@@ -155,9 +139,7 @@ class TestScoreCalculator:
 
         if combinations:
             yaku_results = []
-            fu = self.calculator.calculate_fu(
-                hand, winning_tile, list(combinations[0]), yaku_results, self.game_state, False
-            )
+            fu = self.calculator.calculate_fu(hand, winning_tile, combinations[0], yaku_results, self.game_state, False)
             # 門清榮和：20 + 10 = 30，單騎聽 +2 = 32，進位到 40
             # 但如果有其他符數，可能更多
             assert fu >= 30
@@ -173,9 +155,7 @@ class TestScoreCalculator:
 
         if combinations:
             yaku_results = []
-            fu = self.calculator.calculate_fu(
-                hand, winning_tile, list(combinations[0]), yaku_results, self.game_state, False
-            )
+            fu = self.calculator.calculate_fu(hand, winning_tile, combinations[0], yaku_results, self.game_state, False)
             assert fu >= 30
 
     def test_calculate_payments_tsumo(self):
@@ -252,7 +232,7 @@ class TestScoreCalculator:
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
-            waiting_type = self.calculator._determine_waiting_type(winning_tile, list(combinations[0]))
+            waiting_type = self.calculator._determine_waiting_type(winning_tile, combinations[0])
             assert waiting_type in {
                 WaitingType.RYANMEN,
                 WaitingType.PENCHAN,
@@ -272,9 +252,7 @@ class TestScoreCalculator:
 
         if combinations:
             yaku_results = []
-            fu = self.calculator.calculate_fu(
-                hand, winning_tile, list(combinations[0]), yaku_results, self.game_state, False
-            )
+            fu = self.calculator.calculate_fu(hand, winning_tile, combinations[0], yaku_results, self.game_state, False)
             # 門清榮和：20 + 10 = 30，嵌張聽 +2 = 32，進位到 40
             assert fu >= 30
 
@@ -289,9 +267,7 @@ class TestScoreCalculator:
 
         if combinations:
             yaku_results = []
-            fu = self.calculator.calculate_fu(
-                hand, winning_tile, list(combinations[0]), yaku_results, self.game_state, False
-            )
+            fu = self.calculator.calculate_fu(hand, winning_tile, combinations[0], yaku_results, self.game_state, False)
             # 門清榮和：20 + 10 = 30，兩面聽不增加符數，進位到 30
             assert fu >= 30
 
@@ -316,9 +292,7 @@ class TestScoreCalculator:
             # 手動構建包含槓子的組合（因為標準組合可能不包含槓子）
             # 這裡我們測試是否能正確計算（如果組合中有槓子）
             yaku_results = []
-            fu = self.calculator.calculate_fu(
-                hand, winning_tile, list(combinations[0]), yaku_results, self.game_state, False
-            )
+            fu = self.calculator.calculate_fu(hand, winning_tile, combinations[0], yaku_results, self.game_state, False)
             # 至少應該有基本符數
             assert fu >= 20
 
@@ -340,9 +314,7 @@ class TestScoreCalculator:
 
         if combinations:
             yaku_results = []
-            fu = self.calculator.calculate_fu(
-                hand, winning_tile, list(combinations[0]), yaku_results, self.game_state, False
-            )
+            fu = self.calculator.calculate_fu(hand, winning_tile, combinations[0], yaku_results, self.game_state, False)
             # 非門清榮和：20 + 0 = 20，進位到 20
             assert fu >= 20
 
@@ -357,9 +329,7 @@ class TestScoreCalculator:
 
         if combinations:
             yaku_results = []
-            fu = self.calculator.calculate_fu(
-                hand, winning_tile, list(combinations[0]), yaku_results, self.game_state, False
-            )
+            fu = self.calculator.calculate_fu(hand, winning_tile, combinations[0], yaku_results, self.game_state, False)
             # 門清榮和：20 + 10 = 30，三元牌對子 +2 = 32，進位到 40
             assert fu >= 30
 
@@ -375,9 +345,7 @@ class TestScoreCalculator:
 
         if combinations:
             yaku_results = []
-            fu = self.calculator.calculate_fu(
-                hand, winning_tile, list(combinations[0]), yaku_results, self.game_state, False
-            )
+            fu = self.calculator.calculate_fu(hand, winning_tile, combinations[0], yaku_results, self.game_state, False)
             # 門清榮和：20 + 10 = 30，場風對子 +2 = 32，進位到 40
             assert fu >= 30
 
@@ -667,7 +635,7 @@ class TestScoreCalculator:
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 7)
         # 七對子沒有 winning_combination（返回空列表）
-        yaku_results = []
+        yaku_results = [YakuResult(Yaku.CHIITOITSU, 2, False)]
 
         fu = self.calculator.calculate_fu(hand, winning_tile, [], yaku_results, self.game_state, False)
         # 七對子固定 25 符
@@ -685,7 +653,7 @@ class TestScoreCalculator:
         if combinations:
             # 檢查是否有平和
             yaku_results = self.yaku_checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=True, is_ippatsu=None
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=True
             )
             is_pinfu = any(r.yaku == Yaku.PINFU for r in yaku_results)
 
@@ -708,7 +676,7 @@ class TestScoreCalculator:
         if combinations:
             # 檢查是否有平和
             yaku_results = self.yaku_checker.check_all(
-                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False, is_ippatsu=None
+                hand, winning_tile, list(combinations[0]), self.game_state, is_tsumo=False
             )
             is_pinfu = any(r.yaku == Yaku.PINFU for r in yaku_results)
 

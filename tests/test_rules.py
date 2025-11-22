@@ -5,7 +5,7 @@ RuleEngine 的單元測試
 import pytest
 from pyriichi.hand import Hand, Meld, MeldType
 from pyriichi.rules import ActionResult, RuleEngine, GameAction, GamePhase, RyuukyokuType, RyuukyokuResult
-from pyriichi.tiles import Tile, Suit, TileSet
+from pyriichi.tiles import Tile, Suit
 from pyriichi.utils import parse_tiles
 
 

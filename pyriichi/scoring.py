@@ -205,59 +205,47 @@ class ScoreCalculator:
             hand: 手牌
             winning_tile: 和牌牌
             winning_combination: 和牌組合
+            yaku_results: 役種列表
             game_state: 遊戲狀態
             is_tsumo: 是否自摸
+            player_position: 玩家位置（用於計算自風對子符數）
 
         Returns:
             符數
         """
-        if not winning_combination:
-            # 七對子固定 25 符（實際上是無符，但這裡返回 25）
-            return 25
+        if any(r.yaku == Yaku.CHIITOITSU for r in yaku_results):
+            return 25  # 七對子固定 25 符
+
+        if any(r.yaku == Yaku.PINFU for r in yaku_results):
+            return 30 if is_tsumo else 20  # 平和固定 30 符（自摸）或 20 符（榮和）
 
         fu = 20  # 基本符
-
-        # 檢查是否為平和（平和固定 20 符，無其他符）
-        is_pinfu = any(r.yaku == Yaku.PINFU for r in yaku_results) if yaku_results else False
-
-        if is_pinfu:
-            # 平和固定30符，不需要進位
-            return 30
 
         # 副底符
         if hand.is_concealed and not is_tsumo:
             fu += 10  # 門清榮和
-        elif hand.is_concealed or is_tsumo:
-            fu += 2  # 門清自摸
+        elif is_tsumo:
+            fu += 2  # 自摸
+
         # 面子符
         for combination in winning_combination:
-            tiles = sorted(combination.tiles)
-            tile = tiles[0]
+            if combination.type in [
+                CombinationType.PAIR,
+                CombinationType.SEQUENCE,
+            ]:
+                continue
 
-            if combination.type == CombinationType.KAN:
-                # 槓子符（需要判斷是明槓還是暗槓）
-                # TODO: 需要從 Meld 中獲取是否為暗槓
-                if (tile.is_terminal or tile.is_honor) and hand.is_concealed:
-                    fu += 32  # 暗槓
-                elif tile.is_terminal or tile.is_honor or hand.is_concealed:
-                    fu += 16  # 明槓
-                else:
-                    fu += 8  # 明槓
+            tile = combination.tiles[0]
 
-            elif combination.type == CombinationType.TRIPLET:
-                # 刻子符
-                if (tile.is_terminal or tile.is_honor) and hand.is_concealed:
-                    fu += 8  # 暗刻
-                elif tile.is_terminal or tile.is_honor or hand.is_concealed:
-                    fu += 4  # 明刻
-                else:
-                    fu += 2  # 明刻
+            if combination.type == CombinationType.TRIPLET:
+                fu += 8 if tile.is_terminal or tile.is_honor else 4
+            elif combination.type == CombinationType.KAN:
+                fu += 32 if tile.is_terminal or tile.is_honor else 16
 
-        # 雀頭符
-        pair_combination = self._extract_pair(winning_combination)
+            # TODO: 明刻/槓子符數計算
 
-        if pair_combination:
-            pair_tile = sorted(pair_combination.tiles)[0]
+        if pair_combination := self._extract_pair(winning_combination):
+            pair_tile = pair_combination.tiles[0]
 
             # 役牌對子 +2 符
             if pair_tile.suit == Suit.JIHAI:
@@ -265,26 +253,14 @@ class ScoreCalculator:
                 if pair_tile.rank in [5, 6, 7]:  # 白、發、中
                     fu += 2
                 # 場風
-                round_wind = game_state.round_wind
-                round_wind_mapping = {
-                    1: Wind.EAST,
-                    2: Wind.SOUTH,
-                    3: Wind.WEST,
-                    4: Wind.NORTH,
-                }
-                if round_wind == round_wind_mapping.get(pair_tile.rank):
+                round_wind_tile = game_state.round_wind.tile
+                if round_wind_tile == pair_tile:
                     fu += 2
                 # 自風
                 player_winds = game_state.player_winds
                 if player_position < len(player_winds):
-                    player_wind = player_winds[player_position]
-                    player_wind_mapping = {
-                        1: Wind.EAST,
-                        2: Wind.SOUTH,
-                        3: Wind.WEST,
-                        4: Wind.NORTH,
-                    }
-                    if player_wind == player_wind_mapping.get(pair_tile.rank):
+                    player_wind_tile = player_winds[player_position].tile
+                    if player_wind_tile == pair_tile:
                         fu += 2
 
         # 聽牌符
@@ -326,7 +302,11 @@ class ScoreCalculator:
                 index = tiles.index(winning_tile)
             except ValueError:
                 index = next(
-                    (i for i, tile in enumerate(tiles) if tile.suit == winning_tile.suit and tile.rank == winning_tile.rank),
+                    (
+                        i
+                        for i, tile in enumerate(tiles)
+                        if tile.suit == winning_tile.suit and tile.rank == winning_tile.rank
+                    ),
                     -1,
                 )
                 if index == -1:

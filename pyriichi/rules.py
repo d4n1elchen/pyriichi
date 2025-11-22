@@ -555,7 +555,7 @@ class RuleEngine:
 
         # 檢查役種
         # 判定是否符合一發
-        is_ippatsu = self._riichi_ippatsu.get(player)
+        is_ippatsu = self._riichi_ippatsu.get(player, False)
         # 檢查是否為第一巡
         is_first_turn = self._is_first_turn_after_deal
         # 檢查是否為最後一張牌（需要檢查牌山狀態）

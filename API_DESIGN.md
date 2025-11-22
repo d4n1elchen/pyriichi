@@ -159,15 +159,15 @@ class TileSet:
         """檢查牌山是否耗盡"""
         pass
 
-    def get_dora_indicator(self, index: int = 0) -> Optional[Tile]:
+    def get_dora_indicators(self, count: Optional[int] = None) -> List[Tile]:
         """
         獲取寶牌指示牌
 
         Args:
-            index: 指示牌索引（0 為表寶牌，1+ 為裡寶牌）
+            count: 指示牌數量（如果為 None，則依照嶺上牌數量推斷）
 
         Returns:
-            指示牌，如果不存在則返回 None
+            指示牌列表
         """
         pass
 
@@ -394,17 +394,16 @@ class Hand:
         """
         pass
 
-    def get_winning_combinations(self, winning_tile: Tile) -> List[Tuple]:
+    def get_winning_combinations(self, winning_tile: Tile, is_tsumo: bool = False) -> List[List['Combination']]:
         """
         獲取和牌組合（用於役種判定）
 
         Args:
             winning_tile: 和牌牌
+            is_tsumo: 是否自摸
 
         Returns:
             所有可能的和牌組合（每種組合包含 4 組面子和 1 對子）
-            注意：返回的是 List[Tuple]，使用時需要轉換為 List：
-            winning_combination = list(combinations[0])
         """
         pass
 ```
@@ -433,7 +432,7 @@ class YakuChecker:
                   winning_combination: List,
                   game_state: 'GameState',
                   is_tsumo: bool = False,
-                  is_ippatsu: Optional[bool] = None,
+                  is_ippatsu: bool = False,
                   is_first_turn: bool = False,
                   is_last_tile: bool = False,
                   player_position: int = 0,

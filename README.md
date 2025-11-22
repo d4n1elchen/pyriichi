@@ -180,8 +180,8 @@ if hand.is_winning_hand(winning_tile):
     combinations = hand.get_winning_combinations(winning_tile)
     print(f"和牌組合數量: {len(combinations)}")
     if combinations:
-        # 注意：get_winning_combinations 返回 List[Tuple]，需要轉換為 List
-        winning_combination = list(combinations[0])
+        # get_winning_combinations 返回 List[List[Combination]]
+        winning_combination = combinations[0]
         print("第一個和牌組合:", winning_combination)
 ```
 
@@ -261,7 +261,7 @@ winning_tile = Tile(Suit.PINZU, 5)
 # 獲取和牌組合（注意：需要轉換為 List）
 winning_combinations = hand.get_winning_combinations(winning_tile)
 if winning_combinations:
-    winning_combination = list(winning_combinations[0])  # 轉換為 List
+    winning_combination = winning_combinations[0]
 
     game_state = GameState(num_players=4)
 
@@ -461,11 +461,11 @@ print("遊戲結束")
 
 ### 注意事項
 
-- `get_winning_combinations()` 返回 `List[Tuple]`，在使用時需要轉換為 `List`：
+- `get_winning_combinations()` 返回 `List[List[Combination]]`，可以直接使用：
   ```python
   combinations = hand.get_winning_combinations(winning_tile)
   if combinations:
-      winning_combination = list(combinations[0])  # 轉換為 List
+      winning_combination = combinations[0]
   ```
 
 ## 文檔

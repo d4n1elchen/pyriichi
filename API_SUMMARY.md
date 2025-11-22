@@ -20,7 +20,7 @@
 - `shuffle()`: 洗牌
 - `deal(num_players=4)`: 發牌
 - `draw()`: 摸牌
-- `get_dora_indicator(index)`: 獲取寶牌指示牌
+- `get_dora_indicators(count)`: 獲取寶牌指示牌
 - `get_dora(indicator)`: 獲取寶牌
 
 ### 2. 手牌管理
@@ -37,7 +37,7 @@
 - `kan(tile, kan_tiles)`: 執行槓
 - `is_tenpai()`: 是否聽牌
 - `is_winning_hand(winning_tile)`: 是否和牌
-- `get_winning_combinations(winning_tile)`: 獲取和牌組合
+- `get_winning_combinations(winning_tile, is_tsumo=False)`: 獲取和牌組合
 
 #### `Meld`
 副露（明刻、明順、明槓、暗槓）
@@ -102,8 +102,8 @@
 
 #### `YakuChecker`
 役種判定器
-- `check_all(hand, winning_tile, winning_combination, game_state, is_tsumo=False, is_ippatsu=None, is_first_turn=False, is_last_tile=False, player_position=0, is_rinshan=False)`: 檢查所有役種
-- `check_riichi(hand, game_state, is_ippatsu=None)`: 檢查立直與一發
+- `check_all(hand, winning_tile, winning_combination, game_state, is_tsumo=False, is_ippatsu=False, is_first_turn=False, is_last_tile=False, player_position=0, is_rinshan=False)`: 檢查所有役種
+- `check_riichi(hand, game_state, is_ippatsu=False)`: 檢查立直與一發
 - `check_tanyao(hand, winning_combination)`: 檢查斷么九
 - `check_pinfu(hand, winning_combination)`: 檢查平和
 - 其他役種檢查方法...
