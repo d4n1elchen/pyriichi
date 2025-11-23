@@ -102,6 +102,28 @@ class RulesetConfig:
     - False: 遊戲繼續直到局數結束
     """
 
+    # 遊戲結束規則
+    west_round_extension: bool = True
+    """
+    西入規則（延長戰）：
+    - True: 若南4局結束時無人達到目標分數（return_score），進入西場
+    - False: 南4局結束即遊戲結束
+    """
+
+    return_score: int = 30000
+    """
+    返點/目標分數：
+    - 遊戲結束時，若第一名分數未達此分數，且啟用西入，則遊戲延長
+    - 西場中若有人達到此分數（且為第一名？通常是只要有人超過即可，或局結束時判斷），遊戲結束
+    """
+
+    agari_yame: bool = True
+    """
+    安可（上がり止め）：
+    - True: 莊家在最後一局（南4或西4）和牌且為第一名時，遊戲結束
+    - False: 莊家連莊，遊戲繼續
+    """
+
     # 頭跳/雙響/三響規則
     head_bump_only: bool = True
     """
@@ -147,4 +169,7 @@ class RulesetConfig:
             chuuren_pure_double=True,
             kiriage_mangan=False,
             tobi_enabled=True,
+            west_round_extension=True,
+            return_score=30000,
+            agari_yame=True,
         )

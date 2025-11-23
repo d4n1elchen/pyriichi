@@ -9,7 +9,7 @@ from typing import List, Optional, Dict, Any, Tuple
 from dataclasses import dataclass, field
 from pyriichi.tiles import Tile, TileSet, Suit
 from pyriichi.hand import Hand, Meld, MeldType
-from pyriichi.game_state import GameState
+from pyriichi.game_state import GameState, Wind
 from pyriichi.yaku import YakuChecker, YakuResult, Yaku
 from pyriichi.scoring import ScoreCalculator, ScoreResult
 from pyriichi.enum_utils import TranslatableEnum
@@ -1206,6 +1206,19 @@ class RuleEngine:
             if self._check_tobi():
                 self._phase = GamePhase.ENDED
                 return
+
+            # 檢查安可（Agari-yame）
+            # 如果莊家和牌，且啟用安可，且為最後一局（南4或西4），且莊家為第一名，則遊戲結束
+            if dealer_won and self._game_state.ruleset.agari_yame:
+                is_final_round = (
+                    (self._game_state.round_wind == Wind.SOUTH and self._game_state.round_number == 4) or
+                    (self._game_state.round_wind == Wind.WEST and self._game_state.round_number == 4)
+                )
+                if is_final_round:
+                    max_score = max(self._game_state.scores)
+                    if self._game_state.scores[dealer] == max_score:
+                        self._phase = GamePhase.ENDED
+                        return
 
             # 如果莊家未獲勝，進入下一局
             if not dealer_won:

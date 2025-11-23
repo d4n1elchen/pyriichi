@@ -148,6 +148,13 @@ class GameState:
         Returns:
             是否還有下一局（遊戲是否結束）
         """
+        # 西入後的突然死亡（Sudden Death）規則
+        # 如果在西場，且有人達到目標分數（通常是30000），遊戲結束
+        if self._round_wind == Wind.WEST:
+            max_score = max(self._scores)
+            if max_score >= self.ruleset.return_score:
+                return False
+
         self._round_number += 1
 
         # 如果完成了 4 局，進入下一風
@@ -156,7 +163,17 @@ class GameState:
                 self._round_wind = Wind.SOUTH
                 self._round_number = 1
             elif self._round_wind == Wind.SOUTH:
-                # 遊戲結束
+                # 南場結束
+                # 檢查是否西入
+                max_score = max(self._scores)
+                if self.ruleset.west_round_extension and max_score < self.ruleset.return_score:
+                    self._round_wind = Wind.WEST
+                    self._round_number = 1
+                else:
+                    # 達到目標分數或未啟用西入，遊戲結束
+                    return False
+            elif self._round_wind == Wind.WEST:
+                # 西場結束（強制結束）
                 return False
 
         return True

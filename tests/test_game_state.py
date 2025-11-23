@@ -88,6 +88,9 @@ class TestGameState:
 
     def test_next_round(self):
         """測試進入下一局"""
+        # 禁用西入，以便測試標準結束流程
+        self.game_state.ruleset.west_round_extension = False
+
         # 初始是東1局
         assert self.game_state.round_wind == Wind.EAST
         assert self.game_state.round_number == 1
