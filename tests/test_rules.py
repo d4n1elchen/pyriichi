@@ -1585,34 +1585,47 @@ class TestRuleEngine:
         assert winners[1] == 2
 
 
-    @pytest.mark.skip(reason="TODO: Requires execute_action integration for score distribution")
     def test_double_ron_score_calculation(self):
         """測試雙響：驗證放銃者支付兩份分數"""
         self._init_game()
         self.engine._game_state.ruleset.head_bump_only = False
         self.engine._game_state.ruleset.allow_double_ron = True
 
-        # 玩家0打出4p，玩家1和2都滿貫榮和
+        # 玩家0打出4p
         discard_tile = Tile(Suit.PINZU, 4)
 
-        # 設置玩家1和2的手牌（門清平和，30符4翻 = 滿貫）
-        self.engine._hands[1] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p4p"))
-        self.engine._hands[2] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p4p"))
+        # 設置玩家1和2的手牌（斷么九 平和）
+        # 234m 567m 234p 56p 88s (聽4p/7p)
+        # 30符 2翻 = 2000點 (閒家)
+        hand_tiles = parse_tiles("2m3m4m5m6m7m2p3p4p5p6p8s8s")
+        self.engine._hands[1] = Hand(hand_tiles)
+        self.engine._hands[2] = Hand(hand_tiles)
 
         self.engine._last_discarded_tile = discard_tile
         self.engine._last_discarded_player = 0
         self.engine._current_player = 0
 
+        # Disable Renhou (Human Win) by simulating that it's not the first turn
+        # This ensures we test standard Yaku (Tanyao + Pinfu) scoring
+        self.engine._is_first_turn_after_deal = False
+
         initial_scores = self.engine._game_state.scores.copy()
 
-        # TODO: 執行雙響榮和
-        # TODO: 驗證玩家0支付兩份滿貫（8000 + 8000 = 16000）
-        # assert self.engine._game_state.scores[0] == initial_scores[0] - 16000
-        # assert self.engine._game_state.scores[1] == initial_scores[1] + 8000
-        # assert self.engine._game_state.scores[2] == initial_scores[2] + 8000
+        # 執行雙響榮和
+        result = self.engine.execute_action(1, GameAction.RON)
+
+        # 驗證結果
+        assert len(result.winners) == 2
+
+        # 驗證分數變化
+        # 玩家1 +2000
+        # 玩家2 +2000
+        # 玩家0 -4000
+        assert self.engine._game_state.scores[1] == initial_scores[1] + 2000
+        assert self.engine._game_state.scores[2] == initial_scores[2] + 2000
+        assert self.engine._game_state.scores[0] == initial_scores[0] - 4000
 
 
-    @pytest.mark.skip(reason="TODO: Requires execute_action integration for renchan verification")
     def test_double_ron_dealer_renchan(self):
         """測試雙響：任一贏家是莊家則連莊"""
         self._init_game()
@@ -1624,19 +1637,32 @@ class TestRuleEngine:
         # 玩家0是莊家
         assert self.engine._game_state.dealer == 0
 
-        # 玩家1打出1m，玩家0和2榮和
+        # 玩家1打出1m
         discard_tile = Tile(Suit.MANZU, 1)
 
-        self.engine._hands[0] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p2p"))
-        self.engine._hands[2] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p2p"))
+        # 設置玩家0（莊家）手牌：役牌東
+        # 23m 456m 789m 111z 22z (聽1m/4m)
+        self.engine._hands[0] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1z1z1z2z2z"))
+
+        # 設置玩家2手牌：役牌中
+        # 23m 456m 789m 555z 66z (聽1m/4m)
+        self.engine._hands[2] = Hand(parse_tiles("2m3m4m5m6m7m8m9m5z5z5z6z6z"))
 
         self.engine._last_discarded_tile = discard_tile
         self.engine._last_discarded_player = 1
 
-        # TODO: 執行雙響
-        # TODO: 驗證莊家連莊（玩家0仍是莊家）
-        # self.engine.end_round(winners=[0, 2])
-        # assert self.engine._game_state.dealer == 0
+        # 執行雙響
+        result = self.engine.execute_action(0, GameAction.RON)
+
+        # 驗證贏家
+        assert 0 in result.winners
+        assert 2 in result.winners
+
+        # 執行回合結束
+        self.engine.end_round(winners=result.winners)
+
+        # 驗證莊家連莊（玩家0仍是莊家）
+        assert self.engine._game_state.dealer == 0
 
     def test_triple_ron_disabled_ryuukyoku(self):
         """測試三響禁用：三家可榮和導致流局"""

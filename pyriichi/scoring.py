@@ -54,7 +54,8 @@ class ScoreResult:
             # 基本點計算
             base = self.fu * (2 ** (self.han + 2))
             self.base_points = base
-            self.total_points = (base + 9) // 10 * 10  # 進位到 10
+            # 點數不進位，留待 calculate_payments 處理
+            self.total_points = base
 
     def calculate_payments(self, game_state: GameState) -> None:
         """
@@ -94,10 +95,10 @@ class ScoreResult:
                 # 重新計算總點數
                 if self.payment_to == game_state.dealer:
                     # 莊家自摸：16000 all -> 48000
-                    total_win = base_payment * 6
+                    total_win = (base_payment * 6 + 99) // 100 * 100
                 else:
                     # 閒家自摸：8000/16000 -> 32000
-                    total_win = base_payment * 4
+                    total_win = (base_payment * 4 + 99) // 100 * 100
 
                 # 加上本場 (自摸時本場是每人支付 100*honba，共 300*honba)
                 total_honba = game_state.honba * 300
@@ -113,9 +114,9 @@ class ScoreResult:
             else:
                 # 榮和
                 if self.payment_to == game_state.dealer:
-                    total_win = base_payment * 6
+                    total_win = (base_payment * 6 + 99) // 100 * 100
                 else:
-                    total_win = base_payment * 4
+                    total_win = (base_payment * 4 + 99) // 100 * 100
 
                 total_honba = game_state.honba * 300
                 self.total_points = total_win + total_honba + self.riichi_sticks_bonus
@@ -180,12 +181,12 @@ class ScoreResult:
             if self.payment_to == game_state.dealer:
                 # 莊家自摸：每個閒家支付 2 * Basic + honba
                 self.dealer_payment = 0
-                self.non_dealer_payment = 2 * base_payment + honba_per_person
+                self.non_dealer_payment = (2 * base_payment + 99) // 100 * 100 + honba_per_person
                 self.total_points = self.non_dealer_payment * 3 + self.riichi_sticks_bonus
             else:
                 # 閒家自摸：莊家 2 * Basic + honba, 閒家 1 * Basic + honba
-                self.dealer_payment = 2 * base_payment + honba_per_person
-                self.non_dealer_payment = base_payment + honba_per_person
+                self.dealer_payment = (2 * base_payment + 99) // 100 * 100 + honba_per_person
+                self.non_dealer_payment = (base_payment + 99) // 100 * 100 + honba_per_person
                 self.total_points = self.dealer_payment + self.non_dealer_payment * 2 + self.riichi_sticks_bonus
         else:
             # 榮和支付
@@ -195,9 +196,9 @@ class ScoreResult:
             total_honba = game_state.honba * 300
 
             if self.payment_to == game_state.dealer:
-                win_points = 6 * base_payment
+                win_points = (6 * base_payment + 99) // 100 * 100
             else:
-                win_points = 4 * base_payment
+                win_points = (4 * base_payment + 99) // 100 * 100
 
             self.total_points = win_points + total_honba + self.riichi_sticks_bonus
             self.dealer_payment = 0
