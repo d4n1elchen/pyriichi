@@ -716,10 +716,11 @@ class GamePhase(Enum):
 @dataclass
 class ActionResult:
     """動作執行結果"""
+    success: bool = True
+    phase: Optional[GamePhase] = None
     drawn_tile: Optional[Tile] = None
     is_last_tile: Optional[bool] = None
-    draw: Optional[bool] = None
-    draw_type: Optional[DrawType] = None
+    ryuukyoku: Optional[RyuukyokuResult] = None
     discarded: Optional[bool] = None
     riichi: Optional[bool] = None
     chankan: Optional[bool] = None
@@ -727,7 +728,10 @@ class ActionResult:
     rinshan_tile: Optional[Tile] = None
     kan: Optional[bool] = None
     ankan: Optional[bool] = None
-    rinshan_win: Optional["WinResult"] = None
+    rinshan_win: Optional[WinResult] = None
+    meld: Optional[Meld] = None
+    called_action: Optional[GameAction] = None
+    called_tile: Optional[Tile] = None
 
 @dataclass
 class WinResult:

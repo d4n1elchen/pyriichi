@@ -28,6 +28,7 @@ class GameAction(TranslatableEnum):
     TSUMO = ("tsumo", "自摸", "ツモ", "Tsumo")
     RON = ("ron", "榮和", "ロン", "Ron")
     KYUUSHU_KYUUHAI = ("kyuushu_kyuuhai", "九種九牌", "九種九牌", "Kyuushu Kyuuhai")
+    PASS = ("pass", "過", "パス", "Pass")
 
 
 class GamePhase(TranslatableEnum):
@@ -224,6 +225,11 @@ class RuleEngine:
     def get_phase(self) -> GamePhase:
         """獲取當前遊戲階段"""
         return self._phase
+
+    @property
+    def game_state(self) -> GameState:
+        """獲取遊戲狀態"""
+        return self._game_state
 
     def _handle_chombo(self, player: int) -> None:
         """
