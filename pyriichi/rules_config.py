@@ -124,6 +124,14 @@ class RulesetConfig:
     - False: 莊家連莊，遊戲繼續
     """
 
+    # 違規處理規則
+    chombo_penalty_enabled: bool = True
+    """
+    錯和/錯立直罰則：
+    - True: 發生違規時支付滿貫罰符並結束該局
+    - False: 忽略違規或僅拒絕動作
+    """
+
     # 頭跳/雙響/三響規則
     head_bump_only: bool = True
     """
@@ -172,4 +180,5 @@ class RulesetConfig:
             west_round_extension=True,
             return_score=30000,
             agari_yame=True,
+            chombo_penalty_enabled=True,
         )

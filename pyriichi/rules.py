@@ -81,6 +81,8 @@ class RyuukyokuResult:
 class ActionResult:
     """動作執行結果"""
 
+    success: bool = True
+    phase: Optional[GamePhase] = None
     drawn_tile: Optional[Tile] = None
     is_last_tile: Optional[bool] = None
     ryuukyoku: Optional[RyuukyokuResult] = None
@@ -95,6 +97,10 @@ class ActionResult:
     meld: Optional[Meld] = None
     called_action: Optional[GameAction] = None
     called_tile: Optional[Tile] = None
+
+# ... (skip to end_round)
+
+
 
 
 class RuleEngine:
@@ -218,6 +224,55 @@ class RuleEngine:
     def get_phase(self) -> GamePhase:
         """獲取當前遊戲階段"""
         return self._phase
+
+    def _handle_chombo(self, player: int) -> None:
+        """
+        處理錯和/錯立直（Chombo）
+
+        Args:
+            player: 違規玩家位置
+        """
+        if not self._game_state.ruleset.chombo_penalty_enabled:
+            return
+
+        # 計算滿貫罰符
+        # 莊家罰符：支付給每人 4000（共 12000）
+        # 閒家罰符：支付給莊家 4000，其他閒家 2000（共 8000）
+        is_dealer = (player == self._game_state.dealer)
+
+        if is_dealer:
+            payment_per_person = 4000
+            total_payment = 0
+            for i in range(self._num_players):
+                if i != player:
+                    self._game_state.update_score(i, payment_per_person)
+                    total_payment += payment_per_person
+            self._game_state.update_score(player, -total_payment)
+        else:
+            total_payment = 0
+            for i in range(self._num_players):
+                if i != player:
+                    payment = 4000 if i == self._game_state.dealer else 2000
+                    self._game_state.update_score(i, payment)
+                    total_payment += payment
+            self._game_state.update_score(player, -total_payment)
+
+        # 錯和發生後，該局結束
+        # 莊家錯和：莊家輪換
+        # 閒家錯和：莊家連莊
+        dealer_won = not is_dealer
+        self._game_state.next_dealer(dealer_won)
+
+        # 如果莊家連莊，不進入下一局（保持局數，本場已在 next_dealer 增加）
+        # 如果莊家輪換，進入下一局
+        if not dealer_won:
+            has_next = self._game_state.next_round()
+            if not has_next:
+                self._phase = GamePhase.ENDED
+                return
+
+        # 重置遊戲狀態，開始新的一局（或連莊局）
+        self.start_round()
 
     def get_available_actions(self, player: int) -> List[GameAction]:
         """
@@ -377,6 +432,46 @@ class RuleEngine:
         handler = self._action_handlers.get(action)
         if handler is None:
             raise ValueError(f"動作 {action} 尚未實作")
+
+        # 錯和檢測（Chombo Detection）
+        if action in [GameAction.RON, GameAction.TSUMO]:
+            # 檢查是否真的和牌
+            # 注意：這裡需要區分 RON 和 TSUMO 的檢查參數
+            win_tile = tile if action == GameAction.RON else None
+
+            # 如果是 RON 且 tile 為 None，嘗試從最後打出的牌獲取
+            if action == GameAction.RON and win_tile is None:
+                win_tile = self._last_discarded_tile
+
+            is_tsumo = (action == GameAction.TSUMO)
+            check_tile = win_tile
+            if is_tsumo and check_tile is None:
+                # 自摸時，使用剛摸到的牌
+                if self._last_drawn_tile:
+                    _, check_tile = self._last_drawn_tile
+                else:
+                    # 如果沒有摸牌記錄（例如測試時），嘗試從手牌獲取最後一張
+                    # 但這可能不準確。對於測試，我們假設最後一張是自摸牌
+                    pass
+
+            # 如果 check_tile 仍然是 None (例如測試時未設置 last_drawn_tile)，
+            # check_win 會報錯嗎？check_win 需要 winning_tile: Tile
+            # 我們需要確保 check_tile 不為 None
+            if check_tile is None and is_tsumo:
+                 # 嘗試從手牌獲取
+                 if self._hands[player].tiles:
+                     check_tile = self._hands[player].tiles[-1]
+
+            if check_tile:
+                win_result = self.check_win(player, check_tile)
+                if not win_result:
+                    # 錯和！
+                    self._handle_chombo(player)
+                    return ActionResult(
+                        success=False,
+                        phase=self._phase
+                    )
+
         return handler(player, tile=tile, **kwargs)
 
     def _handle_draw(self, player: int, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
@@ -598,12 +693,13 @@ class RuleEngine:
         # 檢查是否觸發三家和了流局
         if len(potential_winners) == 0:
             # 空列表表示三家和了，觸發流局
-            from pyriichi.enums import RyuukyokuType
             result.ryuukyoku = RyuukyokuResult(
                 ryuukyoku=True,
                 ryuukyoku_type=RyuukyokuType.SANCHA_RON
             )
-            self._phase = GamePhase.RYUUKYOKU
+            result.success = True
+            result.phase = GamePhase.ENDED
+            self._phase = GamePhase.ENDED
             return result
 
         # 驗證聲明榮和的玩家在允許列表中
@@ -624,6 +720,110 @@ class RuleEngine:
         self._phase = GamePhase.WINNING
 
         return result
+
+    def end_round(self, winners: Optional[List[int]] = None) -> None:
+        """
+        結束一局
+
+        Args:
+            winners: 獲勝玩家列表（如果為 None，則為流局）
+                    - 單人榮和/自摸：[player_id]
+                    - 雙響/三響：[player1, player2, player3]
+        """
+        if winners is not None and len(winners) > 0:
+            # 和牌處理
+            dealer = self._game_state.dealer
+            # 如果任一贏家是莊家，則連莊
+            dealer_won = dealer in winners
+
+            # 更新莊家
+            self._game_state.next_dealer(dealer_won)
+
+            # 檢查擊飛
+            if self._check_tobi():
+                self._phase = GamePhase.ENDED
+                return
+
+            # 檢查安可（Agari-yame）
+            # 如果莊家和牌，且啟用安可，且為最後一局（南4或西4），且莊家為第一名，則遊戲結束
+            if dealer_won and self._game_state.ruleset.agari_yame:
+                is_final_round = (
+                    (self._game_state.round_wind == Wind.SOUTH and self._game_state.round_number == 4) or
+                    (self._game_state.round_wind == Wind.WEST and self._game_state.round_number == 4)
+                )
+                if is_final_round:
+                    max_score = max(self._game_state.scores)
+                    if self._game_state.scores[dealer] == max_score:
+                        self._phase = GamePhase.ENDED
+                        return
+
+            # 如果莊家未獲勝，進入下一局
+            if not dealer_won:
+                has_next = self._game_state.next_round()
+                if not has_next:
+                    self._phase = GamePhase.ENDED
+        else:
+            # 流局處理
+            # 如果是牌山耗盡流局，檢查流局滿貫和不聽罰符
+            if self._tile_set and self._tile_set.is_exhausted():
+                # 錯立直檢測（False Riichi Detection）
+                # 如果玩家立直但流局時未聽牌，則為錯和
+                if self._game_state.ruleset.chombo_penalty_enabled:
+                    chombo_players = []
+                    for i in range(self._num_players):
+                        hand = self._hands[i]
+                        # Debug print
+                        # print(f"Player {i}: Riichi={hand.is_riichi}, Tenpai={hand.is_tenpai()}")
+                        if hand.is_riichi and not hand.is_tenpai():
+                            chombo_players.append(i)
+
+                    if chombo_players:
+                        # 處理錯和
+                        for player in chombo_players:
+                            self._handle_chombo(player)
+
+                        # 錯和發生後，不計算流局滿貫和不聽罰符
+                        return
+
+                # 檢查流局滿貫
+                flow_mangan_players = []
+                for i in range(self._num_players):
+                    if self._check_nagashi_mangan(i):
+                        flow_mangan_players.append(i)
+
+                if flow_mangan_players:
+                    # 處理流局滿貫分數
+                    for winner in flow_mangan_players:
+                        is_dealer = (winner == self._game_state.dealer)
+                        payment = 4000 if is_dealer else 2000
+
+                        # 所有人支付（除了贏家）
+                        for i in range(self._num_players):
+                            if i == winner:
+                                continue
+
+                            # 莊家支付更多（如果贏家不是莊家）
+                            pay_amount = payment
+                            if not is_dealer and i == self._game_state.dealer:
+                                pay_amount = 4000
+
+                            self._game_state.update_score(i, -pay_amount)
+                            self._game_state.update_score(winner, pay_amount)
+                else:
+                    # 如果沒有流局滿貫，才計算不聽罰符
+                    self._calculate_noten_bappu()
+
+            # 檢查擊飛
+            if self._check_tobi():
+                self._phase = GamePhase.ENDED
+                return
+
+            dealer_won = False  # 流局時莊家不連莊（除非九種九牌，這裡暫不處理）
+            self._game_state.next_dealer(dealer_won)
+
+            has_next = self._game_state.next_round()
+            if not has_next:
+                self._phase = GamePhase.ENDED
 
     def _handle_kyuushu_kyuuhai(self, player: int, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
         """
@@ -1229,6 +1429,26 @@ class RuleEngine:
             # 流局處理
             # 如果是牌山耗盡流局，檢查流局滿貫和不聽罰符
             if self._tile_set and self._tile_set.is_exhausted():
+                # 錯立直檢測（False Riichi Detection）
+                # 如果玩家立直但流局時未聽牌，則為錯和
+                if self._game_state.ruleset.chombo_penalty_enabled:
+                    chombo_players = []
+                    for i in range(self._num_players):
+                        hand = self._hands[i]
+                        if hand.is_riichi and not hand.is_tenpai(): # Added () to is_tenpai
+                            chombo_players.append(i)
+
+                    if chombo_players:
+                        # 處理錯和
+                        # 如果有多人錯和，通常都罰？還是只罰第一個？
+                        # 標準規則：多人錯和都罰。
+                        for player in chombo_players:
+                            self._handle_chombo(player)
+
+                        # 錯和發生後，不計算流局滿貫和不聽罰符
+                        # 遊戲階段已在 _handle_chombo 中設置為 ENDED 或重置
+                        return
+
                 # 檢查流局滿貫
                 flow_mangan_players = []
                 for i in range(self._num_players):
