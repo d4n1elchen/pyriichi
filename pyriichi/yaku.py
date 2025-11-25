@@ -59,6 +59,7 @@ class Yaku(TranslatableEnum):
     HAITEI = ("haitei", "海底撈月", "海底撈月", "Haitei")
     HOUTEI = ("houtei", "河底撈魚", "河底撈魚", "Houtei")
     RINSHAN = ("rinshan", "嶺上開花", "嶺上開花", "Rinshan Kaihou")
+    CHANKAN = ("chankan", "搶槓", "槍槓", "Chankan")
     CHIITOITSU = ("chiitoitsu", "七對子", "七対子", "Chiitoitsu")
     HAKU = ("haku", "白", "白", "Haku")
     HATSU = ("hatsu", "發", "發", "Hatsu")
@@ -169,6 +170,7 @@ class YakuChecker:
         is_last_tile: bool = False,
         player_position: int = 0,
         is_rinshan: bool = False,
+        is_chankan: bool = False,
     ) -> List[YakuResult]:
         """
         檢查所有符合的役種
@@ -227,6 +229,7 @@ class YakuChecker:
             yakuman_results.append(result)
         if result := self.check_suuankou(hand, winning_combination, winning_tile, game_state):
             yakuman_results.append(result)
+
         if result := self.check_shousuushi(hand, winning_combination):
             yakuman_results.append(result)
         if result := self.check_daisuushi(hand, winning_combination):
@@ -258,10 +261,13 @@ class YakuChecker:
             results.append(result)
         if result := self.check_rinshan_kaihou(hand, is_rinshan):
             results.append(result)
+        if result := self.check_chankan(hand, is_chankan):
+            results.append(result)
         if result := self.check_tanyao(hand, winning_combination):
             results.append(result)
         if result := self.check_pinfu(hand, winning_combination, game_state, winning_tile):
             results.append(result)
+
         if result := self.check_iipeikou(hand, winning_combination):
             results.append(result)
         if result := self.check_toitoi(hand, winning_combination):
@@ -1466,3 +1472,10 @@ class YakuChecker:
 
         # 默認為兩面聽
         return WaitingType.RYANMEN
+
+
+    def check_chankan(self, hand: Hand, is_chankan: bool = False) -> Optional[YakuResult]:
+        """
+        檢查搶槓
+        """
+        return YakuResult(Yaku.CHANKAN, 1, False) if is_chankan else None

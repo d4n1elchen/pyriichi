@@ -772,7 +772,10 @@ class Hand:
 
         for meld in self._melds:
             # 槓牌只取前三張
-            all_tiles.extend(meld.tiles)
+            if meld.type in [MeldType.KAN, MeldType.ANKAN]:
+                all_tiles.extend(meld.tiles[:3])
+            else:
+                all_tiles.extend(meld.tiles)
 
         # 檢查特殊和牌型
         if self._is_seven_pairs(all_tiles):
@@ -802,7 +805,10 @@ class Hand:
             all_tiles.append(winning_tile)
 
         for meld in self._melds:
-            all_tiles.extend(meld.tiles)
+            if meld.type in [MeldType.KAN, MeldType.ANKAN]:
+                all_tiles.extend(meld.tiles[:3])
+            else:
+                all_tiles.extend(meld.tiles)
 
         # 檢查標準和牌型
         is_winning, combinations = self._is_standard_winning(all_tiles)

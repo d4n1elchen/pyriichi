@@ -482,9 +482,12 @@ class RuleEngine:
 
     def _handle_draw(self, player: int, tile: Optional[Tile] = None, **kwargs) -> ActionResult:
         result = ActionResult()
+        # 檢查手牌數量
+        # 正常情況下，摸牌前手牌應該是 13 張（或 10, 7, 4, 1）
+        # 即 total_tile_count % 3 == 1
+        hand = self._hands[player]
         if not self._tile_set:
             raise ValueError("牌組未初始化")
-        hand = self._hands[player]
         if hand.total_tile_count() >= 14:
             raise ValueError("手牌已達 14 張，不能再摸牌")
         if drawn_tile := self._tile_set.draw():
@@ -945,24 +948,39 @@ class RuleEngine:
         is_first_turn = self._is_first_turn_after_deal
         # 檢查是否為最後一張牌（需要檢查牌山狀態）
         is_last_tile = self._tile_set.is_exhausted() if self._tile_set else False
+
+        # 檢查是否為海底撈月 (河底撈魚)
+        is_haitei = is_tsumo and is_last_tile
+        # 檢查是否為河底撈魚 (海底撈月)
+        is_houtei = not is_tsumo and is_last_tile
+
+        # 檢查是否為天和
+        is_tenhou = is_tsumo and self._is_first_turn_after_deal and self._game_state.dealer == player and not hand.melds
+        # 檢查是否為地和
+        is_chihou = is_tsumo and self._is_first_turn_after_deal and self._game_state.dealer != player and not hand.melds
+        # 檢查是否為人和
+        is_renhou = not is_tsumo and self._is_first_turn_after_deal and not hand.melds
+
+        # 計算寶牌數量
+        dora_count = self._count_dora(player, winning_tile)
+
+        # 檢查役種
         yaku_results = self._yaku_checker.check_all(
             hand,
             winning_tile,
             winning_combination,
             self._game_state,
-            is_tsumo,
-            is_ippatsu,
-            is_first_turn,
-            is_last_tile,
-            player,
-            is_rinshan,
+            is_tsumo=is_tsumo,
+            is_ippatsu=is_ippatsu,
+            is_first_turn=is_first_turn,
+            is_last_tile=is_last_tile,
+            player_position=player,
+            is_rinshan=is_rinshan,
+            is_chankan=is_chankan,
         )
 
         if not yaku_results:
-            return None  # 沒有役不能和牌
-
-        # 計算寶牌數量
-        dora_count = self._count_dora(player, winning_tile)
+            return None
 
         # 確定包牌者
         pao_player = None
