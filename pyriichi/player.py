@@ -47,6 +47,18 @@ class RandomPlayer(BasePlayer):
         hand: Hand,
         available_actions: List[GameAction]
     ) -> Tuple[GameAction, Optional[Tile]]:
+        """
+        決定下一步動作（隨機）
+
+        Args:
+            game_state: 當前遊戲狀態
+            player_index: 玩家索引
+            hand: 玩家手牌
+            available_actions: 可執行的動作列表
+
+        Returns:
+            (選擇的動作, 相關的牌)
+        """
 
         if not available_actions:
             # 理論上不應該發生，除非遊戲結束
@@ -125,6 +137,18 @@ class SimplePlayer(BasePlayer):
         hand: Hand,
         available_actions: List[GameAction]
     ) -> Tuple[GameAction, Optional[Tile]]:
+        """
+        決定下一步動作（簡單進攻策略）
+
+        Args:
+            game_state: 當前遊戲狀態
+            player_index: 玩家索引
+            hand: 玩家手牌
+            available_actions: 可執行的動作列表
+
+        Returns:
+            (選擇的動作, 相關的牌)
+        """
 
         if not available_actions:
             return GameAction.PASS, None
