@@ -4,17 +4,14 @@ RuleEngine 的單元測試
 
 import pytest
 
-from pyriichi.game_state import GameState, Wind
+from pyriichi.game_state import Wind
 from pyriichi.hand import Hand, Meld, MeldType
 from pyriichi.rules import (
-    ActionResult,
     GameAction,
     GamePhase,
     RuleEngine,
-    RyuukyokuResult,
     RyuukyokuType,
 )
-from pyriichi.rules_config import RulesetConfig
 from pyriichi.tiles import Suit, Tile, TileSet
 from pyriichi.utils import parse_tiles
 from pyriichi.yaku import Yaku
@@ -1278,9 +1275,8 @@ class TestWinningAndScoring:
         rinshan_tile = Tile(Suit.PINZU, 4)
         result = self.engine.check_win(0, rinshan_tile, is_rinshan=True)
         assert result is not None
-        assert result.win == True
-        assert result.rinshan is not None
-        assert result.rinshan == True
+        assert result.win
+        assert result.rinshan
 
     def test_check_win_tsumo_sets_is_tsumo(self):
         """測試自摸時 score_result.is_tsumo 為 True"""
@@ -1373,7 +1369,7 @@ class TestWinningAndScoring:
         # 測試紅寶牌
         # 手牌：r5p
         red_tiles = parse_tiles("r5p")
-        red_tile = red_tiles[0]
+
         test_hand = Hand(red_tiles)
         self.engine._hands[0] = test_hand
         dora_count = self.engine._count_dora(0, Tile(Suit.PINZU, 5))
@@ -1541,7 +1537,7 @@ class TestWinningAndScoring:
         self._init_game()
 
         # 確保使用頭跳模式（預設）
-        assert self.engine._game_state.ruleset.head_bump_only == True
+        assert self.engine._game_state.ruleset.head_bump_only
 
         # 玩家0打出1m
         discard_tile = Tile(Suit.MANZU, 1)
@@ -2063,7 +2059,7 @@ class TestRyuukyoku:
 
         # 設置嶺上開花
         # 1. 設置手牌可以槓 (需要4張相同的牌)
-        kan_tile = Tile(Suit.MANZU, 1)
+
         # 1111m 234m 567m 123p 4p
         hand_tiles = parse_tiles("1m1m1m1m2m3m4m5m6m7m1p2p3p4p")
         self.engine._hands[player] = Hand(hand_tiles)
@@ -2088,7 +2084,7 @@ class TestRyuukyoku:
         self._init_game()
 
         # 禁用三響（預設）
-        assert self.engine._game_state.ruleset.allow_triple_ron == False
+        assert not self.engine._game_state.ruleset.allow_triple_ron
 
         # 玩家0打出1m，玩家1、2、3都能榮和
         discard_tile = Tile(Suit.MANZU, 1)
@@ -2208,7 +2204,7 @@ class TestChomboRules:
         self.engine.get_available_actions = lambda p: [GameAction.RON]
 
         try:
-            result = self.engine.execute_action(0, GameAction.RON)
+            self.engine.execute_action(0, GameAction.RON)
 
             # 莊家錯和：支付每人4000（共12000）
             current_scores = self.engine.game_state.scores

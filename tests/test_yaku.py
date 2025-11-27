@@ -93,7 +93,7 @@ class TestYakuChecker:
                 hand, list(combinations[0]), self.game_state
             )
             # 檢查是否有三元牌
-            sangen_names = ["白", "發", "中"]
+
             has_sangen = any(
                 r.yaku in {Yaku.HAKU, Yaku.HATSU, Yaku.CHUN} for r in results
             )
@@ -590,8 +590,6 @@ class TestYakuChecker:
         # 手牌：111m 1m 222p 2p 333s 3s 1z
         tiles = parse_tiles("1m1m1m1m2p2p2p2p3s3s3s3s1z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 1)
-        combinations = hand.get_winning_combinations(winning_tile)
 
         # 注意：實際的 winning_combination 可能不會包含 'kan' 類型
         # 因為 get_winning_combinations 返回的是標準和牌組合
@@ -653,10 +651,6 @@ class TestYakuChecker:
                 is_ippatsu=False,
             )
             # 如果有役牌，不應該有平和
-            has_pinfu = any(r.yaku == Yaku.PINFU for r in results)
-            has_yakuhai = any(
-                r.yaku in {Yaku.HAKU, Yaku.HATSU, Yaku.CHUN} for r in results
-            )
             # 註：這裡可能同時有平和和役牌，但根據規則應該衝突
             # 實際測試中，如果對子是役牌，check_pinfu 應該返回 None
             # 所以這裡主要測試衝突檢測邏輯
@@ -680,8 +674,7 @@ class TestYakuChecker:
                 is_ippatsu=False,
             )
             # 一気通貫包含1和9，所以不能有斷么九
-            has_tanyao = any(r.yaku == Yaku.TANYAO for r in results)
-            has_ittsu = any(r.yaku == Yaku.ITTSU for r in results)
+
             # 註：因為一気通貫包含1和9，所以邏輯上不能有斷么九
             # 這裡主要測試衝突檢測邏輯
 
@@ -704,8 +697,7 @@ class TestYakuChecker:
                 is_ippatsu=False,
             )
             # 對對和全部是刻子，不能有三色同順
-            has_toitoi = any(r.yaku == Yaku.TOITOI for r in results)
-            has_sanshoku = any(r.yaku == Yaku.SANSHOKU_DOUJUN for r in results)
+
             # 註：對對和全部是刻子，所以邏輯上不能有三色同順
             # 這裡主要測試衝突檢測邏輯
 
@@ -937,7 +929,6 @@ class TestYakuChecker:
         # 手牌：123m 456m 345p 678p 4s
         tiles = parse_tiles("1m2m3m4m5m6m3p4p5p6p7p8p4s")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.SOZU, 4)
 
         # 測試自摸最後一張牌
         result = self.checker.check_haitei_raoyue(
@@ -954,7 +945,6 @@ class TestYakuChecker:
         # 手牌：123m 456m 345p 678p 4s
         tiles = parse_tiles("1m2m3m4m5m6m3p4p5p6p7p8p4s")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.SOZU, 4)
 
         # 測試榮和最後一張牌
         result = self.checker.check_haitei_raoyue(
@@ -971,7 +961,6 @@ class TestYakuChecker:
         # 手牌：123m 456m 345p 678p 4s
         tiles = parse_tiles("1m2m3m4m5m6m3p4p5p6p7p8p4s")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.SOZU, 4)
 
         # 測試嶺上開花
         result = self.checker.check_rinshan_kaihou(hand, is_rinshan=True)
@@ -990,7 +979,6 @@ class TestYakuChecker:
         # 手牌：123m 12p
         tiles = parse_tiles("1m2m3m1p2p")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.PINZU, 3)
 
         # 手動構建包含四個槓子的組合
         combo_with_kan = [

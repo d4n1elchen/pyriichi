@@ -3,8 +3,9 @@ Hand 類的單元測試
 """
 
 import pytest
+
 from pyriichi.hand import Hand, Meld, MeldType
-from pyriichi.tiles import Tile, Suit
+from pyriichi.tiles import Suit, Tile
 from pyriichi.utils import parse_tiles
 
 
@@ -215,7 +216,7 @@ class TestHand:
 
     def test_can_kan(self):
         """測試是否可以槓"""
-        from pyriichi.tiles import Tile, Suit
+        from pyriichi.tiles import Suit, Tile
 
         # 測試明槓（需要三張相同牌）
         # 手牌：111234567m 123p 4p
@@ -260,7 +261,6 @@ class TestHand:
     def test_meld_invalid_chi(self):
         """測試無效的吃操作"""
         from pyriichi.hand import Meld, MeldType
-        from pyriichi.tiles import Tile, Suit
 
         # 吃必須是 3 張牌
         with pytest.raises(ValueError, match="吃必須是 3 張牌"):

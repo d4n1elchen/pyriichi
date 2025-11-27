@@ -4,12 +4,13 @@
 提供符數、翻數和點數計算功能。
 """
 
-from typing import List, Optional, Tuple
 from dataclasses import dataclass
-from pyriichi.hand import Hand, CombinationType, Combination
-from pyriichi.tiles import Tile, Suit
-from pyriichi.game_state import GameState, Wind
-from pyriichi.yaku import YakuResult, Yaku, WaitingType
+from typing import List, Optional
+
+from pyriichi.game_state import GameState
+from pyriichi.hand import Combination, CombinationType, Hand
+from pyriichi.tiles import Suit, Tile
+from pyriichi.yaku import WaitingType, Yaku, YakuResult
 
 
 @dataclass
@@ -47,11 +48,12 @@ class ScoreResult:
             self.total_points = 3000  # 跳滿
         elif self.han >= 5 or (self.han == 4 and self.fu >= 40):
             self.total_points = 2000  # 滿貫
-        elif self.kiriage_mangan_enabled and ((self.han == 4 and self.fu == 30) or (self.han == 3 and self.fu == 60)):
+        elif self.kiriage_mangan_enabled and (
+            (self.han == 4 and self.fu == 30) or (self.han == 3 and self.fu == 60)
+        ):
             # 切上滿貫：30符4翻 或60符3翻 計為滿貫
             self.total_points = 2000  # 滿貫
         else:
-
             base = self.fu * (2 ** (self.han + 2))
             self.base_points = base
             # 點數不進位，留待 calculate_payments 處理
@@ -85,16 +87,12 @@ class ScoreResult:
 
         self.honba_bonus = game_state.honba * 300
 
-
         self.riichi_sticks_bonus = game_state.riichi_sticks * 1000
-
 
         base_payment = self.total_points
 
-
         if self.pao_player is not None and self.is_yakuman:
             if self.is_tsumo:
-
                 if self.payment_to == game_state.dealer:
                     # 莊家自摸：16000 all -> 48000
                     total_win = (base_payment * 6 + 99) // 100 * 100
@@ -107,14 +105,12 @@ class ScoreResult:
 
                 self.total_points = total_win + total_honba + self.riichi_sticks_bonus
 
-
                 self.pao_payment = total_win + total_honba
                 self.dealer_payment = 0
                 self.non_dealer_payment = 0
                 return
 
             else:
-
                 if self.payment_to == game_state.dealer:
                     total_win = (base_payment * 6 + 99) // 100 * 100
                 else:
@@ -134,29 +130,39 @@ class ScoreResult:
                     pass
                 else:
                     # 包牌者放銃：正常支付
-                    self.pao_payment = 0 # 由 payment_from (即 pao_player) 支付，不視為額外包牌支付
+                    self.pao_payment = (
+                        0  # 由 payment_from (即 pao_player) 支付，不視為額外包牌支付
+                    )
 
                 self.dealer_payment = 0
                 self.non_dealer_payment = 0
                 return
 
         if self.is_tsumo:
-
             # 每人需要支付：base_payment + honba_bonus
             honba_per_person = game_state.honba * 100
 
             if self.payment_to == game_state.dealer:
-
                 self.dealer_payment = 0
-                self.non_dealer_payment = (2 * base_payment + 99) // 100 * 100 + honba_per_person
-                self.total_points = self.non_dealer_payment * 3 + self.riichi_sticks_bonus
+                self.non_dealer_payment = (
+                    2 * base_payment + 99
+                ) // 100 * 100 + honba_per_person
+                self.total_points = (
+                    self.non_dealer_payment * 3 + self.riichi_sticks_bonus
+                )
             else:
-
-                self.dealer_payment = (2 * base_payment + 99) // 100 * 100 + honba_per_person
-                self.non_dealer_payment = (base_payment + 99) // 100 * 100 + honba_per_person
-                self.total_points = self.dealer_payment + self.non_dealer_payment * 2 + self.riichi_sticks_bonus
+                self.dealer_payment = (
+                    2 * base_payment + 99
+                ) // 100 * 100 + honba_per_person
+                self.non_dealer_payment = (
+                    base_payment + 99
+                ) // 100 * 100 + honba_per_person
+                self.total_points = (
+                    self.dealer_payment
+                    + self.non_dealer_payment * 2
+                    + self.riichi_sticks_bonus
+                )
         else:
-
             # 閒家榮和：4 * Basic + 300 * honba
             # 莊家榮和：6 * Basic + 300 * honba
 
@@ -169,7 +175,9 @@ class ScoreResult:
 
             self.total_points = win_points + total_honba + self.riichi_sticks_bonus
             self.dealer_payment = 0
-            self.non_dealer_payment = 0 # 榮和時由 payment_from 支付，這裡不設置 dealer/non_dealer payment
+            self.non_dealer_payment = (
+                0  # 榮和時由 payment_from 支付，這裡不設置 dealer/non_dealer payment
+            )
 
 
 class ScoreCalculator:
@@ -194,7 +202,9 @@ class ScoreCalculator:
         return groups
 
     @staticmethod
-    def _extract_pair(winning_combination: Optional[List[Combination]]) -> Optional[Combination]:
+    def _extract_pair(
+        winning_combination: Optional[List[Combination]],
+    ) -> Optional[Combination]:
         if not winning_combination:
             return None
         for combination in winning_combination:
@@ -234,16 +244,19 @@ class ScoreCalculator:
         # ... (計算 fu, han, yakuman)
         # 計算符數
         fu = self.calculate_fu(
-            hand, winning_tile, winning_combination, yaku_results, game_state, is_tsumo, player_position
+            hand,
+            winning_tile,
+            winning_combination,
+            yaku_results,
+            game_state,
+            is_tsumo,
+            player_position,
         )
-
 
         han = self.calculate_han(yaku_results, dora_count)
 
-
         is_yakuman = any(r.is_yakuman for r in yaku_results)
         yakuman_count = sum(bool(r.is_yakuman) for r in yaku_results)
-
 
         result = ScoreResult(
             han=han,
@@ -258,7 +271,6 @@ class ScoreCalculator:
             kiriage_mangan_enabled=game_state.ruleset.kiriage_mangan,
             pao_player=pao_player,
         )
-
 
         result.calculate_payments(game_state)
 
@@ -297,13 +309,10 @@ class ScoreCalculator:
 
         fu = 20  # 基本符
 
-
         if hand.is_concealed and not is_tsumo:
             fu += 10
         elif is_tsumo:
             fu += 2
-
-
 
         for combination in winning_combination:
             if combination.type in [
@@ -318,7 +327,11 @@ class ScoreCalculator:
 
             # 如果是榮和，且該組合包含和牌牌（且原本是門清），則視為明刻
             # 注意：只有刻子需要這樣判斷（順子符數為0，槓子必定是已形成的）
-            if not is_tsumo and not is_open and combination.type == CombinationType.TRIPLET:
+            if (
+                not is_tsumo
+                and not is_open
+                and combination.type == CombinationType.TRIPLET
+            ):
                 if tile.suit == winning_tile.suit and tile.rank == winning_tile.rank:
                     is_open = True
 
@@ -334,7 +347,6 @@ class ScoreCalculator:
 
             # 役牌對子 +2 符
             if pair_tile.suit == Suit.JIHAI:
-
                 if pair_tile.rank in [5, 6, 7]:  # 白、發、中
                     fu += 2
 
@@ -348,17 +360,21 @@ class ScoreCalculator:
                     if player_wind_tile == pair_tile:
                         fu += 2
 
-
         waiting_type = self._determine_waiting_type(winning_tile, winning_combination)
 
-        if waiting_type in {WaitingType.TANKI, WaitingType.PENCHAN, WaitingType.KANCHAN}:
+        if waiting_type in {
+            WaitingType.TANKI,
+            WaitingType.PENCHAN,
+            WaitingType.KANCHAN,
+        }:
             fu += 2
         # 兩面聽和雙碰聽不增加符數
 
-
         return ((fu + 9) // 10) * 10
 
-    def _determine_waiting_type(self, winning_tile: Tile, winning_combination: List) -> WaitingType:
+    def _determine_waiting_type(
+        self, winning_tile: Tile, winning_combination: List
+    ) -> WaitingType:
         """
         判斷聽牌類型。
 
@@ -373,7 +389,9 @@ class ScoreCalculator:
             return WaitingType.RYANMEN
 
         pair_combination = self._extract_pair(winning_combination)
-        if pair_combination and any(tile == winning_tile for tile in pair_combination.tiles):
+        if pair_combination and any(
+            tile == winning_tile for tile in pair_combination.tiles
+        ):
             return WaitingType.TANKI
 
         for combination in winning_combination:
@@ -391,7 +409,8 @@ class ScoreCalculator:
                     (
                         i
                         for i, tile in enumerate(tiles)
-                        if tile.suit == winning_tile.suit and tile.rank == winning_tile.rank
+                        if tile.suit == winning_tile.suit
+                        and tile.rank == winning_tile.rank
                     ),
                     -1,
                 )

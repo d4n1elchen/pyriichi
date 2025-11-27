@@ -4,10 +4,10 @@
 管理局數、風、點數等遊戲狀態。
 """
 
-from enum import Enum
 from typing import List, Optional
-from pyriichi.rules_config import RulesetConfig
+
 from pyriichi.enum_utils import TranslatableEnum
+from pyriichi.rules_config import RulesetConfig
 from pyriichi.tiles import Suit, Tile
 
 
@@ -61,6 +61,7 @@ class GameState:
         self._riichi_sticks = 0
         self._num_players = num_players
         self._ruleset = ruleset if ruleset is not None else RulesetConfig.standard()
+
     @property
     def round_wind(self) -> Wind:
         return self._round_wind
@@ -72,7 +73,10 @@ class GameState:
     @property
     def player_winds(self) -> List[Wind]:
         winds = [Wind.EAST, Wind.SOUTH, Wind.WEST, Wind.NORTH]
-        return [winds[(i - self._dealer) % self._num_players] for i in range(self._num_players)]
+        return [
+            winds[(i - self._dealer) % self._num_players]
+            for i in range(self._num_players)
+        ]
 
     @property
     def dealer(self) -> int:
@@ -112,7 +116,7 @@ class GameState:
             ValueError: 如果位置無效。
         """
         if not (0 <= dealer < self._num_players):
-            raise ValueError(f"莊家位置必須在 0-{self._num_players-1} 之間")
+            raise ValueError(f"莊家位置必須在 0-{self._num_players - 1} 之間")
         self._dealer = dealer
 
     def add_honba(self, count: int = 1) -> None:
@@ -152,7 +156,7 @@ class GameState:
             ValueError: 如果玩家位置無效。
         """
         if not (0 <= player < self._num_players):
-            raise ValueError(f"玩家位置必須在 0-{self._num_players-1} 之間")
+            raise ValueError(f"玩家位置必須在 0-{self._num_players - 1} 之間")
         self._scores[player] += points
 
     def transfer_points(self, from_player: int, to_player: int, points: int) -> None:
@@ -189,9 +193,11 @@ class GameState:
                 self._round_wind = Wind.SOUTH
                 self._round_number = 1
             elif self._round_wind == Wind.SOUTH:
-
                 max_score = max(self._scores)
-                if self.ruleset.west_round_extension and max_score < self.ruleset.return_score:
+                if (
+                    self.ruleset.west_round_extension
+                    and max_score < self.ruleset.return_score
+                ):
                     self._round_wind = Wind.WEST
                     self._round_number = 1
                 else:

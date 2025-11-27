@@ -1,11 +1,12 @@
-from dataclasses import dataclass
-from abc import ABC, abstractmethod
-from typing import List, Tuple, Optional, Dict
 import random
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple
 
+from pyriichi.hand import Hand, Meld
 from pyriichi.rules import GameAction, GameState
 from pyriichi.tiles import Tile
-from pyriichi.hand import Hand, Meld
+
 
 @dataclass
 class PublicInfo:
@@ -14,12 +15,14 @@ class PublicInfo:
 
     包含所有玩家可見的資訊，用於 AI 決策。
     """
+
     turn_number: int
     dora_indicators: List[Tile]
     discards: Dict[int, List[Tile]]  # 每個玩家的捨牌
-    melds: Dict[int, List[Meld]]     # 每個玩家的副露
-    riichi_players: List[int]        # 立直玩家列表
-    scores: List[int]                # 玩家分數
+    melds: Dict[int, List[Meld]]  # 每個玩家的副露
+    riichi_players: List[int]  # 立直玩家列表
+    scores: List[int]  # 玩家分數
+
 
 class BasePlayer(ABC):
     """
@@ -38,7 +41,7 @@ class BasePlayer(ABC):
         player_index: int,
         hand: Hand,
         available_actions: List[GameAction],
-        public_info: Optional[PublicInfo] = None
+        public_info: Optional[PublicInfo] = None,
     ) -> Tuple[GameAction, Optional[Tile]]:
         """
         決定下一步動作。
@@ -58,6 +61,7 @@ class BasePlayer(ABC):
         """
         pass
 
+
 class RandomPlayer(BasePlayer):
     """
     隨機行動的 AI 玩家。
@@ -71,7 +75,7 @@ class RandomPlayer(BasePlayer):
         player_index: int,
         hand: Hand,
         available_actions: List[GameAction],
-        public_info: Optional[PublicInfo] = None
+        public_info: Optional[PublicInfo] = None,
     ) -> Tuple[GameAction, Optional[Tile]]:
         """
         決定下一步動作（隨機）。
@@ -87,7 +91,6 @@ class RandomPlayer(BasePlayer):
         """
 
         if not available_actions:
-
             return GameAction.PASS, None
 
         # 簡單策略：優先和牌，其次立直，否則隨機
@@ -100,18 +103,14 @@ class RandomPlayer(BasePlayer):
 
         # 隨機選擇一個動作，過濾掉 PASS (除非只有 PASS)
 
-
-
         # 為了避免死循環或卡住，優先選擇 DISCARD
         if GameAction.DISCARD in available_actions:
             # 隨機打出一張牌
-
 
             if hand.is_riichi:
                 # 立直後只能打出剛摸到的牌
                 tile_to_discard = hand.tiles[-1]
                 return GameAction.DISCARD, tile_to_discard
-
 
             tile_to_discard = random.choice(hand.tiles)
             return GameAction.DISCARD, tile_to_discard
@@ -122,6 +121,7 @@ class RandomPlayer(BasePlayer):
         # 如果選了需要參數的動作，暫時返回 None
 
         return action, None
+
 
 class SimplePlayer(BasePlayer):
     """
@@ -139,7 +139,7 @@ class SimplePlayer(BasePlayer):
         player_index: int,
         hand: Hand,
         available_actions: List[GameAction],
-        public_info: Optional[PublicInfo] = None
+        public_info: Optional[PublicInfo] = None,
     ) -> Tuple[GameAction, Optional[Tile]]:
         """
         決定下一步動作（簡單進攻策略）。
@@ -181,7 +181,6 @@ class SimplePlayer(BasePlayer):
             for tile in hand.tiles:
                 score = 0
 
-
                 if tile.is_honor:
                     score = 10
 
@@ -189,9 +188,9 @@ class SimplePlayer(BasePlayer):
                     score = 20
 
                 else:
-                    score = 30 + (5 - abs(tile.rank - 5)) # 5是最高分(35)，1/9是26(但已被terminal捕獲)
-
-
+                    score = 30 + (
+                        5 - abs(tile.rank - 5)
+                    )  # 5是最高分(35)，1/9是26(但已被terminal捕獲)
 
                 # 增加隨機性
                 score += random.randint(0, 5)
@@ -227,7 +226,7 @@ class DefensivePlayer(SimplePlayer):
         player_index: int,
         hand: Hand,
         available_actions: List[GameAction],
-        public_info: Optional[PublicInfo] = None
+        public_info: Optional[PublicInfo] = None,
     ) -> Tuple[GameAction, Optional[Tile]]:
         """
         決定下一步動作（帶防守邏輯）。
@@ -247,7 +246,9 @@ class DefensivePlayer(SimplePlayer):
 
         # 如果不需要防守，使用簡單策略
         if not is_defense_mode:
-            return super().decide_action(game_state, player_index, hand, available_actions, public_info)
+            return super().decide_action(
+                game_state, player_index, hand, available_actions, public_info
+            )
 
         # 防守模式
 
@@ -266,7 +267,9 @@ class DefensivePlayer(SimplePlayer):
 
             # 如果沒有完全安牌，回退到 SimplePlayer 的切牌邏輯 (至少會切字牌/老頭牌)
             # 但我們希望它更保守，這裡暫時直接調用父類
-            return super().decide_action(game_state, player_index, hand, available_actions, public_info)
+            return super().decide_action(
+                game_state, player_index, hand, available_actions, public_info
+            )
 
         # 對於副露請求，一律拒絕 (PASS)
         if GameAction.PASS in available_actions:
@@ -278,14 +281,13 @@ class DefensivePlayer(SimplePlayer):
         self,
         hand: Hand,
         public_info: Optional[PublicInfo],
-        threatening_players: List[int]
+        threatening_players: List[int],
     ) -> Optional[Tile]:
         """尋找手牌中的安牌（現物）。"""
         if not public_info:
             return None
 
         # 收集所有威脅玩家的現物
-        safe_tiles_set = set()
 
         # 這裡簡化處理：只要是任何一個立直家的現物，就認為是"相對"安全的
         # 更嚴格的防守應該是針對所有立直家的共通安牌 (Common Safe Tiles)

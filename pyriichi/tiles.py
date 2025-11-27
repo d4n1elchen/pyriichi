@@ -5,9 +5,9 @@
 """
 
 import itertools
-from enum import Enum
-from typing import Dict, List, Optional
 import random
+from typing import Dict, List, Optional
+
 from pyriichi.enum_utils import TranslatableEnum
 
 
@@ -24,8 +24,28 @@ class Tile:
     """單張麻將牌"""
 
     _NUMERAL_MAP: Dict[str, Dict[int, str]] = {
-        "zh": {1: "一", 2: "二", 3: "三", 4: "四", 5: "五", 6: "六", 7: "七", 8: "八", 9: "九"},
-        "ja": {1: "一", 2: "二", 3: "三", 4: "四", 5: "五", 6: "六", 7: "七", 8: "八", 9: "九"},
+        "zh": {
+            1: "一",
+            2: "二",
+            3: "三",
+            4: "四",
+            5: "五",
+            6: "六",
+            7: "七",
+            8: "八",
+            9: "九",
+        },
+        "ja": {
+            1: "一",
+            2: "二",
+            3: "三",
+            4: "四",
+            5: "五",
+            6: "六",
+            7: "七",
+            8: "八",
+            9: "九",
+        },
         "en": {1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9"},
     }
 
@@ -38,7 +58,15 @@ class Tile:
     _HONOR_NAME_MAP: Dict[str, Dict[int, str]] = {
         "zh": {1: "東", 2: "南", 3: "西", 4: "北", 5: "白", 6: "發", 7: "中"},
         "ja": {1: "東", 2: "南", 3: "西", 4: "北", 5: "白", 6: "發", 7: "中"},
-        "en": {1: "East", 2: "South", 3: "West", 4: "North", 5: "White", 6: "Green", 7: "Red"},
+        "en": {
+            1: "East",
+            2: "South",
+            3: "West",
+            4: "North",
+            5: "White",
+            6: "Green",
+            7: "Red",
+        },
     }
 
     _RED_PREFIX_MAP: Dict[str, str] = {"zh": "赤", "ja": "赤", "en": "Red "}
@@ -163,12 +191,6 @@ class Tile:
         return f"{prefix}{numeral}{suffix}"
 
 
-
-
-
-
-
-
 def create_tile(suit: str, rank: int, is_red: bool = False) -> Tile:
     """
     創建一張牌（便捷函數）。
@@ -210,6 +232,7 @@ class TileSet:
         self._tiles = tiles.copy()
         self._wall = []
         self._dora_indicators = []
+
     @staticmethod
     def _create_standard_set() -> List[Tile]:
         tiles = []
@@ -222,7 +245,10 @@ class TileSet:
                 else:
                     tiles.extend(Tile(suit, rank) for _ in range(4))
         # 字牌：風牌 16 張（東南西北各 4 張），三元牌 12 張（白發中各 4 張）
-        tiles.extend(Tile(Suit.JIHAI, rank) for rank, _ in itertools.product(range(1, 8), range(4)))
+        tiles.extend(
+            Tile(Suit.JIHAI, rank)
+            for rank, _ in itertools.product(range(1, 8), range(4))
+        )
         return tiles
 
     def shuffle(self) -> None:
@@ -249,7 +275,6 @@ class TileSet:
         """
         hands = [[] for _ in range(num_players)]
 
-
         for _, player in itertools.product(range(13), range(num_players)):
             if self._tiles:
                 hands[player].append(self._tiles.pop(0))
@@ -257,7 +282,6 @@ class TileSet:
         # 莊家多發 1 張（第 14 張）
         if self._tiles:
             hands[0].append(self._tiles.pop(0))
-
 
         for hand in hands:
             hand.sort()
@@ -309,7 +333,9 @@ class TileSet:
         if count is None:
             count = 5 - len(self._rinshan_tiles)
         if count > len(self._dora_indicators):
-            raise ValueError(f"寶牌指示牌不足，需要 {count} 張，只有 {len(self._dora_indicators)} 張")
+            raise ValueError(
+                f"寶牌指示牌不足，需要 {count} 張，只有 {len(self._dora_indicators)} 張"
+            )
         return self._dora_indicators[:count]
 
     def get_ura_dora_indicators(self, count: Optional[int] = None) -> List[Tile]:
@@ -328,7 +354,9 @@ class TileSet:
         if count is None:
             count = 5 - len(self._rinshan_tiles)
         if count > len(self._ura_dora_indicators):
-            raise ValueError(f"裡寶牌指示牌不足，需要 {count} 張，只有 {len(self._ura_dora_indicators)} 張")
+            raise ValueError(
+                f"裡寶牌指示牌不足，需要 {count} 張，只有 {len(self._ura_dora_indicators)} 張"
+            )
         return self._ura_dora_indicators[:count]
 
     def get_dora(self, indicator: Tile) -> Tile:

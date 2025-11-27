@@ -5,7 +5,8 @@
 """
 
 from typing import List
-from pyriichi.tiles import Tile, Suit, create_tile
+
+from pyriichi.tiles import Tile, create_tile
 
 
 def parse_tiles(tile_string: str) -> List[Tile]:

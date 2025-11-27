@@ -4,22 +4,21 @@
 測試多個模組協同工作的完整場景。
 """
 
-import pytest
 from pyriichi import (
-    Tile,
-    Suit,
-    Hand,
-    RuleEngine,
     GameAction,
     GamePhase,
-    YakuChecker,
-    ScoreCalculator,
     GameState,
+    Hand,
+    RuleEngine,
+    ScoreCalculator,
+    Suit,
+    Tile,
     Wind,
     Yaku,
+    YakuChecker,
     parse_tiles,
 )
-from pyriichi.hand import Meld, MeldType
+from pyriichi.hand import MeldType
 from pyriichi.rules import RyuukyokuType
 
 
@@ -149,7 +148,9 @@ class TestCompleteGameFlow:
             hand = engine.get_hand(current_player)
 
             if hand.total_tile_count() >= 14 and hand.tiles:
-                engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
+                engine.execute_action(
+                    current_player, GameAction.DISCARD, tile=hand.tiles[0]
+                )
                 current_player = engine.get_current_player()
                 hand = engine.get_hand(current_player)
 
@@ -158,7 +159,9 @@ class TestCompleteGameFlow:
                 if result.drawn_tile is not None:
                     hand = engine.get_hand(current_player)
                     if hand.tiles:
-                        engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
+                        engine.execute_action(
+                            current_player, GameAction.DISCARD, tile=hand.tiles[0]
+                        )
                 current_player = engine.get_current_player()
             else:
                 break
@@ -179,7 +182,9 @@ class TestCompleteGameFlow:
         # 若莊家，需先打牌再摸牌
         hand = engine.get_hand(current_player)
         if hand.total_tile_count() >= 14 and hand.tiles:
-            engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
+            engine.execute_action(
+                current_player, GameAction.DISCARD, tile=hand.tiles[0]
+            )
             current_player = engine.get_current_player()
 
         if GameAction.DRAW in engine.get_available_actions(current_player):
@@ -190,10 +195,6 @@ class TestCompleteGameFlow:
         if hand.tiles:
             discard_tile = hand.tiles[0]
             engine.execute_action(current_player, GameAction.DISCARD, tile=discard_tile)
-
-            # 下一個玩家嘗試碰（如果可能）
-            next_player = engine.get_current_player()
-            next_hand = engine.get_hand(next_player)
 
             # 檢查是否可以碰（需要手牌中有兩張相同的牌）
             # 這裡只是測試流程，不保證一定能碰
@@ -231,7 +232,6 @@ class TestSpecialRulesFlow:
         engine.deal()
 
         current_player = engine.get_current_player()
-        hand = engine.get_hand(current_player)
 
         # 檢查是否可以暗槓（需要手牌中有4張相同的牌）
         # 這裡只是測試流程結構
@@ -338,7 +338,6 @@ class TestMultiModuleIntegration:
             assert len(hands[i]) == 13
 
         # 3. 創建手牌對象
-        hand_objects = [Hand(h) for h in hands]
 
         # 4. 使用規則引擎管理
         engine = RuleEngine(num_players=4)
@@ -510,7 +509,9 @@ class TestErrorHandling:
         hand = engine.get_hand(current_player)
         if hand.tiles:
             # 這個動作在正常流程中可能不允許，但應該被正確處理
-            result = engine.execute_action(current_player, GameAction.DISCARD, tile=hand.tiles[0])
+            result = engine.execute_action(
+                current_player, GameAction.DISCARD, tile=hand.tiles[0]
+            )
             # 驗證不會崩潰
             from pyriichi.rules import ActionResult
 
