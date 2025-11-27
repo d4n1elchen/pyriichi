@@ -330,6 +330,35 @@ class TestHand:
         # 加槓後，手牌應該會少一張摸到的加槓牌
         assert len(hand.tiles) == initial_tile_count - 1
 
+    def test_tsumo_winning_hand(self):
+        """測試自摸和牌"""
+        # 123m 456p 789s 11z 22z + 2z (Tsumo)
+        tiles = parse_tiles("1m2m3m4p5p6p7s8s9s1z1z2z2z")
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.JIHAI, 2)
+        hand.add_tile(winning_tile)
+
+        assert len(hand.tiles) == 14
+        assert hand.is_winning_hand(winning_tile, is_tsumo=True)
+
+        # 測試自摸七對子
+        tiles = parse_tiles("1m1m2p2p3s3s4p4p5m5m6s6s7m")
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.MANZU, 7)
+        hand.add_tile(winning_tile)
+
+        assert len(hand.tiles) == 14
+        assert hand.is_winning_hand(winning_tile, is_tsumo=True)
+
+        # 測試自摸國士無雙
+        tiles = parse_tiles("1m9m1p9p1s9s1z2z3z4z5z6z7z")
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.MANZU, 1)
+        hand.add_tile(winning_tile)
+
+        assert len(hand.tiles) == 14
+        assert hand.is_winning_hand(winning_tile, is_tsumo=True)
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

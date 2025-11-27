@@ -860,12 +860,6 @@ class Hand:
 
         return False
 
-        if self._is_kokushi_musou(all_tiles):
-            return True
-
-        is_winning, _ = self._is_standard_winning(all_tiles)
-        return is_winning
-
     def get_winning_combinations(
         self, winning_tile: Tile, is_tsumo: bool = False
     ) -> List[List[Combination]]:
