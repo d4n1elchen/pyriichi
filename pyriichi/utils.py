@@ -10,13 +10,13 @@ from pyriichi.tiles import Tile, Suit, create_tile
 
 def parse_tiles(tile_string: str) -> List[Tile]:
     """
-    從字符串解析牌（例如："1m2m3m4p5p6p"）
+    從字符串解析牌（例如："1m2m3m4p5p6p"）。
 
     Args:
-        tile_string: 牌字符串
+        tile_string (str): 牌字符串。
 
     Returns:
-        牌列表
+        List[Tile]: 牌列表。
 
     Example:
         >>> parse_tiles("1m2m3m4p5p6p")
@@ -52,13 +52,13 @@ def parse_tiles(tile_string: str) -> List[Tile]:
 
 def format_tiles(tiles: List[Tile]) -> str:
     """
-    將牌列表格式化為字符串
+    將牌列表格式化為字符串。
 
     Args:
-        tiles: 牌列表
+        tiles (List[Tile]): 牌列表。
 
     Returns:
-        格式化後的字符串
+        str: 格式化後的字符串。
 
     Example:
         >>> format_tiles([Tile(Suit.MANZU, 1), Tile(Suit.PINZU, 5)])
@@ -69,14 +69,14 @@ def format_tiles(tiles: List[Tile]) -> str:
 
 def is_winning_hand(tiles: List[Tile], winning_tile: Tile) -> bool:
     """
-    快速檢查是否和牌（便利函數）
+    快速檢查是否和牌（便利函數）。
 
     Args:
-        tiles: 手牌列表（13 張）
-        winning_tile: 和牌牌
+        tiles (List[Tile]): 手牌列表（13 張）。
+        winning_tile (Tile): 和牌牌。
 
     Returns:
-        是否和牌
+        bool: 是否和牌。
     """
     from pyriichi.hand import Hand
 

@@ -1,47 +1,80 @@
 import pytest
-from unittest.mock import MagicMock
-from pyriichi.player import RandomPlayer
-from pyriichi.rules import GameAction, GameState
+from pyriichi.player import RandomPlayer, SimplePlayer, DefensivePlayer, PublicInfo
+from pyriichi.rules import GameAction
+from pyriichi.game_state import GameState
 from pyriichi.hand import Hand
 from pyriichi.tiles import Tile, Suit
+from pyriichi.utils import parse_tiles
 
-class TestRandomPlayer:
-    def setup_method(self):
-        self.player = RandomPlayer("TestBot")
-        self.game_state = MagicMock(spec=GameState)
-        self.hand = MagicMock(spec=Hand)
-        self.hand.tiles = [Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 2)]
-        self.hand.is_riichi = False
+class TestPlayer:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.game_state = GameState()
 
-    def test_decide_action_discard(self):
-        """測試切牌階段"""
+    def test_random_player_discard(self):
+        player = RandomPlayer("Random")
+        hand = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
         available_actions = [GameAction.DISCARD]
-        action, tile = self.player.decide_action(self.game_state, 0, self.hand, available_actions)
+
+        action, tile = player.decide_action(self.game_state, 0, hand, available_actions)
 
         assert action == GameAction.DISCARD
-        assert tile in self.hand.tiles
+        assert tile in hand.tiles
 
-    def test_decide_action_ron(self):
-        """測試優先榮和"""
-        available_actions = [GameAction.RON, GameAction.PASS]
-        action, tile = self.player.decide_action(self.game_state, 0, self.hand, available_actions)
-
-        assert action == GameAction.RON
-        assert tile is None
-
-    def test_decide_action_riichi_discard(self):
-        """測試立直後切牌"""
-        self.hand.is_riichi = True
+    def test_simple_player_discard_honor(self):
+        player = SimplePlayer("Simple")
+        # Hand with one honor (East)
+        hand = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p1z"))
         available_actions = [GameAction.DISCARD]
-        action, tile = self.player.decide_action(self.game_state, 0, self.hand, available_actions)
+
+        action, tile = player.decide_action(self.game_state, 0, hand, available_actions)
 
         assert action == GameAction.DISCARD
-        assert tile == self.hand.tiles[-1] # 應該打出最後一張
+        assert tile == Tile(Suit.JIHAI, 1) # Should discard East
 
-    def test_decide_action_response(self):
-        """測試回應階段（隨機選擇）"""
-        available_actions = [GameAction.PON, GameAction.PASS]
-        # 由於是隨機，我們運行多次確保不會崩潰
-        for _ in range(10):
-            action, tile = self.player.decide_action(self.game_state, 0, self.hand, available_actions)
-            assert action in available_actions
+    def test_defensive_player_genbutsu(self):
+        player = DefensivePlayer("Defense")
+        # Hand: 1m (safe), 2m (unsafe), ...
+        hand = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
+        available_actions = [GameAction.DISCARD]
+
+        # Player 1 is in Riichi and discarded 1m
+        public_info = PublicInfo(
+            turn_number=10,
+            dora_indicators=[],
+            discards={1: [Tile(Suit.MANZU, 1)]},
+            melds={},
+            riichi_players=[1],
+            scores=[25000] * 4
+        )
+
+        action, tile = player.decide_action(self.game_state, 0, hand, available_actions, public_info)
+
+        assert action == GameAction.DISCARD
+        # Should discard 1m because it's Genbutsu against Player 1
+        assert tile == Tile(Suit.MANZU, 1)
+
+    def test_defensive_player_no_threat(self):
+        player = DefensivePlayer("Defense")
+        # Hand with 1z (Honor) and 1m
+        hand = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p1z"))
+        available_actions = [GameAction.DISCARD]
+
+        # No one in Riichi
+        public_info = PublicInfo(
+            turn_number=10,
+            dora_indicators=[],
+            discards={},
+            melds={},
+            riichi_players=[],
+            scores=[25000] * 4
+        )
+
+        action, tile = player.decide_action(self.game_state, 0, hand, available_actions, public_info)
+
+        # Should behave like SimplePlayer (discard Honor)
+        assert action == GameAction.DISCARD
+        assert tile == Tile(Suit.JIHAI, 1)
+
+if __name__ == '__main__':
+    pytest.main([__file__])

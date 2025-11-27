@@ -980,5 +980,56 @@ class TestYakuChecker:
 
 
 
+
+class TestPinfuSelfWind:
+    def test_pinfu_with_self_wind_pair(self):
+        # Setup: Hand with sequences and a pair of Self Wind (East)
+        # Player is East (Dealer). Round is East.
+        # Pair of East Wind is Yakuhai (Double East).
+        # Should NOT be Pinfu.
+
+        tiles = [
+            Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 3),
+            Tile(Suit.PINZU, 4), Tile(Suit.PINZU, 5), Tile(Suit.PINZU, 6),
+            Tile(Suit.SOZU, 7), Tile(Suit.SOZU, 8), Tile(Suit.SOZU, 9),
+            Tile(Suit.PINZU, 2), Tile(Suit.PINZU, 3), Tile(Suit.PINZU, 4),
+            Tile(Suit.JIHAI, 1), Tile(Suit.JIHAI, 1), # Pair of East
+        ]
+        hand = Hand(tiles)
+
+        # Game State: Round East, Player East
+        game_state = GameState()
+        # Default dealer is 0. Default round wind is East.
+        # So player 0 is East.
+
+        winning_tile = Tile(Suit.MANZU, 1) # Waiting on 1m (123m sequence) - wait, 1m is in sequence.
+        # Let's make it a ryanmen wait.
+        # 23m waiting for 1m or 4m.
+        # Remove 1m from tiles.
+        tiles.remove(Tile(Suit.MANZU, 1))
+        hand = Hand(tiles)
+
+        winning_tile = Tile(Suit.MANZU, 1)
+
+        checker = YakuChecker()
+
+        # Get winning combinations
+        combinations = hand.get_winning_combinations(winning_tile, is_tsumo=False)
+        assert len(combinations) > 0
+        winning_combination = combinations[0]
+
+        # Check Pinfu
+        # Should return None because pair is East (Self Wind)
+        result = checker.check_pinfu(
+            hand=hand,
+            winning_combination=winning_combination,
+            game_state=game_state,
+            winning_tile=winning_tile,
+            player_position=0
+        )
+
+        assert result is None, "Should not be Pinfu because pair is Self Wind (East)"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

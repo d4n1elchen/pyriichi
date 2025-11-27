@@ -1,13 +1,32 @@
+from dataclasses import dataclass
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict
 import random
 
 from pyriichi.rules import GameAction, GameState
 from pyriichi.tiles import Tile
-from pyriichi.hand import Hand
+from pyriichi.hand import Hand, Meld
+
+@dataclass
+class PublicInfo:
+    """
+    公開遊戲資訊 (Visible Game Information)。
+
+    包含所有玩家可見的資訊，用於 AI 決策。
+    """
+    turn_number: int
+    dora_indicators: List[Tile]
+    discards: Dict[int, List[Tile]]  # 每個玩家的捨牌
+    melds: Dict[int, List[Meld]]     # 每個玩家的副露
+    riichi_players: List[int]        # 立直玩家列表
+    scores: List[int]                # 玩家分數
 
 class BasePlayer(ABC):
-    """玩家基類 (Abstract Base Class for Players)"""
+    """
+    玩家基類 (Abstract Base Class for Players)。
+
+    定義了玩家的基本介面，所有具體玩家類別都應繼承此類別。
+    """
 
     def __init__(self, name: str):
         self.name = name
@@ -18,136 +37,121 @@ class BasePlayer(ABC):
         game_state: GameState,
         player_index: int,
         hand: Hand,
-        available_actions: List[GameAction]
+        available_actions: List[GameAction],
+        public_info: Optional[PublicInfo] = None
     ) -> Tuple[GameAction, Optional[Tile]]:
         """
-        決定下一步動作
+        決定下一步動作。
 
         Args:
-            game_state: 當前遊戲狀態
-            player_index: 玩家索引 (0-3)
-            hand: 玩家手牌
-            available_actions: 可執行的動作列表
+            game_state (GameState): 當前遊戲狀態。
+            player_index (int): 玩家索引 (0-3)。
+            hand (Hand): 玩家手牌。
+            available_actions (List[GameAction]): 可執行的動作列表。
+            public_info (Optional[PublicInfo]): 公開遊戲資訊（捨牌、副露等）。
 
         Returns:
-            (選擇的動作, 相關的牌)
-            - 如果動作是 DISCARD，Tile 是要打出的牌
-            - 如果動作是 CHI/PON/KAN，Tile 是相關的牌（通常是 target tile）
-            - 其他動作 Tile 通常為 None
+            Tuple[GameAction, Optional[Tile]]: (選擇的動作, 相關的牌)。
+                - 如果動作是 DISCARD，Tile 是要打出的牌。
+                - 如果動作是 CHI/PON/KAN，Tile 是相關的牌（通常是 target tile）。
+                - 其他動作 Tile 通常為 None。
         """
         pass
 
 class RandomPlayer(BasePlayer):
-    """隨機行動的 AI 玩家"""
+    """
+    隨機行動的 AI 玩家。
+
+    策略完全隨機，僅在必要時遵守規則（如立直後只能切摸到的牌）。
+    """
 
     def decide_action(
         self,
         game_state: GameState,
         player_index: int,
         hand: Hand,
-        available_actions: List[GameAction]
+        available_actions: List[GameAction],
+        public_info: Optional[PublicInfo] = None
     ) -> Tuple[GameAction, Optional[Tile]]:
         """
-        決定下一步動作（隨機）
+        決定下一步動作（隨機）。
 
         Args:
-            game_state: 當前遊戲狀態
-            player_index: 玩家索引
-            hand: 玩家手牌
-            available_actions: 可執行的動作列表
+            game_state (GameState): 當前遊戲狀態。
+            player_index (int): 玩家索引。
+            hand (Hand): 玩家手牌。
+            available_actions (List[GameAction]): 可執行的動作列表。
 
         Returns:
-            (選擇的動作, 相關的牌)
+            Tuple[GameAction, Optional[Tile]]: (選擇的動作, 相關的牌)。
         """
 
         if not available_actions:
-            # 理論上不應該發生，除非遊戲結束
+
             return GameAction.PASS, None
 
         # 簡單策略：優先和牌，其次立直，否則隨機
-        # 但既然是 RandomPlayer，我們就真的隨機嗎？
-        # 為了讓遊戲能進行下去，至少要能正確打牌
 
-        # 如果可以和牌，優先和牌 (為了測試方便)
+        # 如果可以和牌，優先和牌
         if GameAction.RON in available_actions:
             return GameAction.RON, None
         if GameAction.TSUMO in available_actions:
             return GameAction.TSUMO, None
 
-        # 隨機選擇一個動作
-        # 過濾掉 PASS，除非只有 PASS (例如鳴牌詢問時)
-        # 但在此簡化模型中，如果輪到自己切牌，通常沒有 PASS
-        # 如果是回應他家打牌，可能有 PASS
+        # 隨機選擇一個動作，過濾掉 PASS (除非只有 PASS)
 
-        # 這裡做一個簡單的權重：
-        # 如果是切牌階段 (DRAW 後)，必須 DISCARD 或 KAN/RICHI/TSUMO
-        # 如果是回應階段，可以 PASS
 
-        # 為了避免死循環或卡住，我們優先選擇 DISCARD 如果在列表中
+
+        # 為了避免死循環或卡住，優先選擇 DISCARD
         if GameAction.DISCARD in available_actions:
             # 隨機打出一張牌
-            # 這裡需要從手牌中選擇一張
-            # hand.tiles 包含所有手牌
-            # 我們需要處理立直後的強制切牌嗎？規則引擎會限制 available_actions 嗎？
-            # 規則引擎目前只返回 DISCARD 動作，不限制打哪張（除非立直）
-            # 但 RandomPlayer 應該遵守規則
 
-            # 檢查是否立直
+
             if hand.is_riichi:
-                # 立直後只能打出剛摸到的牌 (如果有的話)
-                # 但 hand 對象可能已經包含了摸到的牌
-                # 規則引擎應該處理這個邏輯嗎？
-                # 通常立直後，如果不能和牌/暗槓，就必須打出摸到的牌
-                # 這裡簡單隨機打一張，如果違規，規則引擎會報錯嗎？
-                # 為了安全，我們打出最後一張（假設是摸到的）
+                # 立直後只能打出剛摸到的牌
                 tile_to_discard = hand.tiles[-1]
                 return GameAction.DISCARD, tile_to_discard
 
-            # 非立直，隨機打一張
+
             tile_to_discard = random.choice(hand.tiles)
             return GameAction.DISCARD, tile_to_discard
 
-        # 如果是回應階段 (有 PON, CHI, KAN, RON, PASS)
-        # 隨機選擇，但 PASS 權重高一點，避免亂鳴牌
+        # 如果是回應階段，隨機選擇，但 PASS 權重高一點
         action = random.choice(available_actions)
 
-        # 如果選了需要參數的動作，需要提供 Tile
-        # 目前簡化：CHI/PON/KAN 的 Tile 參數通常由規則引擎上下文決定，
-        # 但這裡接口要求返回 Tile。
-        # 對於 DISCARD，Tile 是打出的牌。
-        # 對於 CHI/PON/KAN，Tile 是什麼？
-        # 通常是 "用哪組牌去吃/碰"。
-        # 這裡暫時返回 None，假設規則引擎能處理或不需要（對於簡單 AI）
-        # 實際上 execute_action 對於 CHI/PON 需要 tile 參數嗎？
-        # execute_action(player, action, tile)
-        # 對於 DISCARD，tile 是打出的牌。
-        # 對於 CHI，tile 是被吃的牌？不，被吃的牌是 last_discarded。
-        # tile 參數在 CHI 中通常是用來指定 "用哪兩張牌吃" (如果有多種吃法)
-        # 這裡 RandomPlayer 可能無法處理複雜吃法，暫時返回 None
+        # 如果選了需要參數的動作，暫時返回 None
 
         return action, None
 
 class SimplePlayer(BasePlayer):
-    """簡單進攻 AI (Simple Attack AI)"""
+    """
+    簡單進攻 AI (Simple Attack AI)。
+
+    策略：
+    1. 優先和牌 (RON/TSUMO)。
+    2. 優先立直 (RICHI)。
+    3. 簡單切牌策略：字牌 -> 老頭牌 -> 中張牌。
+    """
 
     def decide_action(
         self,
         game_state: GameState,
         player_index: int,
         hand: Hand,
-        available_actions: List[GameAction]
+        available_actions: List[GameAction],
+        public_info: Optional[PublicInfo] = None
     ) -> Tuple[GameAction, Optional[Tile]]:
         """
-        決定下一步動作（簡單進攻策略）
+        決定下一步動作（簡單進攻策略）。
 
         Args:
-            game_state: 當前遊戲狀態
-            player_index: 玩家索引
-            hand: 玩家手牌
-            available_actions: 可執行的動作列表
+            game_state (GameState): 當前遊戲狀態。
+            player_index (int): 玩家索引。
+            hand (Hand): 玩家手牌。
+            available_actions (List[GameAction]): 可執行的動作列表。
 
         Returns:
-            (選擇的動作, 相關的牌)
+            Tuple[GameAction, Optional[Tile]]: (選擇的動作, 相關的牌)。
         """
 
         if not available_actions:
@@ -165,17 +169,11 @@ class SimplePlayer(BasePlayer):
 
         # 3. 處理切牌
         if GameAction.DISCARD in available_actions:
-            # 如果立直中，只能打出剛摸到的牌（通常是最後一張）
+            # 如果立直中，只能打出剛摸到的牌
             if hand.is_riichi:
                 return GameAction.DISCARD, hand.tiles[-1]
 
-            # 簡單切牌策略：
-            # 字牌 -> 老頭牌 -> 中張牌
-            # 孤張優先（這裡簡化為只看牌本身，不看是否成面子）
-
-            # 為了避免打出已成面子的牌，我們應該先分析手牌
-            # 但這裡做一個非常簡單的啟發式：
-            # 給每張牌打分，分數越低越容易被打出
+            # 簡單切牌策略：字牌 -> 老頭牌 -> 中張牌 (孤張優先)
 
             best_discard = None
             min_score = 1000
@@ -183,20 +181,19 @@ class SimplePlayer(BasePlayer):
             for tile in hand.tiles:
                 score = 0
 
-                # 字牌分數低
+
                 if tile.is_honor:
                     score = 10
-                # 老頭牌分數中
+
                 elif tile.is_terminal:
                     score = 20
-                # 中張牌分數高
+
                 else:
                     score = 30 + (5 - abs(tile.rank - 5)) # 5是最高分(35)，1/9是26(但已被terminal捕獲)
 
-                # 這裡還可以加入：是否為寶牌（加分）、是否為紅寶牌（加分）
-                # 簡單起見暫不加
 
-                # 為了增加隨機性，避免每次都打同一張
+
+                # 增加隨機性
                 score += random.randint(0, 5)
 
                 if score < min_score:
@@ -206,20 +203,120 @@ class SimplePlayer(BasePlayer):
             return GameAction.DISCARD, best_discard
 
         # 4. 處理鳴牌
-        # 簡單 AI 傾向於門清（不鳴牌），除非能和牌
-        # 所以遇到 PON/CHI/KAN (Daiminkan) 選擇 PASS
         if GameAction.PASS in available_actions:
             return GameAction.PASS, None
 
-        # 如果只有鳴牌選項且不能 PASS (例如暗槓/加槓?)
-        # 暗槓/加槓通常伴隨 DISCARD 選項，所以會在上面被處理嗎？
-        # 不，get_available_actions 會返回 [DISCARD, ANKAN, KAN]
-        # 如果我們選擇了 DISCARD，就不會執行這裡。
-        # 但如果我們想槓呢？
-        # 簡單 AI 暫時不槓
-
-        # 如果被迫選擇（例如沒有 PASS，只有 ANKAN? 不可能，總有 DISCARD）
-        # 除非是回應階段且必須回應？回應階段總有 PASS。
-
-        # 隨機選擇剩餘的
         return random.choice(available_actions), None
+
+
+class DefensivePlayer(SimplePlayer):
+    """
+    防守型 AI (Defensive AI)。
+
+    策略：
+    1. 默認使用 SimplePlayer 的進攻策略。
+    2. 當有對手立直時，進入防守模式：
+       - 優先打出立直家的現物（Genbutsu）。
+       - 如果沒有現物，嘗試打出字牌或筋牌（暫時只實現現物）。
+       - 棄和（Betaori）：不進行副露。
+    """
+
+    def decide_action(
+        self,
+        game_state: GameState,
+        player_index: int,
+        hand: Hand,
+        available_actions: List[GameAction],
+        public_info: Optional[PublicInfo] = None
+    ) -> Tuple[GameAction, Optional[Tile]]:
+        """
+        決定下一步動作（帶防守邏輯）。
+        """
+        if not available_actions:
+            return GameAction.PASS, None
+
+        # 檢查是否需要防守
+        is_defense_mode = False
+        threatening_players = []
+
+        if public_info:
+            for i in public_info.riichi_players:
+                if i != player_index:
+                    is_defense_mode = True
+                    threatening_players.append(i)
+
+        # 如果不需要防守，使用簡單策略
+        if not is_defense_mode:
+            return super().decide_action(game_state, player_index, hand, available_actions, public_info)
+
+        # 防守模式
+
+        # 1. 能夠和牌還是要和 (追立直/兜牌的情況，或者運氣好)
+        if GameAction.RON in available_actions:
+            return GameAction.RON, None
+        if GameAction.TSUMO in available_actions:
+            return GameAction.TSUMO, None
+
+        # 2. 棄和：不立直，不副露
+        if GameAction.DISCARD in available_actions:
+            # 尋找安牌
+            safe_tile = self._find_safe_tile(hand, public_info, threatening_players)
+            if safe_tile:
+                return GameAction.DISCARD, safe_tile
+
+            # 如果沒有完全安牌，回退到 SimplePlayer 的切牌邏輯 (至少會切字牌/老頭牌)
+            # 但我們希望它更保守，這裡暫時直接調用父類
+            return super().decide_action(game_state, player_index, hand, available_actions, public_info)
+
+        # 對於副露請求，一律拒絕 (PASS)
+        if GameAction.PASS in available_actions:
+            return GameAction.PASS, None
+
+        return GameAction.PASS, None
+
+    def _find_safe_tile(
+        self,
+        hand: Hand,
+        public_info: Optional[PublicInfo],
+        threatening_players: List[int]
+    ) -> Optional[Tile]:
+        """尋找手牌中的安牌（現物）。"""
+        if not public_info:
+            return None
+
+        # 收集所有威脅玩家的現物
+        safe_tiles_set = set()
+
+        # 這裡簡化處理：只要是任何一個立直家的現物，就認為是"相對"安全的
+        # 更嚴格的防守應該是針對所有立直家的共通安牌 (Common Safe Tiles)
+        # 但如果無法兼顧，優先防守下家/對家/上家? 或者隨機?
+        # 這裡先取交集（針對所有立直家都安全），如果沒有則取聯集（針對至少一人安全）
+
+        common_safe_tiles = None
+
+        for player_idx in threatening_players:
+            discards = public_info.discards.get(player_idx, [])
+            player_safe_tiles = set(discards)
+
+            if common_safe_tiles is None:
+                common_safe_tiles = player_safe_tiles
+            else:
+                common_safe_tiles = common_safe_tiles.intersection(player_safe_tiles)
+
+        # 檢查手牌中是否有共通安牌
+        if common_safe_tiles:
+            for tile in hand.tiles:
+                if tile in common_safe_tiles:
+                    return tile
+
+        # 如果沒有共通安牌，嘗試找針對某個立直家的安牌 (避免放銃給最危險的?)
+        # 暫時隨機選一個針對某人的安牌
+        all_safe_tiles = set()
+        for player_idx in threatening_players:
+            all_safe_tiles.update(public_info.discards.get(player_idx, []))
+
+        for tile in hand.tiles:
+            if tile in all_safe_tiles:
+                return tile
+
+        return None

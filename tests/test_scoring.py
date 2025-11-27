@@ -3,7 +3,7 @@ ScoreCalculator 的單元測試
 """
 
 import pytest
-from pyriichi.hand import CombinationType, Hand, make_combination
+from pyriichi.hand import CombinationType, Hand, make_combination, Meld, MeldType
 from pyriichi.tiles import Suit, Tile
 from pyriichi.utils import parse_tiles
 from pyriichi.yaku import WaitingType, Yaku, YakuChecker, YakuResult
@@ -1057,6 +1057,104 @@ class TestScoreCalculator:
         )
         # 30符3翻 = 30 * 2^5 = 960
         assert result2.total_points == 960
+
+
+
+class TestFuCalculationOpenMeld:
+    def test_open_pon_fu(self):
+        # Setup: Hand with sequences and a pair of Self Wind (East)
+        # Player is East (Dealer). Round is East.
+        # Pair of East Wind is Yakuhai (Double East).
+        # Should NOT be Pinfu.
+
+        tiles = [
+            Tile(Suit.MANZU, 2), Tile(Suit.MANZU, 2), # Pair
+            Tile(Suit.MANZU, 3), Tile(Suit.MANZU, 4), Tile(Suit.MANZU, 5), # Seq
+        ]
+
+        # Open Pon 1m
+        meld1 = Meld(MeldType.PON, [Tile(Suit.MANZU, 1)] * 3)
+        # Open Pon 9m
+        meld2 = Meld(MeldType.PON, [Tile(Suit.MANZU, 9)] * 3)
+
+        hand = Hand(tiles)
+        hand._melds.append(meld1)
+        hand._melds.append(meld2)
+
+        # Add Sequence 456p
+        tiles.extend([Tile(Suit.PINZU, 4), Tile(Suit.PINZU, 5), Tile(Suit.PINZU, 6)])
+
+        # Re-create hand
+        hand = Hand(tiles)
+        hand._melds.append(meld1)
+        hand._melds.append(meld2)
+
+        # Winning tile: 3m (completing 345m? No, 345m is already there)
+        # Let's remove one 2m to make it waiting.
+        tiles.remove(Tile(Suit.MANZU, 2))
+        hand = Hand(tiles)
+        hand._melds.append(meld1)
+        hand._melds.append(meld2)
+
+        winning_tile = Tile(Suit.MANZU, 2)
+
+        # Calculate score
+        calculator = ScoreCalculator()
+
+        # Let's make the pair a Dragon (White) to get Yakuhai.
+        tiles = [
+            Tile(Suit.JIHAI, 5), # White Dragon (waiting)
+            Tile(Suit.MANZU, 3), Tile(Suit.MANZU, 4), Tile(Suit.MANZU, 5),
+            Tile(Suit.PINZU, 4), Tile(Suit.PINZU, 5), Tile(Suit.PINZU, 6),
+        ]
+        hand = Hand(tiles)
+        hand._melds.append(meld1)
+        hand._melds.append(meld2)
+
+        winning_tile = Tile(Suit.JIHAI, 5)
+
+        # Mock Yaku Result
+        yaku_results = [YakuResult(Yaku.HAKU, 1, False)]
+
+        # Get winning combinations
+        combinations = hand.get_winning_combinations(winning_tile, is_tsumo=False)
+        assert len(combinations) > 0
+        winning_combination = combinations[0]
+
+        # Calculate Fu
+        # Expected:
+        # Base: 20
+        # Open Pon 1m: 4
+        # Open Pon 9m: 4
+        # Pair White: 2
+        # Waiting Tanki (Single): 2
+        # Total: 32 -> 40 fu.
+
+        # Setup for ONE Open Pon Terminal (1m).
+        # Remove 9m Pon. Replace with Sequence.
+        hand = Hand(tiles) # Reset
+        hand._melds.append(meld1) # Open Pon 1m
+
+        # Add Sequence 789p to replace 9m Pon
+        tiles.extend([Tile(Suit.PINZU, 7), Tile(Suit.PINZU, 8), Tile(Suit.PINZU, 9)])
+
+        hand = Hand(tiles)
+        hand._melds.append(meld1)
+
+        winning_tile = Tile(Suit.JIHAI, 5)
+
+        combinations = hand.get_winning_combinations(winning_tile, is_tsumo=False)
+        assert len(combinations) > 0
+        winning_combination = combinations[0]
+
+        game_state = GameState()
+
+        fu = calculator.calculate_fu(
+            hand, winning_tile, winning_combination, yaku_results, game_state, is_tsumo=False, player_position=0
+        )
+
+        # print(f"Calculated Fu: {fu}")
+        assert fu == 30, "Should be 30 fu (20 base + 4 open pon + 2 pair + 2 wait = 28 -> 30)"
 
 
 if __name__ == "__main__":

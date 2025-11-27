@@ -5,7 +5,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from pyriichi.rules import RuleEngine, GameAction, GamePhase
-from pyriichi.player import RandomPlayer, SimplePlayer
+from pyriichi.player import RandomPlayer, SimplePlayer, DefensivePlayer, PublicInfo
 
 def main():
     print("=== PyRiichi AI Game Demo ===")
@@ -17,11 +17,12 @@ def main():
     engine.deal()
 
     # Initialize Players
+    # Use DefensivePlayer for all players to test defense logic
     players = [
-        SimplePlayer("Player 1 (East)"),
-        SimplePlayer("Player 2 (South)"),
-        SimplePlayer("Player 3 (West)"),
-        SimplePlayer("Player 4 (North)")
+        DefensivePlayer("Player 1 (East)"),
+        DefensivePlayer("Player 2 (South)"),
+        DefensivePlayer("Player 3 (West)"),
+        DefensivePlayer("Player 4 (North)")
     ]
 
     print("Game Started!")
@@ -37,13 +38,22 @@ def main():
         available_actions = engine.get_available_actions(current_player_idx)
 
         # AI decides action
-        # Note: We need to pass the hand object.
-        # In a real game, we might want to pass a copy or a view to prevent cheating,
-        # but for now we pass the direct reference.
         hand = engine.get_hand(current_player_idx)
         game_state = engine.game_state
 
-        action, tile = player.decide_action(game_state, current_player_idx, hand, available_actions)
+        # Construct PublicInfo
+        riichi_players = [i for i in range(4) if engine.get_hand(i).is_riichi]
+
+        public_info = PublicInfo(
+            turn_number=engine._turn_count,
+            dora_indicators=engine._tile_set.get_dora_indicators() if engine._tile_set else [],
+            discards={i: engine.get_hand(i)._discards for i in range(4)},
+            melds={i: engine.get_hand(i).melds for i in range(4)},
+            riichi_players=riichi_players,
+            scores=engine.game_state.scores
+        )
+
+        action, tile = player.decide_action(game_state, current_player_idx, hand, available_actions, public_info)
 
         print(f"Turn {turn_count}: {player.name} performs {action.name} {tile if tile else ''}")
 

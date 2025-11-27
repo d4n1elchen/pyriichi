@@ -45,15 +45,15 @@ class Tile:
 
     def __init__(self, suit: Suit, rank: int, is_red: bool = False):
         """
-        初始化一張牌
+        初始化一張牌。
 
         Args:
-            suit: 花色
-            rank: 數字（1-9 對數牌，1-7 對字牌）
-            is_red: 是否為紅寶牌（默認 False）
+            suit (Suit): 花色。
+            rank (int): 數字（1-9 對數牌，1-7 對字牌）。
+            is_red (bool): 是否為紅寶牌（默認 False）。
 
         Raises:
-            ValueError: 如果 rank 超出範圍
+            ValueError: 如果 rank 超出範圍。
         """
         if suit == Suit.JIHAI:
             if not (1 <= rank <= 7):
@@ -67,46 +67,46 @@ class Tile:
 
     @property
     def suit(self) -> Suit:
-        """獲取花色"""
         return self._suit
 
     @property
     def rank(self) -> int:
-        """獲取數字"""
         return self._rank
 
     @property
     def is_red(self) -> bool:
-        """是否為紅寶牌"""
         return self._is_red
 
     @property
     def is_honor(self) -> bool:
-        """是否為字牌"""
         return self._suit == Suit.JIHAI
 
     @property
     def is_terminal(self) -> bool:
-        """是否為老頭牌（1 或 9）"""
         return False if self._suit == Suit.JIHAI else self._rank in [1, 9]
 
     @property
     def is_simple(self) -> bool:
-        """是否為中張牌（2-8）"""
         return False if self._suit == Suit.JIHAI else 2 <= self._rank <= 8
 
     def __eq__(self, other) -> bool:
-        """比較兩張牌是否相同（不考慮紅寶牌）"""
+        """
+        比較兩張牌是否相同（不考慮紅寶牌）。
+
+        Args:
+            other (Any): 要比較的對象。
+
+        Returns:
+            bool: 如果花色和數字相同則返回 True。
+        """
         if not isinstance(other, Tile):
             return False
         return self._suit == other._suit and self._rank == other._rank
 
     def __hash__(self) -> int:
-        """哈希值，用於集合和字典"""
         return hash((self._suit, self._rank))
 
     def __lt__(self, other) -> bool:
-        """排序：先按花色，再按數字"""
         if not isinstance(other, Tile):
             return NotImplemented
         if self._suit.value != other._suit.value:
@@ -114,7 +114,12 @@ class Tile:
         return self._rank < other._rank
 
     def __str__(self) -> str:
-        """字符串表示（例如：1m, 5p, r5m 表示紅寶牌）"""
+        """
+        獲取牌的字符串表示（例如：1m, 5p, r5m 表示紅寶牌）。
+
+        Returns:
+            str: 牌的字符串表示。
+        """
         suit_map = {
             Suit.MANZU: "m",
             Suit.PINZU: "p",
@@ -126,12 +131,16 @@ class Tile:
         return f"{self._rank}{suit_map[self._suit]}"
 
     def __repr__(self) -> str:
-        """對象表示"""
         return f"Tile({self._suit.name}, {self._rank}, red={self._is_red})"
 
     @property
     def is_yaochuu(self) -> bool:
-        """是否為幺九牌（1, 9, 字牌）"""
+        """
+        判斷是否為幺九牌（1, 9, 字牌）。
+
+        Returns:
+            bool: 如果是幺九牌則返回 True。
+        """
         if self._suit == Suit.JIHAI:
             return True
         return self._rank == 1 or self._rank == 9
@@ -153,36 +162,27 @@ class Tile:
 
         return f"{prefix}{numeral}{suffix}"
 
-    @property
-    def zh(self) -> str:
-        """中文名稱"""
-        return self._format_name("zh")
 
-    @property
-    def ja(self) -> str:
-        """日文名稱"""
-        return self._format_name("ja")
 
-    @property
-    def en(self) -> str:
-        """英文名稱"""
-        return self._format_name("en")
+
+
+
 
 
 def create_tile(suit: str, rank: int, is_red: bool = False) -> Tile:
     """
-    創建一張牌（便捷函數）
+    創建一張牌（便捷函數）。
 
     Args:
-        suit: 花色字符串 ("m", "p", "s", "z")
-        rank: 數字
-        is_red: 是否為紅寶牌
+        suit (str): 花色字符串 ("m", "p", "s", "z")。
+        rank (int): 數字。
+        is_red (bool): 是否為紅寶牌。
 
     Returns:
-        Tile 對象
+        Tile: 創建的 Tile 對象。
 
     Raises:
-        ValueError: 如果 suit 無效
+        ValueError: 如果 suit 無效。
     """
     suit_map = {
         "m": Suit.MANZU,
@@ -200,20 +200,18 @@ class TileSet:
 
     def __init__(self, tiles: Optional[List[Tile]] = None):
         """
-        初始化牌組
+        初始化牌組。
 
         Args:
-            tiles: 初始牌列表（如果為 None，則創建標準 136 張牌）
+            tiles (Optional[List[Tile]]): 初始牌列表（如果為 None，則創建標準 136 張牌）。
         """
         if tiles is None:
             tiles = self._create_standard_set()
         self._tiles = tiles.copy()
         self._wall = []
         self._dora_indicators = []
-
     @staticmethod
     def _create_standard_set() -> List[Tile]:
-        """創建標準 136 張牌（含紅寶牌）"""
         tiles = []
         # 數牌：萬、筒、條各 36 張（1-9 各 4 張）
         for suit in [Suit.MANZU, Suit.PINZU, Suit.SOZU]:
@@ -228,31 +226,30 @@ class TileSet:
         return tiles
 
     def shuffle(self) -> None:
-        """洗牌"""
         random.shuffle(self._tiles)
         # 初始化王牌區（最後 14 張）
         self._wall = self._tiles[-14:]
         self._tiles = self._tiles[:-14]
-        # 設置嶺上牌
+
         self._rinshan_tiles = self._wall[:4]
-        # 設置寶牌指示牌
+
         self._dora_indicators = self._wall[4:8]
-        # 設置裡寶牌指示牌
+
         self._ura_dora_indicators = self._wall[8:12]
 
     def deal(self, num_players: int = 4) -> List[List[Tile]]:
         """
-        發牌
+        發牌。
 
         Args:
-            num_players: 玩家數量（默認 4）
+            num_players (int): 玩家數量（默認 4）。
 
         Returns:
-            每個玩家的手牌列表（13 張），莊家為 14 張
+            List[List[Tile]]: 每個玩家的手牌列表（13 張），莊家為 14 張。
         """
         hands = [[] for _ in range(num_players)]
 
-        # 每人發 13 張
+
         for _, player in itertools.product(range(13), range(num_players)):
             if self._tiles:
                 hands[player].append(self._tiles.pop(0))
@@ -261,7 +258,7 @@ class TileSet:
         if self._tiles:
             hands[0].append(self._tiles.pop(0))
 
-        # 排序每人的手牌
+
         for hand in hands:
             hand.sort()
 
@@ -269,45 +266,45 @@ class TileSet:
 
     def draw(self) -> Optional[Tile]:
         """
-        從牌山頂端摸一張牌
+        從牌山頂端摸一張牌。
 
         Returns:
-            摸到的牌，如果牌山為空則返回 None
+            Optional[Tile]: 摸到的牌，如果牌山為空則返回 None。
         """
         return self._tiles.pop(0) if self._tiles else None
 
     def draw_rinshan(self) -> Optional[Tile]:
         """
-        從嶺上牌摸一張牌（用於槓後摸牌）
+        從嶺上牌摸一張牌（用於槓後摸牌）。
 
         Returns:
-            摸到的牌，如果嶺上牌為空則返回 None
+            Optional[Tile]: 摸到的牌，如果嶺上牌為空則返回 None。
         """
         return self._rinshan_tiles.pop(0) if self._rinshan_tiles else None
 
     @property
     def remaining(self) -> int:
-        """剩餘牌數"""
         return len(self._tiles)
 
     @property
     def wall_remaining(self) -> int:
-        """王牌區剩餘牌數"""
         return len(self._wall)
 
     def is_exhausted(self) -> bool:
-        """檢查牌山是否耗盡"""
         return len(self._tiles) == 0
 
     def get_dora_indicators(self, count: Optional[int] = None) -> List[Tile]:
         """
-        獲取寶牌指示牌
+        獲取寶牌指示牌。
 
         Args:
-            count: 指示牌數量（如果為 None，則依照嶺上牌數量推斷）
+            count (Optional[int]): 指示牌數量（如果為 None，則依照嶺上牌數量推斷）。
 
         Returns:
-            指示牌，如果不足則引發 ValueError
+            List[Tile]: 指示牌列表。
+
+        Raises:
+            ValueError: 如果指示牌不足。
         """
         if count is None:
             count = 5 - len(self._rinshan_tiles)
@@ -317,13 +314,16 @@ class TileSet:
 
     def get_ura_dora_indicators(self, count: Optional[int] = None) -> List[Tile]:
         """
-        獲取裡寶牌指示牌
+        獲取裡寶牌指示牌。
 
         Args:
-            count: 指示牌數量（如果為 None，則依照嶺上牌數量推斷）
+            count (Optional[int]): 指示牌數量（如果為 None，則依照嶺上牌數量推斷）。
 
         Returns:
-            指示牌，如果不足則引發 ValueError
+            List[Tile]: 指示牌列表。
+
+        Raises:
+            ValueError: 如果指示牌不足。
         """
         if count is None:
             count = 5 - len(self._rinshan_tiles)
@@ -333,13 +333,13 @@ class TileSet:
 
     def get_dora(self, indicator: Tile) -> Tile:
         """
-        根據指示牌獲取寶牌
+        根據指示牌獲取寶牌。
 
         Args:
-            indicator: 指示牌
+            indicator (Tile): 指示牌。
 
         Returns:
-            對應的寶牌
+            Tile: 對應的寶牌。
         """
         if indicator.suit == Suit.JIHAI:
             # 字牌：東→南→西→北→白→發→中→東
