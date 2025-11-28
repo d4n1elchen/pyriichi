@@ -30,7 +30,7 @@ class TestCompleteWinFlow:
         # 創建一個簡單的和牌型手牌（斷么九）
         # 123m 456p 789s 234m 55p（和牌牌5p）
         # 手牌：123m 456p 789s 234m 5p
-        tiles = parse_tiles("1m2m3m4p5p6p7s8s9s2m3m4m5p")
+        tiles = parse_tiles("123m234m456p5p789s")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.PINZU, 5)
 
@@ -79,7 +79,7 @@ class TestCompleteWinFlow:
         # 創建一個簡單的和牌型手牌
         # 123m 456p 789s 111z 22z（和牌牌2z）
         # 手牌：123m 456p 789s 1112z
-        tiles = parse_tiles("1m2m3m4p5p6p7s8s9s1z1z1z2z")
+        tiles = parse_tiles("123m456p789s1112z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 2)  # 2z
 
@@ -252,7 +252,7 @@ class TestDrawScenarios:
         # 設置玩家0的手牌為九種九牌
         # 1m 9m 1p 9p 1s 9s 1z 2z 3z 4z 5z 6z 7z + 1m (14張)
         # 這裡有13種幺九牌，滿足條件
-        tiles = parse_tiles("1m9m1p9p1s9s1z2z3z4z5z6z7z1m")
+        tiles = parse_tiles("19m19p19s1234567z1m")
         engine._hands[0] = Hand(tiles)
 
         # 確保是玩家0的回合且是第一巡
@@ -283,7 +283,7 @@ class TestMultiModuleIntegration:
         # 創建一個複雜的和牌型手牌（清一色）
         # 123m 456m 789m 111m 44m（和牌牌4m）
         # 手牌：123m 456m 789m 111m 4m
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1m1m1m4m")
+        tiles = parse_tiles("123m456m789m111m4m")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 4)
 
@@ -354,7 +354,7 @@ class TestMultiModuleIntegration:
         """測試副露、手牌、役種的整合"""
         # 創建一個有副露的手牌
         # 手牌：123m 456p 789s 111z
-        tiles = parse_tiles("1m2m3m4p5p6p7s8s9s1z1z1z")
+        tiles = parse_tiles("123m456p789s111z")
         hand = Hand(tiles)
 
         # 執行碰操作（模擬從其他玩家碰1z，會從手牌中移除2張1z）
@@ -381,7 +381,7 @@ class TestRealWorldScenarios:
         """測試場景1：門清自摸斷么九"""
         # 123m 456p 789s 234m 55p（和牌牌5p）
         # 手牌：123m 456p 789s 234m 5p
-        tiles = parse_tiles("1m2m3m4p5p6p7s8s9s2m3m4m5p")
+        tiles = parse_tiles("123m234m456p5p789s")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.PINZU, 5)
 
@@ -419,7 +419,7 @@ class TestRealWorldScenarios:
         """測試場景2：榮和役牌"""
         # 123m 456p 789s 111z 22z（和牌牌2z）
         # 手牌：123m 456p 789s 1112z
-        tiles = parse_tiles("1m2m3m4p5p6p7s8s9s1z1z1z2z")
+        tiles = parse_tiles("123m456p789s1112z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 2)
 
@@ -521,7 +521,7 @@ class TestErrorHandling:
         """測試邊界情況的手牌組合"""
         # 測試七對子
         # 手牌：1122334455667m
-        tiles = parse_tiles("1m1m2m2m3m3m4m4m5m5m6m6m7m")
+        tiles = parse_tiles("11m22m33m44m55m66m7m")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 7)
 
@@ -530,7 +530,7 @@ class TestErrorHandling:
 
         # 測試國士無雙
         # 手牌：1m 9m 1p 9p 1s 9s 123z 456z 7z
-        kokushi_tiles = parse_tiles("1m9m1p9p1s9s1z2z3z4z5z6z7z")
+        kokushi_tiles = parse_tiles("19m19p19s1234567z")
         hand2 = Hand(kokushi_tiles)
         winning_tile2 = Tile(Suit.JIHAI, 1)  # 和牌牌1z（組成11z對子）
 
