@@ -57,7 +57,7 @@ class TestRuleEngine:
     def test_hand_total_tile_count_includes_melds(self):
         """手牌總數應包含副露的牌。"""
         # 11m 123m 456p 77s 8s 99s
-        tiles = parse_tiles("1m1m1m2m3m4p5p6p7s7s8s9s9s")
+        tiles = parse_tiles("11123m456p77899s")
 
         hand = Hand(tiles)
         assert hand.total_tile_count() == 13
@@ -130,8 +130,8 @@ class TestRuleEngine:
         self.engine._riichi_ippatsu_discard = {0: 0}
 
         chi_tile = Tile(Suit.MANZU, 4)
-        self.engine._hands[0] = Hand(parse_tiles("1m1m2m2m3m3m4m4m5m5m6m6m7m7m"))
-        self.engine._hands[1] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p5p"))
+        self.engine._hands[0] = Hand(parse_tiles("11223344556677m"))
+        self.engine._hands[1] = Hand(parse_tiles("23456789m12345p"))
         self.engine._current_player = 0
 
         self.engine.execute_action(0, GameAction.DISCARD, tile=chi_tile)
@@ -152,8 +152,8 @@ class TestRuleEngine:
         self.engine._riichi_ippatsu_discard = {0: 0}
 
         pon_tile = Tile(Suit.PINZU, 7)
-        self.engine._hands[0] = Hand(parse_tiles("7p1m1m1m2m2m3m3m4m4m5m5m6m6m"))
-        self.engine._hands[2] = Hand(parse_tiles("7p7p1p1p2p2p3p3p4p4p5p5p6p"))
+        self.engine._hands[0] = Hand(parse_tiles("7p1112233445566m"))
+        self.engine._hands[2] = Hand(parse_tiles("77p11223344556p"))
         self.engine._current_player = 0
 
         self.engine.execute_action(0, GameAction.DISCARD, tile=pon_tile)
@@ -168,8 +168,8 @@ class TestRuleEngine:
         self.engine._riichi_ippatsu_discard = {0: 0}
 
         kan_tile = Tile(Suit.SOZU, 9)
-        self.engine._hands[0] = Hand(parse_tiles("9s1m1m2m2m3m3m4m4m5m5m6m6m7m"))
-        self.engine._hands[1] = Hand(parse_tiles("9s9s9s1s1s2s2s3s3s4s4s5s5s"))
+        self.engine._hands[0] = Hand(parse_tiles("9s1122334455667m"))
+        self.engine._hands[1] = Hand(parse_tiles("999s1122334455s"))
         self.engine._current_player = 0
 
         self.engine.execute_action(0, GameAction.DISCARD, tile=kan_tile)
@@ -183,7 +183,7 @@ class TestRuleEngine:
         self.engine._riichi_ippatsu = {0: True, 1: True}
         self.engine._riichi_ippatsu_discard = {0: 0, 1: 0}
 
-        self.engine._hands[3] = Hand(parse_tiles("1m1m1m1m2m3m4m5m6m7m8m9m1p"))
+        self.engine._hands[3] = Hand(parse_tiles("111123456789m1p"))
         self.engine._current_player = 3
 
         assert GameAction.ANKAN in self.engine.get_available_actions(3)
@@ -197,7 +197,7 @@ class TestRuleEngine:
 
         # 設置玩家0聽牌（聽 3p）
         # 手牌：123m 456m 789m 12p 33p (聽3p)
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p3p")
+        tiles = parse_tiles("123456789m1233p")
         self.engine._hands[0] = Hand(tiles)
 
         # 玩家0之前打過 3p（現在在捨牌堆中）
@@ -224,7 +224,7 @@ class TestRuleEngine:
 
         # 設置玩家0聽牌（聽 3p）
         # 手牌：123m 456m 789m 12p 33p (13張，聽3p)
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p3p")
+        tiles = parse_tiles("123456789m1233p")
         self.engine._hands[0] = Hand(tiles)
 
         # 玩家0之前打過 3p
@@ -253,7 +253,7 @@ class TestRuleEngine:
 
         # 設置玩家0聽牌（聽 4p）
         # 手牌：123m 456m 789m 123p 4p
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
+        tiles = parse_tiles("123456789m1234p")
         self.engine._hands[0] = Hand(tiles)
 
         winning_tile = Tile(Suit.PINZU, 4)
@@ -281,7 +281,7 @@ class TestRuleEngine:
         self._init_game()
 
         # 設置玩家0聽牌（聽 4p）
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
+        tiles = parse_tiles("123456789m1234p")
         self.engine._hands[0] = Hand(tiles)
 
         winning_tile = Tile(Suit.PINZU, 4)
@@ -308,7 +308,7 @@ class TestRuleEngine:
         self._init_game()
 
         # 設置玩家0立直且聽牌（聽 4p）
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
+        tiles = parse_tiles("123456789m1234p")
         self.engine._hands[0] = Hand(tiles)
         self.engine._hands[0].set_riichi(True)
 
@@ -336,7 +336,7 @@ class TestRuleEngine:
         self._init_game()
 
         # 設置玩家0立直且聽牌（聽 4p）
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p4p")
+        tiles = parse_tiles("123456789m12344p")
         self.engine._hands[0] = Hand(tiles)
         self.engine._hands[0].set_riichi(True)
 
@@ -363,7 +363,7 @@ class TestRuleEngine:
         self._init_game()
 
         # 設置玩家0不聽牌
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p5p")
+        tiles = parse_tiles("123456789m12345p")
         self.engine._hands[0] = Hand(tiles)
 
         # 檢查振聽狀態（未聽牌不算振聽）
@@ -376,7 +376,7 @@ class TestRuleEngine:
 
         # 設置玩家0多面聽（聽 4p 5p）
         # 手牌：123m 456m 789m 44p 55p (雙碰聽 4p 5p)
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m4p5p4p5p")
+        tiles = parse_tiles("123456789m4455p")
         self.engine._hands[0] = Hand(tiles)
 
         # 玩家0之前打過 4p（聽牌牌之一）
@@ -401,11 +401,11 @@ class TestRuleEngine:
 
         # 設置玩家0聽牌
         # 123m 456m 789m 123p 4p
-        self.engine._hands[0] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
+        self.engine._hands[0] = Hand(parse_tiles("123456789m1234p"))
 
         # 設置其他玩家不聽牌
         # 12m 45m 78m 12p 45p 78s 1z
-        noten_hand = Hand(parse_tiles("1m2m4m5m7m8m1p2p4p5p7s8s1z"))
+        noten_hand = Hand(parse_tiles("124578m1245p78s1z"))
         for i in range(1, 4):
             self.engine._hands[i] = noten_hand
 
@@ -433,12 +433,12 @@ class TestRuleEngine:
         self._init_game()
 
         # 設置玩家0, 1聽牌
-        tenpai_hand = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
+        tenpai_hand = Hand(parse_tiles("123456789m1234p"))
         self.engine._hands[0] = tenpai_hand
         self.engine._hands[1] = tenpai_hand
 
         # 設置玩家2, 3不聽牌
-        noten_hand = Hand(parse_tiles("1m2m4m5m7m8m1p2p4p5p7s8s1z"))
+        noten_hand = Hand(parse_tiles("124578m1245p78s1z"))
         self.engine._hands[2] = noten_hand
         self.engine._hands[3] = noten_hand
 
@@ -459,13 +459,13 @@ class TestRuleEngine:
         self._init_game()
 
         # 設置玩家0, 1, 2聽牌
-        tenpai_hand = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
+        tenpai_hand = Hand(parse_tiles("123456789m1234p"))
         self.engine._hands[0] = tenpai_hand
         self.engine._hands[1] = tenpai_hand
         self.engine._hands[2] = tenpai_hand
 
         # 設置玩家3不聽牌
-        noten_hand = Hand(parse_tiles("1m2m4m5m7m8m1p2p4p5p7s8s1z"))
+        noten_hand = Hand(parse_tiles("124578m1245p78s1z"))
         self.engine._hands[3] = noten_hand
 
         initial_scores = self.engine._game_state.scores.copy()
@@ -485,7 +485,7 @@ class TestRuleEngine:
         self._init_game()
 
         # 設置所有玩家聽牌
-        tenpai_hand = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
+        tenpai_hand = Hand(parse_tiles("123456789m1234p"))
         for i in range(4):
             self.engine._hands[i] = tenpai_hand
 
@@ -504,7 +504,7 @@ class TestRuleEngine:
         self._init_game()
 
         # 設置所有玩家不聽牌
-        noten_hand = Hand(parse_tiles("1m2m4m5m7m8m1p2p4p5p7s8s1z"))
+        noten_hand = Hand(parse_tiles("124578m1245p78s1z"))
         for i in range(4):
             self.engine._hands[i] = noten_hand
 
@@ -530,7 +530,7 @@ class TestRuleEngine:
 
         # 玩家0聽牌，榮和玩家1
         # 123m 456m 789m 123p 4p (聽 4p)
-        self.engine._hands[0] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
+        self.engine._hands[0] = Hand(parse_tiles("123456789m1234p"))
 
         # 玩家1打出 4p
         winning_tile = Tile(Suit.PINZU, 4)
@@ -578,8 +578,8 @@ class TestRuleEngine:
         self.engine._game_state._scores[1] = 500
 
         # 設置玩家0聽牌，其他人不聽
-        tenpai_hand = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
-        noten_hand = Hand(parse_tiles("1m2m4m5m7m8m1p2p4p5p7s8s1z"))
+        tenpai_hand = Hand(parse_tiles("123456789m1234p"))
+        noten_hand = Hand(parse_tiles("124578m1245p78s1z"))
 
         self.engine._hands[0] = tenpai_hand
         for i in range(1, 4):
@@ -623,7 +623,7 @@ class TestHighScoringMethod:
         # 123 123 123 (Sequences).
         # This is the classic case!
 
-        tiles = parse_tiles("111222333m678p55s")
+        tiles = parse_tiles("111m222m333m678p55s")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 1)  # Win on 1m
 
@@ -666,7 +666,7 @@ class TestHighScoringMethod:
 class TestDarkKanSelection:
     def test_ankan_selection(self):
         # Setup: Hand with 1111m and 2222m.
-        tiles = parse_tiles("11112222m567p89s")
+        tiles = parse_tiles("1111m2222m567p89s")
         hand = Hand(tiles)
 
         engine = RuleEngine(num_players=1)
@@ -741,9 +741,7 @@ class TestActionAvailability:
         current_player = self.engine.get_current_player()
         # 確保手牌無法聽牌
         # 123m 456m 789m 12p 4p 8p
-        self.engine._hands[current_player] = Hand(
-            parse_tiles("1m2m3m4m5m6m7m8m9m1p2p4p8p")
-        )
+        self.engine._hands[current_player] = Hand(parse_tiles("123456789m1248p"))
         assert not self.engine.get_hand(current_player).is_tenpai()
         assert not self._has_action(current_player, GameAction.RICHI)
 
@@ -765,9 +763,7 @@ class TestActionAvailability:
         self._init_game()
         current_player = self.engine.get_current_player()
         # 111m 234m 567m 12p 3p 4p
-        self.engine._hands[current_player] = Hand(
-            parse_tiles("1m1m1m2m3m4m5m6m7m1p2p3p4p")
-        )
+        self.engine._hands[current_player] = Hand(parse_tiles("111m234m567m1234p"))
         self.engine._last_discarded_tile = Tile(Suit.MANZU, 1)
         self.engine._last_discarded_player = (
             current_player + 1
@@ -781,7 +777,7 @@ class TestActionAvailability:
         """測試是否可以暗槓"""
         self._init_game()
         # 111m 123m 456m 7m 123p
-        self.engine._hands[0] = Hand(parse_tiles("1m1m1m1m2m3m4m5m6m7m1p2p3p"))
+        self.engine._hands[0] = Hand(parse_tiles("1111m234m567m123p"))
         assert self._has_action(0, GameAction.ANKAN)
 
     def test_get_available_actions_draw_requires_current_player(self):
@@ -816,9 +812,9 @@ class TestActionExecution:
         self._init_game()
         tile_to_discard = Tile(Suit.MANZU, 3)
 
-        self.engine._hands[0] = Hand(parse_tiles("1m3m5m6m7m8m9m1p2p3p4p1s2s3s"))
+        self.engine._hands[0] = Hand(parse_tiles("1356789m1234p123s"))
         # 33m 567p 89p 456s 789s
-        self.engine._hands[1] = Hand(parse_tiles("3m3m5p6p7p8p9p4s5s6s7s8s9s"))
+        self.engine._hands[1] = Hand(parse_tiles("33m56789p456789s"))
 
         self.engine._current_player = 0
         discard_before = len(self.engine.get_discards(0))
@@ -850,11 +846,11 @@ class TestActionExecution:
         self._init_game()
         tile_to_discard = Tile(Suit.MANZU, 4)
 
-        self.engine._hands[0] = Hand(parse_tiles("4m7m8m9m1p2p3p4p5p1s2s3s4s5s"))
+        self.engine._hands[0] = Hand(parse_tiles("4789m12345p12345s"))
         # 23m 56m 678p 9p 678s 9s 5s
-        self.engine._hands[1] = Hand(parse_tiles("2m3m5m6m6p7p8p9p6s7s8s9s5s"))
+        self.engine._hands[1] = Hand(parse_tiles("2356m6789p56789s"))
         # 11m 11p 112345678s
-        self.engine._hands[2] = Hand(parse_tiles("1m1m1p1p1s1s2s3s4s5s6s7s8s"))
+        self.engine._hands[2] = Hand(parse_tiles("11m11p12345678s"))
 
         self.engine._current_player = 0
         self.engine.execute_action(0, GameAction.DISCARD, tile=tile_to_discard)
@@ -933,9 +929,7 @@ class TestActionExecution:
         current_player = self.engine.get_current_player()
         # 確保手牌聽牌且門清
         # 123m 456m 789m 123p 4p
-        self.engine._hands[current_player] = Hand(
-            parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
-        )
+        self.engine._hands[current_player] = Hand(parse_tiles("123456789m1234p"))
 
         assert self._has_action(current_player, GameAction.RICHI)
 
@@ -1059,7 +1053,7 @@ class TestActionExecution:
         kan_tile = Tile(Suit.MANZU, 1)
         ten_tile = Tile(Suit.PINZU, 4)
         # 111m 234m 567m 123p 4p
-        kan_tiles = parse_tiles("1m1m1m2m3m4m5m6m7m1p2p3p4p")
+        kan_tiles = parse_tiles("111234567m1234p")
         self.engine._hands[0] = Hand(kan_tiles)
         self.engine._current_player = 0
         self.engine._last_discarded_tile = kan_tile
@@ -1080,7 +1074,7 @@ class TestActionExecution:
         # 設置玩家0可以暗槓
         ten_tile = Tile(Suit.PINZU, 4)
         # 1111m 234m 567m 123p 4p (聽 4p)
-        ankan_tiles = parse_tiles("1m1m1m1m2m3m4m5m6m7m1p2p3p4p")
+        ankan_tiles = parse_tiles("1111234567m1234p")
         self.engine._hands[0] = Hand(ankan_tiles)
         self.engine._current_player = 0
         assert self.engine._tile_set is not None
@@ -1098,7 +1092,7 @@ class TestActionExecution:
 
         # 設置玩家0可以加槓（已有碰，增加第四張1m）
         # 手牌：111234567m 123p 4p
-        kan_tiles = parse_tiles("1m1m1m2m3m4m5m6m7m1p2p3p4p")
+        kan_tiles = parse_tiles("111234567m1234p")
         hand0 = Hand(kan_tiles)
         kan_tile = Tile(Suit.MANZU, 1)
         hand0.pon(kan_tile)
@@ -1110,7 +1104,7 @@ class TestActionExecution:
 
         # 設置玩家1可以搶槓和（聽1m）
         # 手牌：23m 456m 789p 123p 44p（缺 1m）
-        test_tiles = parse_tiles("2m3m4m5m6m7p8p9p1p2p3p4p4p")
+        test_tiles = parse_tiles("23456m12344789p")
         test_hand = Hand(test_tiles)
         self.engine._hands[1] = test_hand
 
@@ -1140,7 +1134,7 @@ class TestActionExecution:
         kan_tile = Tile(Suit.MANZU, 6)
 
         # 111m 2345m 6666m 7m 88m
-        starting_tiles = parse_tiles("1m1m1m2m3m4m5m6m6m6m7m8m8m")
+        starting_tiles = parse_tiles("1112345666788m")
         self.engine._hands[player] = Hand(starting_tiles)
         self.engine._last_discarded_tile = kan_tile
         self.engine._last_discarded_player = (
@@ -1169,7 +1163,7 @@ class TestActionExecution:
         player = self.engine.get_current_player()
 
         # 手牌：222m 2334455678m
-        starting_tiles = parse_tiles("2m2m2m2m3m3m4m4m5m5m6m7m8m")
+        starting_tiles = parse_tiles("2222334455678m")
         self.engine._hands[player] = Hand(starting_tiles)
 
         self.engine._kan_count = 3
@@ -1219,7 +1213,7 @@ class TestWinningAndScoring:
 
         # 設置玩家0可以搶槓和（聽6p，斷么九）
         # 手牌：234m 567m 234p 66p 78p（聽 6p/9p）
-        test_tiles = parse_tiles("2m3m4m5m6m7m2p3p4p6p6p7p8p")
+        test_tiles = parse_tiles("234567m2346678p")
         self.engine._hands[0] = Hand(test_tiles)
 
         # 檢查搶槓
@@ -1241,7 +1235,7 @@ class TestWinningAndScoring:
         # 設置一個可以嶺上開花和牌的手牌
         # 創建一個和牌型手牌
         # 手牌：123m 456m 789m 123p 4p (嶺上牌 4p)
-        self.engine._hands[0] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p4p"))
+        self.engine._hands[0] = Hand(parse_tiles("123456789m12344p"))
         self.engine._current_player = 0
 
         # 檢查嶺上開花和牌
@@ -1257,7 +1251,7 @@ class TestWinningAndScoring:
         player = self.engine.get_current_player()
         winning_tile = Tile(Suit.PINZU, 4)
         # 門清手牌：123m 456m 789m 123p + 4p
-        self.engine._hands[player] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p4p"))
+        self.engine._hands[player] = Hand(parse_tiles("123456789m12344p"))
         # 模擬剛摸到和牌
         self.engine._last_drawn_tile = (player, winning_tile)
         result = self.engine.check_win(player, winning_tile)
@@ -1271,7 +1265,7 @@ class TestWinningAndScoring:
         discarder = 0
         winner = (discarder + 1) % self.engine.get_num_players()
         winning_tile = Tile(Suit.PINZU, 4)
-        self.engine._hands[winner] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
+        self.engine._hands[winner] = Hand(parse_tiles("123456789m1234p"))
         self.engine._last_discarded_tile = winning_tile
         self.engine._last_discarded_player = discarder
         # 模擬輪到下一位玩家（實際為榮和狀態）
@@ -1288,7 +1282,7 @@ class TestWinningAndScoring:
         self._init_game()
         # 創建一個不和牌的手牌
         # 123m 456m 78m 123p 45p
-        test_tiles = parse_tiles("1m2m3m4m5m6m7m8m1p2p3p4p5p")
+        test_tiles = parse_tiles("12345678m12345p")
         test_hand = Hand(test_tiles)
         self.engine._hands[0] = test_hand
 
@@ -1301,7 +1295,7 @@ class TestWinningAndScoring:
         """測試無役"""
         self._init_game()
         # 234m 567m 789m 2p 4p 22s
-        tiles = parse_tiles("2m3m4m5m6m7m7m8m9m2p4p2s2s")
+        tiles = parse_tiles("234567789m24p22s")
 
         hand = Hand(tiles)
         # 將手牌設為非門清
@@ -1322,14 +1316,14 @@ class TestWinningAndScoring:
     def test_count_dora_zero(self):
         """測試無寶牌計算"""
         self._init_game()
-        self.engine._hands[0] = Hand(parse_tiles("1m1m1m1m2m3m4m5m6m7m9m9m9m"))
+        self.engine._hands[0] = Hand(parse_tiles("1111234567999m"))
         dora_count = self.engine._count_dora(0, Tile(Suit.MANZU, 1))
         assert dora_count == 0
 
     def test_count_dora_one(self):
         """測試有寶牌計算"""
         self._init_game()
-        test_hand = Hand(parse_tiles("1m1m1m1m2m3m4m5m6m7m9m9m9m"))
+        test_hand = Hand(parse_tiles("1111234567999m"))
         self.engine._hands[0] = test_hand
         dora_count = self.engine._count_dora(0, Tile(Suit.MANZU, 1))
         assert dora_count >= 0
@@ -1368,7 +1362,7 @@ class TestWinningAndScoring:
         # For tsumo, hand must include the winning tile (14 tiles total)
         # 3 melds (9 tiles) + 5 tiles in hand = 14 tiles
         # Hand: 1m1m1m 9m9m (winning tile 1m already in hand for is_winning_hand check)
-        self.engine._hands[0] = Hand(parse_tiles("1m1m1m9m9m"))  # 111m 99m
+        self.engine._hands[0] = Hand(parse_tiles("11199m"))  # 111m 99m
 
         # 設置副露
         meld_haku = Meld(MeldType.PON, [Tile(Suit.JIHAI, 5)] * 3, 1)  # 碰白 (from 1)
@@ -1420,7 +1414,7 @@ class TestWinningAndScoring:
         self._init_game()
 
         # 設置玩家0手牌
-        self.engine._hands[0] = Hand(parse_tiles("1m1m9m9m"))
+        self.engine._hands[0] = Hand(parse_tiles("1199m"))
 
         # 設置副露
         meld_haku = Meld(MeldType.PON, [Tile(Suit.JIHAI, 5)] * 3, 1)
@@ -1467,7 +1461,7 @@ class TestWinningAndScoring:
         # 設置玩家0手牌
         # 3副露 (9張) + 4張手牌 = 13張
         # 手牌: 1m1m 9m9m
-        self.engine._hands[0] = Hand(parse_tiles("1m1m9m9m"))
+        self.engine._hands[0] = Hand(parse_tiles("1199m"))
 
         # 設置副露
         meld_haku = Meld(MeldType.PON, [Tile(Suit.JIHAI, 5)] * 3, 1)
@@ -1517,8 +1511,8 @@ class TestWinningAndScoring:
 
         # 玩家1（下家）和玩家3（上家）都能榮和1m
         # 手牌應該有13張，榮和1張後變成14張
-        self.engine._hands[1] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p4p"))  # 13張
-        self.engine._hands[3] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p4p"))  # 13張
+        self.engine._hands[1] = Hand(parse_tiles("23456789m12344p"))  # 13張
+        self.engine._hands[3] = Hand(parse_tiles("23456789m12344p"))  # 13張
 
         self.engine._last_discarded_tile = discard_tile
         self.engine._last_discarded_player = 0
@@ -1538,7 +1532,7 @@ class TestWinningAndScoring:
         discard_tile = Tile(Suit.MANZU, 1)
 
         # 只有玩家2（對面）能榮和
-        self.engine._hands[2] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p4p"))
+        self.engine._hands[2] = Hand(parse_tiles("23456789m12344p"))
 
         self.engine._last_discarded_tile = discard_tile
         self.engine._last_discarded_player = 0
@@ -1558,7 +1552,7 @@ class TestWinningAndScoring:
         discard_tile = Tile(Suit.MANZU, 1)
 
         # 只有玩家3（上家）能榮和
-        self.engine._hands[3] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p4p"))
+        self.engine._hands[3] = Hand(parse_tiles("23456789m12344p"))
 
         self.engine._last_discarded_tile = discard_tile
         self.engine._last_discarded_player = 0
@@ -1582,8 +1576,8 @@ class TestWinningAndScoring:
         discard_tile = Tile(Suit.MANZU, 1)
 
         # 玩家1（下家）和玩家2（對面）都能榮和
-        self.engine._hands[1] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p4p"))
-        self.engine._hands[2] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p4p"))
+        self.engine._hands[1] = Hand(parse_tiles("23456789m12344p"))
+        self.engine._hands[2] = Hand(parse_tiles("23456789m12344p"))
 
         self.engine._last_discarded_tile = discard_tile
         self.engine._last_discarded_player = 0
@@ -1611,7 +1605,7 @@ class TestWinningAndScoring:
         # 設置玩家1和2的手牌（斷么九 平和）
         # 234m 567m 234p 56p 88s (聽4p/7p)
         # 30符 2翻 = 2000點 (閒家)
-        hand_tiles = parse_tiles("2m3m4m5m6m7m2p3p4p5p6p8s8s")
+        hand_tiles = parse_tiles("234567m23456p88s")
         self.engine._hands[1] = Hand(hand_tiles)
         self.engine._hands[2] = Hand(hand_tiles)
 
@@ -1655,11 +1649,11 @@ class TestWinningAndScoring:
 
         # 設置玩家0（莊家）手牌：役牌東
         # 23m 456m 789m 111z 22z (聽1m/4m)
-        self.engine._hands[0] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1z1z1z2z2z"))
+        self.engine._hands[0] = Hand(parse_tiles("23456789m11122z"))
 
         # 設置玩家2手牌：役牌中
         # 23m 456m 789m 555z 66z (聽1m/4m)
-        self.engine._hands[2] = Hand(parse_tiles("2m3m4m5m6m7m8m9m5z5z5z6z6z"))
+        self.engine._hands[2] = Hand(parse_tiles("23456789m55566z"))
 
         self.engine._last_discarded_tile = discard_tile
         self.engine._last_discarded_player = 1
@@ -1688,7 +1682,7 @@ class TestWinningAndScoring:
         discard_tile = Tile(Suit.PINZU, 5)
 
         # 234m 345m 678m 234p 5p (Wait 5p)
-        hand_str = "2m3m4m3m4m5m6m7m8m2p3p4p5p"
+        hand_str = "233445678m2345p"
         self.engine._hands[1] = Hand(parse_tiles(hand_str))
         self.engine._hands[2] = Hand(parse_tiles(hand_str))
         self.engine._hands[3] = Hand(parse_tiles(hand_str))
@@ -1737,7 +1731,7 @@ class TestWinningAndScoring:
         discard_tile = Tile(Suit.PINZU, 5)
 
         # 234m 345m 678m 234p 5p (Wait 5p) - Tanyao
-        hand_str = "2m3m4m3m4m5m6m7m8m2p3p4p5p"
+        hand_str = "233445678m2345p"
 
         # 玩家1能榮和
         self.engine._hands[1] = Hand(parse_tiles(hand_str))
@@ -1767,7 +1761,7 @@ class TestWinningAndScoring:
         discard_tile = Tile(Suit.PINZU, 5)
 
         # 234m 345m 678m 234p 5p (Wait 5p) - Tanyao
-        hand_str = "2m3m4m3m4m5m6m7m8m2p3p4p5p"
+        hand_str = "233445678m2345p"
 
         self.engine._hands[2] = Hand(parse_tiles(hand_str))
         self.engine._hands[3] = Hand(parse_tiles(hand_str))
@@ -1840,7 +1834,7 @@ class TestRyuukyoku:
 
         # 設置三個玩家都可以和牌
         # 123m 456m 789m 123p 4p (聽 4p)
-        tenpai_hand = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
+        tenpai_hand = Hand(parse_tiles("123456789m1234p"))
         self.engine._hands[1] = tenpai_hand
         self.engine._hands[2] = tenpai_hand
         self.engine._hands[3] = tenpai_hand
@@ -1881,7 +1875,7 @@ class TestRyuukyoku:
         player = self.engine.get_current_player()
 
         # 設置九種九牌
-        tiles = parse_tiles("1m9m1p9p1s9s1z2z3z4z5z6z7z1m")
+        tiles = parse_tiles("19m19p19s1234567z1m")
         self.engine._hands[player] = Hand(tiles)
         self.engine._is_first_turn_after_deal = True
 
@@ -1951,9 +1945,9 @@ class TestRyuukyoku:
 
         # 設置三個玩家都可以和牌
         # 123m 456m 789m 123p 4p (聽 4p)
-        self.engine._hands[1] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
-        self.engine._hands[2] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
-        self.engine._hands[3] = Hand(parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p"))
+        self.engine._hands[1] = Hand(parse_tiles("123456789m1234p"))
+        self.engine._hands[2] = Hand(parse_tiles("123456789m1234p"))
+        self.engine._hands[3] = Hand(parse_tiles("123456789m1234p"))
 
         # 檢查三家和了
         result = self.engine._check_sancha_ron()

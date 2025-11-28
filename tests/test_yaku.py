@@ -23,7 +23,7 @@ class TestYakuChecker:
     def test_riichi(self):
         """測試立直"""
         # 手牌：1122334455667m
-        tiles = parse_tiles("1122334455667m")
+        tiles = parse_tiles("11m22m33m44m55m66m7m")
         hand = Hand(tiles)
         hand.set_riichi(True)
 
@@ -178,7 +178,7 @@ class TestYakuChecker:
         """測試七對子"""
         # 七對子
         # 手牌：1122334455667m
-        tiles = parse_tiles("1122334455667m")
+        tiles = parse_tiles("11m22m33m44m55m66m7m")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 7)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -411,7 +411,7 @@ class TestYakuChecker:
         """測試國士無雙役滿"""
         # 國士無雙：13種幺九牌各一張，再有一張幺九牌
         # 手牌：1m 9m 1p 9p 1s 9s 123z 456z 7z
-        tiles = parse_tiles("19m19p19s1234567z")
+        tiles = parse_tiles("19m19p19s1z2z3z4z5z6z7z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 7)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -998,7 +998,7 @@ class TestYakuChecker:
         """測試國士無雙十三面直接判定"""
         # 國士無雙十三面：13種幺九牌各一張，再有一張幺九牌，且該牌為聽牌
         # 手牌：1m 9m 1p 9p 1s 9s 123z 456z 7z
-        tiles = parse_tiles("19m19p19s1234567z")
+        tiles = parse_tiles("19m19p19s1z2z3z4z5z6z7z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 7)
 
