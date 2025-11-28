@@ -140,6 +140,30 @@
 - `honba_bonus`: 本場獎勵
 - `riichi_sticks_bonus`: 供託分配
 
+### 7. AI 玩家系統
+
+#### `BasePlayer`
+玩家基類 (Abstract Base Class)
+- `decide_action(game_state, player_index, hand, available_actions, public_info)`: 決定下一步動作
+
+#### `RandomPlayer`
+隨機行動 AI
+- 策略：隨機選擇合法動作，優先和牌
+
+#### `SimplePlayer`
+簡單啟發式 AI
+- 策略：優先和牌 > 優先立直 > 切字牌/老頭牌
+
+#### `DefensivePlayer`
+防守型 AI
+- 策略：有人立直時優先切現物（安全牌），否則同 `SimplePlayer`
+
+#### `PublicInfo`
+公開遊戲資訊
+- `discards`: 各家捨牌
+- `melds`: 各家副露
+- `riichi_players`: 立直玩家列表
+
 ## 便利函數
 
 ### `parse_tiles(tile_string)`
@@ -164,29 +188,36 @@ if is_winning_hand(tiles, winning_tile):
 ## 使用示例
 
 ```python
-from pyriichi import RuleEngine, GameAction, parse_tiles
+from pyriichi.rules import RuleEngine, GameAction, GamePhase
+from pyriichi.player import RandomPlayer
 
-# 創建遊戲
+# 初始化遊戲與玩家
 engine = RuleEngine(num_players=4)
+players = [RandomPlayer(f"Player {i}") for i in range(4)]
+
 engine.start_game()
 engine.start_round()
+engine.deal()
 
-# 發牌
-hands = engine.deal()
+# 遊戲主循環
+while engine.get_phase() == GamePhase.PLAYING:
+    current_player_idx = engine.get_current_player()
+    player = players[current_player_idx]
 
-# 摸牌
-player = engine.get_current_player()
-engine.execute_action(player, GameAction.DRAW)
+    # 獲取可用動作
+    actions = engine.get_available_actions(current_player_idx)
+    if not actions: break
 
-# 打牌
-hand = engine.get_hand(player)
-if hand.tiles:
-    engine.execute_action(player, GameAction.DISCARD, tile=hand.tiles[0])
+    # AI 決定動作
+    action, tile = player.decide_action(
+        engine.game_state,
+        current_player_idx,
+        engine.get_hand(current_player_idx),
+        actions
+    )
 
-# 檢查和牌
-winning_result = engine.check_win(player, winning_tile)
-if winning_result:
-    print(f"和牌！翻數: {winning_result['han']}, 得分: {winning_result['points']}")
+    # 執行動作
+    engine.execute_action(current_player_idx, action, tile)
 ```
 
 ## 詳細文檔

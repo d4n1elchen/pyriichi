@@ -13,6 +13,7 @@
 - 💰 **得分計算** - 準確的符數、翻數和點數計算，符合日本麻將規則
 - 🎮 **遊戲引擎** - 完整的遊戲流程控制，支援吃、碰、槓、立直等操作
 - 📊 **狀態管理** - 局數、風、本場、供託等遊戲狀態管理
+- 🤖 **AI 玩家** - 內建多種 AI 策略（隨機、簡單啟發式、防守型），支援自動對局
 - ⚙️ **規則配置** - 支援標準競技規則和自定義規則配置
 - 🔧 **易於整合** - 清晰的 API 設計，易於整合到其他應用程式
 
@@ -44,23 +45,40 @@ pip install -e .
 ### 基本使用
 
 ```python
-from pyriichi import RuleEngine, GameAction, parse_tiles
+from pyriichi.rules import RuleEngine, GameAction, GamePhase
+from pyriichi.player import RandomPlayer
 
-# 創建遊戲引擎
+# 初始化遊戲與玩家
 engine = RuleEngine(num_players=4)
+players = [RandomPlayer(f"Player {i}") for i in range(4)]
 
-# 開始新遊戲
 engine.start_game()
 engine.start_round()
+engine.deal()
 
-# 發牌
-hands = engine.deal()
-print(f"發牌完成，當前階段: {engine.get_phase()}")
+print(f"遊戲開始！當前階段: {engine.get_phase()}")
 
-# 獲取當前玩家手牌
-current_player = engine.get_current_player()
-hand = engine.get_hand(current_player)
-print(f"玩家 {current_player} 的手牌: {hand.tiles}")
+# 遊戲主循環
+while engine.get_phase() == GamePhase.PLAYING:
+    current_player_idx = engine.get_current_player()
+    player = players[current_player_idx]
+
+    # 獲取可用動作
+    actions = engine.get_available_actions(current_player_idx)
+    if not actions: break
+
+    # AI 決定動作
+    action, tile = player.decide_action(
+        engine.game_state,
+        current_player_idx,
+        engine.get_hand(current_player_idx),
+        actions
+    )
+
+    print(f"玩家 {current_player_idx} 執行: {action.name}" + (f" {tile}" if tile else ""))
+
+    # 執行動作
+    engine.execute_action(current_player_idx, action, tile)
 ```
 
 ### 牌的表示和操作
@@ -427,6 +445,23 @@ print("遊戲結束")
 - **`YakuChecker`** - 役種判定器，檢查所有役種
 - **`ScoreCalculator`** - 得分計算器，計算符數、翻數和點數
 - **`RulesetConfig`** - 規則配置類，支援標準競技規則和自定義規則
+- **`BasePlayer`** - AI 玩家基類
+
+### AI 玩家
+
+PyRiichi 內建多種 AI 策略，可用於測試或對戰：
+
+- **`RandomPlayer`**: 完全隨機行動，適合模糊測試。
+- **`SimplePlayer`**: 簡單啟發式策略（優先和牌 > 立直 > 切字牌）。
+- **`DefensivePlayer`**: 帶有防守意識的 AI，有人立直時會優先切現物（安全牌）。
+
+```python
+from pyriichi.player import SimplePlayer, DefensivePlayer
+
+# 創建不同策略的玩家
+p1 = SimplePlayer("Attacker")
+p2 = DefensivePlayer("Defender")
+```
 
 ### 主要枚舉
 
