@@ -74,6 +74,69 @@ def get_tile_sort_key(tile_str: str):
     return (suit_map.get(suit_char, 4), rank, red_sort_val)
 
 
+def get_tile_display_name(tile_str: str) -> str:
+    # Convert string (e.g. "1m") to Tile object then get localized name
+    is_red = "r" in tile_str
+    clean = tile_str.replace("r", "")
+    suit_char = clean[-1]
+    rank = int(clean[:-1])
+
+    suit_map = {"m": Suit.MANZU, "p": Suit.PINZU, "s": Suit.SOZU, "z": Suit.JIHAI}
+    suit = suit_map.get(suit_char)
+    if not suit:
+        return tile_str
+
+    t = Tile(suit, rank, is_red)
+    return t.get_name("zh")
+
+
+def localize_meld(meld_str: str) -> str:
+    # Format: type(tiles) e.g. "chi(1m2m3m)"
+    if "(" not in meld_str or ")" not in meld_str:
+        return meld_str
+
+    type_str, tiles_part = meld_str.split("(", 1)
+    tiles_part = tiles_part.rstrip(")")
+
+    # Localize Type
+    type_map = {
+        "chi": "吃",
+        "pon": "碰",
+        "kan": "槓",
+        "ankan": "暗槓",
+        "riichi": "立直",
+    }
+    type_zh = type_map.get(type_str, type_str)
+
+    # Localize Tiles
+    # Need to split tiles_part "1m2m3m" -> ["1m", "2m", "3m"]
+    # Regex is best but let's do simple parsing
+    localized_tiles = []
+    i = 0
+    while i < len(tiles_part):
+        # Check for 'r' prefix
+        is_red = False
+        if tiles_part[i] == "r":
+            is_red = True
+            i += 1
+
+        if i >= len(tiles_part):
+            break
+
+        rank = tiles_part[i]
+        i += 1
+        if i >= len(tiles_part):
+            break
+
+        suit = tiles_part[i]
+        i += 1
+
+        tile_str = f"{'r' if is_red else ''}{rank}{suit}"
+        localized_tiles.append(get_tile_display_name(tile_str))
+
+    return f"{type_zh}({''.join(localized_tiles)})"
+
+
 # --- Game Logic Classes ---
 
 
@@ -475,7 +538,8 @@ class MahjongGUI:
         self.lbl_info.config(
             text=f"{state['round_wind']} {state['round_number']} | 本場: {state['honba']} | 立直棒: {state['riichi_sticks']}"
         )
-        self.lbl_dora.config(text=f"寶牌: {' '.join(state['dora_indicators'])}")
+        dora_display = [get_tile_display_name(t) for t in state["dora_indicators"]]
+        self.lbl_dora.config(text=f"寶牌: {' '.join(dora_display)}")
 
         # Render Opponents
         for pid, frame in self.player_frames.items():
@@ -486,7 +550,10 @@ class MahjongGUI:
             score = state["scores"][pid]
 
             # Simple representation
-            txt = f"P{pid}\n[{score}]\n{'🀠 ' * count}\n{' '.join(melds)}"
+            # Convert melds to Chinese
+            melds_display = [localize_meld(m) for m in melds]
+
+            txt = f"P{pid}\n[{score}]\n{'🀠 ' * count}\n{' '.join(melds_display)}"
             ttk.Label(frame, text=txt, justify="center").pack()
 
         # Render River
@@ -517,7 +584,8 @@ class MahjongGUI:
 
             # Show last 6
             shown = discards[-6:]
-            txt = " ".join(shown)
+            shown_display = [get_tile_display_name(t) for t in shown]
+            txt = " ".join(shown_display)
             lbl = tk.Label(
                 self.frame_table, text=txt, bg=COLOR_TABLE, fg="white", font=FONT_MEDIUM
             )
@@ -563,6 +631,7 @@ class MahjongGUI:
 
         for idx, t_str in enumerate(standing_tiles):
             color = get_tile_color(t_str)
+            display_name = get_tile_display_name(t_str)
 
             # Add gap before drawn tile
             padx = 2
@@ -571,7 +640,7 @@ class MahjongGUI:
 
             btn = tk.Button(
                 self.frame_hand,
-                text=t_str,
+                text=display_name,
                 font=FONT_LARGE,
                 width=4,
                 bg="white",
@@ -582,7 +651,11 @@ class MahjongGUI:
             btn.pack(side=tk.LEFT, padx=padx)
 
         if melds:
-            ttk.Label(self.frame_hand, text="   " + " ".join(melds)).pack(side=tk.LEFT)
+            # Localize melds
+            melds_zh = [localize_meld(m) for m in melds]
+            ttk.Label(self.frame_hand, text="   " + " ".join(melds_zh)).pack(
+                side=tk.LEFT
+            )
 
     def enable_human_controls(
         self,

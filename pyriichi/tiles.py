@@ -190,6 +190,18 @@ class Tile:
 
         return f"{prefix}{numeral}{suffix}"
 
+    def get_name(self, locale: str = "zh") -> str:
+        """
+        獲取牌的本地化名稱。
+
+        Args:
+            locale (str): 語言代碼 ("zh", "ja", "en")。
+
+        Returns:
+            str: 本地化名稱。
+        """
+        return self._format_name(locale)
+
 
 def create_tile(suit: str, rank: int, is_red: bool = False) -> Tile:
     """
