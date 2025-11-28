@@ -95,12 +95,10 @@ class ActionResult:
     kan: Optional[bool] = None
     ankan: Optional[bool] = None
     rinshan_win: Optional[WinResult] = None
+    win_results: Dict[int, WinResult] = field(default_factory=dict)
     meld: Optional[Meld] = None
     called_action: Optional[GameAction] = None
     called_tile: Optional[Tile] = None
-
-
-# ... (skip to end_round)
 
 
 class RuleEngine:
@@ -713,6 +711,7 @@ class RuleEngine:
         # 設置結果
         result.winners = [player]
         result.rinshan_win = win_result if is_rinshan else None
+        result.win_results[player] = win_result
 
         # 切換到和牌階段
         self._phase = GamePhase.WINNING
@@ -769,6 +768,7 @@ class RuleEngine:
             win_result = self.check_win(winner, winning_tile, is_chankan=False)
             if win_result:
                 self.apply_win_score(win_result)
+                result.win_results[winner] = win_result
 
         # 設置結果
         result.winners = winners

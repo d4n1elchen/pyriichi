@@ -1,722 +1,693 @@
-"""
-PyRiichi Demo UI
-
-提供一個最小化的 Tkinter 視覺介面示例，演示如何使用 PyRiichi
-的 `RuleEngine` 進行基本的摸打流程。玩家（0 號）透過介面操作，
-其餘三名對手僅會隨機摸牌並打出一張牌。
-"""
-
+import os
+import queue
 import random
+import sys
+import threading
+import time
 import tkinter as tk
-from typing import Iterable, Optional
+from tkinter import messagebox, ttk
+from typing import Dict, List, Optional, Tuple
 
-from pyriichi.hand import Meld
-from pyriichi.rules import GameAction, GamePhase, RuleEngine, WinResult
-from pyriichi.tiles import Tile, Suit
+# Add project root to path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from pyriichi.hand import Hand
+from pyriichi.player import (
+    BasePlayer,
+    DefensivePlayer,
+    PublicInfo,
+    RandomPlayer,
+    SimplePlayer,
+)
+from pyriichi.rules import GameAction, GamePhase, GameState, RuleEngine
+from pyriichi.tiles import Suit, Tile
+
+# --- Constants & Styles ---
+WINDOW_WIDTH = 1200
+WINDOW_HEIGHT = 800
+
+# Colors (Dark Theme)
+COLOR_BG = "#212121"  # Dark Grey Background
+COLOR_TABLE = "#004d40"  # Deep Teal (Mahjong Table)
+COLOR_PANEL = "#424242"  # Lighter Grey for Panels
+COLOR_TEXT = "#ffffff"  # White Text
+COLOR_ACCENT = "#ffb74d"  # Orange Accent
+COLOR_BUTTON = "#5c6bc0"  # Indigo Buttons
+
+# Tile Colors
+COLOR_MANZU = "#ef5350"  # Red
+COLOR_PINZU = "#29b6f6"  # Light Blue
+COLOR_SOZU = "#66bb6a"  # Green
+COLOR_JIHAI = "#ffffff"  # White
+COLOR_RED = "#d32f2f"  # Dark Red
+
+FONT_TITLE = ("Helvetica", 24, "bold")
+FONT_LARGE = ("Helvetica", 16, "bold")
+FONT_MEDIUM = ("Helvetica", 12)
+FONT_SMALL = ("Helvetica", 10)
 
 
-def tile_to_vertical_text(tile: Tile) -> str:
-    """將牌轉換為垂直顯示的文字。"""
-    text = tile.zh
-    return "\n".join(text)
+def get_tile_color(tile_str: str) -> str:
+    if "m" in tile_str:
+        return COLOR_MANZU
+    if "p" in tile_str:
+        return COLOR_PINZU
+    if "s" in tile_str:
+        return COLOR_SOZU
+    return COLOR_JIHAI
 
 
-def format_tiles_chinese(tiles: Iterable[Tile]) -> str:
-    """將多張牌格式化為中文字串。"""
-    tile_list = list(tiles)
-    return " ".join(tile.zh for tile in tile_list) if tile_list else "(無)"
+def get_tile_sort_key(tile_str: str):
+    # Sort Key: Suit (m, p, s, z), Rank, IsRed
+    is_red = "r" in tile_str
+    clean = tile_str.replace("r", "")
+
+    suit_map = {"m": 0, "p": 1, "s": 2, "z": 3}
+    suit_char = clean[-1]
+    rank = int(clean[:-1])
+
+    # Red 5s (5mr, 5pr, 5sr) should sort with their respective 5s,
+    # but perhaps come before or after regular 5s.
+    # Let's make red 5s come before regular 5s of the same suit.
+    red_sort_val = 0 if is_red else 1
+
+    return (suit_map.get(suit_char, 4), rank, red_sort_val)
 
 
-def meld_to_chinese(meld: Meld) -> str:
-    kind = meld.type.zh
-    tiles_text = " ".join(tile.zh for tile in meld.tiles)
-    return f"{kind}({tiles_text})"
+# --- Game Logic Classes ---
 
 
-class MahjongDemoUI:
-    """簡易立直麻將 Demo UI。"""
-
-    def __init__(self, human_player: int = 0, ai_delay_ms: int = 600) -> None:
-        self.human_player = human_player
-        self.ai_players = [i for i in range(4) if i != human_player]
-        self.ai_delay_ms = ai_delay_ms
-
-        self.engine = RuleEngine(num_players=4)
-
-        self.root = tk.Tk()
-        self.root.title("PyRiichi Demo UI")
-
+class GUIHumanPlayer(BasePlayer):
+    def __init__(self, name: str, input_queue: queue.Queue, output_queue: queue.Queue):
+        super().__init__(name)
+        self.input_queue = input_queue
+        self.output_queue = output_queue
         self.last_drawn_tile: Optional[Tile] = None
-        self._cached_tsumo_result: Optional[WinResult] = None
 
-        self.info_label = tk.Label(self.root, text="初始化中...")
-        self.info_label.pack(pady=8)
+    def decide_action(
+        self,
+        game_state: GameState,
+        player_index: int,
+        hand: Hand,
+        available_actions: List[GameAction],
+        public_info: Optional[PublicInfo] = None,
+    ) -> Tuple[GameAction, Optional[Tile]]:
+        # Auto-Draw Logic:
+        # Only auto-draw if DRAW is available AND no interrupts (Chi/Pon/Kan/Ron) are available.
+        # If interrupts are available, we must let the user choose (Pass or Interrupt).
+        # Note: If we Pass, the engine will then offer DRAW again (or auto-draw if we implement that loop).
+        # But here, if we have both, we should stop.
 
-        controls_frame = tk.Frame(self.root)
-        controls_frame.pack(pady=4)
+        interrupts = [
+            GameAction.CHI,
+            GameAction.PON,
+            GameAction.KAN,
+            GameAction.RON,
+            GameAction.ANKAN,
+        ]
+        has_interrupt = any(action in available_actions for action in interrupts)
 
-        self.draw_button = tk.Button(controls_frame, text="摸牌", command=self.draw_tile)
-        self.draw_button.pack(side=tk.LEFT, padx=4)
+        if GameAction.DRAW in available_actions and not has_interrupt:
+            return GameAction.DRAW, None
 
-        reset_button = tk.Button(controls_frame, text="重新開始", command=self.start_new_round)
-        reset_button.pack(side=tk.LEFT, padx=4)
+        # Notify GUI that it's human's turn
+        self.output_queue.put(
+            {
+                "type": "human_turn",
+                "actions": available_actions,
+                "hand": hand,
+                "last_drawn_tile": str(self.last_drawn_tile)
+                if self.last_drawn_tile
+                else None,
+            }
+        )
 
-        self.reaction_frame = tk.Frame(self.root)
-        self.reaction_frame.pack(fill=tk.X, padx=8, pady=4)
+        # Wait for action from GUI
+        action_data = self.input_queue.get()
+        return action_data["action"], action_data.get("tile")
 
-        self.hand_frame = tk.Frame(self.root)
-        self.hand_frame.pack(padx=8, pady=8)
 
-        self.opponents_frame = tk.Frame(self.root)
-        self.opponents_frame.pack(fill=tk.X, padx=8, pady=4)
+class GameThread(threading.Thread):
+    def __init__(
+        self, difficulty: str, update_queue: queue.Queue, human_input_queue: queue.Queue
+    ):
+        super().__init__()
+        self.difficulty = difficulty
+        self.update_queue = update_queue
+        self.human_input_queue = human_input_queue
+        self.engine = RuleEngine(num_players=4)
+        self.running = True
+        self.human_seat = -1
+        self.players = []
+        self.human_last_drawn_tile: Optional[Tile] = None
 
-        log_frame = tk.Frame(self.root)
-        log_frame.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
+    def run(self):
+        try:
+            self._setup_game()
+            self._game_loop()
+        except Exception as e:
+            import traceback
 
-        log_label = tk.Label(log_frame, text="遊戲記錄")
-        log_label.pack(anchor=tk.W)
+            traceback.print_exc()
+            self.update_queue.put({"type": "error", "message": str(e)})
 
-        self.log_text = tk.Text(log_frame, height=16, state=tk.DISABLED)
-        self.log_text.pack(fill=tk.BOTH, expand=True)
+    def _setup_game(self):
+        if self.difficulty == "Easy":
+            ai_class = RandomPlayer
+        elif self.difficulty == "Medium":
+            ai_class = SimplePlayer
+        else:
+            ai_class = DefensivePlayer
 
-        self.pending_reaction = None
+        self.human_seat = random.randint(0, 3)
+        self.players = []
+        for i in range(4):
+            if i == self.human_seat:
+                self.players.append(
+                    GUIHumanPlayer(f"You", self.human_input_queue, self.update_queue)
+                )
+            else:
+                self.players.append(ai_class(f"AI {i}"))
 
-        self.start_new_round()
+        self.update_queue.put(
+            {
+                "type": "setup_complete",
+                "human_seat": self.human_seat,
+                "round_wind": self.engine.game_state.round_wind.name,
+            }
+        )
 
-    def _has_action(self, player: int, action: GameAction) -> bool:
-        """檢查指定玩家是否可以執行某動作。"""
-        return action in self.engine.get_available_actions(player)
-
-    # ------------------------------------------------------------------
-    # 遊戲流程控制
-    # ------------------------------------------------------------------
-    def start_new_round(self) -> None:
-        """初始化並發牌。"""
-
+    def _game_loop(self):
         self.engine.start_game()
-        self.engine.start_round()
-        hands = self.engine.deal()
 
-        self.last_drawn_tile = None
-        self._cached_tsumo_result = None
-        self.clear_reaction_options()
-        self.log(f"新的一局開始！莊家為玩家 {self.engine.get_game_state().dealer}")
-        self.log(f'你的起始手牌: {" ".join(tile.zh for tile in hands[self.human_player])}')
+        while (
+            self.running
+            and self.engine.game_state.round_number <= 4
+            and self.engine.game_state.round_wind
+            == self.engine.game_state.round_wind.EAST
+        ):
+            self.engine.start_round()
+            self.engine.deal()
+            self._notify_state_update()
 
-        self.refresh_ui()
-        self.schedule_next_turn()
+            while self.engine.get_phase() == GamePhase.PLAYING and self.running:
+                current_player_idx = self.engine.get_current_player()
+                player = self.players[current_player_idx]
+                actions = self.engine.get_available_actions(current_player_idx)
 
-    def schedule_next_turn(self) -> None:
-        """排程下一位玩家的行動。"""
-
-        if self.engine.get_phase() != GamePhase.PLAYING:
-            self.end_round_if_needed()
-            return
-
-        current = self.engine.get_current_player()
-        self.update_info_label()
-
-        self.refresh_hand_ui(enable=current == self.human_player)
-        self.update_controls()
-
-        if current == self.human_player:
-            # 僅自動摸牌，打牌仍由玩家操作
-            self.root.after(self.ai_delay_ms // 2, self.auto_human_draw)
-        else:
-            self.root.after(self.ai_delay_ms, self.ai_take_turn)
-
-    def auto_human_draw(self) -> None:
-        if self.engine.get_phase() != GamePhase.PLAYING:
-            self.end_round_if_needed()
-            return
-
-        if self.pending_reaction:
-            return
-
-        hand = self.engine.get_hand(self.human_player)
-        if hand.total_tile_count() < 14 and self._has_action(self.human_player, GameAction.DRAW):
-            self.draw_tile()
-        else:
-            # 若無法自動摸牌，恢復玩家手動操作
-            self.refresh_hand_ui(enable=True)
-            self.update_controls()
-            self._cached_tsumo_result = None
-
-    def end_round_if_needed(self, extra_message: Optional[str] = None) -> None:
-        """若遊戲階段已經結束，停用操作並顯示訊息。"""
-
-        phase = self.engine.get_phase()
-        if phase == GamePhase.PLAYING:
-            return
-
-        self.clear_reaction_options()
-
-        if extra_message:
-            self.log(extra_message)
-
-        if phase == GamePhase.RYUUKYOKU:
-            self.log("本局流局，請重新開始。")
-        elif phase == GamePhase.WINNING:
-            self.log("出現和牌，示例在此結束。")
-        else:
-            self.log(f"遊戲階段：{phase.value}")
-
-        self.refresh_hand_ui(enable=False)
-        self.update_controls()
-
-    # ------------------------------------------------------------------
-    # 玩家操作
-    # ------------------------------------------------------------------
-    def draw_tile(self) -> None:
-        """玩家摸牌。"""
-
-        hand = self.engine.get_hand(self.human_player)
-        if hand.total_tile_count() >= 14:
-            self.log("手牌已達 14 張，請先打出一張牌。")
-            return
-
-        if not self._has_action(self.human_player, GameAction.DRAW):
-            self.log("目前無法摸牌。")
-            return
-
-        result = self.engine.execute_action(self.human_player, GameAction.DRAW)
-        if result.ryuukyoku:
-            self.log("牌山耗盡，流局！")
-            self.last_drawn_tile = None
-            self._cached_tsumo_result = None
-            self.end_round_if_needed()
-            return
-
-        if result.drawn_tile is not None:
-            self.log(f"你摸到了 {result.drawn_tile.zh}")
-            self.last_drawn_tile = result.drawn_tile
-        else:
-            self.last_drawn_tile = None
-
-        if result.is_last_tile:
-            self.log("這是海底最後一張牌。")
-
-        self._cached_tsumo_result = None
-        self.refresh_ui()
-
-    def discard_tile(self, tile) -> None:
-        """玩家打出一張牌。"""
-
-        if not self._has_action(self.human_player, GameAction.DISCARD):
-            self.log("目前無法打牌。")
-            return
-
-        self.engine.execute_action(self.human_player, GameAction.DISCARD, tile=tile)
-        self.log(f"你打出了 {tile.zh}")
-
-        self.last_drawn_tile = None
-        self._cached_tsumo_result = None
-
-        self.refresh_ui()
-        if not self.handle_reactions():
-            self.schedule_next_turn()
-
-    # ------------------------------------------------------------------
-    # AI 行動
-    # ------------------------------------------------------------------
-    def ai_take_turn(self) -> None:
-        """簡單 AI：摸牌後隨機打出一張牌。"""
-
-        if self.engine.get_phase() != GamePhase.PLAYING:
-            self.end_round_if_needed()
-            return
-
-        player = self.engine.get_current_player()
-        if player == self.human_player:
-            # 可能在排程期間狀態已變更
-            self.schedule_next_turn()
-            return
-
-        hand = self.engine.get_hand(player)
-        if len(hand.tiles) < 14 and self._has_action(player, GameAction.DRAW):
-            result = self.engine.execute_action(player, GameAction.DRAW)
-            if result.ryuukyoku:
-                self.log(f"玩家 {player} 嶺上摸牌失敗，流局。")
-                self.end_round_if_needed()
-                return
-            if result.drawn_tile is not None:
-                self.log(f"玩家 {player} 摸牌")
-            if result.is_last_tile:
-                self.log(f"玩家 {player} 摸到了最後一張牌。")
-
-        hand = self.engine.get_hand(player)
-        if hand.tiles:
-            tile = random.choice(hand.tiles)
-            self.engine.execute_action(player, GameAction.DISCARD, tile=tile)
-            self.log(f"玩家 {player} 打出了 {tile.zh}")
-
-        self.refresh_ui()
-
-        if not self.handle_reactions():
-            self.schedule_next_turn()
-
-    def handle_reactions(self, start_offset: int = 1) -> bool:
-        """處理其他玩家對最新捨牌的鳴牌。"""
-
-        last_tile = self.engine.get_last_discard()
-        last_player = self.engine.get_last_discard_player()
-        if last_tile is None or last_player is None:
-            return False
-
-        tile_label = last_tile.zh
-        num_players = self.engine.get_num_players()
-
-        for offset in range(start_offset, num_players):
-            caller = (last_player + offset) % num_players
-            if caller == self.human_player:
-                options = self._build_human_reaction_options(last_tile, tile_label, offset)
-                if options:
-                    self.pending_reaction = {
-                        "tile": last_tile,
-                        "tile_label": tile_label,
-                        "options": options,
-                        "next_offset": offset + 1,
-                    }
-                    self.show_reaction_options(tile_label, options)
-                    self.log(f"你可以對 {tile_label} 鳴牌，請選擇。")
-                    self.update_controls()
-                    return True
-                continue
-
-            if self._has_action(caller, GameAction.KAN):
-                self.clear_reaction_options()
-                result = self.engine.execute_action(caller, GameAction.KAN, tile=last_tile)
-                self.log(f"玩家 {caller} 槓了 {tile_label}")
-                if result.rinshan_tile is not None:
-                    self.log(f"玩家 {caller} 嶺上摸到 {result.rinshan_tile.zh}")
-                self.refresh_ui()
-                if caller != self.human_player:
-                    self.root.after(self.ai_delay_ms, self.ai_take_turn)
-                else:
-                    self.last_drawn_tile = result.rinshan_tile
-                    self.schedule_next_turn()
-                return True
-
-            if self._has_action(caller, GameAction.PON):
-                self.clear_reaction_options()
-                self.engine.execute_action(caller, GameAction.PON)
-                self.log(f"玩家 {caller} 碰了 {tile_label}")
-                self.refresh_ui()
-                if caller != self.human_player:
-                    self.root.after(self.ai_delay_ms, self.ai_take_turn)
-                else:
-                    self.schedule_next_turn()
-                return True
-
-            if offset == 1:
-                sequences = self.engine.get_available_chi_sequences(caller)
-                if sequences:
-                    sequence = sequences[0]
-                    combination = sequence + [last_tile]
-                    self.clear_reaction_options()
-                    self.engine.execute_action(caller, GameAction.CHI, sequence=sequence)
-                    self.log(f"玩家 {caller} 吃了 {tile_label} ({format_tiles_chinese(combination)})")
-                    self.refresh_ui()
-                    if caller != self.human_player:
-                        self.root.after(self.ai_delay_ms, self.ai_take_turn)
-                    else:
-                        self.schedule_next_turn()
-                    return True
-
-        return False
-
-    # ------------------------------------------------------------------
-    # UI 更新
-    # ------------------------------------------------------------------
-    def refresh_ui(self) -> None:
-        self.update_info_label()
-        self.refresh_hand_ui(enable=self.engine.get_current_player() == self.human_player)
-        self.refresh_opponents_ui()
-        self.update_controls()
-
-    def refresh_hand_ui(self, enable: bool) -> None:
-        """更新玩家的手牌顯示。"""
-
-        for widget in self.hand_frame.winfo_children():
-            widget.destroy()
-
-        top_container = tk.Frame(self.hand_frame)
-        top_container.pack(side=tk.TOP, anchor=tk.W)
-
-        hand = self.engine.get_hand(self.human_player)
-        discards = self.engine.get_discards(self.human_player)
-        discard_label = tk.Label(
-            top_container,
-            text=f"捨牌池: {format_tiles_chinese(discards)}",
-            anchor=tk.W,
-        )
-        discard_label.pack(side=tk.LEFT, padx=12)
-
-        melds = hand.melds
-        meld_text = " ".join(meld_to_chinese(meld) for meld in melds) if melds else "(無)"
-        meld_label = tk.Label(
-            top_container,
-            text=f"我的副露: {meld_text}",
-            anchor=tk.W,
-        )
-        meld_label.pack(side=tk.LEFT, padx=12)
-
-        bottom_container = tk.Frame(self.hand_frame)
-        bottom_container.pack(side=tk.TOP, anchor=tk.W)
-
-        tiles_container = tk.Frame(bottom_container)
-        tiles_container.pack(side=tk.LEFT, padx=4)
-
-        sorted_tiles = sorted(hand.tiles)
-        drawn_tile = None
-        if self.last_drawn_tile is not None:
-            for idx, tile in enumerate(sorted_tiles):
-                if tile == self.last_drawn_tile:
-                    drawn_tile = sorted_tiles.pop(idx)
+                if not actions:
                     break
 
-        for tile in sorted_tiles:
-            btn = tk.Button(
-                tiles_container,
-                text=tile_to_vertical_text(tile),
-                width=2,
-                height=3,
-                font=("Helvetica", 12),
-                justify=tk.CENTER,
-                anchor=tk.CENTER,
-                relief=tk.RIDGE,
-                bd=3,
-                command=lambda t=tile: self.discard_tile(t),
-                state=tk.NORMAL if enable else tk.DISABLED,
-            )
-            btn.pack(side=tk.LEFT, padx=3)
+                if current_player_idx == self.human_seat and isinstance(
+                    player, GUIHumanPlayer
+                ):
+                    player.last_drawn_tile = self.human_last_drawn_tile
 
-        if drawn_tile is not None:
-            btn = tk.Button(
-                tiles_container,
-                text=tile_to_vertical_text(drawn_tile),
-                width=2,
-                height=3,
-                font=("Helvetica", 12),
-                justify=tk.CENTER,
-                anchor=tk.CENTER,
-                relief=tk.RIDGE,
-                bd=3,
-                command=lambda t=drawn_tile: self.discard_tile(t),
-                state=tk.NORMAL if enable else tk.DISABLED,
-            )
-            btn.pack(side=tk.LEFT, padx=3)
+                if current_player_idx != self.human_seat:
+                    time.sleep(0.3)  # Faster pacing
+                    public_info = PublicInfo(
+                        turn_number=self.engine._turn_count,
+                        dora_indicators=self.engine._tile_set.get_dora_indicators(1),
+                        discards={i: self.engine.get_discards(i) for i in range(4)},
+                        melds={i: self.engine.get_hand(i).melds for i in range(4)},
+                        riichi_players=[
+                            i for i, r in self.engine._riichi_ippatsu.items() if r
+                        ],
+                        scores=self.engine.game_state.scores,
+                    )
+                    action, tile = player.decide_action(
+                        self.engine.game_state,
+                        current_player_idx,
+                        self.engine.get_hand(current_player_idx),
+                        actions,
+                        public_info,
+                    )
+                else:
+                    action, tile = player.decide_action(
+                        self.engine.game_state,
+                        current_player_idx,
+                        self.engine.get_hand(current_player_idx),
+                        actions,
+                    )
 
-        action_container = tk.Frame(bottom_container)
-        action_container.pack(side=tk.LEFT, padx=8)
+                result = self.engine.execute_action(current_player_idx, action, tile)
 
-        if enable and self._has_action(self.human_player, GameAction.ANKAN):
-            ankan_btn = tk.Button(
-                action_container,
-                text="暗槓",
-                command=self.perform_ankan,
-            )
-            ankan_btn.pack(side=tk.TOP, pady=2)
+                # Track drawn tile for human
+                if current_player_idx == self.human_seat:
+                    if action == GameAction.DRAW and result.drawn_tile:
+                        self.human_last_drawn_tile = result.drawn_tile
+                    elif action == GameAction.DISCARD:
+                        self.human_last_drawn_tile = None  # Reset after discard
 
-        tsumo_result = None
-        if enable and self.engine.get_phase() == GamePhase.PLAYING and self.last_drawn_tile is not None:
-            tsumo_result = self._compute_win_result(self.human_player, self.last_drawn_tile, remove_tile=True)
-
-        self._cached_tsumo_result = tsumo_result
-
-        if enable and tsumo_result is not None:
-            tsumo_btn = tk.Button(
-                action_container,
-                text="自摸",
-                command=self.perform_tsumo,
-            )
-            tsumo_btn.pack(side=tk.TOP, pady=2)
-
-        # discards/melds 已在上方顯示
-
-    def refresh_opponents_ui(self) -> None:
-        """更新其他玩家的捨牌與副露資訊。"""
-
-        for widget in self.opponents_frame.winfo_children():
-            widget.destroy()
-
-        num_players = self.engine.get_num_players()
-        for player in range(num_players):
-            if player == self.human_player:
-                continue
-
-            frame = tk.Frame(self.opponents_frame)
-            frame.pack(anchor=tk.W, pady=2, fill=tk.X)
-
-            hand = self.engine.get_hand(player)
-            melds = hand.melds
-            meld_text = " ".join(meld_to_chinese(meld) for meld in melds) if melds else "(無)"
-            discards = self.engine.get_discards(player)
-            discard_text = format_tiles_chinese(discards)
-            concealed_count = len(hand.tiles)
-            total_tiles = hand.total_tile_count()
-
-            info = (
-                f"玩家 {player} | 手牌:{total_tiles} 張 (暗牌 {concealed_count}) | "
-                f"副露: {meld_text} | 捨牌: {discard_text}"
-            )
-            label = tk.Label(frame, text=info, anchor=tk.W, justify=tk.LEFT)
-            label.pack(fill=tk.X)
-
-    def _reset_reaction_widgets(self) -> None:
-        for widget in self.reaction_frame.winfo_children():
-            widget.destroy()
-
-    def clear_reaction_options(self) -> None:
-        self.pending_reaction = None
-        self._reset_reaction_widgets()
-        self.update_controls()
-
-    def show_reaction_options(self, tile_label: str, options: list) -> None:
-        self._reset_reaction_widgets()
-
-        prompt = tk.Label(self.reaction_frame, text=f"對 {tile_label} 的選擇：", anchor=tk.W)
-        prompt.pack(anchor=tk.W)
-
-        buttons_frame = tk.Frame(self.reaction_frame)
-        buttons_frame.pack(anchor=tk.W, pady=4)
-
-        for option in options:
-            btn = tk.Button(
-                buttons_frame,
-                text=option["label"],
-                command=lambda opt=option: self.on_reaction_choice(opt),
-            )
-            btn.pack(side=tk.LEFT, padx=4)
-
-        pass_option = {"action": None}
-        pass_btn = tk.Button(
-            buttons_frame,
-            text="不要鳴",
-            command=lambda: self.on_reaction_choice(pass_option),
-        )
-        pass_btn.pack(side=tk.LEFT, padx=4)
-
-    def on_reaction_choice(self, option: dict) -> None:
-        if not self.pending_reaction:
-            return
-
-        tile = self.pending_reaction["tile"]
-        tile_label = self.pending_reaction["tile_label"]
-        next_offset = self.pending_reaction.get("next_offset", 1)
-
-        if option.get("action") is None:
-            self.clear_reaction_options()
-            if not self.handle_reactions(start_offset=next_offset):
-                self.schedule_next_turn()
-            return
-
-        action = option["action"]
-        if action == GameAction.PON:
-            self.engine.execute_action(self.human_player, GameAction.PON)
-            self.log(f"你碰了 {tile_label}")
-            self.last_drawn_tile = None
-            self._cached_tsumo_result = None
-        elif action == GameAction.CHI:
-            sequence = option["sequence"]
-            self.engine.execute_action(self.human_player, GameAction.CHI, sequence=sequence)
-            combination = option.get("combination") or (sequence + [tile])
-            self.log(f"你吃了 {tile_label} ({format_tiles_chinese(combination)})")
-            self.last_drawn_tile = None
-            self._cached_tsumo_result = None
-        elif action == GameAction.KAN:
-            kan_tile = option.get("tile") or tile
-            result = self.engine.execute_action(self.human_player, GameAction.KAN, tile=kan_tile)
-            self.log(f"你槓了 {tile_label}")
-            self.last_drawn_tile = result.rinshan_tile
-            self._cached_tsumo_result = None
-            if result.rinshan_tile is not None:
-                self.log(f"你嶺上摸到 {result.rinshan_tile.zh}")
-        elif action == GameAction.RON:
-            win_result = option.get("win_result")
-            self.perform_ron(tile, win_result)
-            return
-
-        self.clear_reaction_options()
-        self.refresh_ui()
-        self.schedule_next_turn()
-
-    def _build_human_reaction_options(self, last_tile: Tile, tile_label: str, offset: int) -> list:
-        options = []
-
-        if self._has_action(self.human_player, GameAction.KAN):
-            options.append(
-                {
-                    "action": GameAction.KAN,
-                    "label": f"槓 {tile_label}",
-                    "tile": last_tile,
-                }
-            )
-
-        if self._has_action(self.human_player, GameAction.PON):
-            options.append({"action": GameAction.PON, "label": f"碰 {tile_label}"})
-
-        if offset == 1:
-            sequences = self.engine.get_available_chi_sequences(self.human_player)
-            for seq in sequences:
-                combination = seq + [last_tile]
-                options.append(
-                    {
-                        "action": GameAction.CHI,
-                        "sequence": seq,
-                        "combination": combination,
-                        "label": f"吃 {format_tiles_chinese(combination)}",
-                    }
+                self._notify_state_update(
+                    last_action=(current_player_idx, action, tile)
                 )
 
-        ron_result = self._compute_win_result(self.human_player, last_tile, remove_tile=False)
-        if ron_result is not None:
-            options.insert(
-                0,
-                {
-                    "action": GameAction.RON,
-                    "label": f"榮 {tile_label}",
-                    "win_result": ron_result,
-                },
-            )
+                if result.winners:
+                    self.update_queue.put(
+                        {
+                            "type": "game_end",
+                            "reason": "win",
+                            "winners": result.winners,
+                            "win_results": result.win_results,
+                        }
+                    )
+                    time.sleep(5)
+                    break
 
-        return options
+                if result.ryuukyoku:
+                    self.update_queue.put({"type": "game_end", "reason": "draw"})
+                    time.sleep(3)
+                    break
 
-    def perform_ankan(self) -> None:
-        if not self._has_action(self.human_player, GameAction.ANKAN):
-            self.log("目前無法暗槓。")
-            return
+            if self.engine.get_phase() == GamePhase.ENDED:
+                break
+            self.engine.game_state.next_round()
 
-        result = self.engine.execute_action(self.human_player, GameAction.ANKAN)
-        self.log("你暗槓了。")
-        self.last_drawn_tile = result.rinshan_tile
-        self._cached_tsumo_result = None
-        if result.rinshan_tile is not None:
-            self.log(f"你嶺上摸到 {result.rinshan_tile.zh}")
+        self.update_queue.put({"type": "match_end"})
 
-        self.refresh_ui()
-        self.schedule_next_turn()
+    def _notify_state_update(self, last_action=None):
+        state = {
+            "type": "state_update",
+            "round_wind": self.engine.game_state.round_wind.name,
+            "round_number": self.engine.game_state.round_number,
+            "honba": self.engine.game_state.honba,
+            "riichi_sticks": self.engine.game_state.riichi_sticks,
+            "scores": self.engine.game_state.scores,
+            "dora_indicators": [
+                str(t) for t in self.engine._tile_set.get_dora_indicators(1)
+            ],
+            "hands": {},
+            "discards": {
+                i: [str(t) for t in self.engine.get_discards(i)] for i in range(4)
+            },
+            "melds": {
+                i: [str(m) for m in self.engine.get_hand(i).melds] for i in range(4)
+            },
+            "current_player": self.engine.get_current_player(),
+            "last_action": last_action,
+            "human_last_drawn_tile": str(self.human_last_drawn_tile)
+            if self.human_last_drawn_tile
+            else None,
+        }
 
-    def perform_tsumo(self) -> None:
-        if self.last_drawn_tile is None:
-            self.log("目前無自摸機會。")
-            return
-
-        win_result = self._cached_tsumo_result or self._compute_win_result(
-            self.human_player, self.last_drawn_tile, remove_tile=True
-        )
-        if win_result is None:
-            self.log("目前無法自摸。")
-            self._cached_tsumo_result = None
-            self.refresh_ui()
-            return
-
-        tile_label = self.last_drawn_tile.zh
-        self._finalize_win(win_result, method_label="自摸", tile_label=tile_label)
-
-    def perform_ron(self, tile: Tile, win_result: Optional[WinResult]) -> None:
-        result = win_result or self._compute_win_result(self.human_player, tile, remove_tile=False)
-        if result is None:
-            next_offset = 1
-            if self.pending_reaction:
-                next_offset = self.pending_reaction.get("next_offset", 1)
-            self.log("目前無法榮和。")
-            self.clear_reaction_options()
-            if not self.handle_reactions(start_offset=next_offset):
-                self.schedule_next_turn()
-            return
-
-        tile_label = tile.zh
-        self._finalize_win(result, method_label="榮和", tile_label=tile_label)
-
-    def _compute_win_result(self, player: int, tile: Tile, remove_tile: bool) -> Optional[WinResult]:
-        # TODO: RuleEngine 若需支援「模擬移除手牌後再檢查和牌」的情境，應提供對應公開 API。
-        return self.engine.check_win(player, tile)
-
-    def _finalize_win(self, win_result: WinResult, method_label: str, tile_label: Optional[str]) -> None:
-        message = f"你{method_label}!"
-        if tile_label:
-            message = f"你{method_label} {tile_label}!"
-        self.log(message)
-
-        self._log_win_result(win_result)
-
-        self.last_drawn_tile = None
-        self._cached_tsumo_result = None
-
-        self.clear_reaction_options()
-        self.engine.end_round(winner=self.human_player)
-        self.refresh_ui()
-        self.update_controls()
-
-    def _log_win_result(self, win_result: WinResult) -> None:
-        if win_result.yaku:
-            self.log("役種:")
-            for yaku in win_result.yaku:
-                self.log(f"  - {yaku.yaku.zh} ({yaku.han} 翻)")
-
-        score = win_result.score_result
-        if score:
-            self.log(f"翻數: {score.han} | 符數: {score.fu} | 總點數: {score.total_points}")
-            if score.is_tsumo:
-                if score.dealer_payment:
-                    self.log(f"莊家支付: {score.dealer_payment}")
-                if score.non_dealer_payment:
-                    self.log(f"閒家支付: {score.non_dealer_payment}")
+        for i in range(4):
+            hand = self.engine.get_hand(i)
+            if i == self.human_seat:
+                state["hands"][i] = [str(t) for t in hand.tiles]
             else:
-                if score.payment_from is not None:
-                    self.log(f"放銃玩家: {score.payment_from}")
+                state["hands"][i] = len(hand.tiles)
 
-    def update_controls(self) -> None:
-        """依遊戲狀態更新功能按鈕。"""
+        self.update_queue.put(state)
 
-        if self.pending_reaction:
-            self.draw_button.config(state=tk.DISABLED)
-            return
 
-        can_draw = self.engine.get_phase() == GamePhase.PLAYING and self._has_action(self.human_player, GameAction.DRAW)
-        self.draw_button.config(state=tk.NORMAL if can_draw else tk.DISABLED)
+# --- GUI Class ---
 
-    def update_info_label(self) -> None:
-        """更新狀態列資訊。"""
 
-        game_state = self.engine.get_game_state()
-        current = self.engine.get_current_player()
-        phase = self.engine.get_phase()
-        info = (
-            f"局風: {game_state.round_wind.name} | 局數: {game_state.round_number} | "
-            f"莊家: {game_state.dealer} | 當前玩家: {current} | 階段: {phase.value}"
+class MahjongGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("PyRiichi Mahjong")
+        self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
+        self.root.configure(bg=COLOR_BG)
+
+        self.style = ttk.Style()
+        self.style.theme_use("clam")
+        self._configure_styles()
+
+        self.human_input_queue = queue.Queue()
+        self.update_queue = queue.Queue()
+        self.game_thread = None
+        self.human_seat = -1
+        self.current_actions = []
+
+        self._init_ui()
+        self.show_start_screen()
+        self.root.after(100, self.poll_updates)
+
+    def _configure_styles(self):
+        self.style.configure("TFrame", background=COLOR_BG)
+        self.style.configure(
+            "TLabel", background=COLOR_BG, foreground=COLOR_TEXT, font=FONT_MEDIUM
         )
-        remaining = self.engine.get_wall_remaining()
-        if remaining is not None:
-            info += f" | 牌山剩餘: {remaining}"
+        self.style.configure(
+            "TButton", font=FONT_MEDIUM, background=COLOR_BUTTON, foreground="white"
+        )
+        self.style.map("TButton", background=[("active", COLOR_ACCENT)])
 
-        dora_indicators = self.engine.get_revealed_dora_indicators()
-        if dora_indicators:
-            info += " | 寶牌指示: " + " ".join(tile.zh for tile in dora_indicators)
-        self.info_label.config(text=info)
+        self.style.configure("Table.TFrame", background=COLOR_TABLE)
+        self.style.configure("Panel.TFrame", background=COLOR_PANEL)
 
-    # ------------------------------------------------------------------
-    # 工具方法
-    # ------------------------------------------------------------------
-    def log(self, message: str) -> None:
-        self.log_text.config(state=tk.NORMAL)
-        self.log_text.insert(tk.END, message + "\n")
-        self.log_text.see(tk.END)
-        self.log_text.config(state=tk.DISABLED)
+        self.style.configure(
+            "Tile.TButton", font=FONT_LARGE, width=4, padding=5, background="white"
+        )
+        self.style.map("Tile.TButton", background=[("active", "#e0e0e0")])
 
-    def run(self) -> None:
-        self.root.mainloop()
+    def _init_ui(self):
+        self.main_container = ttk.Frame(self.root)
+        self.main_container.pack(fill=tk.BOTH, expand=True)
 
+    def show_start_screen(self):
+        for widget in self.main_container.winfo_children():
+            widget.destroy()
 
-def main() -> None:
-    print("PyRiichi Demo UI")
-    print("=================")
-    print("This is a demo UI for PyRiichi, a Japanese Mahjong engine.")
-    print("It is a simple UI that allows you to play a game of Japanese Mahjong.")
-    ui = MahjongDemoUI()
-    ui.run()
+        frame = ttk.Frame(self.main_container)
+        frame.place(relx=0.5, rely=0.5, anchor="center")
+
+        ttk.Label(
+            frame, text="PyRiichi Mahjong", font=FONT_TITLE, foreground=COLOR_ACCENT
+        ).pack(pady=20)
+
+        ttk.Label(frame, text="Select Difficulty:").pack(pady=5)
+        self.diff_var = tk.StringVar(value="Medium")
+        ttk.Radiobutton(frame, text="Easy", variable=self.diff_var, value="Easy").pack()
+        ttk.Radiobutton(
+            frame, text="Medium", variable=self.diff_var, value="Medium"
+        ).pack()
+        ttk.Radiobutton(frame, text="Hard", variable=self.diff_var, value="Hard").pack()
+
+        ttk.Button(frame, text="Start Game", command=self.start_game).pack(pady=20)
+
+    def start_game(self):
+        difficulty = self.diff_var.get()
+        self.game_thread = GameThread(
+            difficulty, self.update_queue, self.human_input_queue
+        )
+        self.game_thread.start()
+        self.create_game_board()
+
+    def create_game_board(self):
+        for widget in self.main_container.winfo_children():
+            widget.destroy()
+
+        # Layout: 3x3 Grid
+        self.main_container.columnconfigure(1, weight=1)
+        self.main_container.rowconfigure(1, weight=1)
+
+        # Opponent Top
+        self.frame_top = ttk.Frame(self.main_container, style="TFrame")
+        self.frame_top.grid(row=0, column=1, sticky="ew", pady=10)
+
+        # Opponent Left
+        self.frame_left = ttk.Frame(self.main_container, style="TFrame")
+        self.frame_left.grid(row=1, column=0, sticky="ns", padx=10)
+
+        # Opponent Right
+        self.frame_right = ttk.Frame(self.main_container, style="TFrame")
+        self.frame_right.grid(row=1, column=2, sticky="ns", padx=10)
+
+        # Center Table (River + Info)
+        self.frame_table = ttk.Frame(
+            self.main_container, style="Table.TFrame", padding=20
+        )
+        self.frame_table.grid(row=1, column=1, sticky="nsew")
+
+        # Info Panel (Inside Table)
+        self.frame_info = ttk.Frame(self.frame_table, style="Panel.TFrame", padding=10)
+        self.frame_info.place(relx=0.5, rely=0.5, anchor="center")
+        self.lbl_info = ttk.Label(
+            self.frame_info, text="Round Info", font=FONT_SMALL, background=COLOR_PANEL
+        )
+        self.lbl_info.pack()
+        self.lbl_dora = ttk.Label(
+            self.frame_info,
+            text="Dora",
+            font=FONT_SMALL,
+            foreground="gold",
+            background=COLOR_PANEL,
+        )
+        self.lbl_dora.pack()
+
+        # Human Player (Bottom)
+        self.frame_bottom = ttk.Frame(self.main_container, style="TFrame", padding=10)
+        self.frame_bottom.grid(row=2, column=0, columnspan=3, sticky="ew")
+
+        self.frame_hand = ttk.Frame(self.frame_bottom)
+        self.frame_hand.pack(side=tk.LEFT, expand=True)
+
+        self.frame_actions = ttk.Frame(self.frame_bottom)
+        self.frame_actions.pack(side=tk.RIGHT, padx=20)
+
+        self.player_frames = {}  # To be mapped
+
+    def poll_updates(self):
+        try:
+            while True:
+                msg = self.update_queue.get_nowait()
+                self.handle_message(msg)
+        except queue.Empty:
+            pass
+        finally:
+            self.root.after(50, self.poll_updates)
+
+    def handle_message(self, msg):
+        msg_type = msg["type"]
+        if msg_type == "setup_complete":
+            self.human_seat = msg["human_seat"]
+            self.setup_player_positions()
+        elif msg_type == "state_update":
+            self.update_game_state(msg)
+        elif msg_type == "human_turn":
+            self.enable_human_controls(
+                msg["actions"], msg["hand"], msg.get("last_drawn_tile")
+            )
+        elif msg_type == "game_end":
+            self.show_round_result(msg)
+        elif msg_type == "match_end":
+            messagebox.showinfo("Game Over", "Match Finished!")
+            self.show_start_screen()
+
+    def setup_player_positions(self):
+        self.pos_map = {
+            "bottom": self.human_seat,
+            "right": (self.human_seat + 1) % 4,
+            "top": (self.human_seat + 2) % 4,
+            "left": (self.human_seat + 3) % 4,
+        }
+        self.player_frames = {
+            self.pos_map["top"]: self.frame_top,
+            self.pos_map["left"]: self.frame_left,
+            self.pos_map["right"]: self.frame_right,
+        }
+
+    def update_game_state(self, state):
+        # Info
+        self.lbl_info.config(
+            text=f"{state['round_wind']} {state['round_number']} | Honba: {state['honba']} | Riichi: {state['riichi_sticks']}"
+        )
+        self.lbl_dora.config(text=f"Dora: {' '.join(state['dora_indicators'])}")
+
+        # Render Opponents
+        for pid, frame in self.player_frames.items():
+            for w in frame.winfo_children():
+                w.destroy()
+            count = state["hands"][pid]
+            melds = state["melds"][pid]
+            score = state["scores"][pid]
+
+            # Simple representation
+            txt = f"P{pid}\n[{score}]\n{'🀠 ' * count}\n{' '.join(melds)}"
+            ttk.Label(frame, text=txt, justify="center").pack()
+
+        # Render River
+        # Clear previous river tiles (simple approach: redraw all)
+        # Ideally we'd have dedicated frames for each player's river in the table
+        # For this demo, we'll just overlay labels in quadrants
+
+        # Remove old river widgets
+        for w in self.frame_table.winfo_children():
+            if w != self.frame_info:
+                w.destroy()
+
+        # Draw rivers
+        for i in range(4):
+            pid = (self.human_seat + i) % 4
+            discards = state["discards"][pid]
+
+            # Position
+            relx, rely, anchor = 0.5, 0.5, "center"
+            if i == 0:
+                relx, rely, anchor = 0.5, 0.8, "s"  # Bottom
+            elif i == 1:
+                relx, rely, anchor = 0.8, 0.5, "e"  # Right
+            elif i == 2:
+                relx, rely, anchor = 0.5, 0.2, "n"  # Top
+            elif i == 3:
+                relx, rely, anchor = 0.2, 0.5, "w"  # Left
+
+            # Show last 6
+            shown = discards[-6:]
+            txt = " ".join(shown)
+            lbl = tk.Label(
+                self.frame_table, text=txt, bg=COLOR_TABLE, fg="white", font=FONT_MEDIUM
+            )
+            lbl.place(relx=relx, rely=rely, anchor=anchor)
+
+        # Render Human Hand (Passive view, active controls handled in human_turn)
+        # Only update if not currently in turn (to avoid flickering during interaction)
+        # Actually, we should update to show the draw.
+        self.render_human_hand(
+            state["hands"][self.human_seat],
+            state["melds"][self.human_seat],
+            active=False,
+            last_drawn_tile=state.get("human_last_drawn_tile"),
+        )
+
+    def render_human_hand(
+        self,
+        tiles_str: List[str],
+        melds: List[str],
+        active: bool = False,
+        last_drawn_tile: Optional[str] = None,
+    ):
+        for w in self.frame_hand.winfo_children():
+            w.destroy()
+
+        # Sort everything first
+        standing_tiles = sorted(tiles_str, key=get_tile_sort_key)
+
+        # If we have a drawn tile, remove one instance of it and append to end
+        has_drawn = False
+        if last_drawn_tile and last_drawn_tile in standing_tiles:
+            # Find the first occurrence of the drawn tile and move it to the end
+            # This handles cases where there are multiple identical tiles
+            idx_to_move = -1
+            for i, t in enumerate(standing_tiles):
+                if t == last_drawn_tile:
+                    idx_to_move = i
+                    break
+            if idx_to_move != -1:
+                moved_tile = standing_tiles.pop(idx_to_move)
+                standing_tiles.append(moved_tile)
+                has_drawn = True
+
+        for idx, t_str in enumerate(standing_tiles):
+            color = get_tile_color(t_str)
+
+            # Add gap before drawn tile
+            padx = 2
+            if has_drawn and idx == len(standing_tiles) - 1:
+                padx = (20, 2)
+
+            btn = tk.Button(
+                self.frame_hand,
+                text=t_str,
+                font=FONT_LARGE,
+                width=4,
+                bg="white",
+                fg=color,
+                state="normal" if active else "disabled",
+                command=lambda t=t_str: self.on_tile_click(t),
+            )
+            btn.pack(side=tk.LEFT, padx=padx)
+
+        if melds:
+            ttk.Label(self.frame_hand, text="   " + " ".join(melds)).pack(side=tk.LEFT)
+
+    def enable_human_controls(
+        self,
+        actions: List[GameAction],
+        hand: Hand,
+        last_drawn_tile: Optional[str] = None,
+    ):
+        self.current_actions = actions
+
+        # Re-render hand as active
+        tiles_str = [str(t) for t in hand.tiles]
+        melds_str = [str(m) for m in hand.melds]
+
+        self.render_human_hand(
+            tiles_str, melds_str, active=True, last_drawn_tile=last_drawn_tile
+        )
+
+        # Action Buttons
+        for w in self.frame_actions.winfo_children():
+            w.destroy()
+
+        for action in actions:
+            if action == GameAction.DISCARD:
+                continue
+
+            btn = ttk.Button(
+                self.frame_actions,
+                text=action.name,
+                command=lambda a=action: self.on_action_click(a),
+            )
+            btn.pack(side=tk.LEFT, padx=5)
+
+    def render_human_hand_active(
+        self, tiles_str: List[str], melds: List[str], has_drawn: bool
+    ):
+        for w in self.frame_hand.winfo_children():
+            w.destroy()
+
+        for idx, t_str in enumerate(tiles_str):
+            color = get_tile_color(t_str)
+
+            # Add gap before drawn tile
+            padx = 2
+            if has_drawn and idx == len(tiles_str) - 1:
+                padx = (20, 2)  # Extra left padding
+
+            btn = tk.Button(
+                self.frame_hand,
+                text=t_str,
+                font=FONT_LARGE,
+                width=4,
+                bg="white",
+                fg=color,
+                command=lambda t=t_str: self.on_tile_click(t),
+            )
+            btn.pack(side=tk.LEFT, padx=padx)
+
+        if melds:
+            ttk.Label(self.frame_hand, text="   " + " ".join(melds)).pack(side=tk.LEFT)
+
+    def on_tile_click(self, tile_str):
+        if GameAction.DISCARD in self.current_actions:
+            # Reconstruct tile
+            is_red = "r" in tile_str
+            clean = tile_str.replace("r", "")
+            suit = Suit.JIHAI
+            if "m" in clean:
+                suit = Suit.MANZU
+            elif "p" in clean:
+                suit = Suit.PINZU
+            elif "s" in clean:
+                suit = Suit.SOZU
+            rank = int(clean[0])
+            tile = Tile(suit, rank, is_red=is_red)
+
+            self.human_input_queue.put({"action": GameAction.DISCARD, "tile": tile})
+            self._clear_actions()
+
+    def on_action_click(self, action):
+        self.human_input_queue.put({"action": action, "tile": None})
+        self._clear_actions()
+
+    def _clear_actions(self):
+        for w in self.frame_actions.winfo_children():
+            w.destroy()
+        # Disable hand buttons
+        for w in self.frame_hand.winfo_children():
+            if isinstance(w, tk.Button):
+                w.config(state="disabled")
+
+    def show_round_result(self, msg):
+        reason = msg["reason"]
+        if reason == "win":
+            winners = msg["winners"]
+            win_results = msg["win_results"]
+            txt = "WINNER(S):\n"
+            for w in winners:
+                res = win_results[w]
+                txt += f"Player {w}: {res.points} pts ({res.han} Han / {res.fu} Fu)\n"
+            messagebox.showinfo("Round End", txt)
+        else:
+            messagebox.showinfo("Round End", "Draw (Ryuukyoku)!")
 
 
 if __name__ == "__main__":
-    main()
+    root = tk.Tk()
+    app = MahjongGUI(root)
+    root.mainloop()
