@@ -1989,7 +1989,7 @@ class TestRyuukyoku:
         kan_tile = Tile(Suit.SOZU, 4)
 
         # 444s 234m 567m 123p 4p
-        hand0_tiles = parse_tiles("4s4s4s2m3m4m5m6m7m1p2p3p4p")
+        hand0_tiles = parse_tiles("444s234567m1234p")
         hand0 = Hand(hand0_tiles)
         hand0.pon(kan_tile)
         hand0.add_tile(kan_tile)
@@ -1998,7 +1998,7 @@ class TestRyuukyoku:
         self.engine._last_discarded_player = None
 
         # 手牌：23s 234m 567m 789p 44p（缺 4s）
-        winning_tiles = parse_tiles("2s3s2m3m4m5m6m7m7p8p9p4p4p")
+        winning_tiles = parse_tiles("23s234567m789p44p")
         self.engine._hands[1] = Hand(winning_tiles)
 
         result = self.engine.execute_action(0, GameAction.ANKAN)
@@ -2014,7 +2014,7 @@ class TestRyuukyoku:
         winning_tile = Tile(Suit.PINZU, 1)
 
         # 手牌：234m 567m 789p 234s 1p
-        ron_ready = parse_tiles("2m3m4m5m6m7m7p8p9p2s3s4s1p")
+        ron_ready = parse_tiles("234567m789p234s1p")
         self.engine._hands[1] = Hand(ron_ready)
         self.engine._last_discarded_tile = winning_tile
         self.engine._last_discarded_player = 0
@@ -2034,7 +2034,7 @@ class TestRyuukyoku:
         # 1. 設置手牌可以槓 (需要4張相同的牌)
 
         # 1111m 234m 567m 123p 4p
-        hand_tiles = parse_tiles("1m1m1m1m2m3m4m5m6m7m1p2p3p4p")
+        hand_tiles = parse_tiles("1111m234567m1234p")
         self.engine._hands[player] = Hand(hand_tiles)
 
         # 2. 設置嶺上牌為和牌牌 (4p) - 聽 1p/4p
@@ -2062,9 +2062,9 @@ class TestRyuukyoku:
         # 玩家0打出1m，玩家1、2、3都能榮和
         discard_tile = Tile(Suit.MANZU, 1)
 
-        self.engine._hands[1] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p4p"))
-        self.engine._hands[2] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p4p"))
-        self.engine._hands[3] = Hand(parse_tiles("2m3m4m5m6m7m8m9m1p2p3p4p4p"))
+        self.engine._hands[1] = Hand(parse_tiles("23456789m123p44p"))
+        self.engine._hands[2] = Hand(parse_tiles("23456789m123p44p"))
+        self.engine._hands[3] = Hand(parse_tiles("23456789m123p44p"))
 
         self.engine._last_discarded_tile = discard_tile
         self.engine._last_discarded_player = 0
@@ -2094,7 +2094,7 @@ class TestChomboRules:
         """測試錯和：無役宣告榮和"""
         # 設置玩家1的手牌（未聽牌或無役）
         # 123m 456p 789s 11z 2z (單騎2z，無役)
-        hand_tiles = parse_tiles("1m2m3m4p5p6p7s8s9s1z1z2z")
+        hand_tiles = parse_tiles("123m456p789s112z")
         self.engine._hands[1] = Hand(hand_tiles)
 
         # 玩家0打出2z
@@ -2139,7 +2139,7 @@ class TestChomboRules:
     def test_chombo_false_riichi(self):
         """測試錯立直：流局時未聽牌"""
         # 設置玩家1立直但未聽牌
-        hand_tiles = parse_tiles("1m2m3m4p5p6p7s8s9s1z1z2z3z")  # 13張，未聽牌
+        hand_tiles = parse_tiles("123m456p789s1123z")  # 13張，未聽牌
         self.engine._hands[1] = Hand(hand_tiles)
         self.engine._hands[1].set_riichi(True)  # Use setter method
 
@@ -2163,7 +2163,7 @@ class TestChomboRules:
     def test_chombo_dealer(self):
         """測試莊家錯和"""
         # 莊家(0)錯和
-        hand_tiles = parse_tiles("1m2m3m4p5p6p7s8s9s1z1z2z")
+        hand_tiles = parse_tiles("123m456p789s112z")
         self.engine._hands[0] = Hand(hand_tiles)
 
         discard_tile = Tile(Suit.JIHAI, 2)

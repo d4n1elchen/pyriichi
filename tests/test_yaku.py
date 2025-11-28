@@ -23,7 +23,7 @@ class TestYakuChecker:
     def test_riichi(self):
         """測試立直"""
         # 手牌：1122334455667m
-        tiles = parse_tiles("1m1m2m2m3m3m4m4m5m5m6m6m7m")
+        tiles = parse_tiles("1122334455667m")
         hand = Hand(tiles)
         hand.set_riichi(True)
 
@@ -37,7 +37,7 @@ class TestYakuChecker:
         """測試斷么九"""
         # 全部中張牌的和牌型
         # 手牌：234m 567m 345p 678p 4s
-        tiles = parse_tiles("2m3m4m5m6m7m3p4p5p6p7p8p4s")
+        tiles = parse_tiles("234m567m345p678p4s")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.SOZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -52,7 +52,7 @@ class TestYakuChecker:
         """測試對對和"""
         # 使用更簡單的對對和型（4個刻子 + 1個對子）
         # 手牌：111222333m 4445p
-        tiles = parse_tiles("1m1m1m2m2m2m3m3m3m4p4p4p5p")
+        tiles = parse_tiles("111m222m333m444p5p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.PINZU, 5)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -68,7 +68,7 @@ class TestYakuChecker:
         """測試一盃口"""
         # 有兩組相同順子的門清和牌型
         # 手牌：123m 123m 456p 789s 1z
-        tiles = parse_tiles("1m2m3m1m2m3m4p5p6p7s8s9s1z")
+        tiles = parse_tiles("123m123m456p789s1z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 1)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -83,7 +83,7 @@ class TestYakuChecker:
         """測試役牌（三元牌）"""
         # 有三元牌刻子的和牌型
         # 手牌：123m 456p 789s 555z 1z
-        tiles = parse_tiles("1m2m3m4p5p6p7s8s9s5z5z5z1z")
+        tiles = parse_tiles("123m456p789s555z1z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 1)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -103,7 +103,7 @@ class TestYakuChecker:
         """測試三色同順"""
         # 三色同順：123m 123p 123s
         # 手牌：123m 123p 123s 456p 1z
-        tiles = parse_tiles("1m2m3m1p2p3p1s2s3s4p5p6p1z")
+        tiles = parse_tiles("123m123p123s456p1z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 1)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -118,7 +118,7 @@ class TestYakuChecker:
         """測試一氣通貫"""
         # 一氣通貫：123m 456m 789m
         # 手牌：123m 456m 789m 123p 1z
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p1z")
+        tiles = parse_tiles("123m456m789m123p1z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 1)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -133,7 +133,7 @@ class TestYakuChecker:
         """測試三暗刻"""
         # 三暗刻：門清狀態下的三個刻子
         # 手牌：111222333m 456p 7p
-        tiles = parse_tiles("1m1m1m2m2m2m3m3m3m4p5p6p7p")
+        tiles = parse_tiles("111m222m333m456p7p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.PINZU, 7)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -148,7 +148,7 @@ class TestYakuChecker:
         """測試清一色"""
         # 清一色：全部萬子
         # 手牌：123m 456m 789m 123m 4m
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1m2m3m4m")
+        tiles = parse_tiles("123m456m789m123m4m")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -163,7 +163,7 @@ class TestYakuChecker:
         """測試混一色"""
         # 混一色：萬子 + 字牌
         # 手牌：123m 456m 789m 1112z
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1z1z1z2z")
+        tiles = parse_tiles("123m456m789m111z2z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 2)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -178,7 +178,7 @@ class TestYakuChecker:
         """測試七對子"""
         # 七對子
         # 手牌：1122334455667m
-        tiles = parse_tiles("1m1m2m2m3m3m4m4m5m5m6m6m7m")
+        tiles = parse_tiles("1122334455667m")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 7)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -209,7 +209,7 @@ class TestYakuChecker:
         """測試純全帶么九"""
         # 純全帶么九：全部由包含1或9的順子組成
         # 手牌：123m 789m 123p 789s 1m
-        tiles = parse_tiles("1m2m3m7m8m9m1p2p3p7s8s9s1m")
+        tiles = parse_tiles("123m789m123p789s1m")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 1)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -227,7 +227,7 @@ class TestYakuChecker:
         """測試全帶么九（Chanta）"""
         # 全帶么九：包含1或9的順子 + 字牌
         # 手牌：123m 789m 123p 1112z
-        tiles = parse_tiles("1m2m3m7m8m9m1p2p3p1z1z1z2z")
+        tiles = parse_tiles("123m789m123p111z2z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 2)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -245,7 +245,7 @@ class TestYakuChecker:
         """測試二盃口"""
         # 二盃口：兩組不同的相同順子
         # 手牌：123m 123m 456m 456m 1z
-        tiles = parse_tiles("1m2m3m1m2m3m4m5m6m4m5m6m1z")
+        tiles = parse_tiles("123m123m456m456m1z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 1)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -266,7 +266,7 @@ class TestYakuChecker:
         """測試三色同刻"""
         # 三色同刻：萬、筒、條都有相同數字的刻子
         # 手牌：111m 111p 111s 234m 1z
-        tiles = parse_tiles("1m1m1m1p1p1p1s1s1s2m3m4m1z")
+        tiles = parse_tiles("111m111p111s234m1z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 1)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -281,7 +281,7 @@ class TestYakuChecker:
         """測試小三元"""
         # 小三元：兩個三元牌刻子 + 一個三元牌對子
         # 手牌：123m 456p 5556667z
-        tiles = parse_tiles("1m2m3m4p5p6p5z5z5z6z6z6z7z")
+        tiles = parse_tiles("123m456p555z666z7z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 7)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -296,7 +296,7 @@ class TestYakuChecker:
         """測試混老頭"""
         # 混老頭：全部由幺九牌組成
         # 手牌：111m 999m 111p 1112z
-        tiles = parse_tiles("1m1m1m9m9m9m1p1p1p1z1z1z2z")
+        tiles = parse_tiles("111m999m111p111z2z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 2)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -311,7 +311,7 @@ class TestYakuChecker:
         """測試大三元役滿"""
         # 大三元：三個三元牌刻子
         # 手牌：123m 555666777z 1z
-        tiles = parse_tiles("1m2m3m5z5z5z6z6z6z7z7z7z1z")
+        tiles = parse_tiles("123m555z666z777z1z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 1)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -335,7 +335,7 @@ class TestYakuChecker:
         # 四暗刻：門清狀態下，四個暗刻（單騎聽）
         # 標準競技規則：四暗刻單騎為雙倍役滿（26翻）
         # 手牌：1112223334445m
-        tiles = parse_tiles("1m1m1m2m2m2m3m3m3m4m4m4m5m")
+        tiles = parse_tiles("111m222m333m444m5m")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 5)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -378,7 +378,7 @@ class TestYakuChecker:
     def test_suuankou_tanki(self):
         """測試四暗刻單騎（標準競技規則：雙倍役滿26翻）"""
         # 手牌：1112223334445m
-        tiles = parse_tiles("1m1m1m2m2m2m3m3m3m4m4m4m5m")
+        tiles = parse_tiles("111m222m333m444m5m")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 5)  # 完成單騎對子
         combinations = hand.get_winning_combinations(winning_tile)
@@ -411,7 +411,7 @@ class TestYakuChecker:
         """測試國士無雙役滿"""
         # 國士無雙：13種幺九牌各一張，再有一張幺九牌
         # 手牌：1m 9m 1p 9p 1s 9s 123z 456z 7z
-        tiles = parse_tiles("1m9m1p9p1s9s1z2z3z4z5z6z7z")
+        tiles = parse_tiles("19m19p19s1234567z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 7)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -438,7 +438,7 @@ class TestYakuChecker:
         # 字一色：全部由字牌組成（避免同時符合四暗刻）
         # 使用一個有順子的組合，因為字牌不能組成順子，所以這樣不會有四暗刻
         # 手牌：111222333z 5556z
-        tiles = parse_tiles("1z1z1z2z2z2z3z3z3z5z5z5z6z")
+        tiles = parse_tiles("111z222z333z555z6z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 6)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -473,7 +473,7 @@ class TestYakuChecker:
         """測試門清自摸"""
         # 門清自摸：門清狀態下自摸和牌
         # 手牌：123m 456m 345p 678p 4s
-        tiles = parse_tiles("1m2m3m4m5m6m3p4p5p6p7p8p4s")
+        tiles = parse_tiles("123m456m345p678p4s")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.SOZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -508,7 +508,7 @@ class TestYakuChecker:
         """測試一發"""
         # 一發：立直後一巡內和牌
         # 手牌：234m 567m 345p 678p 4s
-        tiles = parse_tiles("2m3m4m5m6m7m3p4p5p6p7p8p4s")
+        tiles = parse_tiles("234m567m345p678p4s")
         hand = Hand(tiles)
         hand.set_riichi(True)
         winning_tile = Tile(Suit.SOZU, 4)
@@ -544,7 +544,7 @@ class TestYakuChecker:
         """測試綠一色役滿"""
         # 綠一色：全部由綠牌組成（2、3、4、6、8條、發）
         # 手牌：234s 234s 666s 888s 6z
-        tiles = parse_tiles("2s3s4s2s3s4s6s6s6s8s8s8s6z")
+        tiles = parse_tiles("234s234s666s888s6z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 6)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -574,7 +574,7 @@ class TestYakuChecker:
         """測試九蓮寶燈役滿"""
         # 九蓮寶燈：1112345678999 + 任意一張
         # 手牌：1112345678999m
-        tiles = parse_tiles("1m1m1m2m3m4m5m6m7m8m9m9m9m")
+        tiles = parse_tiles("111m234m567m8m999m")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 1)
 
@@ -588,7 +588,7 @@ class TestYakuChecker:
         # 三槓子：三個槓子
         # 注意：這裡測試判定邏輯，實際遊戲中需要通過 Meld 來實現槓子
         # 手牌：111m 1m 222p 2p 333s 3s 1z
-        tiles = parse_tiles("1m1m1m1m2p2p2p2p3s3s3s3s1z")
+        tiles = parse_tiles("1111m2222p3333s1z")
         hand = Hand(tiles)
 
         # 注意：實際的 winning_combination 可能不會包含 'kan' 類型
@@ -610,7 +610,7 @@ class TestYakuChecker:
         """測試檢查所有役種"""
         # 立直 + 斷么九
         # 手牌：234m 567m 345p 678p 4s
-        tiles = parse_tiles("2m3m4m5m6m7m3p4p5p6p7p8p4s")
+        tiles = parse_tiles("234m567m345p678p4s")
         hand = Hand(tiles)
         hand.set_riichi(True)
         winning_tile = Tile(Suit.SOZU, 4)
@@ -636,7 +636,7 @@ class TestYakuChecker:
         # 平和：4個順子 + 1個非役牌對子
         # 如果對子是役牌，則不能有平和
         # 手牌：234m 567m 234p 567p 5z
-        tiles = parse_tiles("2m3m4m5m6m7m2p3p4p5p6p7p5z")
+        tiles = parse_tiles("234m567m234p567p5z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 5)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -659,7 +659,7 @@ class TestYakuChecker:
         # 斷么九：全部中張牌，一気通貫：包含1和9
         # 這兩個在邏輯上互斥，所以不會同時出現
         # 手牌：123m 456m 789m 234p 5s
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m2p3p4p5s")
+        tiles = parse_tiles("123m456m789m234p5s")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.SOZU, 5)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -682,7 +682,7 @@ class TestYakuChecker:
         # 對對和：全部刻子，三色同順：需要順子
         # 這兩個在結構上互斥
         # 手牌：222m 222p 222s 555m 1z
-        tiles = parse_tiles("2m2m2m2p2p2p2s2s2s5m5m5m1z")
+        tiles = parse_tiles("222m222p222s555m1z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 1)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -704,7 +704,7 @@ class TestYakuChecker:
         # 4. 測試一盃口與二盃口互斥
         # 二盃口包含兩個一盃口，所以不能同時出現
         # 手牌：123m 123m 789m 789m 1z
-        tiles = parse_tiles("1m2m3m1m2m3m7m8m9m7m8m9m1z")
+        tiles = parse_tiles("123m123m789m789m1z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 1)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -741,7 +741,7 @@ class TestYakuChecker:
         """測試小四喜役滿"""
         # 小四喜：三個風牌刻子 + 一個風牌對子
         # 手牌：11122233344z 12m
-        tiles = parse_tiles("1z1z1z2z2z2z3z3z3z4z4z1m2m")
+        tiles = parse_tiles("111z222z333z44z12m")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 3)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -772,7 +772,7 @@ class TestYakuChecker:
         """測試大四喜役滿"""
         # 大四喜：四個風牌刻子
         # 手牌：111222333444z 1m
-        tiles = parse_tiles("1z1z1z2z2z2z3z3z3z4z4z4z1m")
+        tiles = parse_tiles("111z222z333z444z1m")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 1)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -803,7 +803,7 @@ class TestYakuChecker:
         """測試清老頭役滿"""
         # 清老頭：全部由幺九牌刻子組成（無字牌）
         # 手牌：111m 999m 111p 999p 1s
-        tiles = parse_tiles("1m1m1m9m9m9m1p1p1p9p9p9p1s")
+        tiles = parse_tiles("111m999m111p999p1s")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.SOZU, 1)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -835,7 +835,7 @@ class TestYakuChecker:
         # 平和：全部由順子和對子組成，無刻子，且聽牌是兩面聽
         # 門清狀態下，且對子不是役牌
         # 手牌：234m 567m 234p 567p 5s
-        tiles = parse_tiles("2m3m4m5m6m7m2p3p4p5p6p7p5s")
+        tiles = parse_tiles("234m567m234p567p5s")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.SOZU, 5)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -853,7 +853,7 @@ class TestYakuChecker:
         """測試天和直接判定"""
         # 天和：莊家在第一巡自摸和牌
         # 手牌：123m 456m 345p 678p 4s
-        tiles = parse_tiles("1m2m3m4m5m6m3p4p5p6p7p8p4s")
+        tiles = parse_tiles("123m456m345p678p4s")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.SOZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -877,7 +877,7 @@ class TestYakuChecker:
         """測試地和直接判定"""
         # 地和：閒家在第一巡自摸和牌
         # 手牌：123m 456m 345p 678p 4s
-        tiles = parse_tiles("1m2m3m4m5m6m3p4p5p6p7p8p4s")
+        tiles = parse_tiles("123m456m345p678p4s")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.SOZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -902,7 +902,7 @@ class TestYakuChecker:
         # 人和：閒家在第一巡榮和
         # 標準競技規則：人和為2翻（非役滿）
         # 手牌：123m 456m 345p 678p 4s
-        tiles = parse_tiles("1m2m3m4m5m6m3p4p5p6p7p8p4s")
+        tiles = parse_tiles("123m456m345p678p4s")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.SOZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -927,7 +927,7 @@ class TestYakuChecker:
         """測試海底撈月直接判定"""
         # 海底撈月：自摸最後一張牌和牌
         # 手牌：123m 456m 345p 678p 4s
-        tiles = parse_tiles("1m2m3m4m5m6m3p4p5p6p7p8p4s")
+        tiles = parse_tiles("123m456m345p678p4s")
         hand = Hand(tiles)
 
         # 測試自摸最後一張牌
@@ -943,7 +943,7 @@ class TestYakuChecker:
         """測試河底撈魚直接判定"""
         # 河底撈魚：榮和最後一張牌和牌
         # 手牌：123m 456m 345p 678p 4s
-        tiles = parse_tiles("1m2m3m4m5m6m3p4p5p6p7p8p4s")
+        tiles = parse_tiles("123m456m345p678p4s")
         hand = Hand(tiles)
 
         # 測試榮和最後一張牌
@@ -959,7 +959,7 @@ class TestYakuChecker:
         """測試嶺上開花直接判定"""
         # 嶺上開花：槓後從嶺上摸牌和牌
         # 手牌：123m 456m 345p 678p 4s
-        tiles = parse_tiles("1m2m3m4m5m6m3p4p5p6p7p8p4s")
+        tiles = parse_tiles("123m456m345p678p4s")
         hand = Hand(tiles)
 
         # 測試嶺上開花
@@ -977,7 +977,7 @@ class TestYakuChecker:
         # 四槓子需要通過 Hand 的 melds 來實現
         # 這裡測試判定邏輯
         # 手牌：123m 12p
-        tiles = parse_tiles("1m2m3m1p2p")
+        tiles = parse_tiles("123m12p")
         hand = Hand(tiles)
 
         # 手動構建包含四個槓子的組合
@@ -998,7 +998,7 @@ class TestYakuChecker:
         """測試國士無雙十三面直接判定"""
         # 國士無雙十三面：13種幺九牌各一張，再有一張幺九牌，且該牌為聽牌
         # 手牌：1m 9m 1p 9p 1s 9s 123z 456z 7z
-        tiles = parse_tiles("1m9m1p9p1s9s1z2z3z4z5z6z7z")
+        tiles = parse_tiles("19m19p19s1234567z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.JIHAI, 7)
 
@@ -1015,7 +1015,7 @@ class TestYakuChecker:
         # 1112345678999 + 任意一張，且該張牌是聽牌
         # 標準競技規則：純正九蓮寶燈為雙倍役滿（26翻）
         # 手牌：1112345678999m
-        tiles = parse_tiles("1m1m1m2m3m4m5m6m7m8m9m9m9m")
+        tiles = parse_tiles("111m234m567m8m999m")
         hand = Hand(tiles)
         # 測試和牌牌是1-9中的任意一張（九面聽）
         for winning_rank in range(1, 10):
@@ -1034,7 +1034,7 @@ class TestYakuChecker:
         """測試雙立直"""
         # 雙立直：第一巡宣告立直
         # 手牌：234m 567m 345p 678p 4s
-        tiles = parse_tiles("2m3m4m5m6m7m3p4p5p6p7p8p4s")
+        tiles = parse_tiles("234m567m345p678p4s")
         hand = Hand(tiles)
         hand.set_riichi(True)
         winning_tile = Tile(Suit.SOZU, 4)
@@ -1078,7 +1078,7 @@ class TestYakuChecker:
     def test_double_riichi_with_ippatsu(self):
         """測試雙立直與一發複合"""
         # 雙立直 + 一發
-        tiles = parse_tiles("2m3m4m5m6m7m3p4p5p6p7p8p4s")
+        tiles = parse_tiles("234m567m345p678p4s")
         hand = Hand(tiles)
         hand.set_riichi(True)
         winning_tile = Tile(Suit.SOZU, 4)
@@ -1104,7 +1104,7 @@ class TestYakuChecker:
     def test_double_riichi_with_chiitoitsu(self):
         """測試雙立直與七對子複合"""
         # 七對子 + 雙立直
-        tiles = parse_tiles("1m1m2m2m3m3m4m4m5m5m6m6m7m")
+        tiles = parse_tiles("11m22m33m44m55m66m7m")
         hand = Hand(tiles)
         hand.set_riichi(True)
         winning_tile = Tile(Suit.MANZU, 7)

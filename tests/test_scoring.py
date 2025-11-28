@@ -26,7 +26,7 @@ class TestScoreCalculator:
         """測試基本符數計算"""
         # 20 + 10 (門清榮和) + 2 (單騎聽) = 32 (40) 符
         # 234m 567m 345p 678p 4s
-        tiles = parse_tiles("2m3m4m5m6m7m3p4p5p6p7p8p4s")
+        tiles = parse_tiles("234m567m345p678p4s")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.SOZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -40,7 +40,7 @@ class TestScoreCalculator:
         """測試刻子符數"""
         # 20 + 10 (門清榮和) + 2 (單騎聽) + 8 (幺九暗刻) + 4 (暗刻) * 2 = 48 (50) 符
         # 111m 222m 333m 123p 5p
-        tiles = parse_tiles("1m1m1m2m2m2m3m3m3m1p2p3p5p")
+        tiles = parse_tiles("111m222m333m123p5p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.PINZU, 5)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -68,7 +68,7 @@ class TestScoreCalculator:
         """測試完整得分計算"""
         # 斷么九
         # 手牌：234m 567m 345p 678p 4s
-        tiles = parse_tiles("2m3m4m5m6m7m3p4p5p6p7p8p4s")
+        tiles = parse_tiles("234m567m345p678p4s")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.SOZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -103,7 +103,7 @@ class TestScoreCalculator:
 
         # 模擬一個和牌組合
         # 手牌：1122334455667m
-        tiles = parse_tiles("1m1m2m2m3m3m4m4m5m5m6m6m7m")
+        tiles = parse_tiles("11m22m33m44m55m66m7m")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 1)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -127,7 +127,7 @@ class TestScoreCalculator:
     def test_calculate_score_toitoi(self):
         """測試對對和得分（滿貫）"""
         # 手牌：111222333m 4445p
-        tiles = parse_tiles("1m1m1m2m2m2m3m3m3m4p4p4p5p")
+        tiles = parse_tiles("111m222m333m444p5p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.PINZU, 5)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -155,7 +155,7 @@ class TestScoreCalculator:
         """測試單騎聽符數（+2符）"""
         # 單騎聽：和牌牌是對子的一部分
         # 手牌：123m 456m 789m 123p 4p
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
+        tiles = parse_tiles("123m456m789m123p4p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.PINZU, 4)  # 單騎聽
         combinations = hand.get_winning_combinations(winning_tile)
@@ -178,7 +178,7 @@ class TestScoreCalculator:
         """測試邊張聽符數（+2符）"""
         # 邊張聽：1-2 聽 3 或 8-9 聽 7
         # 手牌：12m 456m 789m 123p 45p
-        tiles = parse_tiles("1m2m4m5m6m7m8m9m1p2p3p4p5p")
+        tiles = parse_tiles("12m456m789m123p45p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 3)  # 邊張聽
         combinations = hand.get_winning_combinations(winning_tile)
@@ -263,7 +263,7 @@ class TestScoreCalculator:
     def test_determine_waiting_type(self):
         """測試聽牌類型判定"""
         # 手牌：123m 456m 789m 123p 4p
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
+        tiles = parse_tiles("123m456m789m123p4p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.PINZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -284,7 +284,7 @@ class TestScoreCalculator:
         """測試嵌張聽符數（+2符）"""
         # 嵌張聽：2-4 聽 3（中間張）
         # 手牌：2m 456m 789m 123p 45p
-        tiles = parse_tiles("2m4m5m6m7m8m9m1p2p3p4p5p")
+        tiles = parse_tiles("2m456m789m123p45p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 3)  # 嵌張聽
         combinations = hand.get_winning_combinations(winning_tile)
@@ -306,7 +306,7 @@ class TestScoreCalculator:
         """測試兩面聽符數（+0符）"""
         # 兩面聽：4-5 聽 3 或 6（不增加符數）
         # 手牌：45m 789m 123p 456p
-        tiles = parse_tiles("4m5m7m8m9m1p2p3p4p5p6p")
+        tiles = parse_tiles("45m789m123p456p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 6)  # 兩面聽
         combinations = hand.get_winning_combinations(winning_tile)
@@ -336,7 +336,7 @@ class TestScoreCalculator:
         # 創建一個有暗槓的手牌（門清）
         # 注意：這裡需要手動構建 winning_combination 來測試槓子符
         # 手牌：111m 123m 456m 7m 12p
-        tiles = parse_tiles("1m1m1m1m2m3m4m5m6m7m1p2p")
+        tiles = parse_tiles("1111m234567m12p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.PINZU, 3)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -360,7 +360,7 @@ class TestScoreCalculator:
         """測試明槓符數（非門清）"""
         # 創建一個有明刻的手牌（非門清）
         # 手牌：123m 456m 78m 12p
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m1p2p")
+        tiles = parse_tiles("12345678m12p")
         # 添加一個明刻（模擬有副露，使手牌非門清）
         from pyriichi.hand import Meld, MeldType
 
@@ -389,7 +389,7 @@ class TestScoreCalculator:
         """測試三元牌對子符數（+2符）"""
         # 創建一個有三元牌對子的手牌
         # 手牌：123m 456m 78m 123p 55z
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m1p2p3p5z5z")
+        tiles = parse_tiles("12345678m123p55z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 9)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -412,7 +412,7 @@ class TestScoreCalculator:
         # 創建一個有場風對子的手牌（東風局）
         self.game_state.set_round(Wind.EAST, 1)
         # 手牌：123m 456m 78m 123p 11z
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m1p2p3p1z1z")
+        tiles = parse_tiles("12345678m123p11z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 9)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -435,7 +435,7 @@ class TestScoreCalculator:
         # 南風局
         self.game_state.set_round(Wind.SOUTH, 1)
         # 手牌：123m 456m 78m 123p 22z
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m1p2p3p2z2z")
+        tiles = parse_tiles("12345678m123p22z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 9)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -457,7 +457,7 @@ class TestScoreCalculator:
         """測試幺九暗槓符數（+32符）"""
         # 手動構建包含幺九暗槓的和牌組合
         # 手牌：123m 456m 12p
-        tiles = parse_tiles("1m2m3m4m5m6m1p2p")
+        tiles = parse_tiles("123456m12p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.PINZU, 3)
 
@@ -479,7 +479,7 @@ class TestScoreCalculator:
     def test_fu_kan_terminal_open(self):
         """測試幺九明槓符數（+16符，非門清）"""
         # 手牌：234m 567m 12p
-        tiles = parse_tiles("2m3m4m5m6m7m1p2p")
+        tiles = parse_tiles("234567m12p")
         # 添加明刻使手牌非門清
         from pyriichi.hand import Meld, MeldType
 
@@ -510,7 +510,7 @@ class TestScoreCalculator:
     def test_fu_kan_simple_concealed(self):
         """測試中張暗槓符數（+16符）"""
         # 手牌：234m 56m 12p
-        tiles = parse_tiles("2m3m4m5m6m1p2p")
+        tiles = parse_tiles("23456m12p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.PINZU, 3)
 
@@ -532,7 +532,7 @@ class TestScoreCalculator:
     def test_fu_kan_simple_open(self):
         """測試中張明槓符數（+8符，非門清）"""
         # 手牌：234m 67m 12p
-        tiles = parse_tiles("2m3m4m6m7m1p2p")
+        tiles = parse_tiles("23467m12p")
         # 添加明刻使手牌非門清
         from pyriichi.hand import Meld, MeldType
 
@@ -737,7 +737,7 @@ class TestScoreCalculator:
     def test_calculate_fu_seven_pairs(self):
         """測試七對子符數"""
         # 手牌：1122334455667m
-        tiles = parse_tiles("1m1m2m2m3m3m4m4m5m5m6m6m7m")
+        tiles = parse_tiles("1122334455667m")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 7)
         # 七對子沒有 winning_combination（返回空列表）
@@ -753,7 +753,7 @@ class TestScoreCalculator:
         """測試平和自摸符數（30 符）"""
         # 平和：只有順子，無刻子，無役牌對子
         # 手牌：123m 456m 789m 123p 4p
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
+        tiles = parse_tiles("123m456m789m123p4p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.PINZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -785,7 +785,7 @@ class TestScoreCalculator:
         """測試平和榮和符數（30 符）"""
         # 平和：只有順子，無刻子，無役牌對子
         # 手牌：123m 456m 789m 123p 4p
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p2p3p4p")
+        tiles = parse_tiles("123m456m789m123p4p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.PINZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -817,7 +817,7 @@ class TestScoreCalculator:
         """測試門清自摸符數"""
         # 使用有刻子的手牌，確保不是平和
         # 手牌：111234567m 123p 4p
-        tiles = parse_tiles("1m1m1m2m3m4m5m6m7m1p2p3p4p")
+        tiles = parse_tiles("111m234567m123p4p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.PINZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -840,7 +840,7 @@ class TestScoreCalculator:
         """測試非門清自摸符數"""
         # 使用有刻子的手牌，確保不是平和
         # 手牌：11123456m 12p
-        tiles = parse_tiles("1m1m1m2m3m4m5m6m1p2p")
+        tiles = parse_tiles("11123456m12p")
         # 添加副露使手牌非門清
         from pyriichi.hand import Meld, MeldType
 
@@ -871,7 +871,7 @@ class TestScoreCalculator:
     def test_calculate_fu_open_triplet_terminal(self):
         """測試非門清幺九刻子符數"""
         # 手牌：234m 567m 8m 12p
-        tiles = parse_tiles("2m3m4m5m6m7m8m1p2p")
+        tiles = parse_tiles("2345678m12p")
         # 添加明刻使手牌非門清
         from pyriichi.hand import Meld, MeldType
 
@@ -900,7 +900,7 @@ class TestScoreCalculator:
     def test_calculate_fu_open_triplet_simple(self):
         """測試非門清中張刻子符數"""
         # 手牌：123m 56m 12p
-        tiles = parse_tiles("1m2m3m5m6m1p2p")
+        tiles = parse_tiles("12356m12p")
         # 添加明刻使手牌非門清
         from pyriichi.hand import Meld, MeldType
 
@@ -968,7 +968,7 @@ class TestScoreCalculator:
         """直接測試非門清自摸符數"""
         # 手動構建一個非門清、非平和的情況
         # 手牌：234m 567m 12p
-        tiles = parse_tiles("2m3m4m5m6m7m1p2p")
+        tiles = parse_tiles("234567m12p")
         # 添加副露使手牌非門清
         from pyriichi.hand import Meld, MeldType
 
@@ -1041,7 +1041,7 @@ class TestScoreCalculator:
         """測試雙碰聽不增加符數"""
         # 創建一個雙碰聽的手牌（實際判定可能較複雜，這裡測試符數計算邏輯）
         # 手牌：1122333m 456p 789s
-        tiles = parse_tiles("1m1m2m2m3m3m3m4p5p6p7s8s9s")
+        tiles = parse_tiles("112233m456p789s")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 1)  # 雙碰聽（聽 11m 或 22m）
         combinations = hand.get_winning_combinations(winning_tile)
@@ -1076,7 +1076,7 @@ class TestScoreCalculator:
         # 假設玩家0是東家（自風是東）
         self.game_state.set_dealer(0)  # 玩家0是莊家（東家）
         # 手牌：123m 456m 78m 123p 11z
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m1p2p3p1z1z")
+        tiles = parse_tiles("12345678m123p11z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 9)
         combinations = hand.get_winning_combinations(winning_tile)
@@ -1102,7 +1102,7 @@ class TestScoreCalculator:
         self.game_state.set_dealer(0)  # 玩家0是莊家（東家）
         # 玩家1的自風是南
         # 手牌：123m 456m 78m 123p 22z
-        tiles = parse_tiles("1m2m3m4m5m6m7m8m1p2p3p2z2z")
+        tiles = parse_tiles("12345678m123p22z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 9)
         combinations = hand.get_winning_combinations(winning_tile)
