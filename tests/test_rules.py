@@ -623,22 +623,7 @@ class TestHighScoringMethod:
         # 123 123 123 (Sequences).
         # This is the classic case!
 
-        tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.PINZU, 6),
-            Tile(Suit.PINZU, 7),
-            Tile(Suit.PINZU, 8),
-            Tile(Suit.SOZU, 5),
-            Tile(Suit.SOZU, 5),
-        ]
+        tiles = parse_tiles("111222333m678p55s")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 1)  # Win on 1m
 
@@ -681,21 +666,7 @@ class TestHighScoringMethod:
 class TestDarkKanSelection:
     def test_ankan_selection(self):
         # Setup: Hand with 1111m and 2222m.
-        tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.PINZU, 5),
-            Tile(Suit.PINZU, 6),
-            Tile(Suit.PINZU, 7),
-            Tile(Suit.SOZU, 8),
-            Tile(Suit.SOZU, 9),
-        ]
+        tiles = parse_tiles("11112222m567p89s")
         hand = Hand(tiles)
 
         engine = RuleEngine(num_players=1)
@@ -1180,7 +1151,9 @@ class TestActionExecution:
         assert self.engine._tile_set is not None
         self.engine._tile_set._wall = [Tile(Suit.PINZU, 2)]
         # Set dead wall to safe tiles to avoid accidental Rinshan win
-        self.engine._tile_set._dead_wall = [Tile(Suit.PINZU, 1)] * 14
+        safe_tiles = [Tile(Suit.PINZU, 1)] * 14
+        self.engine._tile_set._dead_wall = safe_tiles
+        self.engine._tile_set._rinshan_tiles = safe_tiles[:4]
         self.engine._tile_set._tiles = []
 
         result = self.engine.execute_action(player, GameAction.KAN, tile=kan_tile)

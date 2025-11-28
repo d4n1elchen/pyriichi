@@ -1132,22 +1132,7 @@ class TestPinfuSelfWind:
         # Pair of East Wind is Yakuhai (Double East).
         # Should NOT be Pinfu.
 
-        tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.PINZU, 4),
-            Tile(Suit.PINZU, 5),
-            Tile(Suit.PINZU, 6),
-            Tile(Suit.SOZU, 7),
-            Tile(Suit.SOZU, 8),
-            Tile(Suit.SOZU, 9),
-            Tile(Suit.PINZU, 2),
-            Tile(Suit.PINZU, 3),
-            Tile(Suit.PINZU, 4),
-            Tile(Suit.JIHAI, 1),
-            Tile(Suit.JIHAI, 1),  # Pair of East
-        ]
+        tiles = parse_tiles("123m456p789s234p11z")
         hand = Hand(tiles)
 
         # Game State: Round East, Player East

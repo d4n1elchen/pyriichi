@@ -3,8 +3,9 @@ utils 模組的單元測試
 """
 
 import pytest
-from pyriichi.tiles import Tile, Suit
-from pyriichi.utils import parse_tiles, format_tiles, is_winning_hand
+
+from pyriichi.tiles import Suit, Tile
+from pyriichi.utils import format_tiles, is_winning_hand, parse_tiles
 
 
 class TestUtils:
@@ -20,13 +21,30 @@ class TestUtils:
         assert tiles[3].suit == Suit.PINZU
         assert tiles[3].rank == 4
 
+    def test_parse_tiles_shorthand(self):
+        """測試簡寫格式解析 (123m)"""
+        tiles = parse_tiles("123m456p")
+        assert len(tiles) == 6
+        assert tiles[0].suit == Suit.MANZU
+        assert tiles[0].rank == 1
+        assert tiles[1].suit == Suit.MANZU
+        assert tiles[1].rank == 2
+        assert tiles[2].suit == Suit.MANZU
+        assert tiles[2].rank == 3
+        assert tiles[3].suit == Suit.PINZU
+        assert tiles[3].rank == 4
+        assert tiles[4].suit == Suit.PINZU
+        assert tiles[4].rank == 5
+        assert tiles[5].suit == Suit.PINZU
+        assert tiles[5].rank == 6
+
     def test_parse_tiles_red_dora(self):
         """測試解析紅寶牌（標準格式：r5p）"""
         # 測試標準格式：用 r 前綴
         # 手牌：r5p
         tiles = parse_tiles("r5p")
         assert len(tiles) == 1
-        assert tiles[0].is_red == True
+        assert tiles[0].is_red
         assert tiles[0].rank == 5
         assert tiles[0].suit == Suit.PINZU
 
@@ -36,12 +54,25 @@ class TestUtils:
         # 手牌：r567p
         tiles = parse_tiles("r5p6p7p")
         assert len(tiles) == 3
-        assert tiles[0].is_red == True
+        assert tiles[0].is_red
         assert tiles[0].rank == 5
-        assert tiles[1].is_red == False
+        assert not tiles[1].is_red
         assert tiles[1].rank == 6
-        assert tiles[2].is_red == False
+        assert not tiles[2].is_red
         assert tiles[2].rank == 7
+
+    def test_parse_tiles_mixed_shorthand_red(self):
+        """測試混合簡寫和紅寶牌"""
+        # 12r5p -> 1p 2p r5p
+        tiles = parse_tiles("12r5p")
+        assert len(tiles) == 3
+        assert tiles[0].rank == 1
+        assert not tiles[0].is_red
+        assert tiles[1].rank == 2
+        assert not tiles[1].is_red
+        assert tiles[2].rank == 5
+        assert tiles[2].is_red
+        assert all(t.suit == Suit.PINZU for t in tiles)
 
     def test_parse_tiles_invalid_char(self):
         """測試解析無效字符（跳過）"""
@@ -53,12 +84,7 @@ class TestUtils:
 
     def test_format_tiles(self):
         """測試牌格式化"""
-        tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.PINZU, 5),
-            Tile(Suit.SOZU, 9),
-        ]
+        tiles = parse_tiles("1m2m5p9s")
         result = format_tiles(tiles)
         assert isinstance(result, str)
         assert "1m" in result

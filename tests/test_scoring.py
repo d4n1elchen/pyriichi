@@ -1227,13 +1227,7 @@ class TestFuCalculationOpenMeld:
         # Pair of East Wind is Yakuhai (Double East).
         # Should NOT be Pinfu.
 
-        tiles = [
-            Tile(Suit.MANZU, 2),
-            Tile(Suit.MANZU, 2),  # Pair
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),  # Seq
-        ]
+        tiles = parse_tiles("22345m")
 
         # Open Pon 1m
         meld1 = Meld(MeldType.PON, [Tile(Suit.MANZU, 1)] * 3)
@@ -1265,15 +1259,7 @@ class TestFuCalculationOpenMeld:
         calculator = ScoreCalculator()
 
         # Let's make the pair a Dragon (White) to get Yakuhai.
-        tiles = [
-            Tile(Suit.JIHAI, 5),  # White Dragon (waiting)
-            Tile(Suit.MANZU, 3),
-            Tile(Suit.MANZU, 4),
-            Tile(Suit.MANZU, 5),
-            Tile(Suit.PINZU, 4),
-            Tile(Suit.PINZU, 5),
-            Tile(Suit.PINZU, 6),
-        ]
+        tiles = parse_tiles("5z345m456p")
         hand = Hand(tiles)
         hand._melds.append(meld1)
         hand._melds.append(meld2)

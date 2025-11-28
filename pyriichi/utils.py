@@ -6,7 +6,7 @@
 
 from typing import List
 
-from pyriichi.tiles import Tile, create_tile
+from pyriichi.tiles import Suit, Tile
 
 
 def parse_tiles(tile_string: str) -> List[Tile]:
@@ -26,28 +26,40 @@ def parse_tiles(tile_string: str) -> List[Tile]:
         [Tile(PINZU, 5, red=True), Tile(PINZU, 6), Tile(PINZU, 7)]
     """
     tiles = []
+    buffer = []  # List of (rank, is_red)
     i = 0
+    suit_map = {"m": Suit.MANZU, "p": Suit.PINZU, "s": Suit.SOZU, "z": Suit.JIHAI}
+
     while i < len(tile_string):
-        # 檢查是否為紅寶牌（用 r 前綴，標準格式：r5m, r5p, r5s）
-        if tile_string[i] == "r" and i + 2 < len(tile_string):
-            # 跳過 r，解析後面的數字和花色
-            i += 1  # 跳過 r
-            if tile_string[i].isdigit():
-                rank = int(tile_string[i])
+        char = tile_string[i]
+
+        if char == "r":
+            if i + 1 < len(tile_string) and tile_string[i + 1].isdigit():
+                rank = int(tile_string[i + 1])
+                buffer.append((rank, True))
+                i += 2
+                continue
+            else:
                 i += 1
-                if i < len(tile_string):
-                    suit = tile_string[i]
-                    tiles.append(create_tile(suit, rank, is_red=True))
-                    i += 1
-        elif tile_string[i].isdigit():
-            rank = int(tile_string[i])
+                continue
+
+        if char.isdigit():
+            rank = int(char)
+            buffer.append((rank, False))
             i += 1
-            if i < len(tile_string):
-                suit = tile_string[i]
-                tiles.append(create_tile(suit, rank, is_red=False))
-                i += 1
-        else:
+            continue
+
+        if char in suit_map:
+            suit = suit_map[char]
+            for rank, is_red in buffer:
+                tiles.append(Tile(suit, rank, is_red))
+            buffer = []
             i += 1
+            continue
+
+        # Ignore other characters
+        i += 1
+
     return tiles
 
 
