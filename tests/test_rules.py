@@ -619,92 +619,92 @@ class TestRuleEngine:
 class TestHighScoringMethod:
     def test_ambiguous_hand_pinfu_vs_triplet(self):
         # 111222333m.
-        # 111 222 333 (Triplets).
-        # 123 123 123 (Sequences).
-        # This is the classic case!
+        # 111 222 333 (刻子)。
+        # 123 123 123 (順子)。
+        # 這是經典案例！
 
         tiles = parse_tiles("111m222m333m678p55s")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.MANZU, 1)  # Win on 1m
+        winning_tile = Tile(Suit.MANZU, 1)  # 和 1m
 
         combinations = hand.get_winning_combinations(winning_tile, is_tsumo=True)
         # print(f"Found {len(combinations)} combinations for 111222333m")
-        assert len(combinations) >= 2, "Should have at least 2 interpretations"
+        assert len(combinations) >= 2, "應該至少有 2 種解釋"
 
         engine = RuleEngine()
         engine.start_game()
         engine.start_round()
         engine.deal()
 
-        # Mock game state
+        # 模擬遊戲狀態
         engine._hands[0] = hand
 
-        # Set last drawn tile to simulate Tsumo
+        # 設置最後摸牌以模擬自摸
         engine._last_drawn_tile = (0, winning_tile)
 
-        # Disable Tenhou/Chihou/Renhou
+        # 禁用天和/地和/人和
         engine._is_first_turn_after_deal = False
 
-        # Calculate score
+        # 計算得分
         result = engine.check_win(0, winning_tile)
 
         assert result is not None
         # print(f"Score: {result.points}, Han: {result.han}, Fu: {result.fu}")
         # print(f"Yaku: {[y.yaku.name for y in result.yaku]}")
 
-        # Expected:
-        # Sanankou (2) + Tsumo (1) = 3 han. 40 fu.
-        # If Pinfu interpretation:
-        # Pinfu (1) + Tsumo (1) + Iipeikou (1) = 3 han. 20 fu.
+        # 預期：
+        # 三暗刻 (2) + 自摸 (1) = 3 翻 40 符。
+        # 如果是平和解釋：
+        # 平和 (1) + 自摸 (1) + 一盃口 (1) = 3 翻 20 符。
 
-        # So we expect 3 han 40 fu.
+        # 所以我們預期 3 翻 40 符。
         assert result.fu == 40, (
-            f"Should pick the higher scoring interpretation (40 fu vs 20 fu). Got {result.fu} fu with yaku {[y.yaku.name for y in result.yaku]}"
+            f"應該選擇得分較高的解釋（40 符 vs 20 符）。得到了 {result.fu} 符，役種為 {[y.yaku.name for y in result.yaku]}"
         )
 
 
 class TestDarkKanSelection:
     def test_ankan_selection(self):
-        # Setup: Hand with 1111m and 2222m.
+        # 設置：手牌有 1111m 和 2222m。
         tiles = parse_tiles("1111m2222m567p89s")
         hand = Hand(tiles)
 
         engine = RuleEngine(num_players=1)
-        # Initialize hands manually
+        # 手動初始化手牌
         engine._hands = [hand]
-        # Initialize tile set manually
+        # 手動初始化牌組
         from pyriichi.tiles import TileSet
 
         engine._tile_set = TileSet()
         engine._tile_set.shuffle()
 
-        # Set game state
+        # 設置遊戲狀態
         engine._phase = GamePhase.PLAYING
         engine._current_player = 0
         engine._riichi_ippatsu = {}
 
-        # Execute ANKAN with 2m
+        # 執行暗槓 2m
         tile_to_kan = Tile(Suit.MANZU, 2)
         result = engine.execute_action(0, GameAction.ANKAN, tile=tile_to_kan)
 
-        # Check if successful
+        # 檢查是否成功
         assert result.success
 
-        # Check hand melds
+        # 檢查手牌副露
         melds = engine._hands[0].melds
         assert len(melds) == 1
         assert melds[0].type == MeldType.ANKAN
         assert melds[0].tiles[0] == tile_to_kan
 
-        # Check remaining tiles
-        # Should have 1111m left (and others)
+        # 檢查剩餘手牌
+        # 應該剩下 1111m（和其他牌）
         remaining_tiles = engine._hands[0].tiles
         count_1m = sum(
             1 for t in remaining_tiles if t.suit == Suit.MANZU and t.rank == 1
         )
         assert count_1m == 4
 
-        # Now execute ANKAN with 1m
+        # 現在執行暗槓 1m
         tile_to_kan_1 = Tile(Suit.MANZU, 1)
         result = engine.execute_action(0, GameAction.ANKAN, tile=tile_to_kan_1)
         assert result.success
@@ -1144,7 +1144,7 @@ class TestActionExecution:
         self.engine._kan_count = 3
         assert self.engine._tile_set is not None
         self.engine._tile_set._wall = [Tile(Suit.PINZU, 2)]
-        # Set dead wall to safe tiles to avoid accidental Rinshan win
+        # 將王牌區設為安全牌以避免意外的嶺上開花
         safe_tiles = [Tile(Suit.PINZU, 1)] * 14
         self.engine._tile_set._dead_wall = safe_tiles
         self.engine._tile_set._rinshan_tiles = safe_tiles[:4]
@@ -1359,9 +1359,9 @@ class TestWinningAndScoring:
         # 但我們正在寫測試，所以我們假設它會工作，或者我們手動設置 _pao_daisangen
 
         # 設置玩家0手牌
-        # For tsumo, hand must include the winning tile (14 tiles total)
-        # 3 melds (9 tiles) + 5 tiles in hand = 14 tiles
-        # Hand: 1m1m1m 9m9m (winning tile 1m already in hand for is_winning_hand check)
+        # 對於自摸，手牌必須包含和牌牌（總共 14 張）
+        # 3 副露（9 張）+ 5 張手牌 = 14 張
+        # 手牌：1m1m1m 9m9m（和牌牌 1m 已在手牌中，用於 is_winning_hand 檢查）
         self.engine._hands[0] = Hand(parse_tiles("11199m"))  # 111m 99m
 
         # 設置副露
@@ -1459,8 +1459,8 @@ class TestWinningAndScoring:
         self._init_game()
 
         # 設置玩家0手牌
-        # 3副露 (9張) + 4張手牌 = 13張
-        # 手牌: 1m1m 9m9m
+        # 3 副露（9 張）+ 4 張手牌 = 13 張
+        # 手牌：1m1m 9m9m
         self.engine._hands[0] = Hand(parse_tiles("1199m"))
 
         # 設置副露

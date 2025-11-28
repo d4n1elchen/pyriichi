@@ -460,11 +460,11 @@ class TestRealWorldScenarios:
         """測試遊戲狀態轉換的完整流程"""
         engine = RuleEngine(num_players=4)
 
-        # INIT -> DEALING
+        # 初始化 -> 發牌
         engine.start_game()
         assert engine.get_phase() == GamePhase.INIT
 
-        # DEALING -> PLAYING
+        # 發牌 -> 遊戲中
         engine.start_round()
         assert engine.get_phase() == GamePhase.DEALING
 

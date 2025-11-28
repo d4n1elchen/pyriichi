@@ -25,22 +25,22 @@ class TestPlayer:
 
     def test_simple_player_discard_honor(self):
         player = SimplePlayer("Simple")
-        # Hand with one honor (East)
+        # 手牌包含一張字牌（東）
         hand = Hand(parse_tiles("123m456m789m123p1z"))
         available_actions = [GameAction.DISCARD]
 
         action, tile = player.decide_action(self.game_state, 0, hand, available_actions)
 
         assert action == GameAction.DISCARD
-        assert tile == Tile(Suit.JIHAI, 1)  # Should discard East
+        assert tile == Tile(Suit.JIHAI, 1)  # 應該打出東
 
     def test_defensive_player_genbutsu(self):
         player = DefensivePlayer("Defense")
-        # Hand: 1m (safe), 2m (unsafe), ...
+        # 手牌：1m（安全），2m（危險），...
         hand = Hand(parse_tiles("123m456m789m123p4p"))
         available_actions = [GameAction.DISCARD]
 
-        # Player 1 is in Riichi and discarded 1m
+        # 玩家 1 已立直並打過 1m
         public_info = PublicInfo(
             turn_number=10,
             dora_indicators=[],
@@ -55,16 +55,16 @@ class TestPlayer:
         )
 
         assert action == GameAction.DISCARD
-        # Should discard 1m because it's Genbutsu against Player 1
+        # 應該打出 1m，因為它是對玩家 1 的現物
         assert tile == Tile(Suit.MANZU, 1)
 
     def test_defensive_player_no_threat(self):
         player = DefensivePlayer("Defense")
-        # Hand with 1z (Honor) and 1m
+        # 手牌包含 1z（字牌）和 1m
         hand = Hand(parse_tiles("123m456m789m123p1z"))
         available_actions = [GameAction.DISCARD]
 
-        # No one in Riichi
+        # 無人立直
         public_info = PublicInfo(
             turn_number=10,
             dora_indicators=[],
@@ -78,7 +78,7 @@ class TestPlayer:
             self.game_state, 0, hand, available_actions, public_info
         )
 
-        # Should behave like SimplePlayer (discard Honor)
+        # 應該像 SimplePlayer 一樣行動（打出字牌）
         assert action == GameAction.DISCARD
         assert tile == Tile(Suit.JIHAI, 1)
 

@@ -26,7 +26,7 @@ def parse_tiles(tile_string: str) -> List[Tile]:
         [Tile(PINZU, 5, red=True), Tile(PINZU, 6), Tile(PINZU, 7)]
     """
     tiles = []
-    buffer = []  # List of (rank, is_red)
+    buffer = []  # 存儲 (rank, is_red) 的列表
     i = 0
     suit_map = {"m": Suit.MANZU, "p": Suit.PINZU, "s": Suit.SOZU, "z": Suit.JIHAI}
 
@@ -57,7 +57,7 @@ def parse_tiles(tile_string: str) -> List[Tile]:
             i += 1
             continue
 
-        # Ignore other characters
+        # 忽略其他字符
         i += 1
 
     return tiles

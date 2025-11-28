@@ -1508,9 +1508,8 @@ class RuleEngine:
         # 注意：WinResult 可能沒有 player 字段，如果沒有則假設是當前玩家
         # 但 check_win 返回的 WinResult 沒有 player 字段，我們需要確保它有
         # 或者從外部傳入。這裡我們假設調用者會確保上下文正確。
-        # 實際上 check_win 返回的 WinResult 確實沒有 player 字段 (在之前的 edit 中被移除了?)
-        # 讓我們檢查 check_win 的返回值。
-        # 是的，我移除了 player=player。所以這裡我們需要依賴 score_result.payment_to
+        # 實際上 check_win 返回的 WinResult 確實沒有 player 字段
+        # 所以這裡我們需要依賴 score_result.payment_to
 
         winner = score_result.payment_to
 

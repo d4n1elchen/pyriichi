@@ -1222,32 +1222,32 @@ class TestScoreCalculator:
 
 class TestFuCalculationOpenMeld:
     def test_open_pon_fu(self):
-        # Setup: Hand with sequences and a pair of Self Wind (East)
-        # Player is East (Dealer). Round is East.
-        # Pair of East Wind is Yakuhai (Double East).
-        # Should NOT be Pinfu.
+        # 設置：手牌包含順子和自風（東）對子
+        # 玩家是東家（莊家）。場風是東。
+        # 東風對子是役牌（雙東）。
+        # 不應該是平和。
 
         tiles = parse_tiles("22345m")
 
-        # Open Pon 1m
+        # 明碰 1m
         meld1 = Meld(MeldType.PON, [Tile(Suit.MANZU, 1)] * 3)
-        # Open Pon 9m
+        # 明碰 9m
         meld2 = Meld(MeldType.PON, [Tile(Suit.MANZU, 9)] * 3)
 
         hand = Hand(tiles)
         hand._melds.append(meld1)
         hand._melds.append(meld2)
 
-        # Add Sequence 456p
+        # 添加順子 456p
         tiles.extend([Tile(Suit.PINZU, 4), Tile(Suit.PINZU, 5), Tile(Suit.PINZU, 6)])
 
-        # Re-create hand
+        # 重新創建手牌
         hand = Hand(tiles)
         hand._melds.append(meld1)
         hand._melds.append(meld2)
 
-        # Winning tile: 3m (completing 345m? No, 345m is already there)
-        # Let's remove one 2m to make it waiting.
+        # 和牌牌：3m（完成 345m？不，345m 已經有了）
+        # 移除一張 2m 以形成聽牌。
         tiles.remove(Tile(Suit.MANZU, 2))
         hand = Hand(tiles)
         hand._melds.append(meld1)
@@ -1255,10 +1255,10 @@ class TestFuCalculationOpenMeld:
 
         winning_tile = Tile(Suit.MANZU, 2)
 
-        # Calculate score
+        # 計算得分
         calculator = ScoreCalculator()
 
-        # Let's make the pair a Dragon (White) to get Yakuhai.
+        # 將對子改為三元牌（白）以獲得役牌。
         tiles = parse_tiles("5z345m456p")
         hand = Hand(tiles)
         hand._melds.append(meld1)
@@ -1266,29 +1266,29 @@ class TestFuCalculationOpenMeld:
 
         winning_tile = Tile(Suit.JIHAI, 5)
 
-        # Mock Yaku Result
+        # 模擬役種結果
         yaku_results = [YakuResult(Yaku.HAKU, 1, False)]
 
-        # Get winning combinations
+        # 獲取和牌組合
         combinations = hand.get_winning_combinations(winning_tile, is_tsumo=False)
         assert len(combinations) > 0
         winning_combination = combinations[0]
 
-        # Calculate Fu
-        # Expected:
-        # Base: 20
-        # Open Pon 1m: 4
-        # Open Pon 9m: 4
-        # Pair White: 2
-        # Waiting Tanki (Single): 2
-        # Total: 32 -> 40 fu.
+        # 計算符數
+        # 預期：
+        # 底符：20
+        # 明碰 1m：4
+        # 明碰 9m：4
+        # 白對子：2
+        # 單騎聽：2
+        # 總計：32 -> 40 符。
 
-        # Setup for ONE Open Pon Terminal (1m).
-        # Remove 9m Pon. Replace with Sequence.
+        # 設置一個幺九明碰（1m）。
+        # 移除 9m 碰。替換為順子。
         hand = Hand(tiles)  # Reset
-        hand._melds.append(meld1)  # Open Pon 1m
+        hand._melds.append(meld1)  # 明碰 1m
 
-        # Add Sequence 789p to replace 9m Pon
+        # 添加順子 789p 以替換 9m 碰
         tiles.extend([Tile(Suit.PINZU, 7), Tile(Suit.PINZU, 8), Tile(Suit.PINZU, 9)])
 
         hand = Hand(tiles)

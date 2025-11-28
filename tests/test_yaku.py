@@ -1127,25 +1127,23 @@ class TestYakuChecker:
 
 class TestPinfuSelfWind:
     def test_pinfu_with_self_wind_pair(self):
-        # Setup: Hand with sequences and a pair of Self Wind (East)
-        # Player is East (Dealer). Round is East.
-        # Pair of East Wind is Yakuhai (Double East).
-        # Should NOT be Pinfu.
+        # 設置：手牌包含順子和自風（東）對子
+        # 玩家是東家（莊家）。場風是東。
+        # 東風對子是役牌（雙東）。
+        # 不應該是平和。
 
         tiles = parse_tiles("123m456p789s234p11z")
         hand = Hand(tiles)
 
-        # Game State: Round East, Player East
+        # 遊戲狀態：場風東，玩家東
         game_state = GameState()
-        # Default dealer is 0. Default round wind is East.
-        # So player 0 is East.
+        # 預設莊家是 0。預設場風是東。
+        # 所以玩家 0 是東家。
 
-        winning_tile = Tile(
-            Suit.MANZU, 1
-        )  # Waiting on 1m (123m sequence) - wait, 1m is in sequence.
-        # Let's make it a ryanmen wait.
-        # 23m waiting for 1m or 4m.
-        # Remove 1m from tiles.
+        winning_tile = Tile(Suit.MANZU, 1)  # 聽 1m（123m 順子）- 等等，1m 在順子中。
+        # 讓我們將其改為兩面聽。
+        # 23m 聽 1m 或 4m。
+        # 從手牌中移除 1m。
         tiles.remove(Tile(Suit.MANZU, 1))
         hand = Hand(tiles)
 
@@ -1153,13 +1151,13 @@ class TestPinfuSelfWind:
 
         checker = YakuChecker()
 
-        # Get winning combinations
+        # 獲取和牌組合
         combinations = hand.get_winning_combinations(winning_tile, is_tsumo=False)
         assert len(combinations) > 0
         winning_combination = combinations[0]
 
-        # Check Pinfu
-        # Should return None because pair is East (Self Wind)
+        # 檢查平和
+        # 應該返回 None，因為對子是東（自風）
         result = checker.check_pinfu(
             hand=hand,
             winning_combination=winning_combination,

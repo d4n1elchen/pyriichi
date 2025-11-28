@@ -1,25 +1,33 @@
 """
-PyRiichi - Python Japanese Mahjong Engine
+PyRiichi - Python 日本麻將引擎
 
-A complete implementation of Japanese Mahjong (Riichi Mahjong) rules engine.
+日本麻將（立直麻將）規則引擎的完整實作。
 """
 
 __version__ = "0.1.0"
 
-# Core classes
-from pyriichi.tiles import Tile, Suit, TileSet
-from pyriichi.hand import Hand, Meld, MeldType
+# 核心類別
 from pyriichi.game_state import GameState, Wind
-from pyriichi.rules import RuleEngine, GameAction, GamePhase, ActionResult, WinResult, RyuukyokuResult, RyuukyokuType
-from pyriichi.yaku import YakuChecker, YakuResult, Yaku
-from pyriichi.scoring import ScoreCalculator, ScoreResult
+from pyriichi.hand import Hand, Meld, MeldType
+from pyriichi.rules import (
+    ActionResult,
+    GameAction,
+    GamePhase,
+    RuleEngine,
+    RyuukyokuResult,
+    RyuukyokuType,
+    WinResult,
+)
 from pyriichi.rules_config import RulesetConfig
+from pyriichi.scoring import ScoreCalculator, ScoreResult
+from pyriichi.tiles import Suit, Tile, TileSet
 
-# Convenience functions
-from pyriichi.utils import parse_tiles, format_tiles, is_winning_hand
+# 便利函數
+from pyriichi.utils import format_tiles, is_winning_hand, parse_tiles
+from pyriichi.yaku import Yaku, YakuChecker, YakuResult
 
 __all__ = [
-    # Core classes
+    # 核心類別
     "Tile",
     "Suit",
     "TileSet",
@@ -41,7 +49,7 @@ __all__ = [
     "ScoreCalculator",
     "ScoreResult",
     "RulesetConfig",
-    # Utility functions
+    # 工具函數
     "parse_tiles",
     "format_tiles",
     "is_winning_hand",
