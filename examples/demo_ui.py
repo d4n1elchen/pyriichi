@@ -164,10 +164,10 @@ class GameThread(threading.Thread):
         for i in range(4):
             if i == self.human_seat:
                 self.players.append(
-                    GUIHumanPlayer(f"You", self.human_input_queue, self.update_queue)
+                    GUIHumanPlayer(f"玩家", self.human_input_queue, self.update_queue)
                 )
             else:
-                self.players.append(ai_class(f"AI {i}"))
+                self.players.append(ai_class(f"電腦 {i}"))
 
         self.update_queue.put(
             {
@@ -307,7 +307,7 @@ class GameThread(threading.Thread):
 class MahjongGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("PyRiichi Mahjong")
+        self.root.title("PyRiichi 麻將")
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
         self.root.configure(bg=COLOR_BG)
 
@@ -355,18 +355,18 @@ class MahjongGUI:
         frame.place(relx=0.5, rely=0.5, anchor="center")
 
         ttk.Label(
-            frame, text="PyRiichi Mahjong", font=FONT_TITLE, foreground=COLOR_ACCENT
+            frame, text="PyRiichi 麻將", font=FONT_TITLE, foreground=COLOR_ACCENT
         ).pack(pady=20)
 
-        ttk.Label(frame, text="Select Difficulty:").pack(pady=5)
+        ttk.Label(frame, text="選擇難度:").pack(pady=5)
         self.diff_var = tk.StringVar(value="Medium")
-        ttk.Radiobutton(frame, text="Easy", variable=self.diff_var, value="Easy").pack()
+        ttk.Radiobutton(frame, text="簡單", variable=self.diff_var, value="Easy").pack()
         ttk.Radiobutton(
-            frame, text="Medium", variable=self.diff_var, value="Medium"
+            frame, text="普通", variable=self.diff_var, value="Medium"
         ).pack()
-        ttk.Radiobutton(frame, text="Hard", variable=self.diff_var, value="Hard").pack()
+        ttk.Radiobutton(frame, text="困難", variable=self.diff_var, value="Hard").pack()
 
-        ttk.Button(frame, text="Start Game", command=self.start_game).pack(pady=20)
+        ttk.Button(frame, text="開始遊戲", command=self.start_game).pack(pady=20)
 
     def start_game(self):
         difficulty = self.diff_var.get()
@@ -406,12 +406,12 @@ class MahjongGUI:
         self.frame_info = ttk.Frame(self.frame_table, style="Panel.TFrame", padding=10)
         self.frame_info.place(relx=0.5, rely=0.5, anchor="center")
         self.lbl_info = ttk.Label(
-            self.frame_info, text="Round Info", font=FONT_SMALL, background=COLOR_PANEL
+            self.frame_info, text="對局資訊", font=FONT_SMALL, background=COLOR_PANEL
         )
         self.lbl_info.pack()
         self.lbl_dora = ttk.Label(
             self.frame_info,
-            text="Dora",
+            text="寶牌",
             font=FONT_SMALL,
             foreground="gold",
             background=COLOR_PANEL,
@@ -454,7 +454,7 @@ class MahjongGUI:
         elif msg_type == "game_end":
             self.show_round_result(msg)
         elif msg_type == "match_end":
-            messagebox.showinfo("Game Over", "Match Finished!")
+            messagebox.showinfo("遊戲結束", "對局結束!")
             self.show_start_screen()
 
     def setup_player_positions(self):
@@ -473,9 +473,9 @@ class MahjongGUI:
     def update_game_state(self, state):
         # Info
         self.lbl_info.config(
-            text=f"{state['round_wind']} {state['round_number']} | Honba: {state['honba']} | Riichi: {state['riichi_sticks']}"
+            text=f"{state['round_wind']} {state['round_number']} | 本場: {state['honba']} | 立直棒: {state['riichi_sticks']}"
         )
-        self.lbl_dora.config(text=f"Dora: {' '.join(state['dora_indicators'])}")
+        self.lbl_dora.config(text=f"寶牌: {' '.join(state['dora_indicators'])}")
 
         # Render Opponents
         for pid, frame in self.player_frames.items():
@@ -610,7 +610,7 @@ class MahjongGUI:
 
             btn = ttk.Button(
                 self.frame_actions,
-                text=action.name,
+                text=action.zh,
                 command=lambda a=action: self.on_action_click(a),
             )
             btn.pack(side=tk.LEFT, padx=5)
@@ -678,13 +678,13 @@ class MahjongGUI:
         if reason == "win":
             winners = msg["winners"]
             win_results = msg["win_results"]
-            txt = "WINNER(S):\n"
+            txt = "和牌者:\n"
             for w in winners:
                 res = win_results[w]
-                txt += f"Player {w}: {res.points} pts ({res.han} Han / {res.fu} Fu)\n"
-            messagebox.showinfo("Round End", txt)
+                txt += f"玩家 {w}: {res.points} 點 ({res.han} 翻 / {res.fu} 符)\n"
+            messagebox.showinfo("對局結束", txt)
         else:
-            messagebox.showinfo("Round End", "Draw (Ryuukyoku)!")
+            messagebox.showinfo("對局結束", "流局!")
 
 
 if __name__ == "__main__":
