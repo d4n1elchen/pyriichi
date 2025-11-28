@@ -346,6 +346,8 @@ class RuleEngine:
         if player != self._current_player:
             return False
         hand = self._hands[player]
+        if not hand.tiles:
+            return False
         return hand.total_tile_count() > 0
 
     def _can_pon(self, player: int) -> bool:
@@ -609,6 +611,7 @@ class RuleEngine:
         meld = self._hands[player].kan(tile)
         self._kan_count += 1
         self._last_drawn_tile = None
+        self._current_player = player
 
         self._interrupt_ippatsu(GameAction.KAN, acting_player=player)
 

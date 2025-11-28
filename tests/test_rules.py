@@ -299,9 +299,63 @@ class TestRuleEngine:
 
         # 檢查振聽狀態（不應該是同巡振聽）
         assert self.engine.check_furiten_temp(0) is False
+        assert self.engine.is_furiten(0) is False
 
-        # 應該可以榮和（如果沒有其他振聽）
-        # 注意：這裡只測試同巡振聽被解除，實際榮和還需要檢查其他條件
+        # 嘗試榮和，應該成功
+        result = self.engine.check_win(0, winning_tile)
+        assert result is not None
+        assert result.win is True
+
+    def test_kan_updates_current_player(self):
+        """
+        回歸測試：驗證大明槓（Daiminkan）會更新當前玩家。
+        確保槓牌玩家在摸嶺上牌後可以進行打牌。
+        """
+        self._init_game()
+
+        # 設置：玩家 1 手持三張西風（4z），若玩家 0 打出 4z 則可槓
+        # 玩家 0 回合
+        self.engine._current_player = 0
+
+        # 給予玩家 1 三張 4z
+        p1_hand = self.engine.get_hand(1)
+        # 13 張牌
+        p1_hand._tiles = parse_tiles("4z4z4z1m2m3m4m5m6m7m8m9m1p")
+        p1_hand._melds = []
+
+        # 玩家 0 打出 4z
+        tile_4z = Tile(Suit.JIHAI, 4)
+        self.engine.execute_action(0, GameAction.DISCARD, tile_4z)
+
+        # 驗證玩家 1 可以槓
+        actions = self.engine.get_available_actions(1)
+        assert GameAction.KAN in actions
+
+        # 玩家 1 執行槓
+        result = self.engine.execute_action(1, GameAction.KAN, tile_4z)
+
+        # 驗證槓成功
+        assert result.success
+        assert result.kan is True
+
+        # 關鍵檢查：當前玩家應更新為 1
+        assert self.engine.get_current_player() == 1
+
+        # 驗證玩家 1 可以打牌（在自動摸嶺上牌後）
+        # _handle_kan 會調用 _draw_rinshan_tile 增加一張牌
+        p1_actions = self.engine.get_available_actions(1)
+        assert GameAction.DISCARD in p1_actions
+
+        # 玩家 1 打牌以完成回合
+        tile_to_discard = p1_hand.tiles[0]
+        result_discard = self.engine.execute_action(
+            1, GameAction.DISCARD, tile_to_discard
+        )
+        assert result_discard.success
+
+        # 回合應輪轉至玩家 2
+        assert self.engine.get_current_player() == 2
+        assert self.engine.check_furiten_temp(0) is False
 
     def test_furiten_riichi_permanent(self):
         """測試立直振聽：立直後放過榮和，永久振聽"""
