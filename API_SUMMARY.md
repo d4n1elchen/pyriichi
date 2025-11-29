@@ -74,10 +74,22 @@
 - `check_draw()`: 檢查流局
 - `get_hand(player)`: 獲取玩家手牌
 - `get_game_state()`: 獲取遊戲狀態
+- `waiting_for_actions`: (屬性) 獲取當前等待回應的玩家及其可用動作
+
+#### `ActionResult`
+動作執行結果
+- `success`: 動作是否成功
+- `phase`: 當前遊戲階段
+- `drawn_tile`: 摸到的牌 (如果是摸牌動作)
+- `discarded`: 是否執行了打牌
+- `winners`: 和牌玩家列表
+- `win_results`: 和牌結果詳情
+- `ryuukyoku`: 是否流局
+- `waiting_for`: 等待回應的玩家及其動作 (Dict[int, List[GameAction]])
 
 #### `GameAction` (枚舉)
 遊戲動作類型
-- `DRAW`: 摸牌
+- `DRAW`: 摸牌 (通常自動執行，除非特殊情況)
 - `DISCARD`: 打牌
 - `CHI`: 吃
 - `PON`: 碰
@@ -87,7 +99,7 @@
 - `WIN`: 和牌
 - `TSUMO`: 自摸
 - `RON`: 榮和
-- `PASS`: 過
+- `PASS`: 過 (用於放棄鳴牌或榮和機會)
 
 #### `GamePhase` (枚舉)
 遊戲階段

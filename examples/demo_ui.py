@@ -19,7 +19,7 @@ from pyriichi.player import (
     RandomPlayer,
     SimplePlayer,
 )
-from pyriichi.rules import GameAction, GamePhase, GameState, RuleEngine
+from pyriichi.rules import ActionResult, GameAction, GamePhase, GameState, RuleEngine
 from pyriichi.tiles import Suit, Tile
 
 # --- Constants & Styles ---
@@ -155,23 +155,8 @@ class GUIHumanPlayer(BasePlayer):
         available_actions: List[GameAction],
         public_info: Optional[PublicInfo] = None,
     ) -> Tuple[GameAction, Optional[Tile]]:
-        # Auto-Draw Logic:
-        # Only auto-draw if DRAW is available AND no interrupts (Chi/Pon/Kan/Ron) are available.
-        # If interrupts are available, we must let the user choose (Pass or Interrupt).
-        # Note: If we Pass, the engine will then offer DRAW again (or auto-draw if we implement that loop).
-        # But here, if we have both, we should stop.
-
-        interrupts = [
-            GameAction.CHI,
-            GameAction.PON,
-            GameAction.KAN,
-            GameAction.RON,
-            GameAction.ANKAN,
-        ]
-        has_interrupt = any(action in available_actions for action in interrupts)
-
-        if GameAction.DRAW in available_actions and not has_interrupt:
-            return GameAction.DRAW, None
+        # Auto-Draw Logic Removed (Engine handles it)
+        # But we might need to handle interrupts.
 
         # Notify GUI that it's human's turn
         self.output_queue.put(
@@ -240,6 +225,36 @@ class GameThread(threading.Thread):
             }
         )
 
+    def _handle_action_result(
+        self,
+        result: ActionResult,
+        player_idx: int,
+        action: GameAction,
+        tile: Optional[Tile],
+    ):
+        # Track drawn tile for human
+        if player_idx == self.human_seat:
+            if action == GameAction.DRAW and result.drawn_tile:
+                self.human_last_drawn_tile = result.drawn_tile
+            elif action == GameAction.DISCARD:
+                self.human_last_drawn_tile = None  # Reset after discard
+
+        self._notify_state_update(last_action=(player_idx, action, tile))
+
+        if result.winners:
+            self.update_queue.put(
+                {
+                    "type": "game_end",
+                    "reason": "win",
+                    "winners": result.winners,
+                    "win_results": result.win_results,
+                }
+            )
+            # We don't sleep/break here; the loop checks result.winners/ryuukyoku to break
+
+        if result.ryuukyoku:
+            self.update_queue.put({"type": "game_end", "reason": "draw"})
+
     def _game_loop(self):
         self.engine.start_game()
 
@@ -254,30 +269,98 @@ class GameThread(threading.Thread):
             self._notify_state_update()
 
             while self.engine.get_phase() == GamePhase.PLAYING and self.running:
+                # Check for waiting actions (Interrupts)
+                waiting_map = self.engine.waiting_for_actions
+                if waiting_map:
+                    # Iterate over a copy of keys because execute_action modifies the map
+                    waiting_pids = list(waiting_map.keys())
+                    for pid in waiting_pids:
+                        if not self.running:
+                            break
+
+                        player = self.players[pid]
+                        available_actions = self.engine.get_available_actions(pid)
+
+                        # Notify GUI if human (handled in decide_action via update_queue usually,
+                        # but we might need to be explicit about "Interrupt Turn")
+
+                        # Public info for AI players
+                        public_info = PublicInfo(
+                            turn_number=self.engine._turn_count,
+                            dora_indicators=self.engine._tile_set.get_dora_indicators(
+                                1
+                            ),
+                            discards={i: self.engine.get_discards(i) for i in range(4)},
+                            melds={i: self.engine.get_hand(i).melds for i in range(4)},
+                            riichi_players=[
+                                i for i, r in self.engine._riichi_ippatsu.items() if r
+                            ],
+                            scores=self.engine.game_state.scores,
+                        )
+
+                        if pid != self.human_seat:
+                            time.sleep(0.3)  # Faster pacing for AI
+                            action, tile = player.decide_action(
+                                self.engine.game_state,
+                                pid,
+                                self.engine.get_hand(pid),
+                                available_actions,
+                                public_info,
+                            )
+                        else:
+                            action, tile = player.decide_action(
+                                self.engine.game_state,
+                                pid,
+                                self.engine.get_hand(pid),
+                                available_actions,
+                            )
+
+                        try:
+                            result = self.engine.execute_action(pid, action, tile)
+                            self._handle_action_result(result, pid, action, tile)
+
+                            # If resolution happened and phase changed or win, break inner loop
+                            # This check is now handled by the _handle_action_result and the subsequent break
+                        except Exception as e:
+                            print(f"Error executing action for player {pid}: {e}")
+                            import traceback
+
+                            traceback.print_exc()
+
+                    # Continue main loop to re-evaluate state (waiting or next turn)
+                    if result.winners or result.ryuukyoku:
+                        time.sleep(5 if result.winners else 3)
+                        break
+                    continue
+
+                # Normal Turn
                 current_player_idx = self.engine.get_current_player()
                 player = self.players[current_player_idx]
+
                 actions = self.engine.get_available_actions(current_player_idx)
 
+                # If no actions (shouldn't happen unless game over), continue
                 if not actions:
-                    break
+                    continue
 
                 if current_player_idx == self.human_seat and isinstance(
                     player, GUIHumanPlayer
                 ):
                     player.last_drawn_tile = self.human_last_drawn_tile
 
+                public_info = PublicInfo(
+                    turn_number=self.engine._turn_count,
+                    dora_indicators=self.engine._tile_set.get_dora_indicators(1),
+                    discards={i: self.engine.get_discards(i) for i in range(4)},
+                    melds={i: self.engine.get_hand(i).melds for i in range(4)},
+                    riichi_players=[
+                        i for i, r in self.engine._riichi_ippatsu.items() if r
+                    ],
+                    scores=self.engine.game_state.scores,
+                )
+
                 if current_player_idx != self.human_seat:
                     time.sleep(0.3)  # Faster pacing
-                    public_info = PublicInfo(
-                        turn_number=self.engine._turn_count,
-                        dora_indicators=self.engine._tile_set.get_dora_indicators(1),
-                        discards={i: self.engine.get_discards(i) for i in range(4)},
-                        melds={i: self.engine.get_hand(i).melds for i in range(4)},
-                        riichi_players=[
-                            i for i, r in self.engine._riichi_ippatsu.items() if r
-                        ],
-                        scores=self.engine.game_state.scores,
-                    )
                     action, tile = player.decide_action(
                         self.engine.game_state,
                         current_player_idx,
@@ -293,33 +376,22 @@ class GameThread(threading.Thread):
                         actions,
                     )
 
-                result = self.engine.execute_action(current_player_idx, action, tile)
+                try:
+                    result = self.engine.execute_action(
+                        current_player_idx, action, tile
+                    )
+                    self._handle_action_result(result, current_player_idx, action, tile)
+                except Exception as e:
+                    print(f"Error executing action: {e}")
+                    import traceback
 
-                # Track drawn tile for human
-                if current_player_idx == self.human_seat:
-                    if action == GameAction.DRAW and result.drawn_tile:
-                        self.human_last_drawn_tile = result.drawn_tile
-                    elif action == GameAction.DISCARD:
-                        self.human_last_drawn_tile = None  # Reset after discard
-
-                self._notify_state_update(
-                    last_action=(current_player_idx, action, tile)
-                )
+                    traceback.print_exc()
 
                 if result.winners:
-                    self.update_queue.put(
-                        {
-                            "type": "game_end",
-                            "reason": "win",
-                            "winners": result.winners,
-                            "win_results": result.win_results,
-                        }
-                    )
                     time.sleep(5)
                     break
 
                 if result.ryuukyoku:
-                    self.update_queue.put({"type": "game_end", "reason": "draw"})
                     time.sleep(3)
                     break
 
@@ -681,9 +753,12 @@ class MahjongGUI:
             if action == GameAction.DISCARD:
                 continue
 
+            # Special handling for PASS (make it distinct?)
+            btn_text = action.zh
+
             btn = ttk.Button(
                 self.frame_actions,
-                text=action.zh,
+                text=btn_text,
                 command=lambda a=action: self.on_action_click(a),
             )
             btn.pack(side=tk.LEFT, padx=5)

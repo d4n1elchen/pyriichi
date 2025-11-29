@@ -67,6 +67,13 @@ while engine.get_phase() == GamePhase.PLAYING:
     actions = engine.get_available_actions(current_player_idx)
     if not actions: break
 
+    # 檢查是否有等待回應的動作（鳴牌/榮和）
+    if engine.waiting_for_actions:
+        for pid, p_actions in engine.waiting_for_actions.items():
+            # 處理中斷邏輯...
+            pass
+        continue
+
     # AI 決定動作
     action, tile = player.decide_action(
         engine.game_state,
@@ -78,7 +85,12 @@ while engine.get_phase() == GamePhase.PLAYING:
     print(f"玩家 {current_player_idx} 執行: {action.name}" + (f" {tile}" if tile else ""))
 
     # 執行動作
-    engine.execute_action(current_player_idx, action, tile)
+    result = engine.execute_action(current_player_idx, action, tile)
+
+    # 檢查結果
+    if result.winners:
+        print("和牌！")
+        break
 ```
 
 ### 牌的表示和操作

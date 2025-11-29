@@ -260,6 +260,9 @@ class TestDrawScenarios:
         engine._is_first_turn_after_deal = True
         engine._melds = [[] for _ in range(4)]
 
+        # Force update actions
+        engine._waiting_for_actions[0] = engine._calculate_turn_actions(0)
+
         # 檢查可用動作
         actions = engine.get_available_actions(0)
         assert GameAction.KYUUSHU_KYUUHAI in actions

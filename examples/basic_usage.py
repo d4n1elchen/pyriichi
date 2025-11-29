@@ -32,123 +32,67 @@ def main():
     max_turns = 100  # Limit turns to prevent infinite loops in this example
 
     while engine.get_phase() == GamePhase.PLAYING and turn_count < max_turns:
-        current_player_idx = engine.get_current_player()
-        current_player = players[current_player_idx]
+        # Check for waiting actions (Unified Turn & Interrupts)
+        waiting_map = engine.waiting_for_actions
+        if waiting_map:
+            # Iterate over a copy of keys because execute_action modifies the map
+            waiting_pids = list(waiting_map.keys())
+            for pid in waiting_pids:
+                if engine.get_phase() != GamePhase.PLAYING:
+                    break
 
-        # Get available actions for the current player
-        # Usually DRAW, unless it's after a call
-        actions = engine.get_available_actions(current_player_idx)
+                player = players[pid]
+                available_actions = engine.get_available_actions(pid)
 
-        if not actions:
-            print(f"No actions for Player {current_player_idx}. Ending loop.")
-            break
+                # Determine if it's an interrupt or normal turn for logging
+                is_turn = (
+                    pid == engine.get_current_player()
+                    and GameAction.DISCARD in available_actions
+                )
+                if is_turn:
+                    print(f"\n--- Turn {turn_count} (Player {pid}) ---")
+                else:
+                    print(f"\n--- Interrupt Opportunity (Player {pid}) ---")
 
-        # Decide action
-        # Note: RandomPlayer.decide_action expects (game_state, player_index, hand, actions)
-        # We don't pass public_info in this simple example
-        action, tile = current_player.decide_action(
-            engine.game_state,
-            current_player_idx,
-            engine.get_hand(current_player_idx),
-            actions,
-        )
+                print(f"Player {pid} waiting actions: {available_actions}")
 
-        print(
-            f"[Turn {turn_count}] Player {current_player_idx} performs {action.name}"
-            + (f" on {tile}" if tile else "")
-        )
+                # Decide action
+                action, tile = player.decide_action(
+                    engine.game_state,
+                    pid,
+                    engine.get_hand(pid),
+                    available_actions,
+                )
 
-        # Execute Action
-        result = engine.execute_action(current_player_idx, action, tile)
+                print(
+                    f"Player {pid} responds with {action.name}"
+                    + (f" on {tile}" if tile else "")
+                )
 
-        if not result.success:
-            print(f"Action failed! {result}")
-            break
+                try:
+                    result = engine.execute_action(pid, action, tile)
+                    if not result.success:
+                        print(f"Action failed! {result}")
+                        break
 
-        # Check for Game End
-        if engine.get_phase() != GamePhase.PLAYING:
-            print(f"Game Phase changed to {engine.get_phase()}")
-            break
+                    # If resolution happened and phase changed or win, break inner loop
+                    if not engine.waiting_for_actions:
+                        break
+                except Exception as e:
+                    print(f"Error executing action for player {pid}: {e}")
+                    break
 
-        # If DISCARD happened, check for interrupts (Ron, Pon, Chi, Kan)
-        if action == GameAction.DISCARD:
-            discarded_tile = tile
-            interrupt_occurred = False
-
-            # Check other players for actions (Priority: Ron > Pon/Kan > Chi)
-            # We iterate through all players to see if anyone wants to interrupt
-
-            # 1. Check RON (All other players)
-            for i in range(4):
-                if i == current_player_idx:
-                    continue
-
-                p_actions = engine.get_available_actions(i)
-                if GameAction.RON in p_actions:
-                    # For this example, if RandomPlayer can Ron, it will
-                    decision, _ = players[i].decide_action(
-                        engine.game_state, i, engine.get_hand(i), p_actions
-                    )
-                    if decision == GameAction.RON:
-                        print(f"!!! Player {i} declares RON on {discarded_tile} !!!")
-                        engine.execute_action(i, GameAction.RON, discarded_tile)
-                        interrupt_occurred = True
-                        break  # Game ends on Ron usually
-
+            # Increment turn count if it was a turn action (heuristic)
+            # Actually turn count is managed by engine, we just track loop iterations
+            turn_count += 1
+            continue
+        else:
+            # Should not happen in unified flow unless transition
+            print("No waiting actions. Checking engine state...")
             if engine.get_phase() != GamePhase.PLAYING:
                 break
-
-            if interrupt_occurred:
-                continue
-
-            # 2. Check PON/KAN (All other players)
-            for i in range(4):
-                if i == current_player_idx:
-                    continue
-
-                p_actions = engine.get_available_actions(i)
-                # Filter for Pon/Kan
-                call_actions = [
-                    a for a in p_actions if a in [GameAction.PON, GameAction.KAN]
-                ]
-
-                if call_actions:
-                    # Ask player if they want to call
-                    # RandomPlayer might pass, so we check decision
-                    decision, _ = players[i].decide_action(
-                        engine.game_state, i, engine.get_hand(i), p_actions
-                    )
-                    if decision in [GameAction.PON, GameAction.KAN]:
-                        print(f"Player {i} calls {decision.name} on {discarded_tile}")
-                        engine.execute_action(i, decision, discarded_tile)
-                        interrupt_occurred = True
-                        break  # Only one player can Pon/Kan
-
-            if interrupt_occurred:
-                continue
-
-            # 3. Check CHI (Next player only)
-            next_player_idx = (current_player_idx + 1) % 4
-            p_actions = engine.get_available_actions(next_player_idx)
-            if GameAction.CHI in p_actions:
-                decision, chi_tile = players[next_player_idx].decide_action(
-                    engine.game_state,
-                    next_player_idx,
-                    engine.get_hand(next_player_idx),
-                    p_actions,
-                )
-                if decision == GameAction.CHI:
-                    print(f"Player {next_player_idx} calls CHI on {discarded_tile}")
-                    # CHI requires the sequence (e.g. 23m for 1m)
-                    # RandomPlayer returns the tile to construct sequence?
-                    # Wait, RandomPlayer implementation for CHI might need review.
-                    # For this example, let's assume it works or skip CHI if complex.
-                    # RandomPlayer returns (Action, None) for calls usually in current impl.
-                    # Let's skip CHI for simplicity in this basic example unless RandomPlayer is robust.
-                    pass
-
-        turn_count += 1
-        # time.sleep(0.1) # Optional delay for readability
+            # If still playing but no actions, maybe just continue?
+            continue
 
     # 4. Game End Results
     print("\n=== Game End ===")
