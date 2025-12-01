@@ -6,7 +6,7 @@ import threading
 import time
 import tkinter as tk
 from tkinter import messagebox, ttk
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -212,7 +212,7 @@ class GameThread(threading.Thread):
         for i in range(4):
             if i == self.human_seat:
                 self.players.append(
-                    GUIHumanPlayer(f"玩家", self.human_input_queue, self.update_queue)
+                    GUIHumanPlayer("玩家", self.human_input_queue, self.update_queue)
                 )
             else:
                 self.players.append(ai_class(f"電腦 {i}"))

@@ -4,7 +4,6 @@ RuleEngine 的單元測試
 
 import pytest
 
-import pyriichi
 from pyriichi.game_state import Wind
 from pyriichi.hand import Hand, Meld, MeldType
 from pyriichi.rules import (
@@ -351,6 +350,11 @@ class TestRuleEngine:
         # 設置：玩家 1 手持三張西風（4z），若玩家 0 打出 4z 則可槓
         # 玩家 0 回合
         self.engine._current_player = 0
+
+        # Ensure other players don't interrupt
+        safe_tiles = parse_tiles("1s1s1s1s2s2s2s2s3s3s3s3s4s")
+        for i in [0, 2, 3]:
+            self.engine._hands[i] = Hand(safe_tiles)
 
         # 給予玩家 1 三張 4z
         p1_hand = self.engine.get_hand(1)

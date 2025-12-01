@@ -650,7 +650,6 @@ class RuleEngine:
         # 這裡簡化：每個贏家都計算分數，從放銃者扣除。
 
         loser = self._last_discarded_player
-        total_points_transfer = 0
 
         for player in winners:
             win_res = result.win_results[player]
@@ -1429,7 +1428,7 @@ class RuleEngine:
         return WinResult(
             win=True,
             player=player,
-            yaku=yaku_results,
+            yaku=best_yaku_results,
             han=score_result.han,
             fu=score_result.fu,
             points=score_result.total_points,
