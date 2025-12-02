@@ -315,7 +315,8 @@ class MahjongTable(tk.Canvas):
         )
 
         # Round Info
-        info_text = f"{self.round_wind_name} {self.round_number} 局\n{self.honba} 本場\n供託: {self.riichi_sticks * 1000}"
+        # Round Info
+        info_text = f"{self.round_wind_name} {self.round_number} 局\n{self.honba} 本場"
         self.create_text(
             self.center_x,
             self.center_y - 50,
@@ -324,6 +325,27 @@ class MahjongTable(tk.Canvas):
             font=FONT_MEDIUM,
             justify="center",
         )
+
+        # Riichi Sticks (Unclaimed)
+        # Calculate how many sticks are currently on the table (active Riichi)
+        active_riichi_count = 0
+        for hand in self.hands.values():
+            if hand and hand.is_riichi:  # Ensure hand is not None
+                active_riichi_count += 1
+
+        center_sticks = self.riichi_sticks - active_riichi_count
+
+        if center_sticks > 0:
+            stick_y = self.center_y - 15
+            self._draw_riichi_stick(self.center_x - 30, stick_y, 40, 8)
+            self.create_text(
+                self.center_x + 10,
+                stick_y,
+                text=f"x {center_sticks}",
+                fill=COLOR_TEXT_WHITE,
+                font=FONT_SMALL,
+                anchor="w",
+            )
 
         # Dora
         self.create_text(
@@ -344,6 +366,51 @@ class MahjongTable(tk.Canvas):
                 tile,
                 scale=0.8,
             )
+
+    def _draw_riichi_stick(self, x, y, w, h, angle=0):
+        """Draw a 1000 point stick (Riichi stick)"""
+
+        # Helper for rotation
+        def rotate_point(px, py, ox, oy, theta):
+            import math
+
+            rad = math.radians(theta)
+            c, s = math.cos(rad), math.sin(rad)
+            dx, dy = px - ox, py - oy
+            return ox + dx * c - dy * s, oy + dx * s + dy * c
+
+        center_x = x + w / 2
+        center_y = y
+
+        # Calculate corners relative to center
+        half_w = w / 2
+        half_h = h / 2
+
+        corners = [
+            (center_x - half_w, center_y - half_h),
+            (center_x + half_w, center_y - half_h),
+            (center_x + half_w, center_y + half_h),
+            (center_x - half_w, center_y + half_h),
+        ]
+
+        rotated_corners = [
+            rotate_point(px, py, center_x, center_y, angle) for px, py in corners
+        ]
+
+        # White body
+        self.create_polygon(rotated_corners, fill="#F0F0F0", outline="#CCCCCC")
+
+        # Red dot in center
+        r = h * 0.3
+        # Dot is always at center, just circle
+        self.create_oval(
+            center_x - r,
+            center_y - r,
+            center_x + r,
+            center_y + r,
+            fill="#FF0000",
+            outline="#FF0000",
+        )
 
     def _render_player(self, player_idx: int, rel_pos: int):
         # rel_pos: 0=Bottom, 1=Right, 2=Top, 3=Left
@@ -440,6 +507,32 @@ class MahjongTable(tk.Canvas):
             justify="center",
             angle=score_angle,
         )
+
+        # Draw Riichi Stick if player is in Riichi
+        hand = self.hands.get(player_idx)
+        if hand and hand.is_riichi:
+            offset = 25
+
+            if rel_pos == 0:  # Bottom
+                sx, sy = score_x, score_y + offset
+                angle = 0
+            elif rel_pos == 1:  # Right
+                sx, sy = score_x + offset, score_y
+                angle = 90
+            elif rel_pos == 2:  # Top
+                sx, sy = score_x, score_y - offset
+                angle = 180
+            elif rel_pos == 3:  # Left
+                sx, sy = score_x - offset, score_y
+                angle = -90
+
+            # Draw stick centered at sx, sy
+            # My _draw_riichi_stick takes x (left/top-left) and y (center).
+            # I should adjust input to center it.
+            w, h = 40, 8
+            # Pass x such that center is sx
+            # x + w/2 = sx => x = sx - w/2
+            self._draw_riichi_stick(sx - w / 2, sy, w, h, angle)
 
         # Draw River (Discards)
         discards = self.discards.get(player_idx, [])
