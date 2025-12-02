@@ -350,7 +350,56 @@ class RuleEngine:
         hand = self._hands[player]
         if not hand.is_concealed:
             return False
-        return False if hand.is_riichi else hand.is_tenpai()
+        if hand.is_riichi:
+            return False
+
+        # Check if we can discard any tile to become tenpai
+        # We need to simulate discarding each tile
+        # Note: This assumes the hand has 14 tiles (after draw)
+        # If the hand has 13 tiles (e.g. before draw?), we can't Riichi anyway (must draw first)
+
+        # Optimization: If already tenpai (13 tiles), return True?
+        # But _can_riichi is called after draw (14 tiles).
+
+        # We can't easily modify hand._tiles directly without affecting state if not careful.
+        # But Hand class doesn't have a "check_tenpai_after_discard" method.
+        # We can use a temporary hand or modify/restore.
+
+        # Using internal _tiles list is risky if not restored properly.
+        # Let's try to use a temporary list if possible, but is_tenpai uses self._tiles.
+
+        # We will iterate and temporarily remove.
+        # Since we are in a single thread logic (mostly), it should be fine.
+
+        can_riichi = False
+        original_tiles = hand._tiles.copy()
+
+        # We iterate over unique tiles to save time
+        unique_tiles = set(original_tiles)
+
+        for tile in unique_tiles:
+            # Remove one instance
+            try:
+                hand._tiles.remove(tile)
+            except ValueError:
+                # Should not happen if tile is from original_tiles
+                continue
+
+            hand._tile_counts_cache = None  # Invalidate cache
+
+            is_tenpai = hand.is_tenpai()
+
+            if is_tenpai:
+                can_riichi = True
+
+            # Restore
+            hand._tiles = original_tiles.copy()
+            hand._tile_counts_cache = None
+
+            if can_riichi:
+                break
+
+        return can_riichi
 
     def _can_kan(self, player: int) -> bool:
         hand = self._hands[player]
@@ -836,8 +885,27 @@ class RuleEngine:
         self, player: int, tile: Optional[Tile] = None, **kwargs
     ) -> ActionResult:
         result = ActionResult()
+
+        # If tile is None, try to use last discarded tile (Daiminkan)
         if tile is None:
-            raise ValueError("明槓必須指定被槓的牌")
+            if self._last_discarded_tile is None:
+                raise ValueError("明槓必須指定被槓的牌")
+            tile = self._last_discarded_tile
+
+        # Check if it's a Daiminkan (Open Kan) on discard
+        # Must be an interrupt (player != current_player)
+        if (
+            self._last_discarded_tile
+            and tile == self._last_discarded_tile
+            and player != self._current_player
+        ):
+            # Remove from discarder
+            if self._last_discarded_player is not None:
+                self._remove_last_discard(self._last_discarded_player, tile)
+
+            # Clear last discard state
+            self._last_discarded_tile = None
+            self._last_discarded_player = None
 
         meld = self._hands[player].kan(tile)
         self._kan_count += 1

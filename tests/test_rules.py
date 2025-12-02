@@ -54,6 +54,37 @@ class TestRuleEngine:
 
         assert self.engine.get_phase() == GamePhase.PLAYING
 
+    def test_riichi_availability_14_tiles(self):
+        """測試 14 張手牌（摸牌後）打牌後聽牌，應可立直"""
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine.deal()
+
+        player_idx = self.engine.get_current_player()
+        hand = self.engine.get_hand(player_idx)
+
+        # 清空手牌
+        hand._tiles = []
+
+        # 構造手牌: 11 123 123 123 566 (萬子)
+        # 打出 5m 後剩 11 123 123 123 66 -> 聽牌 (聽 6m)
+        tiles = []
+        tiles.extend([Tile(Suit.MANZU, 1) for _ in range(2)])
+        tiles.extend([Tile(Suit.MANZU, 2) for _ in range(3)])
+        tiles.extend([Tile(Suit.MANZU, 3) for _ in range(3)])
+        tiles.extend([Tile(Suit.MANZU, 4) for _ in range(3)])
+        tiles.append(Tile(Suit.MANZU, 5))
+        tiles.append(Tile(Suit.MANZU, 6))
+        tiles.append(Tile(Suit.MANZU, 6))
+
+        for t in tiles:
+            hand.add_tile(t)
+
+        # 強制重新計算動作 (繞過緩存)
+        actions = self.engine._calculate_turn_actions(player_idx)
+
+        assert GameAction.RICHI in actions
+
     def test_hand_total_tile_count_includes_melds(self):
         """手牌總數應包含副露的牌。"""
         # 11m 123m 456p 77s 8s 99s
@@ -768,6 +799,10 @@ class TestDarkKanSelection:
         # 手動初始化牌組
 
         engine._tile_set = TileSet()
+        # Remove tiles in hand from tile set to avoid duplicates
+        for t in tiles:
+            if t in engine._tile_set._tiles:
+                engine._tile_set._tiles.remove(t)
         engine._tile_set.shuffle()
 
         # 設置遊戲狀態
@@ -918,6 +953,58 @@ class TestActionExecution:
         self.engine.start_round()
         self.engine.deal()
 
+    def test_open_kan_logic(self):
+        """測試大明槓邏輯：自動推斷牌並移除捨牌"""
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine.deal()
+
+        # 玩家 1 設置 (在打牌前)
+        p1 = 1
+        hand1 = self.engine.get_hand(p1)
+        hand1._tiles = []
+        # 給予 P1 三張 1m
+        for _ in range(3):
+            hand1.add_tile(Tile(Suit.MANZU, 1))
+        # 填充剩餘牌
+        for i in range(10):
+            hand1.add_tile(Tile(Suit.PINZU, i % 9 + 1))
+
+        # 玩家 0 回合
+        p0 = 0
+        self.engine._current_player = p0
+        hand0 = self.engine.get_hand(p0)
+        discard_tile = Tile(Suit.MANZU, 1)
+        hand0.add_tile(discard_tile)
+
+        # 玩家 0 打出 1m
+        self.engine.execute_action(p0, GameAction.DISCARD, tile=discard_tile)
+
+        # 驗證捨牌狀態
+        assert self.engine._last_discarded_tile == discard_tile
+        assert self.engine._last_discarded_player == p0
+        assert discard_tile in hand0.discards
+
+        # 檢查 P1 是否可以槓
+        assert self.engine._can_kan(p1)
+
+        # 執行槓 (不指定牌，應自動推斷)
+        waiting = self.engine.waiting_for_actions
+        assert p1 in waiting
+        assert GameAction.KAN in waiting[p1]
+
+        result = self.engine.execute_action(p1, GameAction.KAN, tile=None)
+
+        # 驗證槓成功
+        assert result.kan is True
+        assert len(hand1.melds) == 1
+        assert hand1.melds[0].type == MeldType.KAN
+        assert hand1.melds[0].called_tile == discard_tile
+
+        # 驗證捨牌已從 P0 河中移除
+        assert discard_tile not in hand0.discards
+        assert self.engine._last_discarded_tile is None
+
     def test_pon_action_claims_last_discard(self):
         """測試碰牌會取得最後捨牌並改變輪到的玩家。"""
         self._init_game()
@@ -1044,8 +1131,9 @@ class TestActionExecution:
         self._init_game()
         current_player = self.engine.get_current_player()
         # 確保手牌聽牌且門清
-        # 123m 456m 789m 123p 4p
-        self.engine._hands[current_player] = Hand(parse_tiles("123456789m1234p"))
+        # 123m 456m 789m 123p 4p -> 13 tiles
+        # Add one more tile (e.g. 9s) to discard and stay tenpai
+        self.engine._hands[current_player] = Hand(parse_tiles("123456789m1234p9s"))
 
         # Force update actions
         self.engine._waiting_for_actions[current_player] = (
@@ -2359,7 +2447,3 @@ class TestGameEndConditions:
         assert self.engine.game_state.round_wind == Wind.SOUTH
         assert self.engine.game_state.round_number == 4
         assert self.engine.game_state.honba == 1
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
