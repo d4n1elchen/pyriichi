@@ -170,11 +170,13 @@ class Hand:
         self._is_riichi = False
         self._riichi_turn: Optional[int] = None
         self._tile_counts_cache: Optional[dict] = None
+        self._last_drawn_tile: Optional[Tile] = None
 
     def add_tile(self, tile: Tile) -> None:
         self._tiles.append(tile)
         self._tiles.sort()
         self._tile_counts_cache = None
+        self._last_drawn_tile = tile
 
     def discard(self, tile: Tile) -> bool:
         """
@@ -281,6 +283,7 @@ class Hand:
         meld = Meld(MeldType.CHI, all_tiles, called_tile=tile)
         self._melds.append(meld)
         self._tile_counts_cache = None
+        self._last_drawn_tile = None
         return meld
 
     def can_pon(self, tile: Tile) -> bool:
@@ -327,6 +330,7 @@ class Hand:
         meld = Meld(MeldType.PON, meld_tiles, called_tile=tile)
         self._melds.append(meld)
         self._tile_counts_cache = None
+        self._last_drawn_tile = None
         return meld
 
     def can_kan(self, tile: Optional[Tile] = None) -> List[Meld]:
@@ -424,6 +428,8 @@ class Hand:
 
         self._melds.append(meld)
         self._tile_counts_cache = None
+        # Kan usually followed by Rinshan draw which will set last_drawn_tile via add_tile
+        self._last_drawn_tile = None
         return meld
 
     @property
@@ -461,6 +467,15 @@ class Hand:
         """
         self._is_riichi = is_riichi
         self._riichi_turn = turn
+
+    @property
+    def last_drawn_tile(self) -> Optional[Tile]:
+        """獲取最後摸到的牌"""
+        return self._last_drawn_tile
+
+    def reset_last_drawn_tile(self) -> None:
+        """重置最後摸到的牌"""
+        self._last_drawn_tile = None
 
     def _get_tile_counts(self, tiles: Optional[List[Tile]] = None) -> dict[Tile, int]:
         """

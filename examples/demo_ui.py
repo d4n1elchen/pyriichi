@@ -519,7 +519,24 @@ class MahjongTable(tk.Canvas):
         # Sort
         tiles = sorted(tiles, key=lambda t: (t.suit.value, t.rank, t.is_red))
 
-        for i, tile in enumerate(tiles):
+        # Check for drawn tile
+        drawn_tile = hand.last_drawn_tile
+
+        tiles_to_render = list(tiles)
+        drawn_tile_to_render = None
+
+        # Only separate if it's the current player (human)
+        # And if the tile is actually in the hand
+        if (
+            self.current_player == self.human_seat
+            and drawn_tile
+            and drawn_tile in tiles_to_render
+        ):
+            # Remove one instance
+            tiles_to_render.remove(drawn_tile)
+            drawn_tile_to_render = drawn_tile
+
+        for i, tile in enumerate(tiles_to_render):
             dx = x + i * TILE_WIDTH
             dy = y
 
@@ -537,15 +554,39 @@ class MahjongTable(tk.Canvas):
             )
 
             # Store bbox for click detection
-            # Use addtag_overlapping to tag all items in the tile area (rect, text, oval)
-            # This ensures hover works even if mouse is over text or decoration
+            self.addtag_overlapping(
+                f"hand_tile:{i}", dx, dy, dx + TILE_WIDTH, dy + TILE_HEIGHT
+            )
+
+        # Render drawn tile if exists
+        if drawn_tile_to_render:
+            i = len(tiles_to_render)
+            # Add gap
+            dx = x + i * TILE_WIDTH + 15  # 15px gap
+            dy = y
+
+            # Check if selected (index would be last)
+            if self.selected_tile_idx == i:
+                dy -= 20
+
+            TileRenderer.draw_tile(
+                self,
+                dx,
+                dy,
+                drawn_tile_to_render,
+                face_up=True,
+                selected=(self.selected_tile_idx == i),
+            )
+
             self.addtag_overlapping(
                 f"hand_tile:{i}", dx, dy, dx + TILE_WIDTH, dy + TILE_HEIGHT
             )
 
         # Draw Melds (to the right of hand)
         if melds:
-            meld_start_x = x + len(tiles) * TILE_WIDTH + 20
+            # Adjust start x based on whether we had a drawn tile
+            extra_width = TILE_WIDTH + 15 if drawn_tile_to_render else 0
+            meld_start_x = x + len(tiles_to_render) * TILE_WIDTH + extra_width + 20
             self._render_melds(melds, meld_start_x, y, 0)
 
     def _render_ai_hand(
@@ -683,6 +724,14 @@ class MahjongTable(tk.Canvas):
                     tiles = sorted(
                         hand.tiles, key=lambda t: (t.suit.value, t.rank, t.is_red)
                     )
+                    # If there's a drawn tile, it's at the end of the visual hand
+                    drawn_tile = hand.last_drawn_tile
+                    if drawn_tile and drawn_tile in tiles:
+                        # Remove one instance from the main sorted list to simulate visual separation
+                        tiles.remove(drawn_tile)
+                        # Add it back to the end for indexing purposes
+                        tiles.append(drawn_tile)
+
                     if 0 <= self.selected_tile_idx < len(tiles):
                         tile = tiles[self.selected_tile_idx]
                         self.on_tile_click_callback(tile)  # Corrected callback name
@@ -698,7 +747,6 @@ class GUIHumanPlayer(BasePlayer):
         super().__init__(name)
         self.input_queue = input_queue
         self.output_queue = output_queue
-        self.last_drawn_tile: Optional[Tile] = None
 
     def decide_action(
         self,
@@ -714,7 +762,6 @@ class GUIHumanPlayer(BasePlayer):
                 "type": "human_turn",
                 "actions": available_actions,
                 "hand": hand,
-                "last_drawn_tile": self.last_drawn_tile,
             }
         )
 
@@ -888,12 +935,6 @@ class GameThread(threading.Thread):
 
                 if not actions:
                     continue
-
-                # Update last drawn tile for human visualization
-                if current_player_idx == self.human_seat and isinstance(
-                    player, GUIHumanPlayer
-                ):
-                    player.last_drawn_tile = self.engine._last_drawn_tile
 
                 public_info = PublicInfo(
                     turn_number=self.engine._turn_count,
@@ -1070,9 +1111,7 @@ class GameApp:
         elif msg_type == "state_update":
             self.table.update_state(msg)
         elif msg_type == "human_turn":
-            self.enable_human_controls(
-                msg["actions"], msg["hand"], msg.get("last_drawn_tile")
-            )
+            self.enable_human_controls(msg["actions"])
         elif msg_type == "game_end":
             self.show_round_result(msg)
         elif msg_type == "match_end":
@@ -1081,9 +1120,7 @@ class GameApp:
         elif msg_type == "error":
             messagebox.showerror("錯誤", msg["message"])
 
-    def enable_human_controls(
-        self, actions: List[GameAction], hand: Hand, last_drawn_tile: Optional[Tile]
-    ):
+    def enable_human_controls(self, actions: List[GameAction]):
         self.current_actions = actions
 
         # Show action buttons

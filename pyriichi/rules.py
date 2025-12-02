@@ -196,7 +196,10 @@ class RuleEngine:
         self._pending_kan_tile = None
         self._winning_players = []
         self._ignore_suukantsu = False
-        self._last_drawn_tile = None
+
+        # Reset hands last drawn tile
+        for hand in self._hands:
+            hand.reset_last_drawn_tile()
 
         self._furiten_permanent = {}
         self._furiten_temp = {}
@@ -244,6 +247,32 @@ class RuleEngine:
             int: 當前玩家位置。
         """
         return self._current_player
+
+    def get_last_discard_player(self) -> Optional[int]:
+        """獲取最後捨牌的玩家。"""
+        return self._last_discarded_player
+
+    def get_last_drawn_tile(self) -> Optional[Tuple[int, Tile]]:
+        """
+        獲取最後摸到的牌。
+
+        Returns:
+            Optional[Tuple[int, Tile]]: (玩家索引, 牌) 或 None。
+        """
+        # Delegate to current player's hand
+        # Note: This assumes "last drawn" implies current player's draw.
+        # If we need global last drawn (e.g. for some weird reason), we'd need to track player.
+        # But usually we only care about the current player's draw.
+
+        # However, the previous implementation tracked (player_idx, tile).
+        # We should try to reconstruct that if possible, or just return what we can.
+        # If current player has a last_drawn_tile, return it.
+
+        hand = self.get_hand(self._current_player)
+        tile = hand.last_drawn_tile
+        if tile:
+            return (self._current_player, tile)
+        return None
 
     def get_phase(self) -> GamePhase:
         """
@@ -667,18 +696,19 @@ class RuleEngine:
             raise ValueError("牌組未初始化")
         if hand.total_tile_count() >= 14:
             raise ValueError("手牌已達 14 張，不能再摸牌")
-        if drawn_tile := self._tile_set.draw():
+        # 摸牌
+        drawn_tile = self._tile_set.draw()
+        if drawn_tile:
             hand.add_tile(drawn_tile)
             result.drawn_tile = drawn_tile
-            self._last_drawn_tile = (player, drawn_tile)
-            if self._tile_set.is_exhausted():
-                result.is_last_tile = True
+        if self._tile_set.is_exhausted():
+            result.is_last_tile = True
 
-            # 計算並設置等待動作
-            actions = self._calculate_turn_actions(player)
-            self._waiting_for_actions = {player: actions}
-            result.waiting_for = self._waiting_for_actions
-        else:
+        # 計算並設置等待動作
+        actions = self._calculate_turn_actions(player)
+        self._waiting_for_actions = {player: actions}
+        result.waiting_for = self._waiting_for_actions
+        if not drawn_tile:
             self._phase = GamePhase.RYUUKYOKU
             result.ryuukyoku = RyuukyokuResult(
                 ryuukyoku=True, ryuukyoku_type=RyuukyokuType.EXHAUSTED
@@ -736,7 +766,8 @@ class RuleEngine:
         if not self._tile_set:
             raise ValueError("牌組未初始化")
 
-        if self._hands[player].discard(tile):
+        hand = self._hands[player]
+        if hand.discard(tile):
             # 記錄打牌並處理相關效果（但不推進回合）
             self._last_discarded_tile = tile
             self._last_discarded_player = player
@@ -753,6 +784,7 @@ class RuleEngine:
                 result.is_last_tile = True
 
             result.discarded = True
+            hand.reset_last_drawn_tile()  # 打牌後清除最後摸的牌
 
             # 檢查其他玩家是否可以鳴牌或榮和
             interrupts = self._check_interrupts(tile, player)
@@ -764,8 +796,6 @@ class RuleEngine:
             else:
                 # 無人鳴牌，推進回合並自動摸牌
                 self._advance_turn(result)
-
-            self._last_drawn_tile = None
 
         return result
 
@@ -814,7 +844,7 @@ class RuleEngine:
         self._last_discarded_tile = None
         self._last_discarded_player = None
         self._is_first_turn_after_deal = False
-        self._last_drawn_tile = None
+        hand.reset_last_drawn_tile()  # 鳴牌後清除最後摸的牌
 
         # 鳴牌後必須打牌
         self._waiting_for_actions = {player: [GameAction.DISCARD]}
@@ -856,7 +886,7 @@ class RuleEngine:
         self._last_discarded_tile = None
         self._last_discarded_player = None
         self._is_first_turn_after_deal = False
-        self._last_drawn_tile = None
+        hand.reset_last_drawn_tile()  # 鳴牌後清除最後摸的牌
 
         # 鳴牌後必須打牌
         self._waiting_for_actions = {player: [GameAction.DISCARD]}
@@ -885,6 +915,7 @@ class RuleEngine:
         self, player: int, tile: Optional[Tile] = None, **kwargs
     ) -> ActionResult:
         result = ActionResult()
+        hand = self._hands[player]
 
         # If tile is None, try to use last discarded tile (Daiminkan)
         if tile is None:
@@ -907,10 +938,10 @@ class RuleEngine:
             self._last_discarded_tile = None
             self._last_discarded_player = None
 
-        meld = self._hands[player].kan(tile)
+        meld = hand.kan(tile)
         self._kan_count += 1
         result.kan = True
-        self._last_drawn_tile = None
+        hand.reset_last_drawn_tile()  # 槓牌後清除最後摸的牌
         self._current_player = player
 
         self._interrupt_ippatsu(GameAction.KAN, acting_player=player)
@@ -976,7 +1007,7 @@ class RuleEngine:
         self._draw_rinshan_tile(player, result, kan_type=kan_type)
         if self._pending_kan_tile:
             self._pending_kan_tile = None
-        self._last_drawn_tile = None
+        hand.reset_last_drawn_tile()  # 槓牌後清除最後摸的牌
 
         result.ankan = True
         return result
@@ -999,12 +1030,13 @@ class RuleEngine:
             ValueError: 如果無法自摸。
         """
         result = ActionResult()
+        hand = self._hands[player]
 
         # 獲取和牌牌（應該是player剛摸的牌）
         if tile is None:
             # 使用最後摸的牌
-            if self._last_drawn_tile and self._last_drawn_tile[0] == player:
-                tile = self._last_drawn_tile[1]
+            if hand.last_drawn_tile:
+                tile = hand.last_drawn_tile
             else:
                 raise ValueError("無法確定自摸的牌")
 
@@ -1207,10 +1239,10 @@ class RuleEngine:
         if not self._tile_set:
             return False
 
+        hand = self._hands[player]
         if rinshan_tile := self._tile_set.draw_rinshan():
-            self._hands[player].add_tile(rinshan_tile)
+            hand.add_tile(rinshan_tile)
             result.rinshan_tile = rinshan_tile
-            self._last_drawn_tile = (player, rinshan_tile)
             if kan_type == MeldType.KAN:
                 result.kan = True
             else:
@@ -1686,15 +1718,6 @@ class RuleEngine:
             Optional[Tile]: 最新的捨牌。
         """
         return self._last_discarded_tile
-
-    def get_last_discard_player(self) -> Optional[int]:
-        """
-        取得最後捨牌的玩家。
-
-        Returns:
-            Optional[int]: 最後捨牌的玩家位置。
-        """
-        return self._last_discarded_player
 
     def get_num_players(self) -> int:
         """
