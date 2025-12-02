@@ -264,50 +264,6 @@ class RuleEngine:
         """
         return self._game_state
 
-    def _handle_chombo(self, player: int) -> None:
-        """
-        處理錯和/錯立直（Chombo）
-
-        Args:
-            player: 違規玩家位置
-        """
-        if not self._game_state.ruleset.chombo_penalty_enabled:
-            return
-
-        # 計算滿貫罰符
-        is_dealer = player == self._game_state.dealer
-
-        if is_dealer:
-            payment_per_person = 4000
-            total_payment = 0
-            for i in range(self._num_players):
-                if i != player:
-                    self._game_state.update_score(i, payment_per_person)
-                    total_payment += payment_per_person
-            self._game_state.update_score(player, -total_payment)
-        else:
-            total_payment = 0
-            for i in range(self._num_players):
-                if i != player:
-                    payment = 4000 if i == self._game_state.dealer else 2000
-                    self._game_state.update_score(i, payment)
-                    total_payment += payment
-            self._game_state.update_score(player, -total_payment)
-
-        # 錯和發生後，該局結束
-        dealer_won = not is_dealer
-        self._game_state.next_dealer(dealer_won)
-
-        # 如果莊家連莊，不進入下一局（保持局數，本場已在 next_dealer 增加）
-        # 如果莊家輪換，進入下一局
-        if not dealer_won:
-            has_next = self._game_state.next_round()
-            if not has_next:
-                self._phase = GamePhase.ENDED
-                return
-
-        self.start_round()
-
     @property
     def waiting_for_actions(self) -> Dict[int, List[GameAction]]:
         """獲取當前等待執行的動作"""
@@ -477,28 +433,6 @@ class RuleEngine:
             raise ValueError(f"動作 {action} 尚未實作")
 
         # 錯和檢測（Chombo Detection）
-        if action in [GameAction.RON, GameAction.TSUMO]:
-            # 注意：這裡需要區分 RON 和 TSUMO 的檢查參數
-            win_tile = tile if action == GameAction.RON else None
-
-            # 如果是 RON 且 tile 為 None，嘗試從最後打出的牌獲取
-            if action == GameAction.RON and win_tile is None:
-                win_tile = self._last_discarded_tile
-
-            is_tsumo = action == GameAction.TSUMO
-            check_tile = win_tile
-            if is_tsumo and check_tile is None:
-                # 自摸時，使用剛摸到的牌
-                if self._last_drawn_tile:
-                    _, check_tile = self._last_drawn_tile
-                else:
-                    # 如果沒有摸牌記錄（例如測試時），嘗試從手牌獲取最後一張
-                    pass
-            if check_tile:
-                win_result = self.check_win(player, check_tile)
-                if not win_result:
-                    self._handle_chombo(player)
-                    return ActionResult(success=False, phase=self._phase)
 
         # 如果處於等待狀態，收集玩家回應
         if self._waiting_for_actions:
@@ -1134,23 +1068,6 @@ class RuleEngine:
             # 流局處理
             # 如果是牌山耗盡流局，檢查流局滿貫和不聽罰符
             if self._tile_set and self._tile_set.is_exhausted():
-                # 錯立直檢測（False Riichi Detection）
-                # 如果玩家立直但流局時未聽牌，則為錯和
-                if self._game_state.ruleset.chombo_penalty_enabled:
-                    chombo_players = []
-                    for i in range(self._num_players):
-                        hand = self._hands[i]
-                        if hand.is_riichi and not hand.is_tenpai():
-                            chombo_players.append(i)
-
-                    if chombo_players:
-                        # 處理錯和
-                        for player in chombo_players:
-                            self._handle_chombo(player)
-
-                        # 錯和發生後，不計算流局滿貫和不聽罰符
-                        return
-
                 # 檢查流局滿貫
                 flow_mangan_players = []
                 for i in range(self._num_players):
