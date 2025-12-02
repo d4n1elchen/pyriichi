@@ -648,7 +648,7 @@ class RuleEngine:
             self._game_state.update_score(
                 first_winner, self._game_state.riichi_sticks * 1000
             )
-            self._game_state.riichi_sticks = 0
+            self._game_state.clear_riichi_sticks()
 
         # 本場棒 (Honba) - 通常每個贏家都加? 還是只有第一個?
         # 標準規則：頭跳才有本場。雙響時，通常都加? 或者只有第一個?
@@ -1865,7 +1865,7 @@ class RuleEngine:
 
         # 清空供託
         if score_result.riichi_sticks_bonus > 0:
-            self._game_state._riichi_sticks = 0
+            self._game_state.clear_riichi_sticks()
 
         # 清空本場 (如果是自摸或莊家榮和? 不，通常由 next_dealer 處理)
         # 這裡只處理分數更新
