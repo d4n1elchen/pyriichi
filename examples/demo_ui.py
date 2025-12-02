@@ -592,19 +592,23 @@ class MahjongTable(tk.Canvas):
             elif rel_pos == 1:  # Right
                 # Start: Right of center box, Top-aligned with center box (visually centered vertically)
                 # Fills: Top -> Bottom (Cols), Left -> Right (Rows - growing away)
+                # FIX: Should fill Bottom -> Top (Player's Left -> Right)
                 start_x = cx + center_half_size + padding
-                start_y = cy - 3 * w  # Centered vertically (6 cols * w = total height)
+                # start_y = cy - 3 * w  # Old Top-down start
+                start_y = cy + 2 * w  # New Bottom-up start
 
                 dx = start_x + row * h
-                dy = start_y + col * w
+                dy = start_y - col * w  # Grow Up
 
             elif rel_pos == 2:  # Top
                 # Start: Left-aligned with center box, Above center box
                 # Fills: Left -> Right (Cols), Bottom -> Top (Rows - growing away)
-                start_x = cx - 3 * w
+                # FIX: Should fill Right -> Left (Player's Left -> Right)
+                # start_x = cx - 3 * w  # Old Left-right start
+                start_x = cx + 2 * w  # New Right-left start
                 start_y = cy - center_half_size - padding
 
-                dx = start_x + col * w
+                dx = start_x - col * w  # Grow Left
                 dy = (
                     start_y - row * h - h
                 )  # Grow Up (minus h because drawing from top-left of tile)
