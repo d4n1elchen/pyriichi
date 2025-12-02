@@ -5,13 +5,14 @@ import sys
 import threading
 import time
 import tkinter as tk
-from tkinter import messagebox, ttk
-from typing import List, Optional, Tuple
+from tkinter import messagebox
+from typing import Dict, List, Optional, Tuple
 
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from pyriichi.hand import Hand
+from pyriichi.game_state import GameState, Wind
+from pyriichi.hand import Hand, Meld
 from pyriichi.player import (
     BasePlayer,
     DefensivePlayer,
@@ -19,122 +20,674 @@ from pyriichi.player import (
     RandomPlayer,
     SimplePlayer,
 )
-from pyriichi.rules import ActionResult, GameAction, GamePhase, GameState, RuleEngine
+from pyriichi.rules import GameAction, GamePhase, RuleEngine
 from pyriichi.tiles import Suit, Tile
 
-# --- Constants & Styles ---
-WINDOW_WIDTH = 1200
+# --- Constants ---
+WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 800
 
-# Colors (Dark Theme)
-COLOR_BG = "#212121"  # Dark Grey Background
-COLOR_TABLE = "#004d40"  # Deep Teal (Mahjong Table)
-COLOR_PANEL = "#424242"  # Lighter Grey for Panels
-COLOR_TEXT = "#ffffff"  # White Text
-COLOR_ACCENT = "#ffb74d"  # Orange Accent
-COLOR_BUTTON = "#5c6bc0"  # Indigo Buttons
+# Colors
+COLOR_TABLE_BG = "#006400"  # Deep Green Felt
+COLOR_TILE_FACE = "#FDF5E6"  # Cream/Bone
+COLOR_TILE_BACK = "#E6B422"  # Gold/Yellow
+COLOR_TILE_BORDER = "#8B4513"  # SaddleBrown
+COLOR_TEXT_WHITE = "#FFFFFF"
+COLOR_TEXT_GOLD = "#FFD700"
 
-# Tile Colors
-COLOR_MANZU = "#ef5350"  # Red
-COLOR_PINZU = "#29b6f6"  # Light Blue
-COLOR_SOZU = "#66bb6a"  # Green
-COLOR_JIHAI = "#ffffff"  # White
-COLOR_RED = "#d32f2f"  # Dark Red
+# Tile Dimensions (Canvas Units)
+TILE_WIDTH = 40
+TILE_HEIGHT = 56
+TILE_DEPTH = 4
 
-FONT_TITLE = ("Helvetica", 24, "bold")
-FONT_LARGE = ("Helvetica", 16, "bold")
-FONT_MEDIUM = ("Helvetica", 12)
-FONT_SMALL = ("Helvetica", 10)
-
-
-def get_tile_color(tile_str: str) -> str:
-    if "m" in tile_str:
-        return COLOR_MANZU
-    if "p" in tile_str:
-        return COLOR_PINZU
-    if "s" in tile_str:
-        return COLOR_SOZU
-    return COLOR_JIHAI
+# Fonts
+FONT_LARGE = ("Arial", 24, "bold")
+FONT_MEDIUM = ("Arial", 16, "bold")
+FONT_SMALL = ("Arial", 12)
+FONT_TINY = ("Arial", 10)
+FONT_TILE = (
+    "Kaiti TC",
+    24,
+    "bold",
+)  # Use a nice Chinese font if available, fallback to sans
+FONT_TILE_SMALL = ("Arial", 10, "bold")  # For the number/suit indicator
 
 
-def get_tile_sort_key(tile_str: str):
-    # Sort Key: Suit (m, p, s, z), Rank, IsRed
-    is_red = "r" in tile_str
-    clean = tile_str.replace("r", "")
+class TileRenderer:
+    """Handles drawing of Mahjong tiles on a Canvas using text."""
 
-    suit_map = {"m": 0, "p": 1, "s": 2, "z": 3}
-    suit_char = clean[-1]
-    rank = int(clean[:-1])
+    @staticmethod
+    def draw_tile(
+        canvas: tk.Canvas,
+        x: float,
+        y: float,
+        tile: Optional[Tile],
+        width: float = TILE_WIDTH,
+        height: float = TILE_HEIGHT,
+        face_up: bool = True,
+        selected: bool = False,
+        scale: float = 1.0,
+        angle: float = 0.0,
+    ):
+        w = width * scale
+        h = height * scale
+        d = TILE_DEPTH * scale
 
-    # Red 5s (5mr, 5pr, 5sr) should sort with their respective 5s,
-    # but perhaps come before or after regular 5s.
-    # Let's make red 5s come before regular 5s of the same suit.
-    red_sort_val = 0 if is_red else 1
+        cx = x + w / 2
+        cy = y + h / 2
 
-    return (suit_map.get(suit_char, 4), rank, red_sort_val)
+        # Helper for rotation
+        def rotate_point(px, py, ox, oy, theta):
+            import math
+
+            rad = math.radians(theta)
+            c, s = math.cos(rad), math.sin(rad)
+            dx, dy = px - ox, py - oy
+            return ox + dx * c - dy * s, oy + dx * s + dy * c
+
+        # Calculate corners for body
+        corners = [
+            (x, y),
+            (x + w, y),
+            (x + w, y + h),
+            (x, y + h),
+        ]
+        rotated_corners = [rotate_point(px, py, cx, cy, angle) for px, py in corners]
+
+        # Calculate corners for shadow (offset)
+        # Shadow offset should also rotate? Or just fixed offset?
+        # Fixed offset looks like global light source.
+        shadow_corners = [(px + d, py + d) for px, py in rotated_corners]
+
+        # Draw Shadow
+        canvas.create_polygon(shadow_corners, fill="#333333", outline="", tags="tile")
+
+        # Border/Body
+        bg_color = COLOR_TILE_FACE if face_up else COLOR_TILE_BACK
+        if selected:
+            bg_color = "#FFD700"  # Highlight selected
+
+        # Main Tile Body
+        canvas.create_polygon(
+            rotated_corners,
+            fill=bg_color,
+            outline=COLOR_TILE_BORDER,
+            width=1,
+            tags="tile",
+        )
+
+        if face_up and tile:
+            TileRenderer._draw_text_pattern(canvas, cx, cy, w, h, tile, angle)
+
+    @staticmethod
+    def _draw_text_pattern(
+        canvas: tk.Canvas,
+        cx: float,
+        cy: float,
+        w: float,
+        h: float,
+        tile: Tile,
+        angle: float,
+    ):
+        # Determine color
+        color = "#000000"
+        if tile.suit == Suit.MANZU:
+            color = "#B22222"  # Red
+        elif tile.suit == Suit.PINZU:
+            color = "#000080"  # Navy Blue
+            if tile.is_red and tile.rank == 5:
+                color = "#FF0000"
+        elif tile.suit == Suit.SOZU:
+            color = "#006400"  # Green
+            if tile.is_red and tile.rank == 5:
+                color = "#FF0000"
+        elif tile.suit == Suit.JIHAI:
+            if tile.rank == 5:  # Haku (White)
+                color = "#000000"  # Black as requested
+            elif tile.rank == 6:  # Hatsu (Green)
+                color = "#006400"
+            elif tile.rank == 7:  # Chun (Red)
+                color = "#B22222"
+            else:
+                color = "#000000"  # Winds are black
+
+        # Get localized name
+        text = tile.get_name("zh")
+
+        # Draw Text
+        # Use same font for everything
+        font_size = int(h * 0.5)
+        font = ("Kaiti TC", font_size, "bold")
+
+        # Vertical layout for number + suit if needed
+        if len(text) > 1 and tile.suit != Suit.JIHAI:
+            # Vertical layout
+            # We need to position them relative to center, but rotated.
+            # Offset for top char (Number) and bottom char (Suit)
+
+            # Calculate offsets based on angle
+            # Standard (0 deg): Number at Top (-y), Suit at Bottom (+y)
+            offset = h * 0.2
+
+            if angle == 0:
+                dx1, dy1 = 0, -offset
+                dx2, dy2 = 0, offset
+            elif angle == 90:  # Top points Left
+                dx1, dy1 = -offset, 0  # Number Left
+                dx2, dy2 = offset, 0  # Suit Right
+            elif angle == -90:  # Top points Right
+                dx1, dy1 = offset, 0  # Number Right
+                dx2, dy2 = -offset, 0  # Suit Left
+            elif angle == 180:  # Top points Down
+                dx1, dy1 = 0, offset  # Number Bottom
+                dx2, dy2 = 0, -offset  # Suit Top
+            else:
+                # Fallback to rotation math if needed, but we stick to 90 deg steps
+                import math
+
+                rad = math.radians(angle)
+                c, s = math.cos(rad), math.sin(rad)
+                # Original offsets (0, -offset) and (0, offset)
+                # Rotated: x' = x*c - y*s, y' = x*s + y*c
+                # Top: (0, -offset) -> (offset*s, -offset*c)
+                dx1 = offset * s
+                dy1 = -offset * c
+                dx2 = -dx1
+                dy2 = -dy1
+
+            cx1, cy1 = cx + dx1, cy + dy1
+            cx2, cy2 = cx + dx2, cy + dy2
+
+            number_char = text[0]
+            suit_char = text[1:]
+
+            # Use smaller font for split
+            split_font = ("Kaiti TC", int(h * 0.35), "bold")
+
+            canvas.create_text(
+                cx1, cy1, text=number_char, fill=color, font=split_font, angle=angle
+            )
+            canvas.create_text(
+                cx2, cy2, text=suit_char, fill=color, font=split_font, angle=angle
+            )
+        else:
+            # Single char or Honors
+            canvas.create_text(cx, cy, text=text, fill=color, font=font, angle=angle)
+
+        if tile.is_red:
+            # Add a small red dot indicator
+            # Rotate position
+            import math
+
+            rad = math.radians(angle)
+            c, s = math.cos(rad), math.sin(rad)
+
+            dx = w * 0.35
+            dy = -h * 0.35
+            rcx = cx + dx * c - dy * s
+            rcy = cy + dx * s + dy * c
+
+            r = w * 0.05
+            canvas.create_oval(
+                rcx - r, rcy - r, rcx + r, rcy + r, fill="red", outline="red"
+            )
 
 
-def get_tile_display_name(tile_str: str) -> str:
-    # Convert string (e.g. "1m") to Tile object then get localized name
-    is_red = "r" in tile_str
-    clean = tile_str.replace("r", "")
-    suit_char = clean[-1]
-    rank = int(clean[:-1])
+class MahjongTable(tk.Canvas):
+    def __init__(self, master, width=WINDOW_WIDTH, height=WINDOW_HEIGHT):
+        super().__init__(master, width=width, height=height, bg=COLOR_TABLE_BG)
+        self.width = width
+        self.height = height
+        self.center_x = width / 2
+        self.center_y = height / 2
 
-    suit_map = {"m": Suit.MANZU, "p": Suit.PINZU, "s": Suit.SOZU, "z": Suit.JIHAI}
-    suit = suit_map.get(suit_char)
-    if not suit:
-        return tile_str
+        # Game State Data
+        self.hands: Dict[int, Hand] = {}
+        self.discards: Dict[int, List[Tile]] = {}
+        self.melds: Dict[int, List[str]] = {}
+        self.scores: Dict[int, int] = {}
+        self.dealer: int = 0
+        self.current_player: int = 0
+        self.round_wind: str = "EAST"
+        self.round_number: int = 1
+        self.honba: int = 0
+        self.riichi_sticks: int = 0
+        self.dora_indicators: List[Tile] = []
 
-    t = Tile(suit, rank, is_red)
-    return t.get_name("zh")
+        # Interaction
+        self.human_seat: int = 0
+        self.selected_tile_idx: int = -1
+        self.on_tile_click_callback = None
 
+        self.bind("<Button-1>", self._on_click)
+        self.bind("<Motion>", self._on_mouse_move)
 
-def localize_meld(meld_str: str) -> str:
-    # Format: type(tiles) e.g. "chi(1m2m3m)"
-    if "(" not in meld_str or ")" not in meld_str:
-        return meld_str
+    def update_state(self, state: dict):
+        self.hands = state.get(
+            "hands_obj", {}
+        )  # Expecting Hand objects or list of Tiles
+        self.discards = state.get("discards_obj", {})  # Expecting list of Tiles
+        self.melds = state.get("melds_obj", {})
+        self.scores = state.get("scores", {})
+        self.dealer = state.get("dealer", 0)
+        self.current_player = state.get("current_player", 0)
+        self.round_wind_name = state.get("round_wind_zh", "東")  # Use localized name
+        self.round_number = state.get("round_number", 1)
+        self.honba = state.get("honba", 0)
+        self.riichi_sticks = state.get("riichi_sticks", 0)
+        self.dora_indicators = state.get("dora_indicators_obj", [])
 
-    type_str, tiles_part = meld_str.split("(", 1)
-    tiles_part = tiles_part.rstrip(")")
+        self.render()
 
-    # Localize Type
-    type_map = {
-        "chi": "吃",
-        "pon": "碰",
-        "kan": "槓",
-        "ankan": "暗槓",
-        "riichi": "立直",
-    }
-    type_zh = type_map.get(type_str, type_str)
+    def render(self):
+        self.delete("all")
 
-    # Localize Tiles
-    # Need to split tiles_part "1m2m3m" -> ["1m", "2m", "3m"]
-    # Regex is best but let's do simple parsing
-    localized_tiles = []
-    i = 0
-    while i < len(tiles_part):
-        # Check for 'r' prefix
-        is_red = False
-        if tiles_part[i] == "r":
-            is_red = True
-            i += 1
+        # Draw Center Info
+        self._render_center_info()
 
-        if i >= len(tiles_part):
-            break
+        # Draw Players (Hands, Discards)
+        for i in range(4):
+            # Calculate relative position based on human seat
+            # Human is always bottom (index 0 in relative terms)
+            rel_pos = (i - self.human_seat) % 4
+            self._render_player(i, rel_pos)
 
-        rank = tiles_part[i]
-        i += 1
-        if i >= len(tiles_part):
-            break
+    def _render_center_info(self):
+        w, h = 260, 260
+        x = self.center_x - w / 2
+        y = self.center_y - h / 2
 
-        suit = tiles_part[i]
-        i += 1
+        self.create_rectangle(
+            x, y, x + w, y + h, fill="#004d40", outline="#FFD700", width=2
+        )
 
-        tile_str = f"{'r' if is_red else ''}{rank}{suit}"
-        localized_tiles.append(get_tile_display_name(tile_str))
+        # Round Info
+        info_text = f"{self.round_wind_name} {self.round_number} 局\n{self.honba} 本場\n供託: {self.riichi_sticks * 1000}"
+        self.create_text(
+            self.center_x,
+            self.center_y - 50,
+            text=info_text,
+            fill=COLOR_TEXT_WHITE,
+            font=FONT_MEDIUM,
+            justify="center",
+        )
 
-    return f"{type_zh}({''.join(localized_tiles)})"
+        # Dora
+        self.create_text(
+            self.center_x,
+            self.center_y + 5,
+            text="寶牌",
+            fill=COLOR_TEXT_GOLD,
+            font=FONT_SMALL,
+        )
+        dora_start_x = (
+            self.center_x - (len(self.dora_indicators) * TILE_WIDTH * 0.8) / 2
+        )
+        for idx, tile in enumerate(self.dora_indicators):
+            TileRenderer.draw_tile(
+                self,
+                dora_start_x + idx * TILE_WIDTH * 0.8,
+                self.center_y + 25,
+                tile,
+                scale=0.8,
+            )
+
+    def _render_player(self, player_idx: int, rel_pos: int):
+        # rel_pos: 0=Bottom, 1=Right, 2=Top, 3=Left
+
+        # Coordinates setup
+        # Center of the table
+        cx, cy = self.center_x, self.center_y
+
+        # Hand & River Parameters
+        hand_offset = 30  # Distance from edge
+
+        # Score Position (Inside Center Panel) & Rotation
+        # Center panel is approx 260x260 (radius 130)
+        score_radius = 95
+
+        if rel_pos == 0:  # Bottom (Human)
+            # Hand centered horizontally at bottom
+            hand_len = 13
+            hand = self.hands.get(player_idx)
+            if hand:
+                hand_len = len(hand.tiles)
+
+            hand_width = hand_len * TILE_WIDTH
+            hand_x = (self.width - hand_width) / 2
+            hand_y = self.height - TILE_HEIGHT - hand_offset
+
+            score_x, score_y = cx, cy + score_radius
+            score_angle = 0
+
+        elif rel_pos == 1:  # Right
+            # Hand centered vertically at right
+            hand_len = 13
+            hand = self.hands.get(player_idx)
+            if hand:
+                hand_len = len(hand.tiles) if isinstance(hand, Hand) else hand
+
+            # Vertical hand
+            spacing = TILE_WIDTH * 0.9
+            hand_height = hand_len * spacing
+            hand_x = self.width - TILE_HEIGHT - hand_offset
+            hand_y = (self.height - hand_height) / 2  # Top of the stack
+
+            score_x, score_y = cx + score_radius, cy
+            score_angle = 90
+
+        elif rel_pos == 2:  # Top
+            # Hand centered horizontally at top
+            hand_len = 13
+            hand = self.hands.get(player_idx)
+            if hand:
+                hand_len = len(hand.tiles) if isinstance(hand, Hand) else hand
+
+            hand_width = hand_len * TILE_WIDTH
+            hand_x = (self.width - hand_width) / 2
+            hand_y = hand_offset
+
+            score_x, score_y = cx, cy - score_radius
+            score_angle = 180
+
+        elif rel_pos == 3:  # Left
+            # Hand centered vertically at left
+            hand_len = 13
+            hand = self.hands.get(player_idx)
+            if hand:
+                hand_len = len(hand.tiles) if isinstance(hand, Hand) else hand
+
+            spacing = TILE_WIDTH * 0.9
+            hand_height = hand_len * spacing
+            hand_x = hand_offset
+            hand_y = (self.height + hand_height) / 2  # Bottom of the stack (drawing up)
+
+            score_x, score_y = cx - score_radius, cy
+            score_angle = -90
+
+        # Draw Score
+        score = (
+            self.scores[player_idx]
+            if isinstance(self.scores, list) and player_idx < len(self.scores)
+            else self.scores.get(player_idx, 25000)
+        )
+
+        # Calculate Seat Wind
+        # 0=East, 1=South, 2=West, 3=North
+        winds = [Wind.EAST, Wind.SOUTH, Wind.WEST, Wind.NORTH]
+        seat_wind_idx = (player_idx - self.dealer) % 4
+        seat_wind = winds[seat_wind_idx]
+
+        self.create_text(
+            score_x,
+            score_y,
+            text=f"{seat_wind.zh}\n{score}",
+            fill=COLOR_TEXT_WHITE,
+            font=FONT_SMALL,
+            justify="center",
+            angle=score_angle,
+        )
+
+        # Draw River (Discards)
+        discards = self.discards.get(player_idx, [])
+        self._render_river(
+            discards, 0, 0, rel_pos
+        )  # Pass dummy x,y? No, _render_river ignores them now?
+        # Wait, _render_river uses passed x,y as "Anchor" in my previous logic?
+        # Let's check _render_river.
+        # It uses self.center_x/y and ignores passed x/y for start position calculation!
+        # "Recalculate start positions to align with center panel... cx, cy = self.center_x, self.center_y"
+        # So passing score_x/y is fine, it won't be used.
+
+        # Draw Hand
+        hand = self.hands.get(player_idx)
+        melds = self.melds.get(player_idx, [])
+
+        if hand:
+            if rel_pos == 0:  # Human - Face Up
+                self._render_human_hand(hand, hand_x, hand_y, melds)
+            else:  # AI - Face Down (or simplified)
+                self._render_ai_hand(hand, hand_x, hand_y, rel_pos, melds)
+
+    def _render_river(self, discards: List[Tile], x: float, y: float, rel_pos: int):
+        # 6 tiles per row
+        scale = 0.8
+        w = TILE_WIDTH * scale
+        h = TILE_HEIGHT * scale
+
+        # Center panel dimensions (approx 260x260)
+        center_half_size = 130
+        padding = 10
+
+        # Recalculate start positions to align with center panel
+        cx, cy = self.center_x, self.center_y
+
+        angle = 0
+        if rel_pos == 1:
+            angle = 90  # Right player discards face left (CCW)
+        elif rel_pos == 2:
+            angle = 180  # Top player discards upside down
+        elif rel_pos == 3:
+            angle = -90  # Left player discards face right (CW)
+
+        for i, tile in enumerate(discards):
+            row = i // 6
+            col = i % 6
+
+            if rel_pos == 0:  # Bottom
+                # Start: Left-aligned with center box, Below center box
+                # Fills: Left -> Right (Cols), Top -> Bottom (Rows)
+                start_x = cx - 3 * w
+                start_y = cy + center_half_size + padding
+
+                dx = start_x + col * w
+                dy = start_y + row * h
+
+            elif rel_pos == 1:  # Right
+                # Start: Right of center box, Top-aligned with center box (visually centered vertically)
+                # Fills: Top -> Bottom (Cols), Left -> Right (Rows - growing away)
+                start_x = cx + center_half_size + padding
+                start_y = cy - 3 * w  # Centered vertically (6 cols * w = total height)
+
+                dx = start_x + row * h
+                dy = start_y + col * w
+
+            elif rel_pos == 2:  # Top
+                # Start: Left-aligned with center box, Above center box
+                # Fills: Left -> Right (Cols), Bottom -> Top (Rows - growing away)
+                start_x = cx - 3 * w
+                start_y = cy - center_half_size - padding
+
+                dx = start_x + col * w
+                dy = (
+                    start_y - row * h - h
+                )  # Grow Up (minus h because drawing from top-left of tile)
+
+            elif rel_pos == 3:  # Left
+                # Start: Left of center box, Top-aligned with center box
+                # Fills: Top -> Bottom (Cols), Right -> Left (Rows - growing away)
+                start_x = cx - center_half_size - padding
+                start_y = cy - 3 * w
+
+                dx = start_x - row * h - h  # Grow Left
+                dy = start_y + col * w
+
+            TileRenderer.draw_tile(self, dx, dy, tile, scale=scale, angle=angle)
+
+    def _render_human_hand(self, hand: Hand, x: float, y: float, melds: List[Meld]):
+        tiles = hand.tiles
+        # Sort
+        tiles = sorted(tiles, key=lambda t: (t.suit.value, t.rank, t.is_red))
+
+        for i, tile in enumerate(tiles):
+            dx = x + i * TILE_WIDTH
+            dy = y
+
+            # Lift selected tile
+            if i == self.selected_tile_idx:
+                dy -= 20
+
+            TileRenderer.draw_tile(
+                self,
+                dx,
+                dy,
+                tile,
+                face_up=True,
+                selected=(i == self.selected_tile_idx),
+            )
+
+            # Store bbox for click detection
+            # Use addtag_overlapping to tag all items in the tile area (rect, text, oval)
+            # This ensures hover works even if mouse is over text or decoration
+            self.addtag_overlapping(
+                f"hand_tile:{i}", dx, dy, dx + TILE_WIDTH, dy + TILE_HEIGHT
+            )
+
+        # Draw Melds (to the right of hand)
+        if melds:
+            meld_start_x = x + len(tiles) * TILE_WIDTH + 20
+            self._render_melds(melds, meld_start_x, y, 0)
+
+    def _render_ai_hand(
+        self, hand: Hand, x: float, y: float, rel_pos: int, melds: List[Meld]
+    ):
+        # Just draw backs
+        count = (
+            len(hand.tiles) if isinstance(hand, Hand) else hand
+        )  # hand might be int count
+        if isinstance(hand, int):
+            count = hand
+        elif isinstance(hand, Hand):
+            count = len(hand.tiles)
+
+        spacing = TILE_WIDTH * 0.9
+
+        for i in range(count):
+            if rel_pos == 2:  # Top
+                dx = x + i * TILE_WIDTH
+                dy = y
+                TileRenderer.draw_tile(self, dx, dy, None, face_up=False, angle=180)
+            elif rel_pos == 1:  # Right
+                dx = x
+                dy = y + i * spacing  # Vertical
+                TileRenderer.draw_tile(self, dx, dy, None, face_up=False, angle=90)
+            elif rel_pos == 3:  # Left
+                dx = x
+                dy = y - i * spacing  # Vertical (Up)
+                TileRenderer.draw_tile(self, dx, dy, None, face_up=False, angle=-90)
+            else:
+                dx = x
+                dy = y
+                TileRenderer.draw_tile(self, dx, dy, None, face_up=False)
+
+        # Draw Melds
+        if melds:
+            if rel_pos == 2:  # Top (Left of hand)
+                self._render_melds(melds, x - 20, y, rel_pos)
+
+            elif rel_pos == 1:  # Right (Bottom of hand)
+                self._render_melds(melds, x, y + count * spacing + 20, rel_pos)
+
+            elif rel_pos == 3:  # Left (Top of hand)
+                self._render_melds(melds, x, y - count * spacing - 20, rel_pos)
+
+    def _render_melds(self, melds: List[Meld], x: float, y: float, rel_pos: int):
+        # Render melds sequentially
+        current_x, current_y = x, y
+
+        for meld in melds:
+            tiles = meld.tiles
+            # For simplicity, draw all tiles face up
+            # TODO: Handle called tile rotation
+
+            for tile in tiles:
+                angle = 0
+                if rel_pos == 1:
+                    angle = 90
+                elif rel_pos == 2:
+                    angle = 180
+                elif rel_pos == 3:
+                    angle = -90
+
+                TileRenderer.draw_tile(
+                    self, current_x, current_y, tile, face_up=True, angle=angle
+                )
+
+                if rel_pos == 0:
+                    current_x += TILE_WIDTH
+                elif rel_pos == 1:
+                    current_y += TILE_WIDTH * 0.9
+                elif rel_pos == 2:
+                    current_x -= TILE_WIDTH  # Grow Left
+                elif rel_pos == 3:
+                    current_y -= TILE_WIDTH * 0.9  # Grow Up
+
+            # Spacing between melds
+            if rel_pos == 0:
+                current_x += 10
+            elif rel_pos == 1:
+                current_y += 10
+            elif rel_pos == 2:
+                current_x -= 10
+            elif rel_pos == 3:
+                current_y -= 10
+
+    def _on_mouse_move(self, event):
+        # Only allow hover selection for the human player's turn
+        if self.current_player != self.human_seat:
+            if self.selected_tile_idx != -1:  # If not human's turn, clear selection
+                self.selected_tile_idx = -1
+                self.render()
+            return
+
+        # Find item under mouse
+        # find_overlapping is better than find_closest for hover
+        items = self.find_overlapping(event.x, event.y, event.x, event.y)
+
+        new_selection = -1
+
+        for item in items:
+            tags = self.gettags(item)
+            for tag in tags:
+                if tag.startswith("hand_tile:"):
+                    idx = int(tag.split(":")[1])
+                    new_selection = idx
+                    break
+            if new_selection != -1:
+                break
+
+        if new_selection != self.selected_tile_idx:
+            self.selected_tile_idx = new_selection
+            self.render()
+
+    def _on_click(self, event):
+        # Check if clicked on human hand
+        if self.current_player != self.human_seat:
+            return
+
+        # If we have a selected tile (from hover), and we clicked it (or just clicked anywhere while hovering?)
+        # Usually click while hovering means discard.
+
+        if self.selected_tile_idx != -1:
+            # Confirm discard
+            # Check if it's the human's turn
+            # We already checked current_player == self.human_seat
+
+            # Callback
+            if self.on_tile_click_callback:  # Corrected callback name
+                # We need the tile object.
+                # self.hands[self.human_seat] is the hand object
+                hand = self.hands.get(self.human_seat)
+                if hand and isinstance(hand, Hand):
+                    # Sort to match index
+                    tiles = sorted(
+                        hand.tiles, key=lambda t: (t.suit.value, t.rank, t.is_red)
+                    )
+                    if 0 <= self.selected_tile_idx < len(tiles):
+                        tile = tiles[self.selected_tile_idx]
+                        self.on_tile_click_callback(tile)  # Corrected callback name
+                        self.selected_tile_idx = -1
+                        self.render()
 
 
 # --- Game Logic Classes ---
@@ -155,18 +708,13 @@ class GUIHumanPlayer(BasePlayer):
         available_actions: List[GameAction],
         public_info: Optional[PublicInfo] = None,
     ) -> Tuple[GameAction, Optional[Tile]]:
-        # Auto-Draw Logic Removed (Engine handles it)
-        # But we might need to handle interrupts.
-
         # Notify GUI that it's human's turn
         self.output_queue.put(
             {
                 "type": "human_turn",
                 "actions": available_actions,
                 "hand": hand,
-                "last_drawn_tile": str(self.last_drawn_tile)
-                if self.last_drawn_tile
-                else None,
+                "last_drawn_tile": self.last_drawn_tile,
             }
         )
 
@@ -187,7 +735,6 @@ class GameThread(threading.Thread):
         self.running = True
         self.human_seat = -1
         self.players = []
-        self.human_last_drawn_tile: Optional[Tile] = None
 
     def run(self):
         try:
@@ -217,6 +764,16 @@ class GameThread(threading.Thread):
             else:
                 self.players.append(ai_class(f"電腦 {i}"))
 
+        # Assign players to engine
+        # RuleEngine doesn't have a set_players method, it uses init_game logic internally usually
+        # But we need to override the player decision logic.
+        # The engine calls player.decide_action.
+        # We need to make sure the engine uses OUR player instances.
+        # Wait, RuleEngine doesn't store Player objects directly for logic?
+        # It does! self.players = [] in __init__? No.
+        # RuleEngine manages state. The loop below calls player.decide_action.
+        # So we just need to maintain our list of players and call them.
+
         self.update_queue.put(
             {
                 "type": "setup_complete",
@@ -225,35 +782,23 @@ class GameThread(threading.Thread):
             }
         )
 
-    def _handle_action_result(
-        self,
-        result: ActionResult,
-        player_idx: int,
-        action: GameAction,
-        tile: Optional[Tile],
-    ):
-        # Track drawn tile for human
-        if player_idx == self.human_seat:
-            if action == GameAction.DRAW and result.drawn_tile:
-                self.human_last_drawn_tile = result.drawn_tile
-            elif action == GameAction.DISCARD:
-                self.human_last_drawn_tile = None  # Reset after discard
-
-        self._notify_state_update(last_action=(player_idx, action, tile))
-
-        if result.winners:
-            self.update_queue.put(
-                {
-                    "type": "game_end",
-                    "reason": "win",
-                    "winners": result.winners,
-                    "win_results": result.win_results,
-                }
-            )
-            # We don't sleep/break here; the loop checks result.winners/ryuukyoku to break
-
-        if result.ryuukyoku:
-            self.update_queue.put({"type": "game_end", "reason": "draw"})
+    def _notify_state_update(self):
+        # Prepare state object for GUI
+        state = {
+            "type": "state_update",
+            "round_wind_zh": self.engine.game_state.round_wind.zh,
+            "round_number": self.engine.game_state.round_number,
+            "honba": self.engine.game_state.honba,
+            "riichi_sticks": self.engine.game_state.riichi_sticks,
+            "scores": self.engine.game_state.scores,
+            "dora_indicators_obj": self.engine._tile_set.get_dora_indicators(1),
+            "hands_obj": {i: self.engine.get_hand(i) for i in range(4)},
+            "discards_obj": {i: self.engine.get_discards(i) for i in range(4)},
+            "melds_obj": {i: self.engine.get_hand(i).melds for i in range(4)},
+            "dealer": self.engine.game_state.dealer,
+            "current_player": self.engine.get_current_player(),
+        }
+        self.update_queue.put(state)
 
     def _game_loop(self):
         self.engine.start_game()
@@ -272,7 +817,6 @@ class GameThread(threading.Thread):
                 # Check for waiting actions (Interrupts)
                 waiting_map = self.engine.waiting_for_actions
                 if waiting_map:
-                    # Iterate over a copy of keys because execute_action modifies the map
                     waiting_pids = list(waiting_map.keys())
                     for pid in waiting_pids:
                         if not self.running:
@@ -281,10 +825,7 @@ class GameThread(threading.Thread):
                         player = self.players[pid]
                         available_actions = self.engine.get_available_actions(pid)
 
-                        # Notify GUI if human (handled in decide_action via update_queue usually,
-                        # but we might need to be explicit about "Interrupt Turn")
-
-                        # Public info for AI players
+                        # Public info
                         public_info = PublicInfo(
                             turn_number=self.engine._turn_count,
                             dora_indicators=self.engine._tile_set.get_dora_indicators(
@@ -299,7 +840,7 @@ class GameThread(threading.Thread):
                         )
 
                         if pid != self.human_seat:
-                            time.sleep(0.3)  # Faster pacing for AI
+                            time.sleep(0.5)
                             action, tile = player.decide_action(
                                 self.engine.game_state,
                                 pid,
@@ -317,36 +858,42 @@ class GameThread(threading.Thread):
 
                         try:
                             result = self.engine.execute_action(pid, action, tile)
-                            self._handle_action_result(result, pid, action, tile)
+                            self._notify_state_update()
 
-                            # If resolution happened and phase changed or win, break inner loop
-                            # This check is now handled by the _handle_action_result and the subsequent break
+                            if result.winners or result.ryuukyoku:
+                                break  # Inner loop break
                         except Exception as e:
-                            print(f"Error executing action for player {pid}: {e}")
+                            print(f"Error executing action: {e}")
                             import traceback
 
                             traceback.print_exc()
 
-                    # Continue main loop to re-evaluate state (waiting or next turn)
                     if result.winners or result.ryuukyoku:
-                        time.sleep(5 if result.winners else 3)
+                        self.update_queue.put(
+                            {
+                                "type": "game_end",
+                                "reason": "win" if result.winners else "draw",
+                                "winners": result.winners,
+                                "win_results": result.win_results,
+                            }
+                        )
+                        time.sleep(5)
                         break
                     continue
 
                 # Normal Turn
                 current_player_idx = self.engine.get_current_player()
                 player = self.players[current_player_idx]
-
                 actions = self.engine.get_available_actions(current_player_idx)
 
-                # If no actions (shouldn't happen unless game over), continue
                 if not actions:
                     continue
 
+                # Update last drawn tile for human visualization
                 if current_player_idx == self.human_seat and isinstance(
                     player, GUIHumanPlayer
                 ):
-                    player.last_drawn_tile = self.human_last_drawn_tile
+                    player.last_drawn_tile = self.engine._last_drawn_tile
 
                 public_info = PublicInfo(
                     turn_number=self.engine._turn_count,
@@ -360,7 +907,7 @@ class GameThread(threading.Thread):
                 )
 
                 if current_player_idx != self.human_seat:
-                    time.sleep(0.3)  # Faster pacing
+                    time.sleep(0.5)
                     action, tile = player.decide_action(
                         self.engine.game_state,
                         current_player_idx,
@@ -380,19 +927,23 @@ class GameThread(threading.Thread):
                     result = self.engine.execute_action(
                         current_player_idx, action, tile
                     )
-                    self._handle_action_result(result, current_player_idx, action, tile)
+                    self._notify_state_update()
                 except Exception as e:
                     print(f"Error executing action: {e}")
                     import traceback
 
                     traceback.print_exc()
 
-                if result.winners:
+                if result.winners or result.ryuukyoku:
+                    self.update_queue.put(
+                        {
+                            "type": "game_end",
+                            "reason": "win" if result.winners else "draw",
+                            "winners": result.winners,
+                            "win_results": result.win_results,
+                        }
+                    )
                     time.sleep(5)
-                    break
-
-                if result.ryuukyoku:
-                    time.sleep(3)
                     break
 
             if self.engine.get_phase() == GamePhase.ENDED:
@@ -401,54 +952,13 @@ class GameThread(threading.Thread):
 
         self.update_queue.put({"type": "match_end"})
 
-    def _notify_state_update(self, last_action=None):
-        state = {
-            "type": "state_update",
-            "round_wind": self.engine.game_state.round_wind.name,
-            "round_number": self.engine.game_state.round_number,
-            "honba": self.engine.game_state.honba,
-            "riichi_sticks": self.engine.game_state.riichi_sticks,
-            "scores": self.engine.game_state.scores,
-            "dora_indicators": [
-                str(t) for t in self.engine._tile_set.get_dora_indicators(1)
-            ],
-            "hands": {},
-            "discards": {
-                i: [str(t) for t in self.engine.get_discards(i)] for i in range(4)
-            },
-            "melds": {
-                i: [str(m) for m in self.engine.get_hand(i).melds] for i in range(4)
-            },
-            "current_player": self.engine.get_current_player(),
-            "last_action": last_action,
-            "human_last_drawn_tile": str(self.human_last_drawn_tile)
-            if self.human_last_drawn_tile
-            else None,
-        }
 
-        for i in range(4):
-            hand = self.engine.get_hand(i)
-            if i == self.human_seat:
-                state["hands"][i] = [str(t) for t in hand.tiles]
-            else:
-                state["hands"][i] = len(hand.tiles)
-
-        self.update_queue.put(state)
-
-
-# --- GUI Class ---
-
-
-class MahjongGUI:
+class GameApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("PyRiichi 麻將")
+        self.root.title("PyRiichi 麻將 (Canvas Version)")
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
-        self.root.configure(bg=COLOR_BG)
-
-        self.style = ttk.Style()
-        self.style.theme_use("clam")
-        self._configure_styles()
+        self.root.configure(bg="#212121")
 
         self.human_input_queue = queue.Queue()
         self.update_queue = queue.Queue()
@@ -460,48 +970,63 @@ class MahjongGUI:
         self.show_start_screen()
         self.root.after(100, self.poll_updates)
 
-    def _configure_styles(self):
-        self.style.configure("TFrame", background=COLOR_BG)
-        self.style.configure(
-            "TLabel", background=COLOR_BG, foreground=COLOR_TEXT, font=FONT_MEDIUM
-        )
-        self.style.configure(
-            "TButton", font=FONT_MEDIUM, background=COLOR_BUTTON, foreground="white"
-        )
-        self.style.map("TButton", background=[("active", COLOR_ACCENT)])
-
-        self.style.configure("Table.TFrame", background=COLOR_TABLE)
-        self.style.configure("Panel.TFrame", background=COLOR_PANEL)
-
-        self.style.configure(
-            "Tile.TButton", font=FONT_LARGE, width=4, padding=5, background="white"
-        )
-        self.style.map("Tile.TButton", background=[("active", "#e0e0e0")])
-
     def _init_ui(self):
-        self.main_container = ttk.Frame(self.root)
+        self.main_container = tk.Frame(self.root, bg="#212121")
         self.main_container.pack(fill=tk.BOTH, expand=True)
 
     def show_start_screen(self):
         for widget in self.main_container.winfo_children():
             widget.destroy()
 
-        frame = ttk.Frame(self.main_container)
+        frame = tk.Frame(self.main_container, bg="#212121")
         frame.place(relx=0.5, rely=0.5, anchor="center")
 
-        ttk.Label(
-            frame, text="PyRiichi 麻將", font=FONT_TITLE, foreground=COLOR_ACCENT
+        tk.Label(
+            frame,
+            text="PyRiichi 麻將",
+            font=("Arial", 32, "bold"),
+            fg="#FFD700",
+            bg="#212121",
         ).pack(pady=20)
 
-        ttk.Label(frame, text="選擇難度:").pack(pady=5)
+        tk.Label(frame, text="選擇難度:", fg="white", bg="#212121").pack(pady=5)
         self.diff_var = tk.StringVar(value="Medium")
-        ttk.Radiobutton(frame, text="簡單", variable=self.diff_var, value="Easy").pack()
-        ttk.Radiobutton(
-            frame, text="普通", variable=self.diff_var, value="Medium"
+        tk.Radiobutton(
+            frame,
+            text="簡單",
+            variable=self.diff_var,
+            value="Easy",
+            bg="#212121",
+            fg="white",
+            selectcolor="#424242",
         ).pack()
-        ttk.Radiobutton(frame, text="困難", variable=self.diff_var, value="Hard").pack()
+        tk.Radiobutton(
+            frame,
+            text="普通",
+            variable=self.diff_var,
+            value="Medium",
+            bg="#212121",
+            fg="white",
+            selectcolor="#424242",
+        ).pack()
+        tk.Radiobutton(
+            frame,
+            text="困難",
+            variable=self.diff_var,
+            value="Hard",
+            bg="#212121",
+            fg="white",
+            selectcolor="#424242",
+        ).pack()
 
-        ttk.Button(frame, text="開始遊戲", command=self.start_game).pack(pady=20)
+        tk.Button(
+            frame,
+            text="開始遊戲",
+            command=self.start_game,
+            font=("Arial", 14),
+            bg="#5c6bc0",
+            fg="white",
+        ).pack(pady=20)
 
     def start_game(self):
         difficulty = self.diff_var.get()
@@ -515,55 +1040,17 @@ class MahjongGUI:
         for widget in self.main_container.winfo_children():
             widget.destroy()
 
-        # Layout: 3x3 Grid
-        self.main_container.columnconfigure(1, weight=1)
-        self.main_container.rowconfigure(1, weight=1)
+        # Table Canvas
+        self.table = MahjongTable(self.main_container)
+        self.table.pack(fill=tk.BOTH, expand=True)
+        self.table.on_tile_click_callback = self.on_tile_click
 
-        # Opponent Top
-        self.frame_top = ttk.Frame(self.main_container, style="TFrame")
-        self.frame_top.grid(row=0, column=1, sticky="ew", pady=10)
-
-        # Opponent Left
-        self.frame_left = ttk.Frame(self.main_container, style="TFrame")
-        self.frame_left.grid(row=1, column=0, sticky="ns", padx=10)
-
-        # Opponent Right
-        self.frame_right = ttk.Frame(self.main_container, style="TFrame")
-        self.frame_right.grid(row=1, column=2, sticky="ns", padx=10)
-
-        # Center Table (River + Info)
-        self.frame_table = ttk.Frame(
-            self.main_container, style="Table.TFrame", padding=20
+        # Action Panel (Overlay)
+        self.action_panel = tk.Frame(
+            self.main_container, bg="#212121", bd=2, relief="raised"
         )
-        self.frame_table.grid(row=1, column=1, sticky="nsew")
-
-        # Info Panel (Inside Table)
-        self.frame_info = ttk.Frame(self.frame_table, style="Panel.TFrame", padding=10)
-        self.frame_info.place(relx=0.5, rely=0.5, anchor="center")
-        self.lbl_info = ttk.Label(
-            self.frame_info, text="對局資訊", font=FONT_SMALL, background=COLOR_PANEL
-        )
-        self.lbl_info.pack()
-        self.lbl_dora = ttk.Label(
-            self.frame_info,
-            text="寶牌",
-            font=FONT_SMALL,
-            foreground="gold",
-            background=COLOR_PANEL,
-        )
-        self.lbl_dora.pack()
-
-        # Human Player (Bottom)
-        self.frame_bottom = ttk.Frame(self.main_container, style="TFrame", padding=10)
-        self.frame_bottom.grid(row=2, column=0, columnspan=3, sticky="ew")
-
-        self.frame_hand = ttk.Frame(self.frame_bottom)
-        self.frame_hand.pack(side=tk.LEFT, expand=True)
-
-        self.frame_actions = ttk.Frame(self.frame_bottom)
-        self.frame_actions.pack(side=tk.RIGHT, padx=20)
-
-        self.player_frames = {}  # To be mapped
+        self.action_panel.place(relx=0.5, rely=0.85, anchor="center")
+        self.action_panel.place_forget()  # Hide initially
 
     def poll_updates(self):
         try:
@@ -579,9 +1066,9 @@ class MahjongGUI:
         msg_type = msg["type"]
         if msg_type == "setup_complete":
             self.human_seat = msg["human_seat"]
-            self.setup_player_positions()
+            self.table.human_seat = self.human_seat
         elif msg_type == "state_update":
-            self.update_game_state(msg)
+            self.table.update_state(msg)
         elif msg_type == "human_turn":
             self.enable_human_controls(
                 msg["actions"], msg["hand"], msg.get("last_drawn_tile")
@@ -591,235 +1078,49 @@ class MahjongGUI:
         elif msg_type == "match_end":
             messagebox.showinfo("遊戲結束", "對局結束!")
             self.show_start_screen()
-
-    def setup_player_positions(self):
-        self.pos_map = {
-            "bottom": self.human_seat,
-            "right": (self.human_seat + 1) % 4,
-            "top": (self.human_seat + 2) % 4,
-            "left": (self.human_seat + 3) % 4,
-        }
-        self.player_frames = {
-            self.pos_map["top"]: self.frame_top,
-            self.pos_map["left"]: self.frame_left,
-            self.pos_map["right"]: self.frame_right,
-        }
-
-    def update_game_state(self, state):
-        # Info
-        self.lbl_info.config(
-            text=f"{state['round_wind']} {state['round_number']} | 本場: {state['honba']} | 立直棒: {state['riichi_sticks']}"
-        )
-        dora_display = [get_tile_display_name(t) for t in state["dora_indicators"]]
-        self.lbl_dora.config(text=f"寶牌: {' '.join(dora_display)}")
-
-        # Render Opponents
-        for pid, frame in self.player_frames.items():
-            for w in frame.winfo_children():
-                w.destroy()
-            count = state["hands"][pid]
-            melds = state["melds"][pid]
-            score = state["scores"][pid]
-
-            # Simple representation
-            # Convert melds to Chinese
-            melds_display = [localize_meld(m) for m in melds]
-
-            txt = f"P{pid}\n[{score}]\n{'🀠 ' * count}\n{' '.join(melds_display)}"
-            ttk.Label(frame, text=txt, justify="center").pack()
-
-        # Render River
-        # Clear previous river tiles (simple approach: redraw all)
-        # Ideally we'd have dedicated frames for each player's river in the table
-        # For this demo, we'll just overlay labels in quadrants
-
-        # Remove old river widgets
-        for w in self.frame_table.winfo_children():
-            if w != self.frame_info:
-                w.destroy()
-
-        # Draw rivers
-        for i in range(4):
-            pid = (self.human_seat + i) % 4
-            discards = state["discards"][pid]
-
-            # Position
-            relx, rely, anchor = 0.5, 0.5, "center"
-            if i == 0:
-                relx, rely, anchor = 0.5, 0.8, "s"  # Bottom
-            elif i == 1:
-                relx, rely, anchor = 0.8, 0.5, "e"  # Right
-            elif i == 2:
-                relx, rely, anchor = 0.5, 0.2, "n"  # Top
-            elif i == 3:
-                relx, rely, anchor = 0.2, 0.5, "w"  # Left
-
-            # Show last 6
-            shown = discards[-6:]
-            shown_display = [get_tile_display_name(t) for t in shown]
-            txt = " ".join(shown_display)
-            lbl = tk.Label(
-                self.frame_table, text=txt, bg=COLOR_TABLE, fg="white", font=FONT_MEDIUM
-            )
-            lbl.place(relx=relx, rely=rely, anchor=anchor)
-
-        # Render Human Hand (Passive view, active controls handled in human_turn)
-        # Only update if not currently in turn (to avoid flickering during interaction)
-        # Actually, we should update to show the draw.
-        self.render_human_hand(
-            state["hands"][self.human_seat],
-            state["melds"][self.human_seat],
-            active=False,
-            last_drawn_tile=state.get("human_last_drawn_tile"),
-        )
-
-    def render_human_hand(
-        self,
-        tiles_str: List[str],
-        melds: List[str],
-        active: bool = False,
-        last_drawn_tile: Optional[str] = None,
-    ):
-        for w in self.frame_hand.winfo_children():
-            w.destroy()
-
-        # Sort everything first
-        standing_tiles = sorted(tiles_str, key=get_tile_sort_key)
-
-        # If we have a drawn tile, remove one instance of it and append to end
-        has_drawn = False
-        if last_drawn_tile and last_drawn_tile in standing_tiles:
-            # Find the first occurrence of the drawn tile and move it to the end
-            # This handles cases where there are multiple identical tiles
-            idx_to_move = -1
-            for i, t in enumerate(standing_tiles):
-                if t == last_drawn_tile:
-                    idx_to_move = i
-                    break
-            if idx_to_move != -1:
-                moved_tile = standing_tiles.pop(idx_to_move)
-                standing_tiles.append(moved_tile)
-                has_drawn = True
-
-        for idx, t_str in enumerate(standing_tiles):
-            color = get_tile_color(t_str)
-            display_name = get_tile_display_name(t_str)
-
-            # Add gap before drawn tile
-            padx = 2
-            if has_drawn and idx == len(standing_tiles) - 1:
-                padx = (20, 2)
-
-            btn = tk.Button(
-                self.frame_hand,
-                text=display_name,
-                font=FONT_LARGE,
-                width=4,
-                bg="white",
-                fg=color,
-                state="normal" if active else "disabled",
-                command=lambda t=t_str: self.on_tile_click(t),
-            )
-            btn.pack(side=tk.LEFT, padx=padx)
-
-        if melds:
-            # Localize melds
-            melds_zh = [localize_meld(m) for m in melds]
-            ttk.Label(self.frame_hand, text="   " + " ".join(melds_zh)).pack(
-                side=tk.LEFT
-            )
+        elif msg_type == "error":
+            messagebox.showerror("錯誤", msg["message"])
 
     def enable_human_controls(
-        self,
-        actions: List[GameAction],
-        hand: Hand,
-        last_drawn_tile: Optional[str] = None,
+        self, actions: List[GameAction], hand: Hand, last_drawn_tile: Optional[Tile]
     ):
         self.current_actions = actions
 
-        # Re-render hand as active
-        tiles_str = [str(t) for t in hand.tiles]
-        melds_str = [str(m) for m in hand.melds]
+        # Show action buttons
+        for widget in self.action_panel.winfo_children():
+            widget.destroy()
 
-        self.render_human_hand(
-            tiles_str, melds_str, active=True, last_drawn_tile=last_drawn_tile
-        )
-
-        # Action Buttons
-        for w in self.frame_actions.winfo_children():
-            w.destroy()
-
+        has_buttons = False
         for action in actions:
             if action == GameAction.DISCARD:
                 continue
 
-            # Special handling for PASS (make it distinct?)
-            btn_text = action.zh
-
-            btn = ttk.Button(
-                self.frame_actions,
-                text=btn_text,
+            has_buttons = True
+            btn = tk.Button(
+                self.action_panel,
+                text=action.zh,  # Use localized name
+                font=("Arial", 12, "bold"),
                 command=lambda a=action: self.on_action_click(a),
             )
-            btn.pack(side=tk.LEFT, padx=5)
+            btn.pack(side=tk.LEFT, padx=5, pady=5)
 
-    def render_human_hand_active(
-        self, tiles_str: List[str], melds: List[str], has_drawn: bool
-    ):
-        for w in self.frame_hand.winfo_children():
-            w.destroy()
+        if has_buttons:
+            self.action_panel.place(relx=0.5, rely=0.85, anchor="center")
+        else:
+            self.action_panel.place_forget()
 
-        for idx, t_str in enumerate(tiles_str):
-            color = get_tile_color(t_str)
-
-            # Add gap before drawn tile
-            padx = 2
-            if has_drawn and idx == len(tiles_str) - 1:
-                padx = (20, 2)  # Extra left padding
-
-            btn = tk.Button(
-                self.frame_hand,
-                text=t_str,
-                font=FONT_LARGE,
-                width=4,
-                bg="white",
-                fg=color,
-                command=lambda t=t_str: self.on_tile_click(t),
-            )
-            btn.pack(side=tk.LEFT, padx=padx)
-
-        if melds:
-            ttk.Label(self.frame_hand, text="   " + " ".join(melds)).pack(side=tk.LEFT)
-
-    def on_tile_click(self, tile_str):
+    def on_tile_click(self, tile: Tile):
         if GameAction.DISCARD in self.current_actions:
-            # Reconstruct tile
-            is_red = "r" in tile_str
-            clean = tile_str.replace("r", "")
-            suit = Suit.JIHAI
-            if "m" in clean:
-                suit = Suit.MANZU
-            elif "p" in clean:
-                suit = Suit.PINZU
-            elif "s" in clean:
-                suit = Suit.SOZU
-            rank = int(clean[0])
-            tile = Tile(suit, rank, is_red=is_red)
-
             self.human_input_queue.put({"action": GameAction.DISCARD, "tile": tile})
-            self._clear_actions()
+            self.action_panel.place_forget()
+            self.current_actions = []
 
-    def on_action_click(self, action):
+    def on_action_click(self, action: GameAction):
+        # For now, assume no tile selection needed for actions (like Pon/Chi auto-select)
+        # Ideally we need a sub-menu for Chi selection if multiple options
         self.human_input_queue.put({"action": action, "tile": None})
-        self._clear_actions()
-
-    def _clear_actions(self):
-        for w in self.frame_actions.winfo_children():
-            w.destroy()
-        # Disable hand buttons
-        for w in self.frame_hand.winfo_children():
-            if isinstance(w, tk.Button):
-                w.config(state="disabled")
+        self.action_panel.place_forget()
+        self.current_actions = []
 
     def show_round_result(self, msg):
         reason = msg["reason"]
@@ -830,6 +1131,9 @@ class MahjongGUI:
             for w in winners:
                 res = win_results[w]
                 txt += f"玩家 {w}: {res.points} 點 ({res.han} 翻 / {res.fu} 符)\n"
+                txt += "役種:\n"
+                for yaku_res in res.yaku_results:
+                    txt += f"  - {yaku_res.yaku.zh} ({yaku_res.han} 翻)\n"  # Use localized Yaku name
             messagebox.showinfo("對局結束", txt)
         else:
             messagebox.showinfo("對局結束", "流局!")
@@ -837,5 +1141,5 @@ class MahjongGUI:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = MahjongGUI(root)
+    app = GameApp(root)
     root.mainloop()
