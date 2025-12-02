@@ -132,17 +132,17 @@ class TileRenderer:
         angle: float,
     ):
         # Determine color
+        # Determine color
         color = "#000000"
-        if tile.suit == Suit.MANZU:
+
+        if tile.is_red:
+            color = "#FF0000"
+        elif tile.suit == Suit.MANZU:
             color = "#B22222"  # Red
         elif tile.suit == Suit.PINZU:
             color = "#000080"  # Navy Blue
-            if tile.is_red and tile.rank == 5:
-                color = "#FF0000"
         elif tile.suit == Suit.SOZU:
             color = "#006400"  # Green
-            if tile.is_red and tile.rank == 5:
-                color = "#FF0000"
         elif tile.suit == Suit.JIHAI:
             if tile.rank == 5:  # Haku (White)
                 color = "#000000"  # Black as requested
@@ -155,6 +155,8 @@ class TileRenderer:
 
         # Get localized name
         text = tile.get_name("zh")
+        # Remove "赤" prefix if present (we use red dot and color instead)
+        text = text.replace("赤", "")
 
         # Draw Text
         # Use same font for everything
