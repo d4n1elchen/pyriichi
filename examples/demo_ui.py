@@ -68,6 +68,7 @@ class TileRenderer:
         selected: bool = False,
         scale: float = 1.0,
         angle: float = 0.0,
+        dimmed: bool = False,
     ):
         w = width * scale
         h = height * scale
@@ -120,6 +121,16 @@ class TileRenderer:
 
         if face_up and tile:
             TileRenderer._draw_text_pattern(canvas, cx, cy, w, h, tile, angle)
+
+        if dimmed:
+            # Draw a semi-transparent (stippled) black overlay
+            canvas.create_polygon(
+                rotated_corners,
+                fill="black",
+                stipple="gray50",  # 50% transparency simulation
+                outline="",
+                tags=("tile", "dim_overlay"),
+            )
 
     @staticmethod
     def _draw_text_pattern(
@@ -648,6 +659,10 @@ class MahjongTable(tk.Canvas):
             tiles_to_render.remove(drawn_tile)
             drawn_tile_to_render = drawn_tile
 
+        # Determine if hand should be dimmed (not my turn)
+        is_my_turn = self.current_player == self.human_seat
+        should_dim = not is_my_turn
+
         for i, tile in enumerate(tiles_to_render):
             dx = x + i * TILE_WIDTH
             dy = y
@@ -663,6 +678,7 @@ class MahjongTable(tk.Canvas):
                 tile,
                 face_up=True,
                 selected=(i == self.selected_tile_idx),
+                dimmed=should_dim,
             )
 
             # Store bbox for click detection
@@ -688,6 +704,7 @@ class MahjongTable(tk.Canvas):
                 drawn_tile_to_render,
                 face_up=True,
                 selected=(self.selected_tile_idx == i),
+                dimmed=should_dim,
             )
 
             self.addtag_overlapping(
