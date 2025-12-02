@@ -252,28 +252,6 @@ class RuleEngine:
         """獲取最後捨牌的玩家。"""
         return self._last_discarded_player
 
-    def get_last_drawn_tile(self) -> Optional[Tuple[int, Tile]]:
-        """
-        獲取最後摸到的牌。
-
-        Returns:
-            Optional[Tuple[int, Tile]]: (玩家索引, 牌) 或 None。
-        """
-        # Delegate to current player's hand
-        # Note: This assumes "last drawn" implies current player's draw.
-        # If we need global last drawn (e.g. for some weird reason), we'd need to track player.
-        # But usually we only care about the current player's draw.
-
-        # However, the previous implementation tracked (player_idx, tile).
-        # We should try to reconstruct that if possible, or just return what we can.
-        # If current player has a last_drawn_tile, return it.
-
-        hand = self.get_hand(self._current_player)
-        tile = hand.last_drawn_tile
-        if tile:
-            return (self._current_player, tile)
-        return None
-
     def get_phase(self) -> GamePhase:
         """
         獲取當前遊戲階段。
