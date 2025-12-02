@@ -100,7 +100,9 @@ class TileRenderer:
         shadow_corners = [(px + d, py + d) for px, py in rotated_corners]
 
         # Draw Shadow
-        canvas.create_polygon(shadow_corners, fill="#333333", outline="", tags="tile")
+        canvas.create_polygon(
+            shadow_corners, fill="#333333", outline="", tags=("tile", "shadow")
+        )
 
         # Border/Body
         bg_color = COLOR_TILE_FACE if face_up else COLOR_TILE_BACK
@@ -113,7 +115,7 @@ class TileRenderer:
             fill=bg_color,
             outline=COLOR_TILE_BORDER,
             width=1,
-            tags="tile",
+            tags=("tile", "body"),
         )
 
         if face_up and tile:
@@ -292,13 +294,24 @@ class MahjongTable(tk.Canvas):
             rel_pos = (i - self.human_seat) % 4
             self._render_player(i, rel_pos)
 
+        # Ensure shadows are behind everything else, but above center panel
+        self.tag_lower("shadow")
+        self.tag_raise("shadow", "center_panel")
+
     def _render_center_info(self):
         w, h = 260, 260
         x = self.center_x - w / 2
         y = self.center_y - h / 2
 
         self.create_rectangle(
-            x, y, x + w, y + h, fill="#004d40", outline="#FFD700", width=2
+            x,
+            y,
+            x + w,
+            y + h,
+            fill="#004d40",
+            outline="#FFD700",
+            width=2,
+            tags="center_panel",
         )
 
         # Round Info
