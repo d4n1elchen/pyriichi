@@ -426,7 +426,6 @@ class RuleEngine:
 
         # 恢復
         hand._tiles.append(last_drawn)
-        hand._tiles.sort()
 
         if not current_waits:
             return False  # 應該不會發生，立直必聽牌
@@ -927,11 +926,14 @@ class RuleEngine:
 
         # 恢復手牌
         hand._tiles.append(tile)
-        hand._tiles.sort()
         hand._tile_counts_cache = None
 
         if not is_tenpai:
             raise ValueError("立直打牌後必須聽牌")
+
+        # 執行打牌
+        # 注意：這裡直接調用 _handle_discard，它會處理打牌邏輯和後續流程
+        discard_result = self._handle_discard(player, tile, **kwargs)
 
         # 執行立直
         hand.set_riichi(True)
@@ -939,10 +941,6 @@ class RuleEngine:
         self._game_state.update_score(player, -1000)
         self._riichi_ippatsu[player] = True
         self._riichi_ippatsu_discard[player] = 0
-
-        # 執行打牌
-        # 注意：這裡直接調用 _handle_discard，它會處理打牌邏輯和後續流程
-        discard_result = self._handle_discard(player, tile, **kwargs)
 
         # 合併結果
         discard_result.riichi = True

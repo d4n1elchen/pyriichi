@@ -109,7 +109,10 @@ class RandomPlayer(BasePlayer):
 
             if hand.is_riichi:
                 # 立直後只能打出剛摸到的牌
-                tile_to_discard = hand.tiles[-1]
+                tile_to_discard = hand.last_drawn_tile
+                if tile_to_discard is None:
+                    # Should not happen if we just drew a tile, but fallback to last tile just in case
+                    tile_to_discard = hand.tiles[-1]
                 return GameAction.DISCARD, tile_to_discard
 
             tile_to_discard = random.choice(hand.tiles)
@@ -183,7 +186,10 @@ class SimplePlayer(BasePlayer):
         if GameAction.DISCARD in available_actions:
             # 如果立直中，只能打出剛摸到的牌
             if hand.is_riichi:
-                return GameAction.DISCARD, hand.tiles[-1]
+                tile_to_discard = hand.last_drawn_tile
+                if tile_to_discard is None:
+                    tile_to_discard = hand.tiles[-1]
+                return GameAction.DISCARD, tile_to_discard
 
             # 簡單切牌策略：字牌 -> 老頭牌 -> 中張牌 (孤張優先)
             best_discard = self._choose_best_discard(hand)

@@ -164,7 +164,7 @@ class Hand:
         Args:
             tiles (List[Tile]): 初始手牌列表（13 或 14 張）。
         """
-        self._tiles = sorted(tiles.copy())
+        self._tiles = tiles.copy()
         self._melds: List[Meld] = []
         self._discards: List[Tile] = []
         self._is_riichi = False
@@ -175,7 +175,6 @@ class Hand:
 
     def add_tile(self, tile: Tile) -> None:
         self._tiles.append(tile)
-        self._tiles.sort()
         self._tile_counts_cache = None
         self._tenpai_discards = self.calculate_tenpai_discards()
         self._last_drawn_tile = tile
@@ -819,7 +818,6 @@ class Hand:
 
                 # 恢復手牌
                 self._tiles.append(tile_to_discard)
-                self._tiles.sort()
                 self._tile_counts_cache = None
             except ValueError:
                 continue
