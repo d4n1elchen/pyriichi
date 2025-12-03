@@ -190,30 +190,25 @@ class TileRenderer:
             # Offset for top char (Number) and bottom char (Suit)
 
             # Calculate offsets based on angle
-            # Standard (0 deg): Number at Top (-y), Suit at Bottom (+y)
             offset = h * 0.2
 
             if angle == 0:
                 dx1, dy1 = 0, -offset
                 dx2, dy2 = 0, offset
-            elif angle == 90:  # Top points Left
-                dx1, dy1 = -offset, 0  # Number Left
-                dx2, dy2 = offset, 0  # Suit Right
-            elif angle == -90:  # Top points Right
-                dx1, dy1 = offset, 0  # Number Right
-                dx2, dy2 = -offset, 0  # Suit Left
-            elif angle == 180:  # Top points Down
-                dx1, dy1 = 0, offset  # Number Bottom
-                dx2, dy2 = 0, -offset  # Suit Top
+            elif angle == 90:
+                dx1, dy1 = -offset, 0
+                dx2, dy2 = offset, 0
+            elif angle == -90:
+                dx1, dy1 = offset, 0
+                dx2, dy2 = -offset, 0
+            elif angle == 180:
+                dx1, dy1 = 0, offset
+                dx2, dy2 = 0, -offset
             else:
-                # Fallback to rotation math if needed, but we stick to 90 deg steps
                 import math
 
                 rad = math.radians(angle)
                 c, s = math.cos(rad), math.sin(rad)
-                # Original offsets (0, -offset) and (0, offset)
-                # Rotated: x' = x*c - y*s, y' = x*s + y*c
-                # Top: (0, -offset) -> (offset*s, -offset*c)
                 dx1 = offset * s
                 dy1 = -offset * c
                 dx2 = -dx1
@@ -317,8 +312,6 @@ class MahjongTable(tk.Canvas):
 
         # Draw Players (Hands, Discards)
         for i in range(4):
-            # Calculate relative position based on human seat
-            # Human is always bottom (index 0 in relative terms)
             rel_pos = (i - self.human_seat) % 4
             self._render_player(i, rel_pos)
 
@@ -364,7 +357,6 @@ class MahjongTable(tk.Canvas):
         )
 
         # Riichi Sticks (Unclaimed)
-        # Calculate how many sticks are currently on the table (active Riichi)
         active_riichi_count = 0
         for hand in self.hands.values():
             if hand and hand.is_riichi:  # Ensure hand is not None
@@ -564,23 +556,12 @@ class MahjongTable(tk.Canvas):
                 angle = -90
 
             # Draw stick centered at sx, sy
-            # My _draw_riichi_stick takes x (left/top-left) and y (center).
-            # I should adjust input to center it.
             w, h = 40, 8
-            # Pass x such that center is sx
-            # x + w/2 = sx => x = sx - w/2
             self._draw_riichi_stick(sx - w / 2, sy, w, h, angle)
 
         # Draw River (Discards)
         discards = self.discards.get(player_idx, [])
-        self._render_river(
-            discards, 0, 0, rel_pos
-        )  # Pass dummy x,y? No, _render_river ignores them now?
-        # Wait, _render_river uses passed x,y as "Anchor" in my previous logic?
-        # Let's check _render_river.
-        # It uses self.center_x/y and ignores passed x/y for start position calculation!
-        # "Recalculate start positions to align with center panel... cx, cy = self.center_x, self.center_y"
-        # So passing score_x/y is fine, it won't be used.
+        self._render_river(discards, 0, 0, rel_pos)
 
         # Draw Hand
         hand = self.hands.get(player_idx)
@@ -628,21 +609,15 @@ class MahjongTable(tk.Canvas):
 
             elif rel_pos == 1:  # Right
                 # Start: Right of center box, Top-aligned with center box (visually centered vertically)
-                # Fills: Top -> Bottom (Cols), Left -> Right (Rows - growing away)
-                # FIX: Should fill Bottom -> Top (Player's Left -> Right)
                 start_x = cx + center_half_size + padding
-                # start_y = cy - 3 * w  # Old Top-down start
-                start_y = cy + 2 * w  # New Bottom-up start
+                start_y = cy + 2 * w
 
                 dx = start_x + row * h
                 dy = start_y - col * w  # Grow Up
 
             elif rel_pos == 2:  # Top
                 # Start: Left-aligned with center box, Above center box
-                # Fills: Left -> Right (Cols), Bottom -> Top (Rows - growing away)
-                # FIX: Should fill Right -> Left (Player's Left -> Right)
-                # start_x = cx - 3 * w  # Old Left-right start
-                start_x = cx + 2 * w  # New Right-left start
+                start_x = cx + 2 * w
                 start_y = cy - center_half_size - padding
 
                 dx = start_x - col * w  # Grow Left
@@ -673,7 +648,6 @@ class MahjongTable(tk.Canvas):
         drawn_tile_to_render = None
 
         # Only separate if it's the current player (human)
-        # And if the tile is actually in the hand
         if (
             self.current_player == self.human_seat
             and drawn_tile
@@ -683,7 +657,6 @@ class MahjongTable(tk.Canvas):
             tiles_to_render.remove(drawn_tile)
             drawn_tile_to_render = drawn_tile
 
-        # Determine if hand should be dimmed (not my turn)
         is_my_turn = self.current_player == self.human_seat
         should_dim_turn = not is_my_turn
 
@@ -691,7 +664,6 @@ class MahjongTable(tk.Canvas):
             dx = x + i * TILE_WIDTH
             dy = y
 
-            # Lift selected tile
             if i == self.selected_tile_idx:
                 # If in Riichi mode, only lift if valid discard
                 if self.riichi_mode and tile not in self.valid_riichi_discards:
@@ -699,7 +671,6 @@ class MahjongTable(tk.Canvas):
                 else:
                     dy -= 20
 
-            # Dimming logic
             is_dimmed = should_dim_turn
             if self.riichi_mode and not is_dimmed:
                 # If in Riichi mode, dim tiles that are NOT in valid_riichi_discards
@@ -716,12 +687,10 @@ class MahjongTable(tk.Canvas):
                 dimmed=is_dimmed,
             )
 
-            # Store bbox for click detection
             self.addtag_overlapping(
                 f"hand_tile:{i}", dx, dy, dx + TILE_WIDTH, dy + TILE_HEIGHT
             )
 
-        # Render drawn tile if exists
         if drawn_tile_to_render:
             i = len(tiles_to_render)
             # Add gap
@@ -739,7 +708,6 @@ class MahjongTable(tk.Canvas):
                 else:
                     dy -= 20
 
-            # Dimming logic for drawn tile
             is_dimmed = should_dim_turn
             if self.riichi_mode and not is_dimmed:
                 if drawn_tile_to_render not in self.valid_riichi_discards:
@@ -759,7 +727,6 @@ class MahjongTable(tk.Canvas):
                 f"hand_tile:{i}", dx, dy, dx + TILE_WIDTH, dy + TILE_HEIGHT
             )
 
-        # Draw Melds (to the right of hand)
         if melds:
             # Adjust start x based on whether we had a drawn tile
             extra_width = TILE_WIDTH + 15 if drawn_tile_to_render else 0
@@ -769,10 +736,7 @@ class MahjongTable(tk.Canvas):
     def _render_ai_hand(
         self, hand: Hand, x: float, y: float, rel_pos: int, melds: List[Meld]
     ):
-        # Just draw backs
-        count = (
-            len(hand.tiles) if isinstance(hand, Hand) else hand
-        )  # hand might be int count
+        count = len(hand.tiles) if isinstance(hand, Hand) else hand
         if isinstance(hand, int):
             count = hand
         elif isinstance(hand, Hand):
@@ -815,8 +779,6 @@ class MahjongTable(tk.Canvas):
 
         for meld in melds:
             tiles = meld.tiles
-            # For simplicity, draw all tiles face up
-            # TODO: Handle called tile rotation
 
             for tile in tiles:
                 angle = 0
@@ -851,15 +813,12 @@ class MahjongTable(tk.Canvas):
                 current_y -= 10
 
     def _on_mouse_move(self, event):
-        # Only allow hover selection for the human player's turn
         if self.current_player != self.human_seat:
             if self.selected_tile_idx != -1:  # If not human's turn, clear selection
                 self.selected_tile_idx = -1
                 self.render()
             return
 
-        # Find item under mouse
-        # find_overlapping is better than find_closest for hover
         items = self.find_overlapping(event.x, event.y, event.x, event.y)
 
         new_selection = -1
@@ -879,40 +838,29 @@ class MahjongTable(tk.Canvas):
             self.render()
 
     def _on_click(self, event):
-        # Check if clicked on human hand
         if self.current_player != self.human_seat:
             return
-
-        # If we have a selected tile (from hover), and we clicked it (or just clicked anywhere while hovering?)
-        # Usually click while hovering means discard.
 
         if self.selected_tile_idx != -1:
             # Confirm discard
             # Check if it's the human's turn
             # We already checked current_player == self.human_seat
 
-            # Callback
-            if self.on_tile_click_callback:  # Corrected callback name
+            if self.on_tile_click_callback:
                 # We need the tile object.
-                # self.hands[self.human_seat] is the hand object
                 hand = self.hands.get(self.human_seat)
                 if hand and isinstance(hand, Hand):
-                    # Sort to match index
                     tiles = sorted(
                         hand.tiles, key=lambda t: (t.suit.value, t.rank, t.is_red)
                     )
-                    # If there's a drawn tile, it's at the end of the visual hand
                     drawn_tile = hand.last_drawn_tile
                     if drawn_tile and drawn_tile in tiles:
-                        # Remove one instance from the main sorted list to simulate visual separation
                         tiles.remove(drawn_tile)
-                        # Add it back to the end for indexing purposes
                         tiles.append(drawn_tile)
 
                     if 0 <= self.selected_tile_idx < len(tiles):
                         tile = tiles[self.selected_tile_idx]
 
-                        # Check Riichi restrictions
                         if self.riichi_mode:
                             if tile not in self.valid_riichi_discards:
                                 return
@@ -939,7 +887,6 @@ class GUIHumanPlayer(BasePlayer):
         available_actions: List[GameAction],
         public_info: Optional[PublicInfo] = None,
     ) -> Tuple[GameAction, Optional[Tile]]:
-        # Notify GUI that it's human's turn
         self.output_queue.put(
             {
                 "type": "human_turn",
@@ -948,7 +895,6 @@ class GUIHumanPlayer(BasePlayer):
             }
         )
 
-        # Wait for action from GUI
         action_data = self.input_queue.get()
         return action_data["action"], action_data.get("tile")
 
@@ -996,15 +942,6 @@ class GameThread(threading.Thread):
                 self.players.append(ai_class(f"電腦 {i}"))
 
         # Assign players to engine
-        # RuleEngine doesn't have a set_players method, it uses init_game logic internally usually
-        # But we need to override the player decision logic.
-        # The engine calls player.decide_action.
-        # We need to make sure the engine uses OUR player instances.
-        # Wait, RuleEngine doesn't store Player objects directly for logic?
-        # It does! self.players = [] in __init__? No.
-        # RuleEngine manages state. The loop below calls player.decide_action.
-        # So we just need to maintain our list of players and call them.
-
         self.update_queue.put(
             {
                 "type": "setup_complete",
@@ -1014,7 +951,6 @@ class GameThread(threading.Thread):
         )
 
     def _notify_state_update(self):
-        # Prepare state object for GUI
         state = {
             "type": "state_update",
             "round_wind_zh": self.engine.game_state.round_wind.zh,
@@ -1048,7 +984,6 @@ class GameThread(threading.Thread):
             self._notify_state_update()
 
             while self.engine.get_phase() == GamePhase.PLAYING and self.running:
-                # Check for waiting actions (Interrupts)
                 waiting_map = self.engine.waiting_for_actions
                 if waiting_map:
                     waiting_pids = list(waiting_map.keys())
@@ -1059,7 +994,6 @@ class GameThread(threading.Thread):
                         player = self.players[pid]
                         available_actions = self.engine.get_available_actions(pid)
 
-                        # Public info
                         public_info = PublicInfo(
                             turn_number=self.engine._turn_count,
                             dora_indicators=self.engine.tileset.get_dora_indicators(1),
@@ -1115,7 +1049,6 @@ class GameThread(threading.Thread):
                         break
                     continue
 
-                # Normal Turn
                 current_player_idx = self.engine.get_current_player()
                 player = self.players[current_player_idx]
                 actions = self.engine.get_available_actions(current_player_idx)
@@ -1268,20 +1201,16 @@ class GameApp:
         for widget in self.main_container.winfo_children():
             widget.destroy()
 
-        # Table Canvas
         self.table = MahjongTable(self.main_container)
         self.table.pack(fill=tk.BOTH, expand=True)
         self.table.on_tile_click_callback = self.on_tile_click
 
-        # Action Panel (Overlay)
         self.action_panel = tk.Frame(
             self.main_container, bg="#212121", bd=2, relief="raised"
         )
         self.action_panel.place(relx=0.5, rely=0.85, anchor="center")
-        self.action_panel.place(relx=0.5, rely=0.85, anchor="center")
         self.action_panel.place_forget()  # Hide initially
 
-        # Settlement Panel
         self.settlement_panel = SettlementPanel(
             self.main_container, self.on_next_round_click
         )
@@ -1316,7 +1245,6 @@ class GameApp:
     def enable_human_controls(self, actions: List[GameAction]):
         self.current_actions = actions
 
-        # Show action buttons
         for widget in self.action_panel.winfo_children():
             widget.destroy()
 
@@ -1340,10 +1268,8 @@ class GameApp:
             self.action_panel.place_forget()
 
     def on_tile_click(self, tile: Tile):
-        # If in Riichi mode, check if tile is valid
         if self.table.riichi_mode:
             if tile in self.table.valid_riichi_discards:
-                # Execute Riichi with this tile
                 self.human_input_queue.put({"action": GameAction.RICHI, "tile": tile})
                 self._exit_riichi_mode()
             return
@@ -1358,28 +1284,23 @@ class GameApp:
             self._enter_riichi_mode()
             return
 
-        # For now, assume no tile selection needed for actions (like Pon/Chi auto-select)
-        # Ideally we need a sub-menu for Chi selection if multiple options
         self.human_input_queue.put({"action": action, "tile": None})
         self.action_panel.place_forget()
         self.current_actions = []
 
     def _enter_riichi_mode(self):
-        # Calculate valid discards
         hand = self.table.hands.get(self.human_seat)
         if not hand:
             return
 
         valid_discards = hand.tenpai_discards
         if not valid_discards:
-            # Should not happen if Riichi action was available
             return
 
         self.table.riichi_mode = True
         self.table.valid_riichi_discards = valid_discards
         self.table.render()
 
-        # Update Action Panel to show Cancel
         for widget in self.action_panel.winfo_children():
             widget.destroy()
 
@@ -1393,7 +1314,6 @@ class GameApp:
 
     def _cancel_riichi_mode(self):
         self._exit_riichi_mode()
-        # Restore original actions
         self.enable_human_controls(self.current_actions)
 
     def _exit_riichi_mode(self):
@@ -1413,7 +1333,6 @@ class GameApp:
 class SettlementPanel(tk.Frame):
     def __init__(self, master, on_next_round):
         super().__init__(master)
-        # Use a solid dark color
         self.configure(bg="#1a1a1a", bd=2, relief="solid")
         self.on_next_round = on_next_round
         self.place_forget()
@@ -1421,19 +1340,16 @@ class SettlementPanel(tk.Frame):
         self._init_widgets()
 
     def _init_widgets(self):
-        # Header
         self.header_label = tk.Label(
             self, text="", font=("Arial", 24, "bold"), fg="#FFD700", bg="#1a1a1a"
         )
         self.header_label.pack(side=tk.TOP, pady=20)
 
-        # Content Container
         self.content_frame = tk.Frame(self, bg="#1a1a1a")
         self.content_frame.pack(
             side=tk.TOP, fill=tk.BOTH, expand=True, padx=40, pady=(10, 80)
         )
 
-        # Footer (Place to ensure visibility)
         self.next_btn = tk.Button(
             self,
             text="下一局",
@@ -1448,7 +1364,6 @@ class SettlementPanel(tk.Frame):
         self.lift()
         self.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.8, relheight=0.8)
 
-        # Clear previous content
         for widget in self.content_frame.winfo_children():
             widget.destroy()
 
@@ -1469,10 +1384,6 @@ class SettlementPanel(tk.Frame):
     def _show_ryuukyoku(self, data):
         self.header_label.config(text="流局")
 
-        # Show reason if available (e.g. Exhausted Wall)
-        # Currently data might not have detailed reason enum, but we can infer or add it later.
-        # For now just "流局"
-
         tk.Label(
             self.content_frame,
             text="荒牌流局",  # Default to exhausted wall for now
@@ -1487,17 +1398,12 @@ class SettlementPanel(tk.Frame):
         winners = data["winners"]
         win_results = data["win_results"]
 
-        # If multiple winners, we might need a scrollable frame or just stack them.
-        # For demo, stacking is fine.
-
         for winner_idx in winners:
             res = win_results[winner_idx]
 
-            # Winner Frame
             w_frame = tk.Frame(self.content_frame, bg="#2d2d2d", bd=1, relief="solid")
             w_frame.pack(fill=tk.X, pady=10, ipady=10)
 
-            # Left: Player Name & Score
             left_frame = tk.Frame(w_frame, bg="#2d2d2d")
             left_frame.pack(side=tk.LEFT, padx=20)
 
@@ -1530,11 +1436,9 @@ class SettlementPanel(tk.Frame):
                 bg="#2d2d2d",
             ).pack(anchor="w")
 
-            # Right: Yaku List
             right_frame = tk.Frame(w_frame, bg="#2d2d2d")
             right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=20)
 
-            # Grid for Yaku
             row = 0
             col = 0
             for yaku_res in res.yaku:
