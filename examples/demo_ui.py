@@ -107,14 +107,14 @@ class TileRenderer:
 
         # Border/Body
         bg_color = COLOR_TILE_FACE if face_up else COLOR_TILE_BACK
-        if selected:
-            bg_color = "#FFD700"  # Highlight selected
-        elif dimmed:
+        if dimmed:
             # Darken the background color for dimming
             if face_up:
                 bg_color = "#CCCCCC"  # Darker cream
             else:
                 bg_color = "#B8860B"  # Darker gold
+        elif selected:
+            bg_color = "#FFD700"  # Highlight selected
 
         # Main Tile Body
         canvas.create_polygon(
@@ -365,12 +365,12 @@ class MahjongTable(tk.Canvas):
         center_sticks = self.riichi_sticks - active_riichi_count
 
         if center_sticks > 0:
-            stick_y = self.center_y - 15
+            stick_y = self.center_y - 5
             self._draw_riichi_stick(self.center_x - 30, stick_y, 40, 8)
             self.create_text(
                 self.center_x + 10,
                 stick_y,
-                text=f"x {center_sticks}",
+                text=f" x {center_sticks}",
                 fill=COLOR_TEXT_WHITE,
                 font=FONT_SMALL,
                 anchor="w",
@@ -379,7 +379,7 @@ class MahjongTable(tk.Canvas):
         # Dora
         self.create_text(
             self.center_x,
-            self.center_y + 5,
+            self.center_y + 15,
             text="寶牌",
             fill=COLOR_TEXT_GOLD,
             font=FONT_SMALL,
