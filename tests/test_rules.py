@@ -879,6 +879,59 @@ class TestRuleEngine:
         with pytest.raises(ValueError, match="立直打牌後必須聽牌"):
             self.engine._handle_riichi(0, tile=drawn_tile)
 
+    def test_multiple_ron_decision(self):
+        """測試多人榮和時的個別決定（一人榮和，一人PASS）"""
+        self._init_game()
+
+        # 啟用雙響
+        self.engine._game_state.ruleset.head_bump_only = False
+        self.engine._game_state.ruleset.allow_double_ron = True
+
+        # 設置 Player 1 聽牌 (Wait 5p)
+        # 123m 456s 789p 11z + 46p (Wait 5p for 456p)
+        self.engine.get_hand(1)._tiles = parse_tiles("123m456s789p11z46p")
+        self.engine.get_hand(1)._melds = []
+
+        # 設置 Player 2 聽牌 (Wait 5p)
+        # 123m 456s 789p 22z + 46p (Wait 5p for 456p)
+        self.engine.get_hand(2)._tiles = parse_tiles("123m456s789p22z46p")
+        self.engine.get_hand(2)._melds = []
+
+        # Player 0 打出 5p
+        discard_tile = Tile(Suit.PINZU, 5)
+        self.engine._last_discarded_tile = discard_tile
+        self.engine._last_discarded_player = 0
+
+        # 檢查中斷
+        interrupts = self.engine._check_interrupts(discard_tile, discarded_player=0)
+
+        # 確保 Player 1 和 Player 2 都可以榮和
+        assert 1 in interrupts
+        assert GameAction.RON in interrupts[1]
+        assert 2 in interrupts
+        assert GameAction.RON in interrupts[2]
+
+        # 設置等待回應
+        self.engine._waiting_for_actions = interrupts
+        self.engine._incoming_actions = {}
+        self.engine._last_discarded_tile = discard_tile
+        self.engine._last_discarded_player = 0
+
+        # Player 1 選擇 RON
+        self.engine.execute_action(1, GameAction.RON)
+
+        # Player 2 選擇 PASS
+        result = self.engine.execute_action(2, GameAction.PASS)
+
+        # 驗證結果
+        # 應該只有 Player 1 贏
+        assert result.success
+        assert len(result.winners) == 1
+        assert result.winners[0] == 1
+
+        # 驗證 Player 2 振聽 (因為錯過榮和)
+        assert self.engine._furiten_temp[2] == True
+
 
 class TestHighScoringMethod:
     def test_ambiguous_hand_pinfu_vs_triplet(self):
