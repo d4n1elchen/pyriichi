@@ -24,8 +24,8 @@ from pyriichi.rules import GameAction, GamePhase, RuleEngine
 from pyriichi.tiles import Suit, Tile
 
 # --- Constants ---
-WINDOW_WIDTH = 1280
-WINDOW_HEIGHT = 800
+WINDOW_WIDTH = 1024
+WINDOW_HEIGHT = 900
 
 # Colors
 COLOR_TABLE_BG = "#006400"  # Deep Green Felt
@@ -1254,8 +1254,6 @@ class GameApp:
             text="開始遊戲",
             command=self.start_game,
             font=("Arial", 14),
-            bg="#5c6bc0",
-            fg="white",
         ).pack(pady=20)
 
     def start_game(self):
@@ -1427,13 +1425,15 @@ class SettlementPanel(tk.Frame):
         self.header_label = tk.Label(
             self, text="", font=("Arial", 24, "bold"), fg="#FFD700", bg="#1a1a1a"
         )
-        self.header_label.pack(pady=20)
+        self.header_label.pack(side=tk.TOP, pady=20)
 
         # Content Container
         self.content_frame = tk.Frame(self, bg="#1a1a1a")
-        self.content_frame.pack(fill=tk.BOTH, expand=True, padx=40, pady=10)
+        self.content_frame.pack(
+            side=tk.TOP, fill=tk.BOTH, expand=True, padx=40, pady=(10, 80)
+        )
 
-        # Footer
+        # Footer (Place to ensure visibility)
         self.next_btn = tk.Button(
             self,
             text="下一局",
@@ -1442,7 +1442,7 @@ class SettlementPanel(tk.Frame):
             width=15,
             height=2,
         )
-        self.next_btn.pack(pady=30)
+        self.next_btn.place(relx=0.5, rely=0.95, anchor="s")
 
     def show(self, data):
         self.lift()
