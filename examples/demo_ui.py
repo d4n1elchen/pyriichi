@@ -693,7 +693,11 @@ class MahjongTable(tk.Canvas):
 
             # Lift selected tile
             if i == self.selected_tile_idx:
-                dy -= 20
+                # If in Riichi mode, only lift if valid discard
+                if self.riichi_mode and tile not in self.valid_riichi_discards:
+                    pass
+                else:
+                    dy -= 20
 
             # Dimming logic
             is_dimmed = should_dim_turn
@@ -726,7 +730,14 @@ class MahjongTable(tk.Canvas):
 
             # Check if selected (index would be last)
             if self.selected_tile_idx == i:
-                dy -= 20
+                # If in Riichi mode, only lift if valid discard
+                if (
+                    self.riichi_mode
+                    and drawn_tile_to_render not in self.valid_riichi_discards
+                ):
+                    pass
+                else:
+                    dy -= 20
 
             # Dimming logic for drawn tile
             is_dimmed = should_dim_turn
@@ -900,6 +911,12 @@ class MahjongTable(tk.Canvas):
 
                     if 0 <= self.selected_tile_idx < len(tiles):
                         tile = tiles[self.selected_tile_idx]
+
+                        # Check Riichi restrictions
+                        if self.riichi_mode:
+                            if tile not in self.valid_riichi_discards:
+                                return
+
                         self.on_tile_click_callback(tile)  # Corrected callback name
                         self.selected_tile_idx = -1
                         self.render()
