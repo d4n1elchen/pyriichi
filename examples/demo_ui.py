@@ -38,7 +38,6 @@ COLOR_TEXT_GOLD = "#FFD700"
 # Tile Dimensions (Canvas Units)
 TILE_WIDTH = 40
 TILE_HEIGHT = 56
-TILE_DEPTH = 4
 
 # Fonts
 FONT_LARGE = ("Arial", 24, "bold")
@@ -72,7 +71,6 @@ class TileRenderer:
     ):
         w = width * scale
         h = height * scale
-        d = TILE_DEPTH * scale
 
         cx = x + w / 2
         cy = y + h / 2
@@ -96,9 +94,11 @@ class TileRenderer:
         rotated_corners = [rotate_point(px, py, cx, cy, angle) for px, py in corners]
 
         # Calculate corners for shadow (offset)
-        # Shadow offset should also rotate? Or just fixed offset?
-        # Fixed offset looks like global light source.
-        shadow_corners = [(px + d, py + d) for px, py in rotated_corners]
+        # Fixed offset to simulate global light source
+        shadow_offset = width * 0.1
+        shadow_corners = [
+            (px + shadow_offset, py + shadow_offset) for px, py in rotated_corners
+        ]
 
         # Draw Shadow
         canvas.create_polygon(
@@ -142,7 +142,6 @@ class TileRenderer:
         tile: Tile,
         angle: float,
     ):
-        # Determine color
         # Determine color
         color = "#000000"
 

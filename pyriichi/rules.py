@@ -361,52 +361,28 @@ class RuleEngine:
             return False
 
         # Check if we can discard any tile to become tenpai
-        # We need to simulate discarding each tile
-        # Note: This assumes the hand has 14 tiles (after draw)
-        # If the hand has 13 tiles (e.g. before draw?), we can't Riichi anyway (must draw first)
-
-        # Optimization: If already tenpai (13 tiles), return True?
-        # But _can_riichi is called after draw (14 tiles).
-
-        # We can't easily modify hand._tiles directly without affecting state if not careful.
-        # But Hand class doesn't have a "check_tenpai_after_discard" method.
-        # We can use a temporary hand or modify/restore.
-
-        # Using internal _tiles list is risky if not restored properly.
-        # Let's try to use a temporary list if possible, but is_tenpai uses self._tiles.
-
-        # We will iterate and temporarily remove.
-        # Since we are in a single thread logic (mostly), it should be fine.
-
-        can_riichi = False
-        original_tiles = hand._tiles.copy()
-
-        # We iterate over unique tiles to save time
+        # 模擬打出每一張牌，檢查是否聽牌
+        # 由於 Hand 類沒有 "check_tenpai_after_discard" 方法，
+        # 我們需要暫時移除牌，檢查聽牌，然後恢復。
+        original_tiles = list(hand.tiles)
         unique_tiles = set(original_tiles)
 
-        for tile in unique_tiles:
-            # Remove one instance
-            try:
-                hand._tiles.remove(tile)
-            except ValueError:
-                # Should not happen if tile is from original_tiles
-                continue
-
+        for tile_to_discard in unique_tiles:
+            # 暫時移除一張牌
+            hand._tiles.remove(tile_to_discard)
             hand._tile_counts_cache = None  # Invalidate cache
 
             is_tenpai = hand.is_tenpai()
 
-            if is_tenpai:
-                can_riichi = True
-
-            # Restore
-            hand._tiles = original_tiles.copy()
+            # 恢復手牌
+            hand._tiles.append(tile_to_discard)
+            hand._tiles.sort()  # 保持排序
             hand._tile_counts_cache = None
 
-            if can_riichi:
-                break
+            if is_tenpai:
+                return True
 
-        return can_riichi
+        return False
 
     def _can_kan(self, player: int) -> bool:
         hand = self._hands[player]
@@ -552,11 +528,7 @@ class RuleEngine:
         ron_players = [p for p, (a, _, _) in actions.items() if a == GameAction.RON]
         if ron_players:
             # 執行榮和（處理多人榮和）
-            # 這裡假設 check_multiple_ron 已經處理了頭跳/雙響邏輯，或者我們在這裡處理
-            # 目前 _handle_ron 處理單個玩家。
-            # 如果有多個榮和，我們需要依序調用 _handle_ron，或者 _handle_ron 支持列表?
-            # 為了簡化，我們依序調用，但要注意遊戲結束狀態。
-            # 實際上, _handle_ron 會設置 winners。
+            # 注意：如果有多個榮和，需要依序處理
             # 如果是雙響，我們應該一次性設置?
 
             # 使用 check_multiple_ron 獲取真正的贏家（考慮頭跳）
@@ -636,7 +608,7 @@ class RuleEngine:
         # 我們假設 demo_ui 會處理 result.win_results
 
         # 更新分數
-        # 注意：多贏家時，供託（立直棒）通常給頭跳或平分? 規則配置。
+        # 注意：多贏家時，供託（立直棒）的分配需根據規則配置（通常給頭跳或平分）
         # 這裡簡化：每個贏家都計算分數，從放銃者扣除。
 
         loser = self._last_discarded_player

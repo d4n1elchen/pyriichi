@@ -864,10 +864,8 @@ class Hand:
             return True
 
         # 檢查七對子（必須門清）
-        # 如果有副露（除了暗槓？），通常不能七對子
-        # 但這裡的實現是把所有牌合起來檢查
         # 七對子不允許任何副露（包括暗槓）
-        if not self._melds:
+        if self.is_concealed:
             if self._is_seven_pairs(concealed_tiles):
                 return True
             if self._is_kokushi_musou(concealed_tiles):
