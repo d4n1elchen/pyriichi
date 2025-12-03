@@ -644,8 +644,15 @@ class RuleEngine:
         hand = self._hands[player]
         if not self._tile_set:
             raise ValueError("牌組未初始化")
-        if hand.total_tile_count() >= 14:
-            raise ValueError("手牌已達 14 張，不能再摸牌")
+
+        # 計算槓的數量（每個槓增加 1 張手牌上限）
+        kan_count = sum(
+            1 for meld in hand.melds if meld.type in [MeldType.KAN, MeldType.ANKAN]
+        )
+        limit = 14 + kan_count
+
+        if hand.total_tile_count() >= limit:
+            raise ValueError(f"手牌已達 {limit} 張，不能再摸牌")
         # 摸牌
         drawn_tile = self._tile_set.draw()
         if drawn_tile:

@@ -741,6 +741,30 @@ class TestRuleEngine:
         self.engine.start_round()
         self.engine.deal()
 
+    def test_draw_with_kan(self):
+        """測試有槓的情況下摸牌（手牌數限制應增加）"""
+        self._init_game()
+
+        # 設置：玩家 0 有一個暗槓
+        hand = self.engine.get_hand(0)
+        # 10 tiles + 1 Kan (4 tiles) = 14 tiles
+        hand._tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p")
+        kan_tiles = parse_tiles("2p2p2p2p")
+        meld = Meld(MeldType.ANKAN, kan_tiles)
+        hand._melds = [meld]
+
+        # 確保輪到玩家 0
+        self.engine._current_player = 0
+
+        # 執行摸牌
+        # 直接調用 _handle_draw 以避開 execute_action 的可用動作檢查
+        # 正常情況下應該允許摸牌（變成 15 張）
+        # 如果限制是固定的 14 張，這裡會失敗
+        self.engine._handle_draw(0)
+
+        assert hand.total_tile_count() == 15
+        assert len(hand.melds) == 1
+
 
 class TestHighScoringMethod:
     def test_ambiguous_hand_pinfu_vs_triplet(self):
