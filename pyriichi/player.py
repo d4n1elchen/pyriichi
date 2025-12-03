@@ -118,6 +118,14 @@ class RandomPlayer(BasePlayer):
         # 如果是回應階段，隨機選擇，但 PASS 權重高一點
         action = random.choice(available_actions)
 
+        if action == GameAction.RICHI:
+            valid_discards = hand.tenpai_discards
+            if valid_discards:
+                return GameAction.RICHI, random.choice(valid_discards)
+            else:
+                # Should not happen if RICHI is in available_actions
+                return GameAction.PASS, None
+
         # 如果選了需要參數的動作，暫時返回 None
 
         return action, None
@@ -165,7 +173,11 @@ class SimplePlayer(BasePlayer):
 
         # 2. 優先立直
         if GameAction.RICHI in available_actions:
-            return GameAction.RICHI, None
+            valid_discards = hand.tenpai_discards
+            if valid_discards:
+                # 從可立直的捨牌中選擇一張最好的
+                best_riichi_discard = self._choose_best_discard(hand, valid_discards)
+                return GameAction.RICHI, best_riichi_discard
 
         # 3. 處理切牌
         if GameAction.DISCARD in available_actions:
@@ -174,31 +186,7 @@ class SimplePlayer(BasePlayer):
                 return GameAction.DISCARD, hand.tiles[-1]
 
             # 簡單切牌策略：字牌 -> 老頭牌 -> 中張牌 (孤張優先)
-
-            best_discard = None
-            min_score = 1000
-
-            for tile in hand.tiles:
-                score = 0
-
-                if tile.is_honor:
-                    score = 10
-
-                elif tile.is_terminal:
-                    score = 20
-
-                else:
-                    score = 30 + (
-                        5 - abs(tile.rank - 5)
-                    )  # 5是最高分(35)，1/9是26(但已被terminal捕獲)
-
-                # 增加隨機性
-                score += random.randint(0, 5)
-
-                if score < min_score:
-                    min_score = score
-                    best_discard = tile
-
+            best_discard = self._choose_best_discard(hand)
             return GameAction.DISCARD, best_discard
 
         # 4. 處理鳴牌
@@ -206,6 +194,47 @@ class SimplePlayer(BasePlayer):
             return GameAction.PASS, None
 
         return random.choice(available_actions), None
+
+    def _choose_best_discard(
+        self, hand: Hand, candidates: Optional[List[Tile]] = None
+    ) -> Tile:
+        """
+        選擇最佳捨牌。
+
+        Args:
+            hand (Hand): 手牌。
+            candidates (Optional[List[Tile]]): 候選牌列表。如果為 None，則從手牌中選擇。
+
+        Returns:
+            Tile: 最佳捨牌。
+        """
+        tiles_to_consider = candidates if candidates is not None else hand.tiles
+
+        best_discard = None
+        min_score = 1000
+
+        for tile in tiles_to_consider:
+            score = 0
+
+            if tile.is_honor:
+                score = 10
+
+            elif tile.is_terminal:
+                score = 20
+
+            else:
+                score = 30 + (
+                    5 - abs(tile.rank - 5)
+                )  # 5是最高分(35)，1/9是26(但已被terminal捕獲)
+
+            # 增加隨機性
+            score += random.randint(0, 5)
+
+            if score < min_score:
+                min_score = score
+                best_discard = tile
+
+        return best_discard
 
 
 class DefensivePlayer(SimplePlayer):
