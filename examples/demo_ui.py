@@ -5,8 +5,11 @@ import sys
 import threading
 import time
 import tkinter as tk
+from _operator import is_
 from tkinter import messagebox
 from typing import Dict, List, Optional, Tuple
+
+import _pytest.cacheprovider
 
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -64,7 +67,7 @@ class TileRenderer:
         width: float = TILE_WIDTH,
         height: float = TILE_HEIGHT,
         face_up: bool = True,
-        selected: bool = False,
+        highlighted: bool = False,
         scale: float = 1.0,
         angle: float = 0.0,
         dimmed: bool = False,
@@ -113,7 +116,7 @@ class TileRenderer:
                 bg_color = "#CCCCCC"  # Darker cream
             else:
                 bg_color = "#B8860B"  # Darker gold
-        elif selected:
+        elif highlighted:
             bg_color = "#FFD700"  # Highlight selected
 
         # Main Tile Body
@@ -638,44 +641,54 @@ class MahjongTable(tk.Canvas):
 
     def _render_human_hand(self, hand: Hand, x: float, y: float, melds: List[Meld]):
         tiles = hand.tiles
-        # Sort
-        tiles = sorted(tiles, key=lambda t: (t.suit.value, t.rank, t.is_red))
 
         # Check for drawn tile
-        drawn_tile = hand.last_drawn_tile
+        drawn_tile = None
 
-        tiles_to_render = list(tiles)
-        drawn_tile_to_render = None
-
-        # Only separate if it's the current player (human)
-        if (
-            self.current_player == self.human_seat
-            and drawn_tile
-            and drawn_tile in tiles_to_render
-        ):
-            # Remove one instance
-            tiles_to_render.remove(drawn_tile)
-            drawn_tile_to_render = drawn_tile
+        # Sort
+        if hand.last_drawn_tile and hand.last_drawn_tile in tiles:
+            drawn_tile = hand.last_drawn_tile
+            tiles.remove(drawn_tile)
+        tiles = sorted(tiles, key=lambda t: (t.suit.value, t.rank, t.is_red))
+        if drawn_tile:
+            tiles.append(drawn_tile)
 
         is_my_turn = self.current_player == self.human_seat
         should_dim_turn = not is_my_turn
 
-        for i, tile in enumerate(tiles_to_render):
+        for i, tile in enumerate(tiles):
             dx = x + i * TILE_WIDTH
             dy = y
 
+            if i == len(tiles) - 1 and tile == drawn_tile:
+                # Add gap
+                dx += 15
+
+            is_highlighted = False
+
             if i == self.selected_tile_idx:
-                # If in Riichi mode, only lift if valid discard
+                is_highlighted = True
+                # If in Riichi mode, only lift if valid discard.
                 if self.riichi_mode and tile not in self.valid_riichi_discards:
-                    pass
-                else:
-                    dy -= 20
+                    is_highlighted = False
+                # Not in riichi mode but already riichi, only allow last tile to be discarded
+                if (
+                    not self.riichi_mode
+                    and hand.is_riichi
+                    and i != len(tiles) - 1
+                    and tile != drawn_tile
+                ):
+                    is_highlighted = False
+
+            if is_highlighted:
+                dy -= 20
 
             is_dimmed = should_dim_turn
-            if self.riichi_mode and not is_dimmed:
-                # If in Riichi mode, dim tiles that are NOT in valid_riichi_discards
+            if self.riichi_mode:
                 if tile not in self.valid_riichi_discards:
                     is_dimmed = True
+            elif hand.is_riichi and i != len(tiles) - 1 and tile != drawn_tile:
+                is_dimmed = True
 
             TileRenderer.draw_tile(
                 self,
@@ -683,43 +696,7 @@ class MahjongTable(tk.Canvas):
                 dy,
                 tile,
                 face_up=True,
-                selected=(i == self.selected_tile_idx),
-                dimmed=is_dimmed,
-            )
-
-            self.addtag_overlapping(
-                f"hand_tile:{i}", dx, dy, dx + TILE_WIDTH, dy + TILE_HEIGHT
-            )
-
-        if drawn_tile_to_render:
-            i = len(tiles_to_render)
-            # Add gap
-            dx = x + i * TILE_WIDTH + 15  # 15px gap
-            dy = y
-
-            # Check if selected (index would be last)
-            if self.selected_tile_idx == i:
-                # If in Riichi mode, only lift if valid discard
-                if (
-                    self.riichi_mode
-                    and drawn_tile_to_render not in self.valid_riichi_discards
-                ):
-                    pass
-                else:
-                    dy -= 20
-
-            is_dimmed = should_dim_turn
-            if self.riichi_mode and not is_dimmed:
-                if drawn_tile_to_render not in self.valid_riichi_discards:
-                    is_dimmed = True
-
-            TileRenderer.draw_tile(
-                self,
-                dx,
-                dy,
-                drawn_tile_to_render,
-                face_up=True,
-                selected=(self.selected_tile_idx == i),
+                highlighted=is_highlighted,
                 dimmed=is_dimmed,
             )
 
@@ -729,8 +706,8 @@ class MahjongTable(tk.Canvas):
 
         if melds:
             # Adjust start x based on whether we had a drawn tile
-            extra_width = TILE_WIDTH + 15 if drawn_tile_to_render else 0
-            meld_start_x = x + len(tiles_to_render) * TILE_WIDTH + extra_width + 20
+            extra_width = TILE_WIDTH + 15 if drawn_tile else 0
+            meld_start_x = x + len(tiles) * TILE_WIDTH + extra_width + 20
             self._render_melds(melds, meld_start_x, y, 0)
 
     def _render_ai_hand(
@@ -863,6 +840,15 @@ class MahjongTable(tk.Canvas):
 
                         if self.riichi_mode:
                             if tile not in self.valid_riichi_discards:
+                                return
+
+                        # Not riichi mode but already riichi
+                        if hand.is_riichi:
+                            # Only allow last tile to be discarded
+                            if (
+                                self.selected_tile_idx != len(tiles) - 1
+                                or tile != drawn_tile
+                            ):
                                 return
 
                         self.on_tile_click_callback(tile)  # Corrected callback name

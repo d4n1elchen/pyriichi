@@ -410,7 +410,6 @@ class RuleEngine:
         # 立直狀態下，基準聽牌列表是「打出剛摸到的牌」後的聽牌列表
         # 因為如果不暗槓，就必須模切
         last_drawn = hand.last_drawn_tile
-        print(f"DEBUG: Last drawn: {last_drawn}")
         if last_drawn is None:
             return False  # Should not happen in Riichi turn
 
@@ -418,11 +417,9 @@ class RuleEngine:
         try:
             hand._tiles.remove(last_drawn)
         except ValueError:
-            print("DEBUG: Failed to remove last drawn")
             return False
 
         current_waits = hand.get_waiting_tiles()
-        print(f"DEBUG: Current waits: {current_waits}")
 
         # 恢復
         hand._tiles.append(last_drawn)
@@ -445,7 +442,6 @@ class RuleEngine:
                 for t in tiles_to_remove:
                     temp_hand._tiles.remove(t)
             except ValueError:
-                print(f"DEBUG: Failed to remove tile {t}")
                 continue
 
             # 添加暗槓
@@ -453,7 +449,6 @@ class RuleEngine:
 
             # 檢查聽牌是否改變
             new_waits = temp_hand.get_waiting_tiles()
-            print(f"DEBUG: New waits: {new_waits}")
 
             # 比較聽牌列表
             if sorted(current_waits) == sorted(new_waits):
