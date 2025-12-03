@@ -1438,8 +1438,6 @@ class SettlementPanel(tk.Frame):
             self,
             text="下一局",
             font=("Arial", 16, "bold"),
-            bg="#5c6bc0",
-            fg="white",
             command=self._on_next,
             width=15,
             height=2,
