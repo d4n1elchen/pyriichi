@@ -920,6 +920,7 @@ class GameThread(threading.Thread):
         self.running = True
         self.human_seat = -1
         self.players = []
+        self.next_round_event = threading.Event()
 
     def run(self):
         try:
@@ -1062,7 +1063,9 @@ class GameThread(threading.Thread):
                                 "win_results": result.win_results,
                             }
                         )
-                        time.sleep(5)
+
+                        self.next_round_event.wait()
+                        self.next_round_event.clear()
                         break
                     continue
 
@@ -1122,7 +1125,9 @@ class GameThread(threading.Thread):
                             "win_results": result.win_results,
                         }
                     )
-                    time.sleep(5)
+
+                    self.next_round_event.wait()
+                    self.next_round_event.clear()
                     break
 
             if self.engine.get_phase() == GamePhase.ENDED:
@@ -1229,7 +1234,13 @@ class GameApp:
             self.main_container, bg="#212121", bd=2, relief="raised"
         )
         self.action_panel.place(relx=0.5, rely=0.85, anchor="center")
+        self.action_panel.place(relx=0.5, rely=0.85, anchor="center")
         self.action_panel.place_forget()  # Hide initially
+
+        # Settlement Panel
+        self.settlement_panel = SettlementPanel(
+            self.main_container, self.on_next_round_click
+        )
 
     def poll_updates(self):
         try:
@@ -1297,21 +1308,160 @@ class GameApp:
         self.action_panel.place_forget()
         self.current_actions = []
 
+    def on_next_round_click(self):
+        if self.game_thread:
+            self.game_thread.next_round_event.set()
+
     def show_round_result(self, msg):
-        reason = msg["reason"]
-        if reason == "win":
-            winners = msg["winners"]
-            win_results = msg["win_results"]
-            txt = "和牌者:\n"
-            for w in winners:
-                res = win_results[w]
-                txt += f"玩家 {w}: {res.points} 點 ({res.han} 翻 / {res.fu} 符)\n"
-                txt += "役種:\n"
-                for yaku_res in res.yaku_results:
-                    txt += f"  - {yaku_res.yaku.zh} ({yaku_res.han} 翻)\n"  # Use localized Yaku name
-            messagebox.showinfo("對局結束", txt)
-        else:
-            messagebox.showinfo("對局結束", "流局!")
+        self.settlement_panel.show(msg)
+
+
+class SettlementPanel(tk.Frame):
+    def __init__(self, master, on_next_round):
+        super().__init__(master)
+        # Use a solid dark color
+        self.configure(bg="#1a1a1a", bd=2, relief="solid")
+        self.on_next_round = on_next_round
+        self.place_forget()
+
+        self._init_widgets()
+
+    def _init_widgets(self):
+        # Header
+        self.header_label = tk.Label(
+            self, text="", font=("Arial", 24, "bold"), fg="#FFD700", bg="#1a1a1a"
+        )
+        self.header_label.pack(pady=20)
+
+        # Content Container
+        self.content_frame = tk.Frame(self, bg="#1a1a1a")
+        self.content_frame.pack(fill=tk.BOTH, expand=True, padx=40, pady=10)
+
+        # Footer
+        self.next_btn = tk.Button(
+            self,
+            text="下一局",
+            font=("Arial", 16, "bold"),
+            bg="#5c6bc0",
+            fg="white",
+            command=self._on_next,
+            width=15,
+            height=2,
+        )
+        self.next_btn.pack(pady=30)
+
+    def show(self, data):
+        self.lift()
+        self.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.8, relheight=0.8)
+
+        # Clear previous content
+        for widget in self.content_frame.winfo_children():
+            widget.destroy()
+
+        reason = data.get("reason")
+        if reason == "draw":
+            self._show_ryuukyoku(data)
+        elif reason == "win":
+            self._show_win(data)
+
+    def hide(self):
+        self.place_forget()
+
+    def _on_next(self):
+        self.hide()
+        if self.on_next_round:
+            self.on_next_round()
+
+    def _show_ryuukyoku(self, data):
+        self.header_label.config(text="流局")
+
+        # Show reason if available (e.g. Exhausted Wall)
+        # Currently data might not have detailed reason enum, but we can infer or add it later.
+        # For now just "流局"
+
+        tk.Label(
+            self.content_frame,
+            text="荒牌流局",  # Default to exhausted wall for now
+            font=("Arial", 20),
+            fg="white",
+            bg="#1a1a1a",
+        ).pack(expand=True)
+
+    def _show_win(self, data):
+        self.header_label.config(text="和牌")
+
+        winners = data["winners"]
+        win_results = data["win_results"]
+
+        # If multiple winners, we might need a scrollable frame or just stack them.
+        # For demo, stacking is fine.
+
+        for winner_idx in winners:
+            res = win_results[winner_idx]
+
+            # Winner Frame
+            w_frame = tk.Frame(self.content_frame, bg="#2d2d2d", bd=1, relief="solid")
+            w_frame.pack(fill=tk.X, pady=10, ipady=10)
+
+            # Left: Player Name & Score
+            left_frame = tk.Frame(w_frame, bg="#2d2d2d")
+            left_frame.pack(side=tk.LEFT, padx=20)
+
+            tk.Label(
+                left_frame,
+                text=f"玩家 {winner_idx}",
+                font=("Arial", 18, "bold"),
+                fg="#FFD700",
+                bg="#2d2d2d",
+            ).pack(anchor="w")
+
+            score_text = f"{res.points} 點"
+            tk.Label(
+                left_frame,
+                text=score_text,
+                font=("Arial", 24, "bold"),
+                fg="white",
+                bg="#2d2d2d",
+            ).pack(anchor="w")
+
+            detail_text = f"{res.han} 翻 {res.fu} 符"
+            if any(y.is_yakuman for y in res.yaku):
+                detail_text = "役滿"
+
+            tk.Label(
+                left_frame,
+                text=detail_text,
+                font=("Arial", 14),
+                fg="#aaaaaa",
+                bg="#2d2d2d",
+            ).pack(anchor="w")
+
+            # Right: Yaku List
+            right_frame = tk.Frame(w_frame, bg="#2d2d2d")
+            right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=20)
+
+            # Grid for Yaku
+            row = 0
+            col = 0
+            for yaku_res in res.yaku:
+                y_text = f"{yaku_res.yaku.zh} ({yaku_res.han} 翻)"
+                if yaku_res.is_yakuman:
+                    y_text = f"{yaku_res.yaku.zh} (役滿)"
+
+                tk.Label(
+                    right_frame,
+                    text=y_text,
+                    font=("Arial", 14),
+                    fg="white",
+                    bg="#2d2d2d",
+                    width=20,
+                    anchor="w",
+                ).grid(row=row, column=col, sticky="w", pady=2)
+
+                col += 1
+                if col > 1:
+                    col = 0
+                    row += 1
 
 
 if __name__ == "__main__":

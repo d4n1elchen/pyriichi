@@ -930,7 +930,7 @@ class TestRuleEngine:
         assert result.winners[0] == 1
 
         # 驗證 Player 2 振聽 (因為錯過榮和)
-        assert self.engine._furiten_temp[2] == True
+        assert self.engine._furiten_temp[2]
 
 
 class TestHighScoringMethod:
