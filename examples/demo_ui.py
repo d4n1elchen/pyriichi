@@ -276,6 +276,7 @@ class MahjongTable(tk.Canvas):
         self.round_number: int = 1
         self.honba: int = 0
         self.riichi_sticks: int = 0
+        self.wall_remaining: int = 0
         self.dora_indicators: List[Tile] = []
 
         # Interaction
@@ -303,6 +304,7 @@ class MahjongTable(tk.Canvas):
         self.round_number = state.get("round_number", 1)
         self.honba = state.get("honba", 0)
         self.riichi_sticks = state.get("riichi_sticks", 0)
+        self.wall_remaining = state.get("wall_remaining", 0)
         self.dora_indicators = state.get("dora_indicators_obj", [])
 
         self.render()
@@ -341,7 +343,6 @@ class MahjongTable(tk.Canvas):
         )
 
         # Round Info
-        # Round Info
         info_text = f"{self.round_wind_name} {self.round_number} 局\n{self.honba} 本場"
         self.create_text(
             self.center_x,
@@ -349,6 +350,16 @@ class MahjongTable(tk.Canvas):
             text=info_text,
             fill=COLOR_TEXT_WHITE,
             font=FONT_MEDIUM,
+            justify="center",
+        )
+
+        # Wall Remaining
+        self.create_text(
+            self.center_x,
+            self.center_y - 20,
+            text=f"剩餘: {self.wall_remaining}",
+            fill="#AAAAAA",
+            font=FONT_SMALL,
             justify="center",
         )
 
@@ -993,8 +1004,11 @@ class GameThread(threading.Thread):
             "round_number": self.engine.game_state.round_number,
             "honba": self.engine.game_state.honba,
             "riichi_sticks": self.engine.game_state.riichi_sticks,
+            "wall_remaining": self.engine.tileset.remaining
+            if self.engine.tileset
+            else 0,
             "scores": self.engine.game_state.scores,
-            "dora_indicators_obj": self.engine._tile_set.get_dora_indicators(1),
+            "dora_indicators_obj": self.engine.tileset.get_dora_indicators(1),
             "hands_obj": {i: self.engine.get_hand(i) for i in range(4)},
             "discards_obj": {i: self.engine.get_discards(i) for i in range(4)},
             "melds_obj": {i: self.engine.get_hand(i).melds for i in range(4)},
@@ -1031,9 +1045,7 @@ class GameThread(threading.Thread):
                         # Public info
                         public_info = PublicInfo(
                             turn_number=self.engine._turn_count,
-                            dora_indicators=self.engine._tile_set.get_dora_indicators(
-                                1
-                            ),
+                            dora_indicators=self.engine.tileset.get_dora_indicators(1),
                             discards={i: self.engine.get_discards(i) for i in range(4)},
                             melds={i: self.engine.get_hand(i).melds for i in range(4)},
                             riichi_players=[
@@ -1096,7 +1108,7 @@ class GameThread(threading.Thread):
 
                 public_info = PublicInfo(
                     turn_number=self.engine._turn_count,
-                    dora_indicators=self.engine._tile_set.get_dora_indicators(1),
+                    dora_indicators=self.engine.tileset.get_dora_indicators(1),
                     discards={i: self.engine.get_discards(i) for i in range(4)},
                     melds={i: self.engine.get_hand(i).melds for i in range(4)},
                     riichi_players=[

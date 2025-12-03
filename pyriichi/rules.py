@@ -276,6 +276,11 @@ class RuleEngine:
         """獲取當前等待執行的動作"""
         return self._waiting_for_actions
 
+    @property
+    def tileset(self) -> Optional[TileSet]:
+        """獲取牌組對象"""
+        return self._tile_set
+
     def _calculate_turn_actions(self, player: int) -> List[GameAction]:
         """計算玩家回合內的可執行動作"""
         actions: List[GameAction] = []
