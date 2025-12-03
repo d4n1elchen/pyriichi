@@ -846,6 +846,39 @@ class TestRuleEngine:
         # Should NOT allow Ankan
         assert not self.engine._can_ankan(0)
 
+    def test_riichi_requires_discard_and_tenpai(self):
+        """測試立直必須同時打牌且聽牌"""
+        self._init_game()
+        hand = self.engine.get_hand(0)
+
+        # 設置聽牌手牌：11123m (聽 1m, 4m) + 456p + 789s + 11z
+        # 摸到 2p (不聽牌)
+        hand._tiles = parse_tiles("11123m456p789s11z")
+        drawn_tile = Tile(Suit.PINZU, 2)
+        hand.add_tile(drawn_tile)
+
+        # 嘗試立直但不打牌
+        with pytest.raises(ValueError, match="立直必須同時打出一張牌"):
+            self.engine._handle_riichi(0, tile=None)
+
+        # 嘗試立直並打出 2p (聽牌)
+        # Should succeed
+        result = self.engine._handle_riichi(0, tile=drawn_tile)
+        assert result.riichi
+        assert hand.is_riichi
+        assert self.engine._last_discarded_tile == drawn_tile
+
+        # 設置不聽牌手牌
+        # 11123m 456p 789s 12z (不聽) + draw 3z
+        hand._is_riichi = False
+        hand._tiles = parse_tiles("11123m456p789s12z")
+        drawn_tile = Tile(Suit.JIHAI, 3)
+        hand.add_tile(drawn_tile)
+
+        # 嘗試立直並打出 3z (仍不聽牌)
+        with pytest.raises(ValueError, match="立直打牌後必須聽牌"):
+            self.engine._handle_riichi(0, tile=drawn_tile)
+
 
 class TestHighScoringMethod:
     def test_ambiguous_hand_pinfu_vs_triplet(self):

@@ -930,20 +930,43 @@ class RuleEngine:
     def _handle_riichi(
         self, player: int, tile: Optional[Tile] = None, **kwargs
     ) -> ActionResult:
-        result = ActionResult()
-        self._hands[player].set_riichi(True)
+        if tile is None:
+            raise ValueError("立直必須同時打出一張牌")
+
+        hand = self._hands[player]
+
+        # 檢查打出這張牌後是否聽牌
+        # 模擬打牌
+        try:
+            hand._tiles.remove(tile)
+        except ValueError:
+            raise ValueError("手牌中沒有這張牌")
+
+        hand._tile_counts_cache = None
+        is_tenpai = hand.is_tenpai()
+
+        # 恢復手牌
+        hand._tiles.append(tile)
+        hand._tiles.sort()
+        hand._tile_counts_cache = None
+
+        if not is_tenpai:
+            raise ValueError("立直打牌後必須聽牌")
+
+        # 執行立直
+        hand.set_riichi(True)
         self._game_state.add_riichi_stick()
         self._game_state.update_score(player, -1000)
         self._riichi_ippatsu[player] = True
         self._riichi_ippatsu_discard[player] = 0
 
-        # 立直後必須打牌
-        self._waiting_for_actions = {player: [GameAction.DISCARD]}
-        self._incoming_actions = {}  # 清空之前的回應
+        # 執行打牌
+        # 注意：這裡直接調用 _handle_discard，它會處理打牌邏輯和後續流程
+        discard_result = self._handle_discard(player, tile, **kwargs)
 
-        result.riichi = True
-        result.waiting_for = self._waiting_for_actions
-        return result
+        # 合併結果
+        discard_result.riichi = True
+        return discard_result
 
     def _handle_kan(
         self, player: int, tile: Optional[Tile] = None, **kwargs
