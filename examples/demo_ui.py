@@ -109,6 +109,12 @@ class TileRenderer:
         bg_color = COLOR_TILE_FACE if face_up else COLOR_TILE_BACK
         if selected:
             bg_color = "#FFD700"  # Highlight selected
+        elif dimmed:
+            # Darken the background color for dimming
+            if face_up:
+                bg_color = "#CCCCCC"  # Darker cream
+            else:
+                bg_color = "#B8860B"  # Darker gold
 
         # Main Tile Body
         canvas.create_polygon(
@@ -120,17 +126,7 @@ class TileRenderer:
         )
 
         if face_up and tile:
-            TileRenderer._draw_text_pattern(canvas, cx, cy, w, h, tile, angle)
-
-        if dimmed:
-            # Draw a semi-transparent (stippled) black overlay
-            canvas.create_polygon(
-                rotated_corners,
-                fill="black",
-                stipple="gray50",  # 50% transparency simulation
-                outline="",
-                tags=("tile", "dim_overlay"),
-            )
+            TileRenderer._draw_text_pattern(canvas, cx, cy, w, h, tile, angle, dimmed)
 
     @staticmethod
     def _draw_text_pattern(
@@ -141,6 +137,7 @@ class TileRenderer:
         h: float,
         tile: Tile,
         angle: float,
+        dimmed: bool = False,
     ):
         # Determine color
         color = "#000000"
@@ -162,6 +159,19 @@ class TileRenderer:
                 color = "#B22222"
             else:
                 color = "#000000"  # Winds are black
+
+        if dimmed:
+            # Darken colors
+            if color == "#000000":
+                color = "#555555"
+            elif color == "#FF0000":
+                color = "#8B0000"
+            elif color == "#B22222":
+                color = "#8B0000"
+            elif color == "#000080":
+                color = "#00004d"
+            elif color == "#006400":
+                color = "#004d00"
 
         # Get localized name
         text = tile.get_name("zh")
