@@ -765,6 +765,87 @@ class TestRuleEngine:
         assert hand.total_tile_count() == 15
         assert len(hand.melds) == 1
 
+    def test_cannot_chi_pon_kan_in_riichi(self):
+        """測試立直後不能吃碰槓"""
+        self._init_game()
+
+        # 設置玩家 0 立直
+        hand = self.engine.get_hand(0)
+        hand._is_riichi = True
+
+        # 設置上家打出的牌
+        self.engine._last_discarded_player = 3
+        self.engine._last_discarded_tile = Tile(Suit.PINZU, 3)
+
+        # 設置手牌可以吃碰槓
+        # 12p (吃 3p), 33p (碰 3p), 333p (槓 3p)
+        hand._tiles = parse_tiles("12333p456s789m11z")
+
+        # Check Chi
+        # 12p + 3p -> Chi
+        assert hand.can_chi(self.engine._last_discarded_tile, from_player=0)
+        assert not self.engine._can_chi(0)  # Should be False due to Riichi
+
+        # Check Pon
+        # 33p + 3p -> Pon
+        assert hand.can_pon(self.engine._last_discarded_tile)
+        assert not self.engine._can_pon(0)  # Should be False due to Riichi
+
+        # Check Kan (Open)
+        # 333p + 3p -> Kan
+        assert hand.can_kan(self.engine._last_discarded_tile)
+        assert not self.engine._can_kan(0)  # Should be False due to Riichi
+
+    def test_must_discard_drawn_tile_in_riichi(self):
+        """測試立直後必須打出剛摸到的牌"""
+        self._init_game()
+        hand = self.engine.get_hand(0)
+        hand._is_riichi = True
+
+        # 設置手牌
+        hand._tiles = parse_tiles("123m456p789s1122z")
+
+        # 摸牌
+        drawn_tile = Tile(Suit.JIHAI, 3)  # 3z (West)
+        hand.add_tile(drawn_tile)
+
+        # 嘗試打出非摸到的牌 (1m)
+        with pytest.raises(ValueError, match="立直後只能打出剛摸到的牌"):
+            self.engine._handle_discard(0, Tile(Suit.MANZU, 1))
+
+        # 嘗試打出摸到的牌 (3z)
+        # Should succeed
+        self.engine._handle_discard(0, drawn_tile)
+
+    def test_ankan_allowed_if_wait_unchanged(self):
+        """測試立直後暗槓（聽牌不變）"""
+        self._init_game()
+        hand = self.engine.get_hand(0)
+        hand._is_riichi = True
+
+        # 聽牌：111m (刻子) + 456m + 789p + 23s (聽 1s, 4s) + 77z (雀頭)
+        # 這裡 111m 只能解釋為刻子，不能解釋為雀頭（因為 1m 與 456m 不連）
+        hand._tiles = parse_tiles("111456m789p23s77z")
+        drawn_tile = Tile(Suit.MANZU, 1)
+        hand.add_tile(drawn_tile)
+
+        # Should allow Ankan
+        assert self.engine._can_ankan(0)
+
+    def test_ankan_forbidden_if_wait_changed(self):
+        """測試立直後暗槓（聽牌改變）"""
+        self._init_game()
+        hand = self.engine.get_hand(0)
+        hand._is_riichi = True
+
+        # 聽牌：3334m (聽 2m, 3m, 4m, 5m) -> Ankan 3m -> 4m (Single wait 4m)
+        hand._tiles = parse_tiles("3334m456p789s11z")
+        drawn_tile = Tile(Suit.MANZU, 3)
+        hand.add_tile(drawn_tile)
+
+        # Should NOT allow Ankan
+        assert not self.engine._can_ankan(0)
+
 
 class TestHighScoringMethod:
     def test_ambiguous_hand_pinfu_vs_triplet(self):

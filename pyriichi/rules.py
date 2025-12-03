@@ -342,6 +342,8 @@ class RuleEngine:
         if player == self._last_discarded_player:
             return False
         hand = self._hands[player]
+        if hand.is_riichi:
+            return False
         return hand.can_pon(self._last_discarded_tile)
 
     def _can_chi(self, player: int) -> bool:
@@ -350,6 +352,8 @@ class RuleEngine:
         if (player - self._last_discarded_player) % self._num_players != 1:
             return False
         hand = self._hands[player]
+        if hand.is_riichi:
+            return False
         sequences = hand.can_chi(self._last_discarded_tile, from_player=0)
         return len(sequences) > 0
 
@@ -386,6 +390,8 @@ class RuleEngine:
 
     def _can_kan(self, player: int) -> bool:
         hand = self._hands[player]
+        if hand.is_riichi:
+            return False
 
         # 他家捨牌可進行大明槓
         if (
@@ -409,7 +415,72 @@ class RuleEngine:
 
     def _can_ankan(self, player: int) -> bool:
         hand = self._hands[player]
-        return bool(hand.can_kan(None))
+        possible_kans = hand.can_kan(None)
+
+        if not possible_kans:
+            return False
+
+        if not hand.is_riichi:
+            return True
+
+        # 立直後只能暗槓不改變聽牌的牌
+        # 這裡需要檢查每一個可能的暗槓是否改變聽牌
+        # 由於 _can_ankan 只返回 bool，只要有一個合法的暗槓即可
+        # 獲取當前聽牌列表
+        # 立直狀態下，基準聽牌列表是「打出剛摸到的牌」後的聽牌列表
+        # 因為如果不暗槓，就必須模切
+        last_drawn = hand.last_drawn_tile
+        print(f"DEBUG: Last drawn: {last_drawn}")
+        if last_drawn is None:
+            return False  # Should not happen in Riichi turn
+
+        # 暫時移除剛摸到的牌
+        try:
+            hand._tiles.remove(last_drawn)
+        except ValueError:
+            print("DEBUG: Failed to remove last drawn")
+            return False
+
+        current_waits = hand.get_waiting_tiles()
+        print(f"DEBUG: Current waits: {current_waits}")
+
+        # 恢復
+        hand._tiles.append(last_drawn)
+        hand._tiles.sort()
+
+        if not current_waits:
+            return False  # 應該不會發生，立直必聽牌
+
+        for meld in possible_kans:
+            if meld.type != MeldType.ANKAN:
+                continue
+
+            # 模擬暗槓
+            temp_hand = Hand([t for t in hand.tiles])
+            temp_hand._melds = [m for m in hand.melds]
+            temp_hand._is_riichi = True
+
+            # 執行暗槓 (模擬)
+            tiles_to_remove = meld.tiles
+            try:
+                for t in tiles_to_remove:
+                    temp_hand._tiles.remove(t)
+            except ValueError:
+                print(f"DEBUG: Failed to remove tile {t}")
+                continue
+
+            # 添加暗槓
+            temp_hand._melds.append(meld)
+
+            # 檢查聽牌是否改變
+            new_waits = temp_hand.get_waiting_tiles()
+            print(f"DEBUG: New waits: {new_waits}")
+
+            # 比較聽牌列表
+            if sorted(current_waits) == sorted(new_waits):
+                return True
+
+        return False
 
     def _can_tsumo(self, player: int) -> bool:
         """檢查玩家是否可以自摸"""
@@ -724,6 +795,12 @@ class RuleEngine:
             raise ValueError("牌組未初始化")
 
         hand = self._hands[player]
+
+        # 立直後只能打出剛摸到的牌 (除非是暗槓，但暗槓在 _handle_kan 處理)
+        if hand.is_riichi:
+            if hand.last_drawn_tile and tile != hand.last_drawn_tile:
+                raise ValueError("立直後只能打出剛摸到的牌")
+
         if hand.discard(tile):
             # 記錄打牌並處理相關效果（但不推進回合）
             self._last_discarded_tile = tile
