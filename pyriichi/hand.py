@@ -170,12 +170,14 @@ class Hand:
         self._is_riichi = False
         self._riichi_turn: Optional[int] = None
         self._tile_counts_cache: Optional[dict] = None
+        self._tenpai_discards: Optional[List[Tile]] = None
         self._last_drawn_tile: Optional[Tile] = None
 
     def add_tile(self, tile: Tile) -> None:
         self._tiles.append(tile)
         self._tiles.sort()
         self._tile_counts_cache = None
+        self._tenpai_discards = self.calculate_tenpai_discards()
         self._last_drawn_tile = tile
 
     def discard(self, tile: Tile) -> bool:
@@ -192,6 +194,7 @@ class Hand:
             self._tiles.remove(tile)
             self._discards.append(tile)
             self._tile_counts_cache = None
+            self._tenpai_discards = None
             return True
         except ValueError:
             return False
@@ -283,6 +286,7 @@ class Hand:
         meld = Meld(MeldType.CHI, all_tiles, called_tile=tile)
         self._melds.append(meld)
         self._tile_counts_cache = None
+        self._tenpai_discards = self.calculate_tenpai_discards()
         self._last_drawn_tile = None
         return meld
 
@@ -330,6 +334,7 @@ class Hand:
         meld = Meld(MeldType.PON, meld_tiles, called_tile=tile)
         self._melds.append(meld)
         self._tile_counts_cache = None
+        self._tenpai_discards = self.calculate_tenpai_discards()
         self._last_drawn_tile = None
         return meld
 
@@ -428,7 +433,7 @@ class Hand:
 
         self._melds.append(meld)
         self._tile_counts_cache = None
-        # Kan usually followed by Rinshan draw which will set last_drawn_tile via add_tile
+        self._tenpai_discards = self.calculate_tenpai_discards()
         self._last_drawn_tile = None
         return meld
 
@@ -456,6 +461,11 @@ class Hand:
     def is_riichi(self) -> bool:
         """是否立直"""
         return self._is_riichi
+
+    @property
+    def tenpai_discards(self) -> List[Tile]:
+        """獲取可以聽牌的牌"""
+        return [] if self._tenpai_discards is None else self._tenpai_discards.copy()
 
     def set_riichi(self, is_riichi: bool = True, turn: Optional[int] = None) -> None:
         """
@@ -785,6 +795,36 @@ class Hand:
             bool: 是否聽牌。
         """
         return len(self.get_waiting_tiles()) > 0
+
+    def calculate_tenpai_discards(self) -> List[Tile]:
+        """
+        獲取打出後可以聽牌的牌列表。
+
+        Returns:
+            List[Tile]: 打出後可以聽牌的牌列表。
+        """
+
+        valid_discards = []
+        original_tiles = list(self._tiles)
+        unique_tiles = set(original_tiles)
+
+        for tile_to_discard in unique_tiles:
+            # 暫時移除一張牌
+            try:
+                self._tiles.remove(tile_to_discard)
+                self._tile_counts_cache = None
+
+                if self.is_tenpai():
+                    valid_discards.append(tile_to_discard)
+
+                # 恢復手牌
+                self._tiles.append(tile_to_discard)
+                self._tiles.sort()
+                self._tile_counts_cache = None
+            except ValueError:
+                continue
+
+        return valid_discards
 
     def get_waiting_tiles(self) -> List[Tile]:
         """

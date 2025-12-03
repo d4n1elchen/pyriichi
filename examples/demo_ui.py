@@ -283,6 +283,10 @@ class MahjongTable(tk.Canvas):
         self.selected_tile_idx: int = -1
         self.on_tile_click_callback = None
 
+        # Riichi Selection Mode
+        self.riichi_mode: bool = False
+        self.valid_riichi_discards: List[Tile] = []
+
         self.bind("<Button-1>", self._on_click)
         self.bind("<Motion>", self._on_mouse_move)
 
@@ -670,7 +674,7 @@ class MahjongTable(tk.Canvas):
 
         # Determine if hand should be dimmed (not my turn)
         is_my_turn = self.current_player == self.human_seat
-        should_dim = not is_my_turn
+        should_dim_turn = not is_my_turn
 
         for i, tile in enumerate(tiles_to_render):
             dx = x + i * TILE_WIDTH
@@ -680,6 +684,13 @@ class MahjongTable(tk.Canvas):
             if i == self.selected_tile_idx:
                 dy -= 20
 
+            # Dimming logic
+            is_dimmed = should_dim_turn
+            if self.riichi_mode and not is_dimmed:
+                # If in Riichi mode, dim tiles that are NOT in valid_riichi_discards
+                if tile not in self.valid_riichi_discards:
+                    is_dimmed = True
+
             TileRenderer.draw_tile(
                 self,
                 dx,
@@ -687,7 +698,7 @@ class MahjongTable(tk.Canvas):
                 tile,
                 face_up=True,
                 selected=(i == self.selected_tile_idx),
-                dimmed=should_dim,
+                dimmed=is_dimmed,
             )
 
             # Store bbox for click detection
@@ -706,6 +717,12 @@ class MahjongTable(tk.Canvas):
             if self.selected_tile_idx == i:
                 dy -= 20
 
+            # Dimming logic for drawn tile
+            is_dimmed = should_dim_turn
+            if self.riichi_mode and not is_dimmed:
+                if drawn_tile_to_render not in self.valid_riichi_discards:
+                    is_dimmed = True
+
             TileRenderer.draw_tile(
                 self,
                 dx,
@@ -713,7 +730,7 @@ class MahjongTable(tk.Canvas):
                 drawn_tile_to_render,
                 face_up=True,
                 selected=(self.selected_tile_idx == i),
-                dimmed=should_dim,
+                dimmed=is_dimmed,
             )
 
             self.addtag_overlapping(
@@ -1296,17 +1313,67 @@ class GameApp:
             self.action_panel.place_forget()
 
     def on_tile_click(self, tile: Tile):
+        # If in Riichi mode, check if tile is valid
+        if self.table.riichi_mode:
+            if tile in self.table.valid_riichi_discards:
+                # Execute Riichi with this tile
+                self.human_input_queue.put({"action": GameAction.RICHI, "tile": tile})
+                self._exit_riichi_mode()
+            return
+
         if GameAction.DISCARD in self.current_actions:
             self.human_input_queue.put({"action": GameAction.DISCARD, "tile": tile})
             self.action_panel.place_forget()
             self.current_actions = []
 
     def on_action_click(self, action: GameAction):
+        if action == GameAction.RICHI:
+            self._enter_riichi_mode()
+            return
+
         # For now, assume no tile selection needed for actions (like Pon/Chi auto-select)
         # Ideally we need a sub-menu for Chi selection if multiple options
         self.human_input_queue.put({"action": action, "tile": None})
         self.action_panel.place_forget()
         self.current_actions = []
+
+    def _enter_riichi_mode(self):
+        # Calculate valid discards
+        hand = self.table.hands.get(self.human_seat)
+        if not hand:
+            return
+
+        valid_discards = hand.tenpai_discards
+        if not valid_discards:
+            # Should not happen if Riichi action was available
+            return
+
+        self.table.riichi_mode = True
+        self.table.valid_riichi_discards = valid_discards
+        self.table.render()
+
+        # Update Action Panel to show Cancel
+        for widget in self.action_panel.winfo_children():
+            widget.destroy()
+
+        btn = tk.Button(
+            self.action_panel,
+            text="取消立直",
+            font=("Arial", 12, "bold"),
+            command=self._cancel_riichi_mode,
+        )
+        btn.pack(side=tk.LEFT, padx=5, pady=5)
+
+    def _cancel_riichi_mode(self):
+        self._exit_riichi_mode()
+        # Restore original actions
+        self.enable_human_controls(self.current_actions)
+
+    def _exit_riichi_mode(self):
+        self.table.riichi_mode = False
+        self.table.valid_riichi_discards = []
+        self.table.render()
+        self.action_panel.place_forget()
 
     def on_next_round_click(self):
         if self.game_thread:

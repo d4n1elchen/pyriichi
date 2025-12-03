@@ -359,34 +359,9 @@ class RuleEngine:
 
     def _can_riichi(self, player: int) -> bool:
         hand = self._hands[player]
-        if not hand.is_concealed:
-            return False
-        if hand.is_riichi:
-            return False
-
-        # Check if we can discard any tile to become tenpai
-        # 模擬打出每一張牌，檢查是否聽牌
-        # 由於 Hand 類沒有 "check_tenpai_after_discard" 方法，
-        # 我們需要暫時移除牌，檢查聽牌，然後恢復。
-        original_tiles = list(hand.tiles)
-        unique_tiles = set(original_tiles)
-
-        for tile_to_discard in unique_tiles:
-            # 暫時移除一張牌
-            hand._tiles.remove(tile_to_discard)
-            hand._tile_counts_cache = None  # Invalidate cache
-
-            is_tenpai = hand.is_tenpai()
-
-            # 恢復手牌
-            hand._tiles.append(tile_to_discard)
-            hand._tiles.sort()  # 保持排序
-            hand._tile_counts_cache = None
-
-            if is_tenpai:
-                return True
-
-        return False
+        return (
+            hand.is_concealed and not hand.is_riichi and len(hand.tenpai_discards) > 0
+        )
 
     def _can_kan(self, player: int) -> bool:
         hand = self._hands[player]
