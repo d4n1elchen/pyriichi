@@ -1324,7 +1324,12 @@ class TestActionExecution:
         # 確保手牌聽牌且門清
         # 123m 456m 789m 123p 4p -> 13 tiles
         # Add one more tile (e.g. 9s) to discard and stay tenpai
-        self.engine._hands[current_player] = Hand(parse_tiles("123456789m1234p9s"))
+        # 123m 456m 789m 123p 4p -> 13 tiles
+        # Add one more tile (e.g. 9s) to discard and stay tenpai
+        tiles = parse_tiles("123456789m1234p")
+        hand = Hand(tiles)
+        hand.add_tile(Tile(Suit.SOZU, 9))
+        self.engine._hands[current_player] = hand
 
         # Force update actions
         self.engine._waiting_for_actions[current_player] = (
@@ -1333,12 +1338,14 @@ class TestActionExecution:
 
         assert self._has_action(current_player, GameAction.RICHI)
 
-        result = self.engine.execute_action(current_player, GameAction.RICHI)
+        result = self.engine.execute_action(
+            current_player, GameAction.RICHI, tile=Tile(Suit.SOZU, 9)
+        )
         assert result.riichi is True
         assert self.engine.get_hand(current_player).is_riichi
         # 檢查一發狀態已記錄
         assert current_player in self.engine._riichi_ippatsu
-        assert self.engine._riichi_ippatsu[current_player] is True
+        assert self.engine._riichi_ippatsu[current_player]
 
     def test_execute_action_kan_no_tile(self):
         """測試明槓/加槓時未指定牌"""
