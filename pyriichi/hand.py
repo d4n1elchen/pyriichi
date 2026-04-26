@@ -1,7 +1,7 @@
 """
-手牌管理系統 - Hand and Meld implementation
+Hand Management System - Hand and Meld implementation
 
-提供手牌操作、副露管理和和牌判定功能。
+Provides hand operations, meld management, and winning hand determination.
 """
 
 from enum import Enum
@@ -12,7 +12,7 @@ from pyriichi.tiles import Suit, Tile
 
 
 class CombinationType(Enum):
-    """和牌組合類型"""
+    """Winning combination type"""
 
     PAIR = "pair"
     TRIPLET = "triplet"
@@ -21,7 +21,7 @@ class CombinationType(Enum):
 
 
 class Combination:
-    """和牌組合"""
+    """Winning combination"""
 
     def __init__(self, combination_type: CombinationType, tiles: List[Tile]):
         if combination_type == CombinationType.PAIR:
@@ -59,18 +59,18 @@ class Combination:
 
 def make_combination(combo_type: CombinationType, suit: Suit, rank: int) -> Combination:
     """
-    根據給定類型與花色/數值快速建立 `Combination`。
+    Quickly create a `Combination` based on type and suit/rank.
 
     Args:
-        combo_type (CombinationType): 組合類型。
-        suit (Suit): 牌的花色。
-        rank (int): 數牌的點數或字牌編號。
+        combo_type (CombinationType): Combination type.
+        suit (Suit): Tile suit.
+        rank (int): Number tile rank or Honor tile index.
 
     Returns:
-        Combination: 對應的 `Combination` 實例。
+        Combination: Corresponding `Combination` instance.
 
     Raises:
-        ValueError: 當組合類型不支援或順子參數無效時。
+        ValueError: If combination type is unsupported or sequence parameters are invalid.
     """
 
     if combo_type == CombinationType.SEQUENCE:
@@ -92,7 +92,7 @@ def make_combination(combo_type: CombinationType, suit: Suit, rank: int) -> Comb
 
 
 class MeldType(TranslatableEnum):
-    """副露類型"""
+    """Meld type"""
 
     CHI = ("chi", "吃", "チー", "Chi")
     PON = ("pon", "碰", "ポン", "Pon")
@@ -101,21 +101,21 @@ class MeldType(TranslatableEnum):
 
 
 class Meld:
-    """副露（明刻、明順、明槓、暗槓）"""
+    """Meld (Open Triplet, Open Sequence, Open Kan, Closed Kan)"""
 
     def __init__(
         self, meld_type: MeldType, tiles: List[Tile], called_tile: Optional[Tile] = None
     ):
         """
-        初始化副露。
+        Initialize Meld.
 
         Args:
-            meld_type (MeldType): 副露類型。
-            tiles (List[Tile]): 副露的牌列表。
-            called_tile (Optional[Tile]): 被鳴的牌（吃/碰時需要）。
+            meld_type (MeldType): Meld type.
+            tiles (List[Tile]): List of tiles in the meld.
+            called_tile (Optional[Tile]): The called tile (required for Chi/Pon).
 
         Raises:
-            ValueError: 如果牌數不符合要求。
+            ValueError: If tile count is invalid.
         """
         if meld_type == MeldType.CHI and len(tiles) != 3:
             raise ValueError("吃必須是 3 張牌")
@@ -155,14 +155,14 @@ class Meld:
 
 
 class Hand:
-    """手牌管理器"""
+    """Hand Manager"""
 
     def __init__(self, tiles: List[Tile]):
         """
-        初始化手牌。
+        Initialize Hand.
 
         Args:
-            tiles (List[Tile]): 初始手牌列表（13 或 14 張）。
+            tiles (List[Tile]): Initial hand tiles (13 or 14 tiles).
         """
         self._tiles = tiles.copy()
         self._melds: List[Meld] = []
@@ -181,13 +181,13 @@ class Hand:
 
     def discard(self, tile: Tile) -> bool:
         """
-        打出一張牌。
+        Discard a tile.
 
         Args:
-            tile (Tile): 要打出的牌。
+            tile (Tile): Tile to discard.
 
         Returns:
-            bool: 是否成功打出。
+            bool: Whether discard was successful.
         """
         try:
             self._tiles.remove(tile)
@@ -200,13 +200,13 @@ class Hand:
 
     def remove_last_discard(self, tile: Tile) -> None:
         """
-        移除最後一張捨牌（鳴牌時取回）。
+        Remove the last discard (retrieved when calling a tile).
 
         Args:
-            tile (Tile): 預期移除的牌（用於校驗）。
+            tile (Tile): Expected tile to remove (for validation).
 
         Raises:
-            ValueError: 如果沒有捨牌或最後一張捨牌不匹配。
+            ValueError: If no discards or last discard does not match.
         """
 
         if not self._discards:
@@ -218,10 +218,10 @@ class Hand:
 
     def total_tile_count(self) -> int:
         """
-        獲取手牌總數（包含副露的牌）。
+        Get total tile count (including melds).
 
         Returns:
-            int: 手牌總數。
+            int: Total tile count.
         """
 
         meld_count = sum(len(meld.tiles) for meld in self._melds)
@@ -229,23 +229,23 @@ class Hand:
 
     def can_chi(self, tile: Tile, from_player: int) -> List[List[Tile]]:
         """
-        檢查是否可以吃。
+        Check if Chi is possible.
 
         Args:
-            tile (Tile): 被吃的牌。
-            from_player (int): 出牌玩家位置（0=上家，1=對家，2=下家）。
+            tile (Tile): The tile being called.
+            from_player (int): Discarding player position (0=Kamicha, 1=Toimen, 2=Shimocha).
 
         Returns:
-            List[List[Tile]]: 可以組成的順子列表（每個順子包含 3 張牌）。
+            List[List[Tile]]: List of possible sequences (each sequence contains 3 tiles).
         """
-        if from_player != 0:  # 只能吃上家的牌
+        if from_player != 0:  # Can only Chi from Kamicha (Left player)
             return []
 
-        if tile.is_honor:  # 字牌不能組成順子
+        if tile.is_honor:  # Honors cannot form a Sequence
             return []
 
         results = []
-        for i in range(-2, 1):  # 檢查 -2, -1, 0 三種情況
+        for i in range(-2, 1):  # Check -2, -1, 0 three cases
             needed_ranks = [tile.rank + i, tile.rank + i + 1, tile.rank + i + 2]
             if all(1 <= r <= 9 for r in needed_ranks):
                 sequence = []
@@ -263,17 +263,17 @@ class Hand:
 
     def chi(self, tile: Tile, sequence: List[Tile]) -> Meld:
         """
-        執行吃操作。
+        Execute Chi.
 
         Args:
-            tile (Tile): 被吃的牌。
-            sequence (List[Tile]): 手牌中的兩張牌（與被吃的牌組成順子）。
+            tile (Tile): The tile being called.
+            sequence (List[Tile]): Two tiles from hand (forming a sequence with the called tile).
 
         Returns:
-            Meld: 創建的 Meld 對象。
+            Meld: Created Meld object.
 
         Raises:
-            ValueError: 如果不能吃。
+            ValueError: If Chi is not possible.
         """
         if not self.can_chi(tile, 0):
             raise ValueError("不能吃這張牌")
@@ -291,13 +291,13 @@ class Hand:
 
     def can_pon(self, tile: Tile) -> bool:
         """
-        檢查是否可以碰。
+        Check if Pon is possible.
 
         Args:
-            tile (Tile): 被碰的牌。
+            tile (Tile): The tile being called.
 
         Returns:
-            bool: 是否可以碰。
+            bool: Whether Pon is possible.
         """
 
         count = self._tiles.count(tile)
@@ -305,16 +305,16 @@ class Hand:
 
     def pon(self, tile: Tile) -> Meld:
         """
-        執行碰操作。
+        Execute Pon.
 
         Args:
-            tile (Tile): 被碰的牌。
+            tile (Tile): The tile being called.
 
         Returns:
-            Meld: 創建的 Meld 對象。
+            Meld: Created Meld object.
 
         Raises:
-            ValueError: 如果不能碰。
+            ValueError: If Pon is not possible.
         """
         if not self.can_pon(tile):
             raise ValueError("不能碰這張牌")
@@ -339,13 +339,13 @@ class Hand:
 
     def can_kan(self, tile: Optional[Tile] = None) -> List[Meld]:
         """
-        檢查是否可以槓。
+        Check if Kan is possible.
 
         Args:
-            tile (Optional[Tile]): 被槓的牌（明槓時需要，暗槓時為 None）。
+            tile (Optional[Tile]): The tile being called (required for Daiminkan, None for Ankan/Kakan).
 
         Returns:
-            List[Meld]: 可以槓的組合列表。
+            List[Meld]: List of possible Kan combinations.
         """
         results = []
 
@@ -373,11 +373,11 @@ class Hand:
             kan_tiles.append(tile)
             results.append(Meld(MeldType.KAN, kan_tiles, called_tile=tile))
         elif self._tiles.count(tile) == 4:
-            # 指定牌的暗槓
+            # Ankan of specific tile
             kan_tiles = [t for t in self._tiles if t == tile]
             results.append(Meld(MeldType.ANKAN, kan_tiles))
         elif self._tiles.count(tile) == 1:
-            # 指定牌的加槓
+            # Kakan (Added Kan) of specific tile
             for meld in self._melds:
                 if (
                     meld.type == MeldType.PON
@@ -391,22 +391,22 @@ class Hand:
 
     def kan(self, tile: Optional[Tile]) -> Meld:
         """
-        執行槓操作。
+        Execute Kan.
 
         Args:
-            tile (Optional[Tile]): 被槓的牌（明槓時需要，暗槓時為 None）。
+            tile (Optional[Tile]): The tile being called (required for Daiminkan, None for Ankan/Kakan).
 
         Returns:
-            Meld: 創建的 Meld 對象。
+            Meld: Created Meld object.
 
         Raises:
-            ValueError: 如果不能槓。
+            ValueError: If Kan is not possible.
         """
         possible_kan = self.can_kan(tile)
         if not possible_kan:
             raise ValueError("不能槓這張牌")
 
-        # 使用第一個可能的槓組合
+        # Use the first possible Kan combination
         meld = possible_kan[0]
 
         if meld.type == MeldType.ANKAN:
@@ -438,65 +438,65 @@ class Hand:
 
     @property
     def tiles(self) -> List[Tile]:
-        """獲取當前手牌"""
+        """Get current hand tiles"""
         return self._tiles.copy()
 
     @property
     def melds(self) -> List[Meld]:
-        """獲取所有副露"""
+        """Get all melds"""
         return self._melds.copy()
 
     @property
     def discards(self) -> List[Tile]:
-        """獲取所有舍牌"""
+        """Get all discards"""
         return self._discards.copy()
 
     @property
     def is_concealed(self) -> bool:
-        """是否門清（無副露）"""
+        """Is Menzen (Concealed, no open melds)"""
         return len(self._melds) == 0
 
     @property
     def is_riichi(self) -> bool:
-        """是否立直"""
+        """Is Riichi"""
         return self._is_riichi
 
     @property
     def tenpai_discards(self) -> List[Tile]:
-        """獲取可以聽牌的牌"""
+        """Get tiles that can be discarded to reach Tenpai"""
         return [] if self._tenpai_discards is None else self._tenpai_discards.copy()
 
     def set_riichi(self, is_riichi: bool = True, turn: Optional[int] = None) -> None:
         """
-        設置立直狀態。
+        Set Riichi state.
 
         Args:
-            is_riichi (bool): 是否立直。
-            turn (Optional[int]): 立直的回合數。
+            is_riichi (bool): Whether Riichi.
+            turn (Optional[int]): Turn number of Riichi.
         """
         self._is_riichi = is_riichi
         self._riichi_turn = turn
 
     @property
     def last_drawn_tile(self) -> Optional[Tile]:
-        """獲取最後摸到的牌"""
+        """Get the last drawn tile"""
         return self._last_drawn_tile
 
     def reset_last_drawn_tile(self) -> None:
-        """重置最後摸到的牌"""
+        """Reset the last drawn tile"""
         self._last_drawn_tile = None
 
     def _get_tile_counts(self, tiles: Optional[List[Tile]] = None) -> dict[Tile, int]:
         """
-        獲取牌的計數字典。
+        Get tile count dictionary.
 
         Args:
-            tiles (Optional[List[Tile]]): 牌列表（如果為 None，則使用當前手牌並使用緩存）。
+            tiles (Optional[List[Tile]]): List of tiles (if None, use current hand and cache).
 
         Returns:
-            Dict[Tile, int]: 牌計數字典 {Tile: count}。
+            Dict[Tile, int]: Tile count dictionary {Tile: count}.
         """
-        # 如果使用當前手牌且緩存存在，直接返回緩存
+        # If using current hand and cache exists, return cache
         if tiles is None:
             if self._tile_counts_cache is not None:
                 return self._tile_counts_cache
@@ -506,7 +506,7 @@ class Hand:
         for tile in tiles:
             counts[tile] = counts.get(tile, 0) + 1
 
-        # 如果使用當前手牌，更新緩存
+        # If using current hand, update cache
         if tiles is self._tiles:
             self._tile_counts_cache = counts
 
@@ -514,15 +514,15 @@ class Hand:
 
     def _remove_triplet(self, counts: dict[Tile, int], tile: Tile, count: int) -> bool:
         """
-        從計數中移除一個刻子（三張相同）。
+        Remove a triplet (three identical tiles) from counts.
 
         Args:
-            counts (Dict[Tile, int]): 牌計數字典。
-            tile (Tile): 牌。
-            count (int): 牌的數量。
+            counts (Dict[Tile, int]): Tile count dictionary.
+            tile (Tile): Tile.
+            count (int): Tile count.
 
         Returns:
-            bool: 是否成功移除。
+            bool: Whether removal was successful.
         """
         if counts.get(tile, 0) >= count:
             counts[tile] -= count
@@ -531,17 +531,17 @@ class Hand:
 
     def _remove_sequence(self, counts: dict[Tile, int], suit: Suit, rank: int) -> bool:
         """
-        從計數中移除一個順子（三張連續）。
+        Remove a sequence (three consecutive tiles) from counts.
 
         Args:
-            counts (Dict[Tile, int]): 牌計數字典。
-            suit (Suit): 花色。
-            rank (int): 順子的起始數字。
+            counts (Dict[Tile, int]): Tile count dictionary.
+            suit (Suit): Suit.
+            rank (int): Start rank of the sequence.
 
         Returns:
-            bool: 是否成功移除。
+            bool: Whether removal was successful.
         """
-        if suit == Suit.JIHAI:  # 字牌不能組成順子
+        if suit == Suit.JIHAI:  # Honors cannot form a Sequence
             return False
 
         for i in range(3):
@@ -558,14 +558,14 @@ class Hand:
 
     def _remove_pair(self, counts: dict[Tile, int], tile: Tile) -> bool:
         """
-        從計數中移除一個對子（兩張相同）。
+        Remove a pair (two identical tiles) from counts.
 
         Args:
-            counts (Dict[Tile, int]): 牌計數字典。
-            tile (Tile): 牌。
+            counts (Dict[Tile, int]): Tile count dictionary.
+            tile (Tile): Tile.
 
         Returns:
-            bool: 是否成功移除。
+            bool: Whether removal was successful.
         """
         if counts.get(tile, 0) >= 2:
             counts[tile] -= 2
@@ -576,14 +576,14 @@ class Hand:
         self, tiles: List[Tile], existing_melds: Optional[List[Combination]] = None
     ) -> Tuple[bool, List[List[Combination]]]:
         """
-        檢查標準和牌型（4組面子 + 1對子）。
+        Check standard winning hand (4 Melds + 1 Pair).
 
         Args:
-            tiles (List[Tile]): 牌列表（門清部分）。
-            existing_melds (Optional[List[Combination]]): 已有的面子列表（副露）。
+            tiles (List[Tile]): List of tiles (Concealed part).
+            existing_melds (Optional[List[Combination]]): List of existing melds (Open melds).
 
         Returns:
-            Tuple[bool, List[List[Combination]]]: (是否和牌, 所有可能的和牌組合列表)。
+            Tuple[bool, List[List[Combination]]]: (Is winning, List of all possible winning combinations).
         """
         melds = existing_melds or []
         total_tiles_count = len(tiles) + sum(len(m.tiles) for m in melds)
@@ -597,7 +597,7 @@ class Hand:
             if count > 4:
                 return False, []
 
-        # 嘗試所有可能的對子
+        # Try all possible pairs
         pair_candidates = [tile for tile, count in counts.items() if count >= 2]
 
         for pair_tile in pair_candidates:
@@ -606,8 +606,8 @@ class Hand:
             if not self._remove_pair(test_counts, pair_tile):
                 continue
 
-            # 遞迴尋找剩餘的面子
-            # 注意：existing_melds 已經佔用了部分面子名額
+            # Recursively find remaining melds
+            # Note: existing_melds already occupy some meld slots
             if results := self._find_melds(
                 test_counts,
                 melds,
@@ -624,15 +624,15 @@ class Hand:
         pair_combination: Combination,
     ) -> List[List[Combination]]:
         """
-        遞迴尋找所有可能的面子組合。
+        Recursively find all possible meld combinations.
 
         Args:
-            counts (Dict[Tile, int]): 剩餘牌的計數字典。
-            current_combinations (List[Combination]): 已找到的面子列表。
-            pair_combination (Combination): 對子組合。
+            counts (Dict[Tile, int]): Dictionary of remaining tile counts.
+            current_combinations (List[Combination]): List of found melds.
+            pair_combination (Combination): Pair combination.
 
         Returns:
-            List[List[Combination]]: 所有可能的面子組合列表。
+            List[List[Combination]]: List of all possible meld combinations.
         """
 
         remaining_count = sum(counts.values())
@@ -643,11 +643,11 @@ class Hand:
                 else []
             )
 
-        # 如果已經找到4個面子但還有剩餘牌，說明不匹配
+        # If 4 melds found but tiles remain, it's a mismatch
         if len(current_combinations) == 4:
             return []
 
-        # 如果剩餘牌數不足以組成更多面子，返回
+        # If remaining tiles are not enough to form more melds, return
         if remaining_count < 3:
             return []
 
@@ -715,13 +715,13 @@ class Hand:
 
     def _is_seven_pairs(self, tiles: List[Tile]) -> bool:
         """
-        檢查是否為七對子。
+        Check if Seven Pairs (Chiitoitsu).
 
         Args:
-            tiles (List[Tile]): 牌列表（14張）。
+            tiles (List[Tile]): List of tiles (14 tiles).
 
         Returns:
-            bool: 是否為七對子。
+            bool: Whether it is Seven Pairs.
         """
         if len(tiles) != 14:
             return False
@@ -733,24 +733,24 @@ class Hand:
             if count == 2:
                 pairs += 1
             elif count != 0:
-                return False  # 有不是2的數量
+                return False  # Count is not 2
 
         return pairs == 7
 
     def _is_kokushi_musou(self, tiles: List[Tile]) -> bool:
         """
-        檢查是否為國士無雙。
+        Check if Kokushi Musou (Thirteen Orphans).
 
         Args:
-            tiles (List[Tile]): 牌列表（14張）。
+            tiles (List[Tile]): List of tiles (14 tiles).
 
         Returns:
-            bool: 是否為國士無雙。
+            bool: Whether it is Kokushi Musou.
         """
         if len(tiles) != 14:
             return False
 
-        # 國士無雙需要的13種幺九牌
+        # 13 Terminals and Honors required for Kokushi Musou
         required_tiles = [
             (Suit.MANZU, 1),
             (Suit.MANZU, 9),
@@ -780,27 +780,27 @@ class Hand:
                 and duplicate != key
                 or key not in required_tiles
             ):
-                return False  # 有多個重複
+                return False  # Multiple duplicates
             elif key not in found_tiles:
                 found_tiles.add(key)
-        # 必須有13種各1張，加上1張重複
+        # Must have one of each of the 13 types, plus one duplicate
         return len(found_tiles) == 13 and duplicate is not None
 
     def is_tenpai(self) -> bool:
         """
-        是否聽牌（優化版本：只檢查可能相關的牌）。
+        Check if Tenpai (Ready Hand) (Optimized: only check potentially relevant tiles).
 
         Returns:
-            bool: 是否聽牌。
+            bool: Whether Tenpai.
         """
         return len(self.get_waiting_tiles()) > 0
 
     def calculate_tenpai_discards(self) -> List[Tile]:
         """
-        獲取打出後可以聽牌的牌列表。
+        Get list of tiles that can be discarded to reach Tenpai.
 
         Returns:
-            List[Tile]: 打出後可以聽牌的牌列表。
+            List[Tile]: List of tiles that can be discarded to reach Tenpai.
         """
 
         valid_discards = []
@@ -808,7 +808,7 @@ class Hand:
         unique_tiles = set(original_tiles)
 
         for tile_to_discard in unique_tiles:
-            # 暫時移除一張牌
+            # Temporarily remove a tile
             try:
                 self._tiles.remove(tile_to_discard)
                 self._tile_counts_cache = None
@@ -816,7 +816,7 @@ class Hand:
                 if self.is_tenpai():
                     valid_discards.append(tile_to_discard)
 
-                # 恢復手牌
+                # Restore hand
                 self._tiles.append(tile_to_discard)
                 self._tile_counts_cache = None
             except ValueError:
@@ -826,31 +826,31 @@ class Hand:
 
     def get_waiting_tiles(self) -> List[Tile]:
         """
-        獲取聽牌列表（優化版本：只檢查可能相關的牌）。
+        Get waiting tiles (Optimized: only check potentially relevant tiles).
 
         Returns:
-            List[Tile]: 所有可以和的牌列表。
+            List[Tile]: List of all winning tiles.
         """
-        # 收集所有可能的聽牌候選（與手牌相關的牌）
+        # Collect all possible waiting candidates (tiles related to hand)
         candidates = set[Tile]()
 
         for tile in self._tiles:
             suit, rank = tile.suit, tile.rank
-            # 添加相同牌
+            # Add same tile
             candidates.add(tile)
-            # 如果是數牌，添加相鄰牌
+            # If number tile, add adjacent tiles
             if suit != Suit.JIHAI:
                 if rank > 1:
                     candidates.add(Tile(suit, rank - 1))
                 if rank < 9:
                     candidates.add(Tile(suit, rank + 1))
-                # 對於順子，還需要檢查更遠的牌
+                # For sequence, also check tiles further away
                 if rank > 2:
                     candidates.add(Tile(suit, rank - 2))
                 if rank < 8:
                     candidates.add(Tile(suit, rank + 2))
 
-        # 如果候選太少，回退到檢查所有牌（確保不遺漏）
+        # If too few candidates, fallback to checking all tiles (ensure no misses)
         if len(candidates) < 10:
             for suit in Suit:
                 max_rank = 7 if suit == Suit.JIHAI else 9
@@ -869,14 +869,14 @@ class Hand:
 
     def is_winning_hand(self, winning_tile: Tile, is_tsumo: bool = False) -> bool:
         """
-        檢查是否可以和牌。
+        Check if it is a winning hand.
 
         Args:
-            winning_tile (Tile): 和牌牌。
-            is_tsumo (bool): 是否自摸（默認 False）。
+            winning_tile (Tile): Winning tile.
+            is_tsumo (bool): Is Tsumo (default False).
 
         Returns:
-            bool: 是否可以和牌。
+            bool: Whether it is a winning hand.
         """
 
         concealed_tiles = self._tiles.copy()
@@ -896,13 +896,13 @@ class Hand:
             combo.set_open(meld.is_open())
             existing_melds.append(combo)
 
-        # 檢查標準和牌型
+        # Check standard winning hand
         is_winning, _ = self._is_standard_winning(concealed_tiles, existing_melds)
         if is_winning:
             return True
 
-        # 檢查七對子（必須門清）
-        # 七對子不允許任何副露（包括暗槓）
+        # Check Seven Pairs (Must be Menzen)
+        # Seven Pairs does not allow any melds (including Ankan)
         if self.is_concealed:
             if self._is_seven_pairs(concealed_tiles):
                 return True
@@ -915,22 +915,22 @@ class Hand:
         self, winning_tile: Tile, is_tsumo: bool = False
     ) -> List[List[Combination]]:
         """
-        獲取和牌組合（用於役種判定）。
+        Get winning combinations (for Yaku determination).
 
         Args:
-            winning_tile (Tile): 和牌牌。
-            is_tsumo (bool): 是否自摸（默認 False）。
+            winning_tile (Tile): Winning tile.
+            is_tsumo (bool): Is Tsumo (default False).
 
         Returns:
-            List[List[Combination]]: 所有可能的和牌組合（每種組合包含 4 組面子和 1 對子）。
+            List[List[Combination]]: All possible winning combinations (each combination contains 4 Melds and 1 Pair).
         """
-        # 加上和牌牌（門清部分）
+        # Add winning tile (Concealed part)
         concealed_tiles = self._tiles.copy()
 
         if not is_tsumo:
             concealed_tiles.append(winning_tile)
 
-        # 轉換副露為 Combination
+        # Convert melds to Combination
         existing_melds = []
         for meld in self._melds:
             combo_type = CombinationType.SEQUENCE
@@ -943,7 +943,7 @@ class Hand:
             combo.set_open(meld.is_open())
             existing_melds.append(combo)
 
-        # 檢查標準和牌型
+        # Check standard winning hand
         is_winning, combinations = self._is_standard_winning(
             concealed_tiles, existing_melds
         )

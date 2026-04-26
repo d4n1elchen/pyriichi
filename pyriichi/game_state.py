@@ -1,7 +1,7 @@
 """
-遊戲狀態管理 - GameState implementation
+Game State Management - GameState implementation
 
-管理局數、風、點數等遊戲狀態。
+Manages game state such as round number, wind, scores, etc.
 """
 
 from typing import List, Optional
@@ -12,7 +12,7 @@ from pyriichi.tiles import Suit, Tile
 
 
 class Wind(TranslatableEnum):
-    """風"""
+    """Wind"""
 
     EAST = ("e", "東", "東", "East")
     SOUTH = ("s", "南", "南", "South")
@@ -34,7 +34,7 @@ class Wind(TranslatableEnum):
 
 
 class GameState:
-    """遊戲狀態管理器"""
+    """Game State Manager"""
 
     def __init__(
         self,
@@ -43,12 +43,12 @@ class GameState:
         ruleset: Optional[RulesetConfig] = None,
     ):
         """
-        初始化遊戲狀態。
+        Initialize game state.
 
         Args:
-            initial_scores (Optional[List[int]]): 初始點數列表（默認每人 25000）。
-            num_players (int): 玩家數量。
-            ruleset (Optional[RulesetConfig]): 規則配置（默認使用標準競技規則）。
+            initial_scores (Optional[List[int]]): Initial scores list (default 25000 per player).
+            num_players (int): Number of players.
+            ruleset (Optional[RulesetConfig]): Ruleset configuration (default standard competitive rules).
         """
         if initial_scores is None:
             initial_scores = [25000] * num_players
@@ -96,24 +96,24 @@ class GameState:
 
     def set_round(self, round_wind: Wind, round_number: int) -> None:
         """
-        設置局數。
+        Set round.
 
         Args:
-            round_wind (Wind): 場風。
-            round_number (int): 局數。
+            round_wind (Wind): Round wind.
+            round_number (int): Round number.
         """
         self._round_wind = round_wind
         self._round_number = round_number
 
     def set_dealer(self, dealer: int) -> None:
         """
-        設置莊家。
+        Set dealer.
 
         Args:
-            dealer (int): 莊家位置。
+            dealer (int): Dealer position.
 
         Raises:
-            ValueError: 如果位置無效。
+            ValueError: If position is invalid.
         """
         if not (0 <= dealer < self._num_players):
             raise ValueError(f"莊家位置必須在 0-{self._num_players - 1} 之間")
@@ -121,23 +121,23 @@ class GameState:
 
     def add_honba(self, count: int = 1) -> None:
         """
-        增加本場數。
+        Add Honba count.
 
         Args:
-            count (int): 增加的數量（默認 1）。
+            count (int): Amount to add (default 1).
         """
         self._honba += count
 
     def reset_honba(self) -> None:
-        """重置本場數為 0。"""
+        """Reset Honba count to 0."""
         self._honba = 0
 
     def add_riichi_stick(self) -> None:
-        """增加供託棒（立直棒）。"""
+        """Add Riichi stick (deposit)."""
         self._riichi_sticks += 1
 
     def clear_riichi_sticks(self) -> None:
-        """清除供託棒。"""
+        """Clear Riichi sticks."""
         self._riichi_sticks = 0
 
     @property
@@ -146,14 +146,14 @@ class GameState:
 
     def update_score(self, player: int, points: int) -> None:
         """
-        更新玩家點數。
+        Update player score.
 
         Args:
-            player (int): 玩家位置。
-            points (int): 點數變動（正數增加，負數減少）。
+            player (int): Player position.
+            points (int): Points change (positive to increase, negative to decrease).
 
         Raises:
-            ValueError: 如果玩家位置無效。
+            ValueError: If player position is invalid.
         """
         if not (0 <= player < self._num_players):
             raise ValueError(f"玩家位置必須在 0-{self._num_players - 1} 之間")
@@ -161,25 +161,25 @@ class GameState:
 
     def transfer_points(self, from_player: int, to_player: int, points: int) -> None:
         """
-        轉移點數。
+        Transfer points.
 
         Args:
-            from_player (int): 支付點數的玩家。
-            to_player (int): 接收點數的玩家。
-            points (int): 轉移的點數。
+            from_player (int): Player paying points.
+            to_player (int): Player receiving points.
+            points (int): Points to transfer.
         """
         self.update_score(from_player, -points)
         self.update_score(to_player, points)
 
     def next_round(self) -> bool:
         """
-        進入下一局。
+        Proceed to next round.
 
         Returns:
-            bool: 是否還有下一局（遊戲是否結束）。
+            bool: Whether there is a next round (False if game ended).
         """
-        # 西入後的突然死亡（Sudden Death）規則
-        # 如果在西場，且有人達到目標分數（通常是30000），遊戲結束
+        # Sudden Death rule after West Round
+        # If in West Round and someone reaches target score (usually 30000), game ends
         if self._round_wind == Wind.WEST:
             max_score = max(self._scores)
             if max_score >= self.ruleset.return_score:
@@ -187,7 +187,7 @@ class GameState:
 
         self._round_number += 1
 
-        # 如果完成了 4 局，進入下一風
+        # If 4 rounds completed, move to next wind
         if self._round_number > 4:
             if self._round_wind == Wind.EAST:
                 self._round_wind = Wind.SOUTH
@@ -201,20 +201,20 @@ class GameState:
                     self._round_wind = Wind.WEST
                     self._round_number = 1
                 else:
-                    # 達到目標分數或未啟用西入，遊戲結束
+                    # Target score reached or West Round Extension disabled, game ends
                     return False
             elif self._round_wind == Wind.WEST:
-                # 西場結束（強制結束）
+                # West Round ends (Forced end)
                 return False
 
         return True
 
     def next_dealer(self, dealer_won: bool) -> None:
         """
-        下一局莊家。
+        Set next dealer.
 
         Args:
-            dealer_won (bool): 莊家是否獲勝。
+            dealer_won (bool): Whether dealer won.
         """
         if not dealer_won:
             self._dealer = (self._dealer + 1) % self._num_players

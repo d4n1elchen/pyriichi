@@ -1,7 +1,7 @@
 """
-規則引擎 - RuleEngine implementation
+Rule Engine - RuleEngine implementation
 
-提供遊戲流程控制、動作執行和規則判定功能。
+Provides game flow control, action execution, and rule adjudication functions.
 """
 
 from dataclasses import dataclass, field
@@ -16,7 +16,7 @@ from pyriichi.yaku import Yaku, YakuChecker, YakuResult
 
 
 class GameAction(TranslatableEnum):
-    """遊戲動作"""
+    """Game Action"""
 
     DRAW = ("draw", "摸牌", "ツモ", "Draw")
     DISCARD = ("discard", "打牌", "捨て牌", "Discard")
@@ -32,7 +32,7 @@ class GameAction(TranslatableEnum):
 
 
 class GamePhase(TranslatableEnum):
-    """遊戲階段"""
+    """Game Phase"""
 
     INIT = ("init", "初始化", "初期化", "Init")
     DEALING = ("dealing", "發牌", "配牌", "Dealing")
@@ -43,7 +43,7 @@ class GamePhase(TranslatableEnum):
 
 
 class RyuukyokuType(TranslatableEnum):
-    """流局類型"""
+    """Ryuukyoku (Exhaustive Draw) Type"""
 
     SUUFON_RENDA = ("suufon_renda", "四風連打", "四風連打", "Suufon Renda")
     SANCHA_RON = ("sancha_ron", "三家和了", "三家和了", "Sancha Ron")
@@ -55,7 +55,7 @@ class RyuukyokuType(TranslatableEnum):
 
 @dataclass
 class WinResult:
-    """和牌結果"""
+    """Win Result"""
 
     win: bool
     player: int
@@ -70,7 +70,7 @@ class WinResult:
 
 @dataclass
 class RyuukyokuResult:
-    """流局結果"""
+    """Ryuukyoku (Exhaustive Draw) Result"""
 
     ryuukyoku: bool
     ryuukyoku_type: Optional[RyuukyokuType] = None
@@ -80,7 +80,7 @@ class RyuukyokuResult:
 
 @dataclass
 class ActionResult:
-    """動作執行結果"""
+    """Action Execution Result"""
 
     success: bool = True
     phase: Optional[GamePhase] = None
@@ -103,14 +103,14 @@ class ActionResult:
 
 
 class RuleEngine:
-    """規則引擎"""
+    """Rule Engine"""
 
     def __init__(self, num_players: int = 4):
         """
-        初始化規則引擎。
+        Initialize the Rule Engine.
 
         Args:
-            num_players (int): 玩家數量（默認 4）。
+            num_players (int): Number of players (default 4).
         """
         self._num_players = num_players
         self._tile_set: Optional[TileSet] = None
@@ -133,10 +133,12 @@ class RuleEngine:
         self._winning_players: List[int] = []
         self._ignore_suukantsu: bool = False
 
-        # 振聽狀態追蹤
-        self._furiten_permanent: Dict[int, bool] = {}  # 立直振聽（永久）
-        self._furiten_temp: Dict[int, bool] = {}  # 同巡振聽（臨時）
-        self._furiten_temp_round: Dict[int, int] = {}  # 同巡振聽發生的回合
+        # Furiten (Sacred Discard) status tracking
+        self._furiten_permanent: Dict[int, bool] = {}  # Riichi Furiten (Permanent)
+        self._furiten_temp: Dict[int, bool] = {}  # Temporary Furiten (Same Turn)
+        self._furiten_temp_round: Dict[
+            int, int
+        ] = {}  # Round where Temporary Furiten occurred
 
         self._pao_daisangen: Dict[int, int] = {}
         self._pao_daisuushi: Dict[int, int] = {}
@@ -164,21 +166,21 @@ class RuleEngine:
         self, player: int, tile: Optional[Tile] = None, **kwargs
     ) -> ActionResult:
         """
-        處理 PASS 動作。
+        Handle PASS action.
 
-        PASS 動作通常由 execute_action 在 waiting 狀態下攔截處理。
-        如果直接調用此方法，表示在非等待狀態下調用，這通常是不允許的，
-        除非有特殊的 PASS 邏輯（目前沒有）。
+        PASS action is usually intercepted and handled by execute_action in waiting state.
+        If this method is called directly, it means it is called in a non-waiting state,
+        which is usually not allowed unless there is special PASS logic (currently none).
         """
         return ActionResult(success=True)
 
     def start_game(self) -> None:
-        """開始新遊戲。"""
+        """Start a new game."""
         self._game_state = GameState(num_players=self._num_players)
         self._phase = GamePhase.INIT
 
     def start_round(self) -> None:
-        """開始新一局。"""
+        """Start a new round."""
         self._tile_set = TileSet()
         self._tile_set.shuffle()
         self._phase = GamePhase.DEALING
@@ -208,18 +210,18 @@ class RuleEngine:
         self._pao_daisangen = {}
         self._pao_daisuushi = {}
 
-        # 流局滿貫追蹤：記錄玩家的捨牌是否被鳴牌
+        # Nagashi Mangan tracking: Record if player's discards were called
         self._has_called_discard = {i: False for i in range(self._num_players)}
 
     def deal(self) -> Dict[int, List[Tile]]:
         """
-        發牌。
+        Deal tiles.
 
         Returns:
-            Dict[int, List[Tile]]: 每個玩家的手牌字典 {player_id: [tiles]}。
+            Dict[int, List[Tile]]: Dictionary of player hands {player_id: [tiles]}.
 
         Raises:
-            ValueError: 如果不在發牌階段或牌組未初始化。
+            ValueError: If not in DEALING phase or tile set is not initialized.
         """
         if self._phase != GamePhase.DEALING:
             raise ValueError("只能在發牌階段發牌")
@@ -232,7 +234,7 @@ class RuleEngine:
         self._phase = GamePhase.PLAYING
         self._is_first_turn_after_deal = True
 
-        # 設置莊家等待動作
+        # Set dealer waiting action
         dealer = self._game_state.dealer
         actions = self._calculate_turn_actions(dealer)
         self._waiting_for_actions = {dealer: actions}
@@ -241,48 +243,48 @@ class RuleEngine:
 
     def get_current_player(self) -> int:
         """
-        獲取當前行動玩家。
+        Get the current active player.
 
         Returns:
-            int: 當前玩家位置。
+            int: Current player position.
         """
         return self._current_player
 
     def get_last_discard_player(self) -> Optional[int]:
-        """獲取最後捨牌的玩家。"""
+        """Get the player who last discarded."""
         return self._last_discarded_player
 
     def get_phase(self) -> GamePhase:
         """
-        獲取當前遊戲階段。
+        Get current game phase.
 
         Returns:
-            GamePhase: 當前遊戲階段。
+            GamePhase: Current game phase.
         """
         return self._phase
 
     @property
     def game_state(self) -> GameState:
         """
-        獲取遊戲狀態。
+        Get game state.
 
         Returns:
-            GameState: 遊戲狀態對象。
+            GameState: Game state object.
         """
         return self._game_state
 
     @property
     def waiting_for_actions(self) -> Dict[int, List[GameAction]]:
-        """獲取當前等待執行的動作"""
+        """Get actions currently waiting to be executed"""
         return self._waiting_for_actions
 
     @property
     def tileset(self) -> Optional[TileSet]:
-        """獲取牌組對象"""
+        """Get tile set object"""
         return self._tile_set
 
     def _calculate_turn_actions(self, player: int) -> List[GameAction]:
-        """計算玩家回合內的可執行動作"""
+        """Calculate executable actions for player's turn"""
         actions: List[GameAction] = []
 
         if self._can_discard(player):
@@ -307,13 +309,13 @@ class RuleEngine:
 
     def get_available_actions(self, player: int) -> List[GameAction]:
         """
-        取得指定玩家當前可執行的動作列表。
+        Get list of currently executable actions for the specified player.
 
         Args:
-            player (int): 玩家位置。
+            player (int): Player position.
 
         Returns:
-            List[GameAction]: 可執行的動作列表。
+            List[GameAction]: List of executable actions.
         """
         if self._phase != GamePhase.PLAYING:
             return []
@@ -321,7 +323,7 @@ class RuleEngine:
         if not (0 <= player < len(self._hands)):
             return []
 
-        # 如果處於等待狀態 (現在包含了回合內動作)
+        # If in waiting state (now includes in-turn actions)
         if self._waiting_for_actions:
             return self._waiting_for_actions.get(player, [])
 
@@ -373,7 +375,7 @@ class RuleEngine:
         if hand.is_riichi:
             return False
 
-        # 他家捨牌可進行大明槓
+        # Daiminkan (Big Open Kan) on other player's discard
         if (
             self._last_discarded_tile is not None
             and self._last_discarded_player is not None
@@ -384,9 +386,9 @@ class RuleEngine:
         ):
             return True
 
-        # 自家加槓（需為當前玩家）
+        # Self Kan (must be current player)
         if player == self._current_player:
-            # 加槓：現有碰升級
+            # Kakan (Added Kan): Upgrade existing Pon
             for meld in hand.can_kan(None):
                 if meld.type == MeldType.KAN and meld.called_tile is not None:
                     return True
@@ -403,17 +405,17 @@ class RuleEngine:
         if not hand.is_riichi:
             return True
 
-        # 立直後只能暗槓不改變聽牌的牌
-        # 這裡需要檢查每一個可能的暗槓是否改變聽牌
-        # 由於 _can_ankan 只返回 bool，只要有一個合法的暗槓即可
-        # 獲取當前聽牌列表
-        # 立直狀態下，基準聽牌列表是「打出剛摸到的牌」後的聽牌列表
-        # 因為如果不暗槓，就必須模切
+        # After Riichi, can only Ankan (Closed Kan) if it doesn't change the waiting tiles
+        # Here we need to check if each possible Ankan changes the wait
+        # Since _can_ankan only returns bool, any valid Ankan is enough
+        # Get current waiting tiles
+        # In Riichi state, the base wait list is after "discarding the drawn tile"
+        # Because if not Ankan, must Tsumogiri (discard drawn tile)
         last_drawn = hand.last_drawn_tile
         if last_drawn is None:
             return False  # Should not happen in Riichi turn
 
-        # 暫時移除剛摸到的牌
+        # Temporarily remove the drawn tile
         try:
             hand._tiles.remove(last_drawn)
         except ValueError:
@@ -421,22 +423,22 @@ class RuleEngine:
 
         current_waits = hand.get_waiting_tiles()
 
-        # 恢復
+        # Restore
         hand._tiles.append(last_drawn)
 
         if not current_waits:
-            return False  # 應該不會發生，立直必聽牌
+            return False  # Should not happen, Riichi must be Tenpai
 
         for meld in possible_kans:
             if meld.type != MeldType.ANKAN:
                 continue
 
-            # 模擬暗槓
+            # Simulate Ankan
             temp_hand = Hand([t for t in hand.tiles])
             temp_hand._melds = [m for m in hand.melds]
             temp_hand._is_riichi = True
 
-            # 執行暗槓 (模擬)
+            # Execute Ankan (Simulated)
             tiles_to_remove = meld.tiles
             try:
                 for t in tiles_to_remove:
@@ -444,20 +446,20 @@ class RuleEngine:
             except ValueError:
                 continue
 
-            # 添加暗槓
+            # Add Ankan
             temp_hand._melds.append(meld)
 
-            # 檢查聽牌是否改變
+            # Check if waiting tiles changed
             new_waits = temp_hand.get_waiting_tiles()
 
-            # 比較聽牌列表
+            # Compare waiting lists
             if sorted(current_waits) == sorted(new_waits):
                 return True
 
         return False
 
     def _can_tsumo(self, player: int) -> bool:
-        """檢查玩家是否可以自摸"""
+        """Check if player can Tsumo (Self-Draw Win)"""
         if player != self._current_player:
             return False
 
@@ -471,12 +473,12 @@ class RuleEngine:
         return self.check_win(player, last_tile, is_rinshan=False) is not None
 
     def _can_ron(self, player: int) -> bool:
-        """檢查玩家是否可以榮和"""
+        """Check if player can Ron (Discard Win)"""
         if self._last_discarded_tile is None or self._last_discarded_player is None:
             return False
 
         if player == self._last_discarded_player:
-            return False  # 不能榮和自己打的牌
+            return False  # Cannot Ron on own discard
 
         winners = self.check_multiple_ron(
             self._last_discarded_tile, self._last_discarded_player
@@ -487,19 +489,19 @@ class RuleEngine:
         self, player: int, action: GameAction, tile: Optional[Tile] = None, **kwargs
     ) -> ActionResult:
         """
-        執行動作。
+        Execute an action.
 
         Args:
-            player (int): 玩家位置。
-            action (GameAction): 動作類型。
-            tile (Optional[Tile]): 相關的牌。
-            **kwargs: 其他參數。
+            player (int): Player position.
+            action (GameAction): Action type.
+            tile (Optional[Tile]): Related tile.
+            **kwargs: Other arguments.
 
         Returns:
-            ActionResult: 動作執行結果。
+            ActionResult: Action execution result.
 
         Raises:
-            ValueError: 如果動作無效或尚未實作。
+            ValueError: If action is invalid or not implemented.
         """
         available_actions = self.get_available_actions(player)
         if action not in available_actions:
@@ -509,9 +511,9 @@ class RuleEngine:
         if handler is None:
             raise ValueError(f"動作 {action} 尚未實作")
 
-        # 錯和檢測（Chombo Detection）
+        # Chombo Detection
 
-        # 如果處於等待狀態，收集玩家回應
+        # If in waiting state, collect player response
         if self._waiting_for_actions:
             if player not in self._waiting_for_actions:
                 raise ValueError(f"玩家 {player} 當前不需要執行動作")
@@ -522,61 +524,61 @@ class RuleEngine:
                     f"玩家 {player} 不能執行動作 {action}，期待: {allowed_actions}"
                 )
 
-            # 記錄回應
+            # Record response
             self._incoming_actions[player] = (action, tile, kwargs)
 
-            # 如果玩家錯過榮和（有榮和機會但選擇 PASS 或其他動作），設置同巡振聽
+            # If player missed Ron (had Ron opportunity but chose PASS or other), set Temporary Furiten
             if GameAction.RON in allowed_actions and action != GameAction.RON:
                 self._furiten_temp[player] = True
                 self._furiten_temp_round[player] = self._turn_count
             del self._waiting_for_actions[player]
 
-            # 如果所有玩家都已回應，進行裁決
+            # If all players responded, resolve decisions
             if not self._waiting_for_actions:
                 return self._resolve_decisions()
             else:
-                # 等待其他玩家
+                # Wait for other players
                 return ActionResult(success=True)
 
-        # 非等待狀態，直接執行（例如自摸、暗槓、打牌）
+        # Non-waiting state, execute directly (e.g., Tsumo, Ankan, Discard)
         return handler(player, tile=tile, **kwargs)
 
     def _resolve_decisions(self) -> ActionResult:
-        """裁決所有玩家的回應，執行優先級最高的動作"""
-        # 優先級: 榮和 > 碰/槓 > 吃 > PASS
+        """Resolve all player responses, execute highest priority action"""
+        # Priority: Ron > Pon/Kan > Chi > PASS
 
         actions = self._incoming_actions
-        self._incoming_actions = {}  # 清空
+        self._incoming_actions = {}  # Clear
 
-        # 0. 檢查當前玩家的行動 (打牌/自摸/暗槓/立直)
-        # 這種情況下，_waiting_for_actions 應該只包含當前玩家
-        # 且 actions 中應該只有一個條目
+        # 0. Check current player's action (Discard/Tsumo/Ankan/Riichi)
+        # In this case, _waiting_for_actions should only contain current player
+        # and actions should only have one entry
         if len(actions) == 1:
             player = list(actions.keys())[0]
             action, tile, kwargs = actions[player]
 
-            # 如果是當前玩家的行動 (非中斷)
+            # If it is current player's action (non-interrupt)
             if player == self._current_player and action not in (
                 GameAction.RON,
                 GameAction.PON,
                 GameAction.CHI,
                 GameAction.PASS,
             ):
-                # 執行對應的 handler
+                # Execute corresponding handler
                 handler = self._action_handlers.get(action)
                 if handler:
                     return handler(player, tile, **kwargs)
                 else:
-                    raise ValueError(f"Action {action} not implemented")
+                    raise ValueError(f"動作 {action} 尚未實作")
 
-        # 1. 檢查榮和
+        # 1. Check Ron
         ron_players = [p for p, (a, _, _) in actions.items() if a == GameAction.RON]
         if ron_players:
-            # 執行榮和（處理多人榮和）
-            # 注意：如果有多個榮和，需要依序處理
-            # 如果是雙響，我們應該一次性設置?
+            # Execute Ron (Handle multiple Ron)
+            # Note: If multiple Rons, need to handle in order
+            # If Double Ron, we should set all at once?
 
-            # 使用 check_multiple_ron 獲取真正的贏家（考慮頭跳）
+            # Use check_multiple_ron to get real winners (considering Head Bump / Atama Hane)
             if self._last_discarded_tile is None or self._last_discarded_player is None:
                 raise ValueError("無法執行榮和：無捨牌")
 
@@ -584,52 +586,52 @@ class RuleEngine:
                 self._last_discarded_tile, self._last_discarded_player
             )
 
-            # 過濾掉不在 real_winners 中的玩家（例如被頭跳截胡的）
+            # Filter out players not in real_winners (e.g. intercepted by Head Bump)
             valid_ron_players = [p for p in ron_players if p in real_winners]
 
             if not valid_ron_players:
-                # 應該不會發生，除非邏輯錯誤
+                # Should not happen unless logic error
                 return ActionResult(success=False)
 
-            # 執行榮和
-            # 我們可以對第一個贏家調用 _handle_ron，並手動添加其他贏家?
-            # 或者 _handle_ron 應該被重構以支持多贏家?
-            # 目前 _handle_ron 內部調用 check_win 並設置 result.winners = [player]
-            # 我們需要一個能處理多贏家的 _handle_ron_multiple
+            # Execute Ron
+            # Can we call _handle_ron for the first winner and manually add others?
+            # Or _handle_ron should be refactored to support multiple winners?
+            # Currently _handle_ron calls check_win internally and sets result.winners = [player]
+            # We need a _handle_ron_multiple capable of handling multiple winners
 
             return self._handle_ron_multiple(valid_ron_players)
 
-        # 2. 檢查碰/槓
+        # 2. Check Pon/Kan
         pon_kan_players = [
             p
             for p, (a, _, _) in actions.items()
             if a in (GameAction.PON, GameAction.KAN)
         ]
         if pon_kan_players:
-            # 只有一個玩家可以碰/槓（除了特殊規則，但通常只有一張捨牌）
-            # 如果有多個（不可能，除非牌山有誤），取第一個
+            # Only one player can Pon/Kan (except special rules, but usually only one discard)
+            # If multiple (impossible unless tile set error), take first
             player = pon_kan_players[0]
             action, tile, kwargs = actions[player]
             if action == GameAction.PON:
                 return self._handle_pon(player, tile, **kwargs)
             else:
-                return self._handle_kan(player, tile, **kwargs)  # 這裡是明槓
+                return self._handle_kan(player, tile, **kwargs)  # This is Daiminkan
 
-        # 3. 檢查吃
+        # 3. Check Chi
         chi_players = [p for p, (a, _, _) in actions.items() if a == GameAction.CHI]
         if chi_players:
             player = chi_players[0]
             action, tile, kwargs = actions[player]
             return self._handle_chi(player, tile, **kwargs)
 
-        # 4. 全部 PASS
-        # 推進回合
+        # 4. All PASS
+        # Advance turn
         result = ActionResult()
         self._advance_turn(result)
         return result
 
     def _handle_ron_multiple(self, winners: List[int]) -> ActionResult:
-        """處理多人榮和"""
+        """Handle multiple Ron"""
         result = ActionResult()
         result.winners = winners
         result.win_results = {}
@@ -639,45 +641,47 @@ class RuleEngine:
             raise ValueError("無捨牌")
 
         for player in winners:
-            win_res = self.check_win(player, tile, is_rinshan=False)  # 榮和非嶺上
+            win_res = self.check_win(
+                player, tile, is_rinshan=False
+            )  # Ron is not Rinshan
             if win_res:
                 result.win_results[player] = win_res
 
-        # 處理分數結算（這裡簡化，直接結束）
-        # 實際應調用 _process_win_scoring 等
-        # 為了保持兼容性，我們調用 _handle_ron 對第一個玩家，然後補全?
-        # 不，直接設置狀態
-        self._phase = GamePhase.WINNING  # 或 ENDED
-        # 這裡需要完整的結算邏輯，暫時復用 _handle_ron 的部分邏輯
-        # 但 _handle_ron 只處理單人。
-        # 我們假設 demo_ui 會處理 result.win_results
+        # Handle score settlement (simplified here, end directly)
+        # Actually should call _process_win_scoring etc.
+        # To maintain compatibility, do we call _handle_ron for first player then supplement?
+        # No, set state directly
+        self._phase = GamePhase.WINNING  # or ENDED
+        # Need full settlement logic here, temporarily reuse part of _handle_ron logic
+        # But _handle_ron only handles single person.
+        # We assume demo_ui will handle result.win_results
 
-        # 更新分數
-        # 注意：多贏家時，供託（立直棒）的分配需根據規則配置（通常給頭跳或平分）
-        # 這裡簡化：每個贏家都計算分數，從放銃者扣除。
+        # Update scores
+        # Note: In multiple winners, deposit sticks (Riichi sticks) distribution depends on rules (usually Head Bump or split)
+        # Simplified here: Each winner calculates score, deducted from discarder.
 
         loser = self._last_discarded_player
 
         for player in winners:
             win_res = result.win_results[player]
             points = win_res.points
-            # 簡單扣分
+            # Simple deduction
             self._game_state.update_score(loser, -points)
             self._game_state.update_score(player, points)
 
-        # 處理立直棒歸屬 (給第一個贏家)
+        # Handle Riichi stick ownership (give to first winner)
         if self._game_state.riichi_sticks > 0:
-            first_winner = winners[0]  # 按順序? check_multiple_ron 返回順序?
-            # 假設 check_multiple_ron 按逆時針順序
+            first_winner = winners[0]  # In order? check_multiple_ron returns order?
+            # Assume check_multiple_ron is in counter-clockwise order
             self._game_state.update_score(
                 first_winner, self._game_state.riichi_sticks * 1000
             )
             self._game_state.clear_riichi_sticks()
 
-        # 本場棒 (Honba) - 通常每個贏家都加? 還是只有第一個?
-        # 標準規則：頭跳才有本場。雙響時，通常都加? 或者只有第一個?
-        # 天鳳：雙響都加本場費。
-        # 這裡暫不處理複雜本場邏輯，假設已在 check_win 計算 (check_win 會包含本場費嗎? 通常會)
+        # Honba (Counter Sticks) - Usually added to each winner? Or only first?
+        # Standard rule: Honba only for Head Bump. In Double Ron, usually added to all? Or only first?
+        # Tenhou: Double Ron both get Honba.
+        # Not handling complex Honba logic here, assume calculated in check_win (check_win includes Honba? Usually yes)
 
         return result
 
@@ -685,12 +689,12 @@ class RuleEngine:
         self, player: int, tile: Optional[Tile] = None, **kwargs
     ) -> ActionResult:
         result = ActionResult()
-        # 檢查手牌數量
+        # Check hand tile count
         hand = self._hands[player]
         if not self._tile_set:
             raise ValueError("牌組未初始化")
 
-        # 計算槓的數量（每個槓增加 1 張手牌上限）
+        # Calculate Kan count (each Kan increases hand limit by 1)
         kan_count = sum(
             1 for meld in hand.melds if meld.type in [MeldType.KAN, MeldType.ANKAN]
         )
@@ -698,7 +702,7 @@ class RuleEngine:
 
         if hand.total_tile_count() >= limit:
             raise ValueError(f"手牌已達 {limit} 張，不能再摸牌")
-        # 摸牌
+        # Draw tile
         drawn_tile = self._tile_set.draw()
         if drawn_tile:
             hand.add_tile(drawn_tile)
@@ -706,7 +710,7 @@ class RuleEngine:
         if self._tile_set.is_exhausted():
             result.is_last_tile = True
 
-        # 計算並設置等待動作
+        # Calculate and set waiting actions
         actions = self._calculate_turn_actions(player)
         self._waiting_for_actions = {player: actions}
         result.waiting_for = self._waiting_for_actions
@@ -720,12 +724,12 @@ class RuleEngine:
     def _check_interrupts(
         self, tile: Tile, discarded_player: int
     ) -> Dict[int, List[GameAction]]:
-        """檢查是否有玩家可以對打出的牌進行鳴牌或榮和"""
+        """Check if any player can call or Ron on the discarded tile"""
         interrupts = {}
 
-        # 檢查榮和 (Ron) - 所有其他玩家
-        # 檢查鳴牌 (Pon/Kan) - 所有其他玩家
-        # 檢查吃牌 (Chi) - 僅下家
+        # Check Ron - All other players
+        # Check Pon/Kan - All other players
+        # Check Chi - Next player only
 
         for i in range(self._num_players):
             if i == discarded_player:
@@ -733,17 +737,17 @@ class RuleEngine:
 
             actions = []
 
-            # 榮和
+            # Ron
             if self._can_ron(i):
                 actions.append(GameAction.RON)
 
-            # 碰/槓
+            # Pon/Kan
             if self._can_pon(i):
                 actions.append(GameAction.PON)
             if self._can_kan(i):
                 actions.append(GameAction.KAN)
 
-            # 吃 (僅下家)
+            # Chi (Next player only)
             if (
                 (i - discarded_player) % self._num_players != 1
             ):  # Changed from == 1 to != 1 to match _can_chi logic
@@ -753,7 +757,7 @@ class RuleEngine:
                     actions.append(GameAction.CHI)
 
             if actions:
-                # 如果有動作，必須包含 PASS 選項
+                # If there are actions, must include PASS option
                 actions.append(GameAction.PASS)
                 interrupts[i] = actions
 
@@ -770,13 +774,13 @@ class RuleEngine:
 
         hand = self._hands[player]
 
-        # 立直後只能打出剛摸到的牌 (除非是暗槓，但暗槓在 _handle_kan 處理)
+        # After Riichi, can only discard the drawn tile (unless Ankan, but Ankan is handled in _handle_kan)
         if hand.is_riichi:
             if hand.last_drawn_tile and tile != hand.last_drawn_tile:
                 raise ValueError("立直後只能打出剛摸到的牌")
 
         if hand.discard(tile):
-            # 記錄打牌並處理相關效果（但不推進回合）
+            # Record discard and handle related effects (but do not advance turn)
             self._last_discarded_tile = tile
             self._last_discarded_player = player
             self._discard_history.append((player, tile))
@@ -792,9 +796,9 @@ class RuleEngine:
                 result.is_last_tile = True
 
             result.discarded = True
-            hand.reset_last_drawn_tile()  # 打牌後清除最後摸的牌
+            hand.reset_last_drawn_tile()  # Clear last drawn tile after discard
 
-            # 檢查其他玩家是否可以鳴牌或榮和
+            # Check if other players can call or Ron
             interrupts = self._check_interrupts(tile, player)
 
             if interrupts:

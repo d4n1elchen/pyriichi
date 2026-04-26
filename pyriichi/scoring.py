@@ -1,7 +1,7 @@
 """
-得分計算系統 - ScoreCalculator implementation
+Score Calculator System - ScoreCalculator implementation
 
-提供符數、翻數和點數計算功能。
+Provides functionality for calculating Fu, Han, and Points.
 """
 
 from dataclasses import dataclass
@@ -15,74 +15,76 @@ from pyriichi.yaku import WaitingType, Yaku, YakuResult
 
 @dataclass
 class ScoreResult:
-    """得分計算結果"""
+    """Score Calculation Result"""
 
-    han: int  # 翻數
-    fu: int  # 符數
-    base_points: int  # 基本點
-    total_points: int  # 總點數（自摸時為每人支付，榮和時為總支付）
-    payment_from: int  # 支付者位置（榮和時）
-    payment_to: int  # 獲得者位置
-    is_yakuman: bool  # 是否役滿
-    yakuman_count: int  # 役滿倍數
-    is_tsumo: bool = False  # 是否自摸
-    dealer_payment: int = 0  # 莊家支付（自摸時）
-    non_dealer_payment: int = 0  # 閒家支付（自摸時）
-    honba_bonus: int = 0  # 本場獎勵
-    riichi_sticks_bonus: int = 0  # 供託分配
-    kiriage_mangan_enabled: bool = False  # 是否啟用切上滿貫
-    pao_player: Optional[int] = None  # 包牌者位置
-    pao_payment: int = 0  # 包牌者支付金額
+    han: int  # Han
+    fu: int  # Fu
+    base_points: int  # Base Points
+    total_points: (
+        int  # Total Points (Payment per person for Tsumo, total payment for Ron)
+    )
+    payment_from: int  # Payer position (for Ron)
+    payment_to: int  # Receiver position
+    is_yakuman: bool  # Is Yakuman
+    yakuman_count: int  # Yakuman multiplier
+    is_tsumo: bool = False  # Is Tsumo
+    dealer_payment: int = 0  # Dealer payment (for Tsumo)
+    non_dealer_payment: int = 0  # Non-dealer payment (for Tsumo)
+    honba_bonus: int = 0  # Honba bonus
+    riichi_sticks_bonus: int = 0  # Riichi sticks distribution
+    kiriage_mangan_enabled: bool = False  # Is Kiriage Mangan enabled
+    pao_player: Optional[int] = None  # Pao player position
+    pao_payment: int = 0  # Pao player payment amount
 
     def __post_init__(self):
-        """計算最終得分。"""
+        """Calculate final score."""
         if self.is_yakuman:
             self.total_points = 8000 * self.yakuman_count
         elif self.han >= 13:
-            self.total_points = 8000  # 役滿
+            self.total_points = 8000  # Yakuman (Kazoe)
         elif self.han >= 11:
-            self.total_points = 6000  # 三倍滿
+            self.total_points = 6000  # Sanbaiman
         elif self.han >= 8:
-            self.total_points = 4000  # 倍滿
+            self.total_points = 4000  # Baiman
         elif self.han >= 6:
-            self.total_points = 3000  # 跳滿
+            self.total_points = 3000  # Haneman
         elif self.han >= 5 or (self.han == 4 and self.fu >= 40):
-            self.total_points = 2000  # 滿貫
+            self.total_points = 2000  # Mangan
         elif self.kiriage_mangan_enabled and (
             (self.han == 4 and self.fu == 30) or (self.han == 3 and self.fu == 60)
         ):
-            # 切上滿貫：30符4翻 或60符3翻 計為滿貫
-            self.total_points = 2000  # 滿貫
+            # Kiriage Mangan: 30 Fu 4 Han or 60 Fu 3 Han counts as Mangan
+            self.total_points = 2000  # Mangan
         else:
             base = self.fu * (2 ** (self.han + 2))
             self.base_points = base
-            # 點數不進位，留待 calculate_payments 處理
+            # Points are not rounded up here, left for calculate_payments
             self.total_points = base
 
     def calculate_payments(self, game_state: GameState) -> None:
         """
-        計算支付方式。
+        Calculate payment distribution.
 
-        自摸支付：
-        - 莊家自摸：每個閒家支付 base_payment + honba，總共獲得 3 * (base_payment + honba)
-        - 閒家自摸：莊家支付 2 * (base_payment + honba)，其他閒家支付 base_payment + honba，總共獲得 2 * (base_payment + honba) + (base_payment + honba) * 2
+        Tsumo Payment:
+        - Dealer Tsumo: Each non-dealer pays base_payment + honba, total 3 * (base_payment + honba)
+        - Non-dealer Tsumo: Dealer pays 2 * (base_payment + honba), other non-dealers pay base_payment + honba, total 2 * (base_payment + honba) + (base_payment + honba) * 2
 
-        榮和支付：
-        - 支付者支付全部 total_points（包含本場）
+        Ron Payment:
+        - Payer pays full total_points (including Honba)
 
-        包牌支付（役滿）：
-        - 自摸：包牌者支付全部
-        - 榮和（包牌者放銃）：包牌者支付全部
-        - 榮和（非包牌者放銃）：包牌者與放銃者各支付一半
+        Pao Payment (Yakuman):
+        - Tsumo: Pao player pays all
+        - Ron (Pao player deals in): Pao player pays all
+        - Ron (Non-Pao player deals in): Pao player and deal-in player split payment
 
-        本場獎勵：
-        - 每個本場 +300 點（自摸時每人支付，榮和時放銃者支付）
+        Honba Bonus:
+        - +300 points per Honba (Paid by everyone for Tsumo, by deal-in player for Ron)
 
-        供託分配：
-        - 所有供託棒給和牌者
+        Riichi Sticks:
+        - All Riichi sticks go to the winner
 
         Args:
-            game_state (GameState): 遊戲狀態（用於獲取本場數和供託棒）。
+            game_state (GameState): Game state (used to get Honba count and Riichi sticks).
         """
 
         self.honba_bonus = game_state.honba * 300
@@ -94,13 +96,13 @@ class ScoreResult:
         if self.pao_player is not None and self.is_yakuman:
             if self.is_tsumo:
                 if self.payment_to == game_state.dealer:
-                    # 莊家自摸：16000 all -> 48000
+                    # Dealer Tsumo: 16000 all -> 48000
                     total_win = (base_payment * 6 + 99) // 100 * 100
                 else:
-                    # 閒家自摸：8000/16000 -> 32000
+                    # Non-dealer Tsumo: 8000/16000 -> 32000
                     total_win = (base_payment * 4 + 99) // 100 * 100
 
-                # 加上本場 (自摸時本場是每人支付 100*honba，共 300*honba)
+                # Add Honba (For Tsumo, Honba is paid by everyone 100*honba, total 300*honba)
                 total_honba = game_state.honba * 300
 
                 self.total_points = total_win + total_honba + self.riichi_sticks_bonus
@@ -120,26 +122,24 @@ class ScoreResult:
                 self.total_points = total_win + total_honba + self.riichi_sticks_bonus
 
                 if self.payment_from != self.pao_player:
-                    # 包牌者與放銃者分擔 (折半)
+                    # Split between Pao player and deal-in player (Halved)
 
                     total_pay = total_win + total_honba
                     half_pay = total_pay // 2
 
                     self.pao_payment = half_pay
-                    # 放銃者支付剩下的 (通常也是一半)
+                    # Deal-in player pays the rest (usually also half)
                     pass
                 else:
-                    # 包牌者放銃：正常支付
-                    self.pao_payment = (
-                        0  # 由 payment_from (即 pao_player) 支付，不視為額外包牌支付
-                    )
+                    # Pao player deals in: Normal payment
+                    self.pao_payment = 0  # Paid by payment_from (i.e., pao_player), not considered extra Pao payment
 
                 self.dealer_payment = 0
                 self.non_dealer_payment = 0
                 return
 
         if self.is_tsumo:
-            # 每人需要支付：base_payment + honba_bonus
+            # Each person pays: base_payment + honba_bonus
             honba_per_person = game_state.honba * 100
 
             if self.payment_to == game_state.dealer:
@@ -163,8 +163,8 @@ class ScoreResult:
                     + self.riichi_sticks_bonus
                 )
         else:
-            # 閒家榮和：4 * Basic + 300 * honba
-            # 莊家榮和：6 * Basic + 300 * honba
+            # Non-dealer Ron: 4 * Basic + 300 * honba
+            # Dealer Ron: 6 * Basic + 300 * honba
 
             total_honba = game_state.honba * 300
 
@@ -175,13 +175,11 @@ class ScoreResult:
 
             self.total_points = win_points + total_honba + self.riichi_sticks_bonus
             self.dealer_payment = 0
-            self.non_dealer_payment = (
-                0  # 榮和時由 payment_from 支付，這裡不設置 dealer/non_dealer payment
-            )
+            self.non_dealer_payment = 0  # Paid by payment_from for Ron, dealer/non_dealer payment not set here
 
 
 class ScoreCalculator:
-    """得分計算器"""
+    """Score Calculator"""
 
     @staticmethod
     def _group_combinations(winning_combination: Optional[List[Combination]]) -> dict:
@@ -225,24 +223,24 @@ class ScoreCalculator:
         pao_player: Optional[int] = None,
     ) -> ScoreResult:
         """
-        計算得分。
+        Calculate score.
 
         Args:
-            hand (Hand): 手牌。
-            winning_tile (Tile): 和牌牌。
-            winning_combination (List): 和牌組合。
-            yaku_results (List[YakuResult]): 役種列表。
-            dora_count (int): 寶牌數量。
-            game_state (GameState): 遊戲狀態。
-            is_tsumo (bool): 是否自摸。
-            player_position (int): 玩家位置。
-            pao_player (Optional[int]): 包牌者位置。
+            hand (Hand): Hand tiles.
+            winning_tile (Tile): Winning tile.
+            winning_combination (List): Winning combinations.
+            yaku_results (List[YakuResult]): List of Yaku results.
+            dora_count (int): Number of Dora.
+            game_state (GameState): Game state.
+            is_tsumo (bool): Whether Tsumo.
+            player_position (int): Player position.
+            pao_player (Optional[int]): Pao player position.
 
         Returns:
-            ScoreResult: 得分計算結果。
+            ScoreResult: Score calculation result.
         """
-        # ... (計算 fu, han, yakuman)
-        # 計算符數
+        # ... (Calculate fu, han, yakuman)
+        # Calculate Fu
         fu = self.calculate_fu(
             hand,
             winning_tile,
@@ -287,27 +285,27 @@ class ScoreCalculator:
         player_position: int = 0,
     ) -> int:
         """
-        計算符數。
+        Calculate Fu.
 
         Args:
-            hand (Hand): 手牌。
-            winning_tile (Tile): 和牌牌。
-            winning_combination (List): 和牌組合。
-            yaku_results (List[YakuResult]): 役種列表。
-            game_state (GameState): 遊戲狀態。
-            is_tsumo (bool): 是否自摸。
-            player_position (int): 玩家位置（用於計算自風對子符數）。
+            hand (Hand): Hand tiles.
+            winning_tile (Tile): Winning tile.
+            winning_combination (List): Winning combinations.
+            yaku_results (List[YakuResult]): List of Yaku results.
+            game_state (GameState): Game state.
+            is_tsumo (bool): Whether Tsumo.
+            player_position (int): Player position (used for Seat Wind Pair Fu).
 
         Returns:
-            int: 符數。
+            int: Fu value.
         """
         if any(r.yaku == Yaku.CHIITOITSU for r in yaku_results):
-            return 25  # 七對子固定 25 符
+            return 25  # Chiitoitsu fixed 25 Fu
 
         if any(r.yaku == Yaku.PINFU for r in yaku_results):
-            return 30 if is_tsumo else 20  # 平和固定 30 符（自摸）或 20 符（榮和）
+            return 30 if is_tsumo else 20  # Pinfu fixed 30 Fu (Tsumo) or 20 Fu (Ron)
 
-        fu = 20  # 基本符
+        fu = 20  # Base Fu
 
         if hand.is_concealed and not is_tsumo:
             fu += 10
@@ -325,8 +323,8 @@ class ScoreCalculator:
 
             is_open = combination.is_open
 
-            # 如果是榮和，且該組合包含和牌牌（且原本是門清），則視為明刻
-            # 注意：只有刻子需要這樣判斷（順子符數為0，槓子必定是已形成的）
+            # If Ron, and the combination contains the winning tile (and was originally concealed), treat as Open Triplet
+            # Note: Only needed for Triplets (Sequence Fu is 0, Kans are always formed)
             if (
                 not is_tsumo
                 and not is_open
@@ -345,9 +343,9 @@ class ScoreCalculator:
         if pair_combination := self._extract_pair(winning_combination):
             pair_tile = pair_combination.tiles[0]
 
-            # 役牌對子 +2 符
+            # Yakuhai Pair +2 Fu
             if pair_tile.suit == Suit.JIHAI:
-                if pair_tile.rank in [5, 6, 7]:  # 白、發、中
+                if pair_tile.rank in [5, 6, 7]:  # Haku, Hatsu, Chun
                     fu += 2
 
                 round_wind_tile = game_state.round_wind.tile
@@ -368,7 +366,7 @@ class ScoreCalculator:
             WaitingType.KANCHAN,
         }:
             fu += 2
-        # 兩面聽和雙碰聽不增加符數
+        # Ryanmen and Shabo do not add Fu
 
         return ((fu + 9) // 10) * 10
 
@@ -376,14 +374,14 @@ class ScoreCalculator:
         self, winning_tile: Tile, winning_combination: List
     ) -> WaitingType:
         """
-        判斷聽牌類型。
+        Determine waiting type.
 
         Args:
-            winning_tile (Tile): 和牌牌。
-            winning_combination (List): 和牌組合。
+            winning_tile (Tile): Winning tile.
+            winning_combination (List): Winning combinations.
 
         Returns:
-            WaitingType: 聽牌類型：'ryanmen'（兩面）、'penchan'（邊張）、'kanchan'（嵌張）、'tanki'（單騎）、'shabo'（雙碰）。
+            WaitingType: Waiting type: 'ryanmen' (Two-sided), 'penchan' (Edge), 'kanchan' (Closed), 'tanki' (Single), 'shabo' (Dual).
         """
         if not winning_combination:
             return WaitingType.RYANMEN
@@ -431,14 +429,14 @@ class ScoreCalculator:
 
     def calculate_han(self, yaku_results: List[YakuResult], dora_count: int) -> int:
         """
-        計算翻數。
+        Calculate Han.
 
         Args:
-            yaku_results (List[YakuResult]): 役種列表。
-            dora_count (int): 寶牌數量。
+            yaku_results (List[YakuResult]): List of Yaku results.
+            dora_count (int): Number of Dora.
 
         Returns:
-            int: 翻數。
+            int: Han value.
         """
         han = sum(r.han for r in yaku_results)
         han += dora_count

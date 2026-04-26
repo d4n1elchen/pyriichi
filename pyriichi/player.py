@@ -11,24 +11,24 @@ from pyriichi.tiles import Tile
 @dataclass
 class PublicInfo:
     """
-    公開遊戲資訊 (Visible Game Information)。
+    Public Game Information (Visible Game Information).
 
-    包含所有玩家可見的資訊，用於 AI 決策。
+    Contains information visible to all players, used for AI decision making.
     """
 
     turn_number: int
     dora_indicators: List[Tile]
-    discards: Dict[int, List[Tile]]  # 每個玩家的捨牌
-    melds: Dict[int, List[Meld]]  # 每個玩家的副露
-    riichi_players: List[int]  # 立直玩家列表
-    scores: List[int]  # 玩家分數
+    discards: Dict[int, List[Tile]]  # Discards of each player
+    melds: Dict[int, List[Meld]]  # Melds of each player
+    riichi_players: List[int]  # List of players who declared Riichi
+    scores: List[int]  # Player scores
 
 
 class BasePlayer(ABC):
     """
-    玩家基類 (Abstract Base Class for Players)。
+    Player Base Class (Abstract Base Class for Players).
 
-    定義了玩家的基本介面，所有具體玩家類別都應繼承此類別。
+    Defines the basic interface for players. All concrete player classes should inherit from this class.
     """
 
     def __init__(self, name: str):
@@ -44,29 +44,29 @@ class BasePlayer(ABC):
         public_info: Optional[PublicInfo] = None,
     ) -> Tuple[GameAction, Optional[Tile]]:
         """
-        決定下一步動作。
+        Decide the next action.
 
         Args:
-            game_state (GameState): 當前遊戲狀態。
-            player_index (int): 玩家索引 (0-3)。
-            hand (Hand): 玩家手牌。
-            available_actions (List[GameAction]): 可執行的動作列表。
-            public_info (Optional[PublicInfo]): 公開遊戲資訊（捨牌、副露等）。
+            game_state (GameState): Current game state.
+            player_index (int): Player index (0-3).
+            hand (Hand): Player hand.
+            available_actions (List[GameAction]): List of available actions.
+            public_info (Optional[PublicInfo]): Public game information (Discards, Melds, etc.).
 
         Returns:
-            Tuple[GameAction, Optional[Tile]]: (選擇的動作, 相關的牌)。
-                - 如果動作是 DISCARD，Tile 是要打出的牌。
-                - 如果動作是 CHI/PON/KAN，Tile 是相關的牌（通常是 target tile）。
-                - 其他動作 Tile 通常為 None。
+            Tuple[GameAction, Optional[Tile]]: (Selected action, Related tile).
+                - If action is DISCARD, Tile is the tile to discard.
+                - If action is CHI/PON/KAN, Tile is the related tile (usually target tile).
+                - For other actions, Tile is usually None.
         """
         pass
 
 
 class RandomPlayer(BasePlayer):
     """
-    隨機行動的 AI 玩家。
+    Random Action AI Player.
 
-    策略完全隨機，僅在必要時遵守規則（如立直後只能切摸到的牌）。
+    Strategy is completely random, only following rules when necessary (e.g., must discard drawn tile after Riichi).
     """
 
     def decide_action(
@@ -78,37 +78,37 @@ class RandomPlayer(BasePlayer):
         public_info: Optional[PublicInfo] = None,
     ) -> Tuple[GameAction, Optional[Tile]]:
         """
-        決定下一步動作（隨機）。
+        Decide the next action (Random).
 
         Args:
-            game_state (GameState): 當前遊戲狀態。
-            player_index (int): 玩家索引。
-            hand (Hand): 玩家手牌。
-            available_actions (List[GameAction]): 可執行的動作列表。
+            game_state (GameState): Current game state.
+            player_index (int): Player index.
+            hand (Hand): Player hand.
+            available_actions (List[GameAction]): List of available actions.
 
         Returns:
-            Tuple[GameAction, Optional[Tile]]: (選擇的動作, 相關的牌)。
+            Tuple[GameAction, Optional[Tile]]: (Selected action, Related tile).
         """
 
         if not available_actions:
             return GameAction.PASS, None
 
-        # 簡單策略：優先和牌，其次立直，否則隨機
+        # Simple strategy: Prioritize winning, then Riichi, otherwise random
 
-        # 如果可以和牌，優先和牌
+        # If winning is possible, prioritize winning
         if GameAction.RON in available_actions:
             return GameAction.RON, None
         if GameAction.TSUMO in available_actions:
             return GameAction.TSUMO, None
 
-        # 隨機選擇一個動作，過濾掉 PASS (除非只有 PASS)
+        # Randomly choose an action, filter out PASS (unless only PASS is available)
 
-        # 為了避免死循環或卡住，優先選擇 DISCARD
+        # To avoid infinite loops or getting stuck, prioritize DISCARD
         if GameAction.DISCARD in available_actions:
-            # 隨機打出一張牌
+            # Randomly discard a tile
 
             if hand.is_riichi:
-                # 立直後只能打出剛摸到的牌
+                # After Riichi, must discard the drawn tile
                 tile_to_discard = hand.last_drawn_tile
                 if tile_to_discard is None:
                     # Should not happen if we just drew a tile, but fallback to last tile just in case
@@ -118,7 +118,7 @@ class RandomPlayer(BasePlayer):
             tile_to_discard = random.choice(hand.tiles)
             return GameAction.DISCARD, tile_to_discard
 
-        # 如果是回應階段，隨機選擇，但 PASS 權重高一點
+        # If in response phase, choose randomly, but give PASS slightly higher weight
         action = random.choice(available_actions)
 
         if action == GameAction.RICHI:
@@ -129,19 +129,19 @@ class RandomPlayer(BasePlayer):
                 # Should not happen if RICHI is in available_actions
                 return GameAction.PASS, None
 
-        # 如果選了需要參數的動作，暫時返回 None
+        # If an action requiring parameters is chosen, temporarily return None
 
         return action, None
 
 
 class SimplePlayer(BasePlayer):
     """
-    簡單進攻 AI (Simple Attack AI)。
+    Simple Attack AI (Simple Attack AI).
 
-    策略：
-    1. 優先和牌 (RON/TSUMO)。
-    2. 優先立直 (RICHI)。
-    3. 簡單切牌策略：字牌 -> 老頭牌 -> 中張牌。
+    Strategy:
+    1. Prioritize winning (RON/TSUMO).
+    2. Prioritize Riichi (RICHI).
+    3. Simple discard strategy: Honors -> Terminals -> Simple tiles.
     """
 
     def decide_action(
@@ -153,49 +153,49 @@ class SimplePlayer(BasePlayer):
         public_info: Optional[PublicInfo] = None,
     ) -> Tuple[GameAction, Optional[Tile]]:
         """
-        決定下一步動作（簡單進攻策略）。
+        Decide the next action (Simple Attack Strategy).
 
         Args:
-            game_state (GameState): 當前遊戲狀態。
-            player_index (int): 玩家索引。
-            hand (Hand): 玩家手牌。
-            available_actions (List[GameAction]): 可執行的動作列表。
+            game_state (GameState): Current game state.
+            player_index (int): Player index.
+            hand (Hand): Player hand.
+            available_actions (List[GameAction]): List of available actions.
 
         Returns:
-            Tuple[GameAction, Optional[Tile]]: (選擇的動作, 相關的牌)。
+            Tuple[GameAction, Optional[Tile]]: (Selected action, Related tile).
         """
 
         if not available_actions:
             return GameAction.PASS, None
 
-        # 1. 優先和牌
+        # 1. Prioritize winning
         if GameAction.RON in available_actions:
             return GameAction.RON, None
         if GameAction.TSUMO in available_actions:
             return GameAction.TSUMO, None
 
-        # 2. 優先立直
+        # 2. Prioritize Riichi
         if GameAction.RICHI in available_actions:
             valid_discards = hand.tenpai_discards
             if valid_discards:
-                # 從可立直的捨牌中選擇一張最好的
+                # Choose the best discard from valid Riichi discards
                 best_riichi_discard = self._choose_best_discard(hand, valid_discards)
                 return GameAction.RICHI, best_riichi_discard
 
-        # 3. 處理切牌
+        # 3. Handle Discard
         if GameAction.DISCARD in available_actions:
-            # 如果立直中，只能打出剛摸到的牌
+            # If in Riichi, must discard the drawn tile
             if hand.is_riichi:
                 tile_to_discard = hand.last_drawn_tile
                 if tile_to_discard is None:
                     tile_to_discard = hand.tiles[-1]
                 return GameAction.DISCARD, tile_to_discard
 
-            # 簡單切牌策略：字牌 -> 老頭牌 -> 中張牌 (孤張優先)
+            # Simple discard strategy: Honors -> Terminals -> Simple tiles (Isolated tiles first)
             best_discard = self._choose_best_discard(hand)
             return GameAction.DISCARD, best_discard
 
-        # 4. 處理鳴牌
+        # 4. Handle Melds
         if GameAction.PASS in available_actions:
             return GameAction.PASS, None
 
@@ -205,14 +205,14 @@ class SimplePlayer(BasePlayer):
         self, hand: Hand, candidates: Optional[List[Tile]] = None
     ) -> Tile:
         """
-        選擇最佳捨牌。
+        Choose the best discard.
 
         Args:
-            hand (Hand): 手牌。
-            candidates (Optional[List[Tile]]): 候選牌列表。如果為 None，則從手牌中選擇。
+            hand (Hand): Hand.
+            candidates (Optional[List[Tile]]): List of candidate tiles. If None, choose from hand.
 
         Returns:
-            Tile: 最佳捨牌。
+            Tile: Best discard.
         """
         tiles_to_consider = candidates if candidates is not None else hand.tiles
 
@@ -229,11 +229,11 @@ class SimplePlayer(BasePlayer):
                 score = 20
 
             else:
-                score = 30 + (
-                    5 - abs(tile.rank - 5)
-                )  # 5是最高分(35)，1/9是26(但已被terminal捕獲)
+                score = (
+                    30 + (5 - abs(tile.rank - 5))
+                )  # 5 is highest score (35), 1/9 is 26 (but already captured by terminal)
 
-            # 增加隨機性
+            # Add randomness
             score += random.randint(0, 5)
 
             if score < min_score:
@@ -245,14 +245,14 @@ class SimplePlayer(BasePlayer):
 
 class DefensivePlayer(SimplePlayer):
     """
-    防守型 AI (Defensive AI)。
+    Defensive AI (Defensive AI).
 
-    策略：
-    1. 默認使用 SimplePlayer 的進攻策略。
-    2. 當有對手立直時，進入防守模式：
-       - 優先打出立直家的現物（Genbutsu）。
-       - 如果沒有現物，嘗試打出字牌或筋牌（暫時只實現現物）。
-       - 棄和（Betaori）：不進行副露。
+    Strategy:
+    1. Default to SimplePlayer's attack strategy.
+    2. When an opponent declares Riichi, enter defense mode:
+       - Prioritize discarding Riichi player's Genbutsu (Safe Tiles).
+       - If no Genbutsu, try discarding Honors or Suji (Currently only Genbutsu implemented).
+       - Betaori (Fold): Do not call melds.
     """
 
     def decide_action(
@@ -264,12 +264,12 @@ class DefensivePlayer(SimplePlayer):
         public_info: Optional[PublicInfo] = None,
     ) -> Tuple[GameAction, Optional[Tile]]:
         """
-        決定下一步動作（帶防守邏輯）。
+        Decide the next action (With defensive logic).
         """
         if not available_actions:
             return GameAction.PASS, None
 
-        # 檢查是否需要防守
+        # Check if defense is needed
         is_defense_mode = False
         threatening_players = []
 
@@ -279,34 +279,34 @@ class DefensivePlayer(SimplePlayer):
                     is_defense_mode = True
                     threatening_players.append(i)
 
-        # 如果不需要防守，使用簡單策略
+        # If defense is not needed, use simple strategy
         if not is_defense_mode:
             return super().decide_action(
                 game_state, player_index, hand, available_actions, public_info
             )
 
-        # 防守模式
+        # Defense Mode
 
-        # 1. 能夠和牌還是要和 (追立直/兜牌的情況，或者運氣好)
+        # 1. If winning is possible, still win (Chase Riichi / Push, or lucky)
         if GameAction.RON in available_actions:
             return GameAction.RON, None
         if GameAction.TSUMO in available_actions:
             return GameAction.TSUMO, None
 
-        # 2. 棄和：不立直，不副露
+        # 2. Betaori (Fold): No Riichi, No Melds
         if GameAction.DISCARD in available_actions:
-            # 尋找安牌
+            # Find safe tile
             safe_tile = self._find_safe_tile(hand, public_info, threatening_players)
             if safe_tile:
                 return GameAction.DISCARD, safe_tile
 
-            # 如果沒有完全安牌，回退到 SimplePlayer 的切牌邏輯 (至少會切字牌/老頭牌)
-            # 但我們希望它更保守，這裡暫時直接調用父類
+            # If no completely safe tile, fallback to SimplePlayer's discard logic (at least discard Honors/Terminals)
+            # But we want it to be more conservative, here temporarily call parent class
             return super().decide_action(
                 game_state, player_index, hand, available_actions, public_info
             )
 
-        # 對於副露請求，一律拒絕 (PASS)
+        # Reject all meld requests (PASS)
         if GameAction.PASS in available_actions:
             return GameAction.PASS, None
 
@@ -318,16 +318,16 @@ class DefensivePlayer(SimplePlayer):
         public_info: Optional[PublicInfo],
         threatening_players: List[int],
     ) -> Optional[Tile]:
-        """尋找手牌中的安牌（現物）。"""
+        """Find safe tile (Genbutsu) in hand."""
         if not public_info:
             return None
 
-        # 收集所有威脅玩家的現物
+        # Collect Genbutsu of all threatening players
 
-        # 這裡簡化處理：只要是任何一個立直家的現物，就認為是"相對"安全的
-        # 更嚴格的防守應該是針對所有立直家的共通安牌 (Common Safe Tiles)
-        # 但如果無法兼顧，優先防守下家/對家/上家? 或者隨機?
-        # 這裡先取交集（針對所有立直家都安全），如果沒有則取聯集（針對至少一人安全）
+        # Simplified handling: As long as it is Genbutsu of any Riichi player, consider it "relatively" safe
+        # Stricter defense should target Common Safe Tiles of all Riichi players
+        # But if cannot cover all, prioritize defending against Shimocha/Toimen/Kamicha? Or random?
+        # Here we take intersection (Safe against all), if none then take union (Safe against at least one)
 
         common_safe_tiles = None
 
@@ -340,14 +340,14 @@ class DefensivePlayer(SimplePlayer):
             else:
                 common_safe_tiles = common_safe_tiles.intersection(player_safe_tiles)
 
-        # 檢查手牌中是否有共通安牌
+        # Check if there are common safe tiles in hand
         if common_safe_tiles:
             for tile in hand.tiles:
                 if tile in common_safe_tiles:
                     return tile
 
-        # 如果沒有共通安牌，嘗試找針對某個立直家的安牌 (避免放銃給最危險的?)
-        # 暫時隨機選一個針對某人的安牌
+        # If no common safe tiles, try to find safe tile against a specific Riichi player (Avoid dealing into the most dangerous one?)
+        # Temporarily choose a safe tile against someone randomly
         all_safe_tiles = set()
         for player_idx in threatening_players:
             all_safe_tiles.update(public_info.discards.get(player_idx, []))

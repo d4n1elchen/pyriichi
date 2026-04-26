@@ -1,7 +1,7 @@
 """
-規則配置系統 - RulesetConfig
+Ruleset Configuration System - RulesetConfig
 
-管理日本麻將的規則變體配置，支持標準競技規則和自定義規則。
+Manages Riichi Mahjong rule variations configuration, supporting standard competitive rules and custom rules.
 """
 
 from dataclasses import dataclass
@@ -9,7 +9,7 @@ from enum import Enum
 
 
 class RenhouPolicy(str, Enum):
-    """人和規則設定。"""
+    """Renhou rule setting."""
 
     YAKUMAN = "yakuman"
     TWO_HAN = "2han"
@@ -19,74 +19,74 @@ class RenhouPolicy(str, Enum):
 @dataclass
 class RulesetConfig:
     """
-    規則配置類。
+    Ruleset configuration class.
 
-    用於配置日本麻將的不同規則變體，支持標準競技規則。
+    Used to configure different rule variations of Riichi Mahjong, supporting standard competitive rules.
 
     Attributes:
-        renhou_policy (RenhouPolicy): 人和規則。
-            - YAKUMAN: 役滿（13翻）。
-            - TWO_HAN: 2翻（標準競技規則）。
-            - OFF: 不啟用。
-        pinfu_require_ryanmen (bool): 平和是否需要兩面聽。
-            - True: 必須是兩面聽（標準競技規則）。
-            - False: 不檢查聽牌類型。
-        ippatsu_interrupt_on_meld_or_kan (bool): 一發是否在副露/槓時中斷。
-            - True: 副露或槓會中斷一發（標準競技規則）。
-            - False: 不檢查中斷條件。
-        chanta_enabled (bool): 是否啟用全帶么九（Chanta）。
-            - True: 啟用（標準競技規則）。
-            - False: 不啟用。
-        chanta_open_han (int): 全帶么九（副露）翻數。默認為 1。
-        chanta_closed_han (int): 全帶么九（門清）翻數。默認為 2。
-        junchan_open_han (int): 純全帶么九（副露）翻數。默認為 2。
-        junchan_closed_han (int): 純全帶么九（門清）翻數。默認為 3。
-        suuankou_tanki_double (bool): 四暗刻單騎是否為雙倍役滿。
-            - True: 雙倍役滿（26翻，標準競技規則）。
-            - False: 單倍役滿（13翻）。
-        chuuren_pure_double (bool): 純正九蓮寶燈是否為雙倍役滿。
-            - True: 雙倍役滿（26翻，標準競技規則）。
-            - False: 單倍役滿（13翻）。
-        kiriage_mangan (bool): 切上滿貫規則。
-            - True: 30符4翻 或 60符3翻 計為滿貫（可選規則）。
-            - False: 按正常基本點計算（標準競技規則）。
-        tobi_enabled (bool): 擊飛規則。
-            - True: 當玩家點數 < 0 時遊戲結束。
-            - False: 遊戲繼續直到局數結束。
-        west_round_extension (bool): 西入規則（延長戰）。
-            - True: 若南4局結束時無人達到目標分數（return_score），進入西場。
-            - False: 南4局結束即遊戲結束。
-        return_score (int): 返點/目標分數。
-            - 遊戲結束時，若第一名分數未達此分數，且啟用西入，則遊戲延長。
-        agari_yame (bool): 安可（上がり止め）。
-            - True: 莊家在最後一局（南4或西4）和牌且為第一名時，遊戲結束。
-            - False: 莊家連莊，遊戲繼續。
-        chombo_penalty_enabled (bool): 錯和/錯立直罰則。
-            - True: 發生違規時支付滿貫罰符並結束該局。
-            - False: 忽略違規或僅拒絕動作。
-        head_bump_only (bool): 頭跳規則（只允許下家榮和）。
-            - True: 多人可榮和時，只有放銃者下家（逆時針最近者）可以榮和。
-            - False: 允許多人榮和（需配合 allow_double_ron 或 allow_triple_ron）。
-        allow_double_ron (bool): 雙響規則。
-            - True: 允許兩家同時榮和。
-            - False: 禁止雙響（可能觸發頭跳或流局）。
-            注意：需要 head_bump_only = False。
-        allow_triple_ron (bool): 三響規則。
-            - True: 允許三家同時榮和。
-            - False: 三家可榮和時導致流局（三家和了）。
-            注意：需要 head_bump_only = False 且 allow_double_ron = True。
+        renhou_policy (RenhouPolicy): Renhou rule.
+            - YAKUMAN: Yakuman (13 Han).
+            - TWO_HAN: 2 Han (Standard competitive rule).
+            - OFF: Disabled.
+        pinfu_require_ryanmen (bool): Whether Pinfu requires Ryanmen (Two-sided) wait.
+            - True: Must be Ryanmen wait (Standard competitive rule).
+            - False: Do not check wait type.
+        ippatsu_interrupt_on_meld_or_kan (bool): Whether Ippatsu is interrupted by Meld/Kan.
+            - True: Meld or Kan interrupts Ippatsu (Standard competitive rule).
+            - False: Do not check interruption condition.
+        chanta_enabled (bool): Whether Chanta is enabled.
+            - True: Enabled (Standard competitive rule).
+            - False: Disabled.
+        chanta_open_han (int): Chanta (Open) Han. Default is 1.
+        chanta_closed_han (int): Chanta (Closed) Han. Default is 2.
+        junchan_open_han (int): Junchan (Open) Han. Default is 2.
+        junchan_closed_han (int): Junchan (Closed) Han. Default is 3.
+        suuankou_tanki_double (bool): Whether Suuankou Tanki is Double Yakuman.
+            - True: Double Yakuman (26 Han, Standard competitive rule).
+            - False: Single Yakuman (13 Han).
+        chuuren_pure_double (bool): Whether Junsei Chuuren Poutou is Double Yakuman.
+            - True: Double Yakuman (26 Han, Standard competitive rule).
+            - False: Single Yakuman (13 Han).
+        kiriage_mangan (bool): Kiriage Mangan rule.
+            - True: 30 Fu 4 Han or 60 Fu 3 Han counts as Mangan (Optional rule).
+            - False: Calculate based on normal basic points (Standard competitive rule).
+        tobi_enabled (bool): Tobi (Bankruptcy) rule.
+            - True: Game ends when player points < 0.
+            - False: Game continues until round ends.
+        west_round_extension (bool): West Round Extension rule (Enchousen).
+            - True: If no one reaches target score (return_score) at end of South 4, enter West round.
+            - False: Game ends at end of South 4.
+        return_score (int): Return score / Target score.
+            - When game ends, if 1st place score is below this score, and West Round Extension is enabled, game extends.
+        agari_yame (bool): Agari Yame.
+            - True: If Dealer wins in the last round (South 4 or West 4) and is 1st place, game ends.
+            - False: Dealer repeats (Renchan), game continues.
+        chombo_penalty_enabled (bool): Chombo penalty rule.
+            - True: Pay Mangan penalty and end the round when violation occurs.
+            - False: Ignore violation or just reject action.
+        head_bump_only (bool): Head Bump rule (Only Shimocha wins).
+            - True: When multiple players can Ron, only the discarder's Shimocha (closest counter-clockwise) wins.
+            - False: Allow multiple Ron (Requires allow_double_ron or allow_triple_ron).
+        allow_double_ron (bool): Double Ron rule.
+            - True: Allow two players to Ron simultaneously.
+            - False: Prohibit Double Ron (May trigger Head Bump or Ryuukyoku).
+            Note: Requires head_bump_only = False.
+        allow_triple_ron (bool): Triple Ron rule.
+            - True: Allow three players to Ron simultaneously.
+            - False: Three players Ron leads to Ryuukyoku (Sancha Ron).
+            Note: Requires head_bump_only = False and allow_double_ron = True.
     """
 
-    # 人和規則
+    # Renhou Rule
     renhou_policy: RenhouPolicy = RenhouPolicy.TWO_HAN
 
-    # 平和規則
+    # Pinfu Rule
     pinfu_require_ryanmen: bool = True
 
-    # 一發規則
+    # Ippatsu Rule
     ippatsu_interrupt_on_meld_or_kan: bool = True
 
-    # 全帶系規則
+    # Chanta Rules
     chanta_enabled: bool = True
 
     chanta_open_han: int = 1
@@ -94,30 +94,29 @@ class RulesetConfig:
     junchan_open_han: int = 2
     junchan_closed_han: int = 3
 
-    # 四歸一規則
-    # 四暗刻單騎規則
+    # Suuankou Tanki Rule
     suuankou_tanki_double: bool = True
 
-    # 純正九蓮寶燈規則
+    # Chuuren Poutou Rule
     chuuren_pure_double: bool = True
 
-    # 切上滿貫規則
+    # Kiriage Mangan Rule
     kiriage_mangan: bool = False
 
-    # 擊飛規則
+    # Tobi Rule
     tobi_enabled: bool = True
 
-    # 遊戲結束規則
+    # Game End Rules
     west_round_extension: bool = True
 
     return_score: int = 30000
 
     agari_yame: bool = True
 
-    # 違規處理規則
+    # Violation Penalty Rule
     chombo_penalty_enabled: bool = True
 
-    # 頭跳/雙響/三響規則
+    # Head Bump / Double Ron / Triple Ron Rules
     head_bump_only: bool = True
 
     allow_double_ron: bool = False
@@ -127,10 +126,10 @@ class RulesetConfig:
     @classmethod
     def standard(cls) -> "RulesetConfig":
         """
-        創建標準競技規則配置。
+        Create standard competitive ruleset configuration.
 
         Returns:
-            RulesetConfig: 標準競技規則配置。
+            RulesetConfig: Standard competitive ruleset configuration.
         """
         return cls(
             renhou_policy=RenhouPolicy.TWO_HAN,

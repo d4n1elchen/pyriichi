@@ -1,7 +1,7 @@
 """
-工具函數
+Utility functions
 
-提供便利函數用於牌的解析和格式化。
+Provides convenience functions for tile parsing and formatting.
 """
 
 from typing import List
@@ -11,22 +11,22 @@ from pyriichi.tiles import Suit, Tile
 
 def parse_tiles(tile_string: str) -> List[Tile]:
     """
-    從字符串解析牌（例如："1m2m3m4p5p6p"）。
+    Parse tiles from string (e.g., "1m2m3m4p5p6p").
 
     Args:
-        tile_string (str): 牌字符串。
+        tile_string (str): Tile string.
 
     Returns:
-        List[Tile]: 牌列表。
+        List[Tile]: List of tiles.
 
     Example:
         >>> parse_tiles("1m2m3m4p5p6p")
         [Tile(MANZU, 1), Tile(MANZU, 2), Tile(MANZU, 3), ...]
-        >>> parse_tiles("r5p6p7p")  # 紅寶牌用 r 前綴（標準格式）
+        >>> parse_tiles("r5p6p7p")  # Red Dora uses 'r' prefix (Standard format)
         [Tile(PINZU, 5, red=True), Tile(PINZU, 6), Tile(PINZU, 7)]
     """
     tiles = []
-    buffer = []  # 存儲 (rank, is_red) 的列表
+    buffer = []  # List to store (rank, is_red)
     i = 0
     suit_map = {"m": Suit.MANZU, "p": Suit.PINZU, "s": Suit.SOZU, "z": Suit.JIHAI}
 
@@ -57,7 +57,7 @@ def parse_tiles(tile_string: str) -> List[Tile]:
             i += 1
             continue
 
-        # 忽略其他字符
+        # Ignore other characters
         i += 1
 
     return tiles
@@ -65,13 +65,13 @@ def parse_tiles(tile_string: str) -> List[Tile]:
 
 def format_tiles(tiles: List[Tile]) -> str:
     """
-    將牌列表格式化為字符串。
+    Format tile list to string.
 
     Args:
-        tiles (List[Tile]): 牌列表。
+        tiles (List[Tile]): List of tiles.
 
     Returns:
-        str: 格式化後的字符串。
+        str: Formatted string.
 
     Example:
         >>> format_tiles([Tile(Suit.MANZU, 1), Tile(Suit.PINZU, 5)])
@@ -82,14 +82,14 @@ def format_tiles(tiles: List[Tile]) -> str:
 
 def is_winning_hand(tiles: List[Tile], winning_tile: Tile) -> bool:
     """
-    快速檢查是否和牌（便利函數）。
+    Quick check if hand is winning (Convenience function).
 
     Args:
-        tiles (List[Tile]): 手牌列表（13 張）。
-        winning_tile (Tile): 和牌牌。
+        tiles (List[Tile]): Hand tiles (13 tiles).
+        winning_tile (Tile): Winning tile.
 
     Returns:
-        bool: 是否和牌。
+        bool: Whether it is a winning hand.
     """
     from pyriichi.hand import Hand
 
