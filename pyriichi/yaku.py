@@ -883,10 +883,10 @@ class YakuChecker:
 
         Args:
             hand (Hand): hand.
-            winning_combination (List[Combination]): 和牌組合。
+            winning_combination (List[Combination]): Winning combination.
 
         Returns:
-            Optional[YakuResult]: 役種結果，若不符合則返回 None。
+            Optional[YakuResult]: Yaku result, or None if it does not apply.
         """
         if not hand.is_concealed:
             return None

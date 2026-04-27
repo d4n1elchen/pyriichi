@@ -5,7 +5,7 @@ from typing import Optional
 
 
 class TranslatableEnum(Enum):
-    """提供多語言名稱的列舉基類。"""
+    """Enum base class with multilingual display names."""
 
     def __new__(cls, code: str, zh: str, ja: str, en: Optional[str] = None):
         obj = object.__new__(cls)
@@ -17,22 +17,22 @@ class TranslatableEnum(Enum):
 
     @property
     def code(self) -> str:
-        """列舉代碼（預設值）。"""
+        """Enum code value."""
         return str(self.value)
 
     @property
     def zh(self) -> str:
-        """繁體中文名稱。"""
+        """Traditional Chinese display name."""
         return self._zh  # pyright: ignore[reportAttributeAccessIssue]
 
     @property
     def ja(self) -> str:
-        """日文名稱。"""
+        """Japanese display name."""
         return self._ja  # pyright: ignore[reportAttributeAccessIssue]
 
     @property
     def en(self) -> str:
-        """英文名稱，若未設定則回傳代碼。"""
+        """English display name, falling back to the code if unset."""
         return (
             self._en if self._en is not None else str(self.value)
         )  # pyright: ignore[reportAttributeAccessIssue]

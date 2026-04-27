@@ -337,7 +337,6 @@ class TestRuleEngine:
         assert self.engine.check_furiten_temp(0) is True
         assert self.engine.is_furiten(0) is True
 
-        # 嘗試榮和，應該失敗
         result = self.engine.check_win(0, winning_tile)
         assert result is None or result.win is False
 
@@ -356,7 +355,6 @@ class TestRuleEngine:
         self.engine._furiten_temp_round[0] = 0
         self.engine._turn_count = 2  # 2 turns passed
 
-        # 其他玩家打出 4p
         self.engine._last_discarded_tile = winning_tile
         self.engine._last_discarded_player = 1
         self.engine._current_player = 0
@@ -443,7 +441,6 @@ class TestRuleEngine:
         # Set riichi furiten status (Player 0 passed ron after riichi)
         self.engine._furiten_permanent[0] = True
 
-        # 其他玩家打出 4p
         self.engine._last_discarded_tile = winning_tile
         self.engine._last_discarded_player = 1
         self.engine._current_player = 0
@@ -453,7 +450,6 @@ class TestRuleEngine:
         assert self.engine.check_furiten_riichi(0) is True
         assert self.engine.is_furiten(0) is True
 
-        # 嘗試榮和，應該失敗
         result = self.engine.check_win(0, winning_tile)
         assert result is None or result.win is False
 
@@ -570,11 +566,9 @@ class TestRuleEngine:
 
         initial_scores = self.engine._game_state.scores.copy()
 
-        # 模擬流局
         self.engine._tile_set._tiles = []
         self.engine.end_round(None)
 
-        # 驗證分數變化
         assert self.engine._game_state.scores[0] == initial_scores[0] + 1500
         assert self.engine._game_state.scores[1] == initial_scores[1] + 1500
         assert self.engine._game_state.scores[2] == initial_scores[2] - 1500
@@ -596,11 +590,9 @@ class TestRuleEngine:
 
         initial_scores = self.engine._game_state.scores.copy()
 
-        # 模擬流局
         self.engine._tile_set._tiles = []
         self.engine.end_round(None)
 
-        # 驗證分數變化
         assert self.engine._game_state.scores[0] == initial_scores[0] + 1000
         assert self.engine._game_state.scores[1] == initial_scores[1] + 1000
         assert self.engine._game_state.scores[2] == initial_scores[2] + 1000
@@ -617,11 +609,9 @@ class TestRuleEngine:
 
         initial_scores = self.engine._game_state.scores.copy()
 
-        # 模擬流局
         self.engine._tile_set._tiles = []
         self.engine.end_round(None)
 
-        # 驗證分數無變化
         for i in range(4):
             assert self.engine._game_state.scores[i] == initial_scores[i]
 
@@ -636,11 +626,9 @@ class TestRuleEngine:
 
         initial_scores = self.engine._game_state.scores.copy()
 
-        # 模擬流局
         self.engine._tile_set._tiles = []
         self.engine.end_round(None)
 
-        # 驗證分數無變化
         for i in range(4):
             assert self.engine._game_state.scores[i] == initial_scores[i]
 
@@ -1399,11 +1387,9 @@ class TestActionExecution:
         hand = self.engine.get_hand(current_player)
         hand._tiles.pop()
 
-        # 模擬牌山只剩一張
         assert self.engine._tile_set is not None
         self.engine._tile_set._tiles = [Tile(Suit.MANZU, 1)]
 
-        # 模擬牌山只剩一張
         assert self.engine._tile_set is not None
         self.engine._tile_set._tiles = [Tile(Suit.MANZU, 1)]
 

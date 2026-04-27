@@ -1,6 +1,4 @@
-"""
-hand 類的單元測試
-"""
+"""Test module."""
 
 import pytest
 
@@ -10,10 +8,10 @@ from pyriichi.utils import parse_tiles
 
 
 class TestHand:
-    """手牌測試"""
+    """Tests for TestHand."""
 
     def test_hand_init(self):
-        """測試手牌初始化"""
+        """Test hand init."""
         # 123m 456p 789s 123z 4z
         tiles = parse_tiles("123m456p789s1z2z3z4z")
         hand = Hand(tiles)
@@ -22,7 +20,7 @@ class TestHand:
         assert hand.is_concealed
 
     def test_add_and_discard(self):
-        """測試摸牌和打牌"""
+        """Test add and discard."""
         # 123m 456p 789s 123z 4z
         tiles = parse_tiles("123m456p789s1z2z3z4z")
         hand = Hand(tiles)
@@ -35,22 +33,19 @@ class TestHand:
         assert len(hand.tiles) == 13
 
     def test_standard_winning_hand(self):
-        """測試標準和牌型（4組面子+1對子）"""
-        # 對對和：111m 222m 333m 44p 55p（和牌牌 4p）
+        """Test standard winning hand."""
         tiles = parse_tiles("111m222m333m44p55p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.PINZU, 4)
 
         assert hand.is_winning_hand(winning_tile)
 
-        # 順子組合：123m 234m 345m 456m 1m（和牌牌 1m）
         tiles = parse_tiles("123m234m345m456m1m")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 1)
 
         assert hand.is_winning_hand(winning_tile)
 
-        # 123m 456p 789s 11z 22z（和牌牌 2z）
         tiles = parse_tiles("123m456p789s11z22z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.HONORS, 2)
@@ -58,18 +53,14 @@ class TestHand:
         assert hand.is_winning_hand(winning_tile)
 
     def test_winning_hand_with_open_meld(self):
-        """測試含有副露的和牌判定"""
+        """Test winning hand with open meld."""
 
-        # 手牌：23m 567m 789m 55z 55p 1p
         tiles = parse_tiles("23m567m789m55z55p1p")
         hand = Hand(tiles)
 
-        # 副露：碰 5p
         hand.pon(Tile(Suit.PINZU, 5))
-        # 打出額外的 1p 使牌數回到 13 張
         hand.discard(Tile(Suit.PINZU, 1))
 
-        # 和牌牌 4p
         winning_tile = Tile(Suit.MANZU, 4)
 
         assert hand.total_tile_count() == 13
@@ -79,13 +70,11 @@ class TestHand:
         assert len(combinations) > 0
 
     def test_winning_hand_with_kan(self):
-        """測試含有槓牌的和牌判定"""
+        """Test winning hand with kan."""
 
-        # 手牌：1111m + 234m + 345p + 67s + 77z（聽 8s）
         tiles = parse_tiles("1111m234m345p67s77z")
         hand = Hand(tiles)
 
-        # 宣告暗槓 1111m
         hand.kan(None)
 
         winning_tile = Tile(Suit.SOUZU, 8)
@@ -98,8 +87,7 @@ class TestHand:
         assert len(combinations) > 0
 
     def test_seven_pairs(self):
-        """測試七對子"""
-        # 七對子： 11m 22m 33m 44m 55m 66m 77m（和牌牌 7m）
+        """Test seven pairs."""
         tiles = parse_tiles("11m99m11p99p11s99s1z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.HONORS, 1)
@@ -112,8 +100,7 @@ class TestHand:
         assert hand.is_winning_hand(winning_tile)
 
     def test_kokushi_musou(self):
-        """測試國士無雙"""
-        # 國士無雙：2z 重複，聽 1z
+        """Test kokushi musou."""
         tiles = parse_tiles("19m19p19s22z3z4z5z6z7z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.HONORS, 1)
@@ -126,8 +113,7 @@ class TestHand:
         assert hand.is_winning_hand(winning_tile)
 
     def test_kokushi_musou_juusanmen(self):
-        """測試國士無雙十三面"""
-        # 國士無雙十三面：13種幺九牌各1張，再有一張幺九牌（13面聽）
+        """Test kokushi musou juusanmen."""
         tiles = parse_tiles("19m19p19s1z2z3z4z5z6z7z")
         hand = Hand(tiles)
 
@@ -151,8 +137,7 @@ class TestHand:
         assert hand.is_winning_hand(Tile(Suit.HONORS, 7))
 
     def test_not_winning_hand(self):
-        """測試非和牌"""
-        # 隨機手牌
+        """Test not winning hand."""
         tiles = parse_tiles("123m456p789s1z2z3z4z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 5)
@@ -160,8 +145,7 @@ class TestHand:
         assert not hand.is_winning_hand(winning_tile)
 
     def test_tenpai(self):
-        """測試聽牌判定"""
-        # 123m 456p 789s 123p 4p (聽 4p)
+        """Test tenpai."""
         tiles = parse_tiles("123m456p789s123p4p")
         hand = Hand(tiles)
 
@@ -171,7 +155,7 @@ class TestHand:
         assert Tile(Suit.PINZU, 4) in waiting_tiles
 
     def test_tenpai_with_open_meld(self):
-        """測試含副露的聽牌判定"""
+        """Test tenpai with open meld."""
 
         # 23m 567m 789m 55z 55p 1p
         tiles = parse_tiles("23m567m789m55z55p1p")
@@ -186,8 +170,7 @@ class TestHand:
         assert Tile(Suit.MANZU, 4) in waiting_tiles
 
     def test_pon(self):
-        """測試碰"""
-        # 手牌：111m 234m 567m 89m 11p
+        """Test pon."""
         tiles = parse_tiles("111m234m567m89m11p")
         hand = Hand(tiles)
 
@@ -200,12 +183,11 @@ class TestHand:
         assert not hand.is_concealed
 
     def test_chi(self):
-        """測試吃"""
-        # 手牌：23m 456p 789s 123z 4z
+        """Test chi."""
         tiles = parse_tiles("23m456p789s1z2z3z4z")
         hand = Hand(tiles)
 
-        tile = Tile(Suit.MANZU, 1)  # 上家打出的1m
+        tile = Tile(Suit.MANZU, 1)
         sequences = hand.can_chi(tile, from_player=0)
         assert len(sequences) > 0
 
@@ -215,43 +197,37 @@ class TestHand:
         assert not hand.is_concealed
 
     def test_can_kan(self):
-        """測試是否可以槓"""
+        """Test can kan."""
         from pyriichi.tiles import Suit, Tile
 
-        # 測試明槓（需要三張相同牌）
-        # 手牌：111234567m 123p 4p
         tiles = parse_tiles("111m234m567m123p4p")
         hand = Hand(tiles)
         kan_tile = Tile(Suit.MANZU, 1)
         possible_kan = hand.can_kan(kan_tile)
         assert len(possible_kan) > 0
 
-        # 測試暗槓（需要四張相同牌）
-        # 手牌：111m 123m 456m 7m 123p
         tiles = parse_tiles("1111m234m567m123p")
         hand = Hand(tiles)
         possible_closed_kan = hand.can_kan(None)
         assert len(possible_closed_kan) > 0
 
     def test_cannot_open_kan_from_pair(self):
-        """測試副露對子不能直接槓"""
+        """Test cannot open kan from pair."""
 
         # 111m 234m 567m 89m 11p
         hand = Hand(parse_tiles("111m234m567m89m11p"))
         hand.pon(Tile(Suit.PINZU, 1))
 
-        # 對手打出 1p 時不可再槓
         kan_options = hand.can_kan(Tile(Suit.PINZU, 1))
         assert kan_options == []
 
     def test_open_kan_upgrade_after_pon(self):
-        """測試碰後摸到第四張牌可以加槓"""
+        """Test open kan upgrade after pon."""
 
         # 123m 456m 789m 11p 99p
         hand = Hand(parse_tiles("123m456m789m11p99p"))
         hand.pon(Tile(Suit.PINZU, 1))
 
-        # 摸到第四張牌
         hand.add_tile(Tile(Suit.PINZU, 1))
 
         melds = hand.can_kan()
@@ -259,34 +235,27 @@ class TestHand:
         assert any(meld.type == MeldType.OPEN_KAN for meld in melds)
 
     def test_meld_invalid_chi(self):
-        """測試無效的吃操作"""
+        """Test meld invalid chi."""
         from pyriichi.hand import Meld, MeldType
 
-        # 吃必須是 3 張牌
         with pytest.raises(ValueError, match="吃必須是 3 張牌"):
-            # 手牌：12m
-            Meld(MeldType.CHI_MELD, parse_tiles("1m2m"))  # 只有 2 張
+            Meld(MeldType.CHI_MELD, parse_tiles("1m2m"))
 
     def test_meld_invalid_pon(self):
-        """測試無效的碰操作"""
-        # 碰必須是 3 張牌
+        """Test meld invalid pon."""
         with pytest.raises(ValueError, match="碰必須是 3 張牌"):
-            # 手牌：11m
-            Meld(MeldType.PON_MELD, parse_tiles("1m1m"))  # 只有 2 張
+            Meld(MeldType.PON_MELD, parse_tiles("1m1m"))
 
     def test_meld_invalid_kan(self):
-        """測試無效的槓操作"""
-        # 槓必須是 4 張牌
+        """Test meld invalid kan."""
         with pytest.raises(ValueError, match="槓必須是 4 張牌"):
-            # 手牌：111m
-            Meld(MeldType.OPEN_KAN, parse_tiles("1m1m1m"))  # 只有 3 張
+            Meld(MeldType.OPEN_KAN, parse_tiles("1m1m1m"))
 
         with pytest.raises(ValueError, match="槓必須是 4 張牌"):
-            # 手牌：11m
-            Meld(MeldType.CLOSED_KAN, parse_tiles("1m1m"))  # 只有 2 張
+            Meld(MeldType.CLOSED_KAN, parse_tiles("1m1m"))
 
     def test_closed_kan(self):
-        """測試執行暗槓操作"""
+        """Test closed kan."""
         # 111m 123m 456m 7m 123p
         tiles = parse_tiles("1111m234m567m123p")
         hand = Hand(tiles)
@@ -295,11 +264,10 @@ class TestHand:
         meld = hand.kan(None)
         assert meld.type == MeldType.CLOSED_KAN
         assert len(meld.tiles) == 4
-        # 暗槓後，手牌應該減少4張
         assert len(hand.tiles) == initial_tile_count - 4
 
     def test_open_kan(self):
-        """測試執行明槓操作"""
+        """Test open kan."""
         # 111m 234m 567m 123p 4p
         tiles = parse_tiles("111m234m567m123p4p")
         hand = Hand(tiles)
@@ -310,11 +278,10 @@ class TestHand:
         assert meld.type == MeldType.OPEN_KAN
         assert len(meld.tiles) == 4
         assert meld.called_tile == kan_tile
-        # 明槓後，手牌應該減少3張（被槓的牌來自外部，不包含在初始手牌中）
         assert len(hand.tiles) == initial_tile_count - 3
 
     def test_open_kan_upgrade(self):
-        """測試加槓操作"""
+        """Test open kan upgrade."""
         # 123m 456m 789m 11p 99p
         tiles = parse_tiles("123m456m789m11p99p")
         hand = Hand(tiles)
@@ -327,11 +294,10 @@ class TestHand:
         assert meld.type == MeldType.OPEN_KAN
         assert len(meld.tiles) == 4
         assert meld.called_tile == kan_tile
-        # 加槓後，手牌應該會少一張摸到的加槓牌
         assert len(hand.tiles) == initial_tile_count - 1
 
     def test_tsumo_winning_hand(self):
-        """測試自摸和牌"""
+        """Test tsumo winning hand."""
         # 123m 456p 789s 11z 22z + 2z (tsumo)
         tiles = parse_tiles("123m456p789s11z22z")
         hand = Hand(tiles)
@@ -341,7 +307,6 @@ class TestHand:
         assert len(hand.tiles) == 14
         assert hand.is_winning_hand(winning_tile, is_tsumo=True)
 
-        # 測試自摸七對子
         tiles = parse_tiles("11m22m33m44m55m66m7m")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 7)
@@ -350,7 +315,6 @@ class TestHand:
         assert len(hand.tiles) == 14
         assert hand.is_winning_hand(winning_tile, is_tsumo=True)
 
-        # 測試自摸國士無雙
         tiles = parse_tiles("19m19p19s1z2z3z4z5z6z7z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 1)

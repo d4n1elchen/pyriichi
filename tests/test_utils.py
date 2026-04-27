@@ -1,6 +1,4 @@
-"""
-utils 模組的單元測試
-"""
+"""Test module."""
 
 import pytest
 
@@ -9,11 +7,10 @@ from pyriichi.utils import format_tiles, is_winning_hand, parse_tiles
 
 
 class TestUtils:
-    """工具函數測試"""
+    """Tests for TestUtils."""
 
     def test_parse_tiles_basic(self):
-        """測試基本牌解析"""
-        # 手牌：123m 456p
+        """Test parse tiles basic."""
         tiles = parse_tiles("123m456p")
         assert len(tiles) == 6
         assert tiles[0].suit == Suit.MANZU
@@ -22,7 +19,7 @@ class TestUtils:
         assert tiles[3].rank == 4
 
     def test_parse_tiles_shorthand(self):
-        """測試簡寫格式解析 (123m)"""
+        """Test parse tiles shorthand."""
         tiles = parse_tiles("123m456p")
         assert len(tiles) == 6
         assert tiles[0].suit == Suit.MANZU
@@ -39,9 +36,7 @@ class TestUtils:
         assert tiles[5].rank == 6
 
     def test_parse_tiles_red_dora(self):
-        """測試解析紅寶牌（標準格式：r5p）"""
-        # 測試標準格式：用 r 前綴
-        # 手牌：r5p
+        """Test parse tiles red dora."""
         tiles = parse_tiles("r5p")
         assert len(tiles) == 1
         assert tiles[0].is_red
@@ -49,9 +44,7 @@ class TestUtils:
         assert tiles[0].suit == Suit.PINZU
 
     def test_parse_tiles_with_red_dora(self):
-        """測試包含紅寶牌的牌字符串"""
-        # 測試標準格式：r5p6p7p
-        # 手牌：r567p
+        """Test parse tiles with red dora."""
         tiles = parse_tiles("r567p")
         assert len(tiles) == 3
         assert tiles[0].is_red
@@ -62,7 +55,7 @@ class TestUtils:
         assert tiles[2].rank == 7
 
     def test_parse_tiles_mixed_shorthand_red(self):
-        """測試混合簡寫和紅寶牌"""
+        """Test parse tiles mixed shorthand red."""
         # 12r5p -> 1p 2p r5p
         tiles = parse_tiles("12r5p")
         assert len(tiles) == 3
@@ -75,15 +68,12 @@ class TestUtils:
         assert all(t.suit == Suit.PINZU for t in tiles)
 
     def test_parse_tiles_invalid_char(self):
-        """測試解析無效字符（跳過）"""
-        # 測試包含非數字和花色的字符
-        # 手牌：123m 45p
+        """Test parse tiles invalid char."""
         tiles = parse_tiles("123m abc 45p")
-        # 應該跳過無效字符，只解析有效部分
         assert len(tiles) >= 3
 
     def test_format_tiles(self):
-        """測試牌格式化"""
+        """Test format tiles."""
         tiles = parse_tiles("12m5p9s")
         result = format_tiles(tiles)
         assert isinstance(result, str)
@@ -92,15 +82,13 @@ class TestUtils:
         assert "9s" in result
 
     def test_format_tiles_empty(self):
-        """測試空列表格式化"""
+        """Test format tiles empty."""
         tiles = []
         result = format_tiles(tiles)
         assert result == ""
 
     def test_is_winning_hand(self):
-        """測試 is_winning_hand 便利函數"""
-        # 標準和牌型
-        # 手牌：123m 456m 789m 123p 4p
+        """Test is winning hand."""
         tiles = parse_tiles("123m456m789m123p4p")
         winning_tile = Tile(Suit.PINZU, 4)
 
@@ -108,13 +96,11 @@ class TestUtils:
         assert result is True
 
     def test_is_winning_hand_not_winning(self):
-        """測試非和牌"""
-        # 手牌：123m 456m 78m 123p 45p
+        """Test is winning hand not winning."""
         tiles = parse_tiles("123m456m78m123p45p")
         winning_tile = Tile(Suit.MANZU, 9)
 
         result = is_winning_hand(tiles, winning_tile)
-        # 可能和牌也可能不和牌，取決於具體手牌
         assert isinstance(result, bool)
 
 

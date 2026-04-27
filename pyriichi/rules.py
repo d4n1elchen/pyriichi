@@ -819,23 +819,23 @@ class RuleEngine:
             interrupts = self._check_interrupts(tile, player)
 
             if interrupts:
-                # 進入等待狀態
+                # Enter waiting state.
                 self._waiting_for_actions = interrupts
                 result.waiting_for = interrupts
             else:
-                # 無人鳴牌，推進回合並自動摸牌
+                # No calls were made, so advance the turn and draw automatically.
                 self._advance_turn(result)
 
         return result
 
     def _advance_turn(self, result: ActionResult) -> None:
-        """推進回合並自動摸牌"""
+        """Advance the turn and draw automatically."""
         self._current_player = (self._current_player + 1) % self._num_players
         self._turn_count += 1
         self._is_first_turn_after_deal = False
         self._is_first_round = False
 
-        # 自動摸牌
+        # Draw automatically.
         draw_result = self._handle_draw(self._current_player)
         if draw_result.drawn_tile:
             result.drawn_tile = draw_result.drawn_tile
@@ -873,9 +873,9 @@ class RuleEngine:
         self._last_discarded_tile = None
         self._last_discarded_player = None
         self._is_first_turn_after_deal = False
-        hand.reset_last_drawn_tile()  # 鳴牌後清除最後摸的牌
+        hand.reset_last_drawn_tile()  # Clear the last drawn tile after a call.
 
-        # 鳴牌後必須打牌
+        # A player must discard after calling.
         self._waiting_for_actions = {player: [GameAction.DISCARD]}
         result.waiting_for = self._waiting_for_actions
         return result
@@ -915,9 +915,9 @@ class RuleEngine:
         self._last_discarded_tile = None
         self._last_discarded_player = None
         self._is_first_turn_after_deal = False
-        hand.reset_last_drawn_tile()  # 鳴牌後清除最後摸的牌
+        hand.reset_last_drawn_tile()  # Clear the last drawn tile after a call.
 
-        # 鳴牌後必須打牌
+        # A player must discard after calling.
         self._waiting_for_actions = {player: [GameAction.DISCARD]}
         result.waiting_for = self._waiting_for_actions
         return result
@@ -930,8 +930,8 @@ class RuleEngine:
 
         hand = self._hands[player]
 
-        # 檢查打出這張牌後是否聽牌
-        # 模擬打牌
+        # Check whether discarding this tile leaves the hand in tenpai.
+        # Simulate the discard.
         try:
             hand._tiles.remove(tile)
         except ValueError:
@@ -940,25 +940,25 @@ class RuleEngine:
         hand._tile_counts_cache = None
         is_tenpai = hand.is_tenpai()
 
-        # 恢復手牌
+        # Restore the hand.
         hand._tiles.append(tile)
         hand._tile_counts_cache = None
 
         if not is_tenpai:
             raise ValueError("立直打牌後必須聽牌")
 
-        # 執行打牌
-        # 注意：這裡直接調用 _handle_discard，它會處理打牌邏輯和後續流程
+        # Execute the discard.
+        # _handle_discard handles both discard logic and follow-up flow.
         discard_result = self._handle_discard(player, tile, **kwargs)
 
-        # 執行立直
+        # Execute riichi.
         hand.set_riichi(True)
         self._game_state.add_riichi_stick()
         self._game_state.update_score(player, -1000)
         self._riichi_ippatsu[player] = True
         self._riichi_ippatsu_discard[player] = 0
 
-        # 合併結果
+        # Merge the results.
         discard_result.riichi = True
         return discard_result
 
@@ -992,7 +992,7 @@ class RuleEngine:
         meld = hand.kan(tile)
         self._kan_count += 1
         result.kan = True
-        hand.reset_last_drawn_tile()  # 槓牌後清除最後摸的牌
+        hand.reset_last_drawn_tile()  # Clear the last drawn tile after kan.
         self._current_player = player
 
         self._interrupt_ippatsu(GameAction.KAN, acting_player=player)
@@ -1012,12 +1012,12 @@ class RuleEngine:
         if not candidates:
             raise ValueError("手牌無法暗槓")
 
-        # 支援多個暗槓選擇
+        # Support multiple closed_kan choices.
         selected = None
         if tile:
             for candidate in candidates:
-                # 檢查候選是否匹配指定的牌
-                # 暗槓/加槓的牌都是相同的，所以檢查第一張即可
+                # Check whether the candidate matches the requested tile.
+                # closed_kan and added_kan use identical tiles, so the first tile is enough.
                 if (
                     candidate.tiles
                     and candidate.tiles[0].suit == tile.suit
@@ -1029,7 +1029,7 @@ class RuleEngine:
             if selected is None:
                 raise ValueError(f"無法暗槓指定的牌: {tile}")
         else:
-            # 如果未指定，且有多個選擇，默認選第一個（或應拋出歧義錯誤）
+            # If no tile was specified and multiple choices exist, use the first one.
             selected = candidates[0]
         is_add_kan = (
             selected.type == MeldType.OPEN_KAN and selected.called_tile is not None
@@ -1044,7 +1044,7 @@ class RuleEngine:
                 self._pending_kan_tile = None
                 return result
 
-        # 使用選定的牌進行槓
+        # Use the selected tiles for kan.
         meld = hand.kan(selected.tiles[0])
         if meld:
             self._kan_count += 1
@@ -1060,7 +1060,7 @@ class RuleEngine:
         self._draw_rinshan_tile(player, result, kan_type=kan_type)
         if self._pending_kan_tile:
             self._pending_kan_tile = None
-        hand.reset_last_drawn_tile()  # 槓牌後清除最後摸的牌
+        hand.reset_last_drawn_tile()  # Clear the last drawn tile after kan.
 
         result.closed_kan = True
         return result
@@ -1069,46 +1069,46 @@ class RuleEngine:
         self, player: int, tile: Optional[Tile] = None, **kwargs
     ) -> ActionResult:
         """
-        處理自摸和牌。
+        Handle a tsumo win.
 
         Args:
-            player (int): 和牌玩家。
-            tile (Optional[Tile]): 和牌牌（應該是剛摸的牌）。
-            **kwargs: 其他參數（如 is_rinshan）。
+            player (int): Winning player.
+            tile (Optional[Tile]): Winning tile, normally the just-drawn tile.
+            **kwargs: Additional parameters such as is_rinshan.
 
         Returns:
-            ActionResult: 包含和牌結果的 ActionResult。
+            ActionResult: ActionResult containing the win result.
 
         Raises:
-            ValueError: 如果無法自摸。
+            ValueError: If the player cannot win by tsumo.
         """
         result = ActionResult()
         hand = self._hands[player]
 
-        # 獲取和牌牌（應該是player剛摸的牌）
+        # Get the winning tile, normally the tile just drawn by this player.
         if tile is None:
-            # 使用最後摸的牌
+            # Use the last drawn tile.
             if hand.last_drawn_tile:
                 tile = hand.last_drawn_tile
             else:
                 raise ValueError("無法確定自摸的牌")
 
-        # 檢查是否能自摸和牌
+        # Check whether the player can win by tsumo.
         is_rinshan = kwargs.get("is_rinshan", False)
         win_result = self.check_win(player, tile, is_rinshan=is_rinshan)
 
         if win_result is None:
             raise ValueError(f"玩家 {player} 無法用 {tile} 自摸和牌")
 
-        # 應用分數變化
+        # Apply score changes.
         self.apply_win_score(win_result)
 
-        # 設置結果
+        # Set the result.
         result.winners = [player]
         result.rinshan_win = win_result if is_rinshan else None
         result.win_results[player] = win_result
 
-        # 切換到和牌階段
+        # Move to winning phase.
         self._phase = GamePhase.WINNING
 
         return result
@@ -1117,34 +1117,34 @@ class RuleEngine:
         self, player: int, tile: Optional[Tile] = None, **kwargs
     ) -> ActionResult:
         """
-        處理榮和（支持多人榮和）。
+        Handle ron, including multiple ron.
 
         Args:
-            player (int): 聲明榮和的玩家（可能是多人之一）。
-            tile (Optional[Tile]): 和牌牌（應該是最後打出的牌）。
-            **kwargs: 其他參數。
+            player (int): Player declaring ron, possibly one of multiple winners.
+            tile (Optional[Tile]): Winning tile, normally the last discarded tile.
+            **kwargs: Additional parameters.
 
         Returns:
-            ActionResult: 包含和牌結果的 ActionResult。
+            ActionResult: ActionResult containing the win result.
 
         Raises:
-            ValueError: 如果無法榮和。
+            ValueError: If the player cannot win by ron.
         """
         result = ActionResult()
 
-        # 獲取被榮和的牌（最後打出的牌）
+        # Get the tile won by ron, normally the last discarded tile.
         if self._last_discarded_tile is None or self._last_discarded_player is None:
             raise ValueError("沒有可榮和的捨牌")
 
         winning_tile = self._last_discarded_tile
         discarder = self._last_discarded_player
 
-        # 檢查多人榮和情況
+        # Check for multiple ron.
         potential_winners = self.check_multiple_ron(winning_tile, discarder)
 
-        # 檢查是否觸發三家和了流局
+        # Check whether sancha_ron aborts the round.
         if len(potential_winners) == 0:
-            # 空列表表示三家和了，觸發流局
+            # An empty list means sancha_ron triggered an abortive draw.
             result.ryuukyoku = RyuukyokuResult(
                 ryuukyoku=True, ryuukyoku_type=RyuukyokuType.SANCHA_RON
             )
@@ -1153,11 +1153,11 @@ class RuleEngine:
             self._phase = GamePhase.ENDED
             return result
 
-        # 驗證聲明榮和的玩家在允許列表中
+        # Verify that this player is allowed to declare ron.
         if player not in potential_winners:
             raise ValueError(f"玩家 {player} 不能榮和（配置限制或振聽）")
 
-        # 處理所有贏家
+        # Process all winners.
         winners = potential_winners
         for winner in winners:
             win_result = self.check_win(winner, winning_tile, is_chankan=False)
@@ -1165,39 +1165,39 @@ class RuleEngine:
                 self.apply_win_score(win_result)
                 result.win_results[winner] = win_result
 
-        # 設置結果
+        # Set the result.
         result.winners = winners
 
-        # 切換到和牌階段
+        # Move to winning phase.
         self._phase = GamePhase.WINNING
 
         return result
 
     def end_round(self, winners: Optional[List[int]] = None) -> None:
         """
-        結束一局。
+        End the current round.
 
         Args:
-            winners (Optional[List[int]]): 獲勝玩家列表（如果為 None，則為流局）。
-                - 單人榮和/自摸：[player_id]
-                - 雙響/三響：[player1, player2, player3]
+            winners (Optional[List[int]]): Winning players, or None for ryuukyoku.
+                - Single ron or tsumo: [player_id]
+                - double_ron or triple_ron: [player1, player2, player3]
         """
         if winners is not None and len(winners) > 0:
-            # 和牌處理
+            # Handle a winning round.
             dealer = self._game_state.dealer
-            # 如果任一贏家是莊家，則連莊
+            # If any winner is the dealer, the dealer repeats.
             dealer_won = dealer in winners
 
-            # 更新莊家
+            # Update dealer.
             self._game_state.next_dealer(dealer_won)
 
-            # 檢查擊飛
+            # Check tobi.
             if self._check_tobi():
                 self._phase = GamePhase.ENDED
                 return
 
-            # 檢查安可（Agari-yame）
-            # 如果莊家和牌，且啟用安可，且為最後一局（南4或西4），且莊家為第一名，則遊戲結束
+            # Check agari_yame.
+            # If the dealer wins the final round while in first place, end the game.
             if dealer_won and self._game_state.ruleset.agari_yame:
                 is_final_round = (
                     self._game_state.round_wind == Wind.SOUTH
@@ -1212,33 +1212,33 @@ class RuleEngine:
                         self._phase = GamePhase.ENDED
                         return
 
-            # 如果莊家未獲勝，進入下一局
+            # If the dealer did not win, advance to the next round.
             if not dealer_won:
                 has_next = self._game_state.next_round()
                 if not has_next:
                     self._phase = GamePhase.ENDED
         else:
-            # 流局處理
-            # 如果是牌山耗盡流局，檢查流局滿貫和不聽罰符
+            # Handle ryuukyoku.
+            # On exhaustive draw, check nagashi_mangan and noten_bappu.
             if self._tile_set and self._tile_set.is_exhausted():
-                # 檢查流局滿貫
+                # Check nagashi_mangan.
                 flow_mangan_players = []
                 for i in range(self._num_players):
                     if self._check_nagashi_mangan(i):
                         flow_mangan_players.append(i)
 
                 if flow_mangan_players:
-                    # 處理流局滿貫分數
+                    # Apply nagashi_mangan score changes.
                     for winner in flow_mangan_players:
                         is_dealer = winner == self._game_state.dealer
                         payment = 4000 if is_dealer else 2000
 
-                        # 所有人支付（除了贏家）
+                        # All players except the winner pay.
                         for i in range(self._num_players):
                             if i == winner:
                                 continue
 
-                            # 莊家支付更多（如果贏家不是莊家）
+                            # Dealer pays more when the winner is not dealer.
                             pay_amount = payment
                             if not is_dealer and i == self._game_state.dealer:
                                 pay_amount = 4000
@@ -1246,15 +1246,15 @@ class RuleEngine:
                             self._game_state.update_score(i, -pay_amount)
                             self._game_state.update_score(winner, pay_amount)
                 else:
-                    # 如果沒有流局滿貫，才計算不聽罰符
+                    # Calculate noten_bappu only when there is no nagashi_mangan.
                     self._calculate_noten_bappu()
 
-            # 檢查擊飛
+            # Check tobi.
             if self._check_tobi():
                 self._phase = GamePhase.ENDED
                 return
 
-            dealer_won = False  # 流局時莊家不連莊（除非九種九牌，這裡暫不處理）
+            dealer_won = False  # Dealer does not repeat on ryuukyoku here.
             self._game_state.next_dealer(dealer_won)
 
             has_next = self._game_state.next_round()
@@ -1265,7 +1265,7 @@ class RuleEngine:
         self, player: int, tile: Optional[Tile] = None, **kwargs
     ) -> ActionResult:
         """
-        處理九種九牌流局
+        Handle a kyuushu_kyuuhai abortive draw.
         """
         if not self._check_kyuushu_kyuuhai(player):
             raise ValueError("不滿足九種九牌流局條件")
@@ -1283,7 +1283,7 @@ class RuleEngine:
         self._hands[discarder].remove_last_discard(tile)
         if self._discard_history and self._discard_history[-1] == (discarder, tile):
             self._discard_history.pop()
-        # 標記該玩家有捨牌被鳴牌（影響流局滿貫）
+        # Mark this player's discard as called, which affects nagashi_mangan.
         self._has_called_discard[discarder] = True
 
     def _draw_rinshan_tile(
@@ -1306,7 +1306,7 @@ class RuleEngine:
                 self._ignore_suukan_sanra = True
                 self._phase = GamePhase.WINNING
             else:
-                # 計算並設置等待動作
+                # Calculate and set waiting actions.
                 actions = self._calculate_turn_actions(player)
                 self._waiting_for_actions = {player: actions}
                 result.waiting_for = self._waiting_for_actions
@@ -1348,16 +1348,16 @@ class RuleEngine:
         is_rinshan: bool = False,
     ) -> Optional[WinResult]:
         """
-        檢查是否可以和牌。
+        Check whether the player can win.
 
         Args:
-            player (int): 玩家位置。
-            winning_tile (Tile): 和牌牌。
-            is_chankan (bool): 是否為搶槓和。
-            is_rinshan (bool): 是否為嶺上開花。
+            player (int): Player position.
+            winning_tile (Tile): Winning tile.
+            is_chankan (bool): Whether this is chankan.
+            is_rinshan (bool): Whether this is rinshan.
 
         Returns:
-            Optional[WinResult]: 和牌結果（包含役種、得分等），如果不能和則返回 None。
+            Optional[WinResult]: Win result with yaku and score, or None if the hand cannot win.
         """
         hand = self._hands[player]
 
@@ -1371,37 +1371,37 @@ class RuleEngine:
         if not hand.is_winning_hand(winning_tile, is_tsumo):
             return None
 
-        # 獲取和牌組合
+        # Get winning combinations.
         combinations = hand.get_winning_combinations(winning_tile, is_tsumo)
         if not combinations:
             return None
 
-        # 榮和時檢查振聽（振聽玩家不能榮和，但可以自摸）
+        # Check furiten for ron; furiten players can still win by tsumo.
         if not is_tsumo and self.is_furiten(player):
             return None
 
-        # 判定是否符合一發
+        # Check ippatsu.
         is_ippatsu = self._riichi_ippatsu.get(player, False)
 
-        # 檢查是否為第一巡
+        # Check whether this is the first turn.
         is_first_turn = self._is_first_turn_after_deal
-        # 檢查是否為最後一張牌（需要檢查牌山狀態）
+        # Check whether this is the last tile.
         is_last_tile = self._tile_set.is_exhausted() if self._tile_set else False
-        # 檢查是否為人和
+        # Check renhou context.
 
-        # 計算寶牌數量
+        # Count dora.
         dora_count = self._count_dora(player, winning_tile)
 
-        # 高點法：遍歷所有可能的和牌組合，選擇分數最高的一個
+        # Apply highest-score selection across all possible winning combinations.
         best_score_result = None
         best_yaku_results = None
         best_winning_combination = None
 
-        # 如果是特殊牌型（七對子、國士無雙），combinations 為空，需要檢查一次空組合
+        # Special hands such as chiitoitsu or kokushi_musou may use an empty combination.
         combinations_to_check = combinations if combinations else [[]]
 
         for winning_combination in combinations_to_check:
-            # 檢查役種
+            # Check yaku.
             yaku_results = self._yaku_checker.check_all(
                 hand,
                 winning_tile,
@@ -1418,7 +1418,7 @@ class RuleEngine:
             if not yaku_results:
                 continue
 
-            # 計算得分
+            # Calculate score.
             score_result = self._score_calculator.calculate(
                 hand,
                 winning_tile,
@@ -1430,7 +1430,7 @@ class RuleEngine:
                 player_position=player,
             )
 
-            # 更新最高分
+            # Update the best score.
             if (
                 best_score_result is None
                 or score_result.total_points > best_score_result.total_points
@@ -1439,12 +1439,12 @@ class RuleEngine:
                 best_yaku_results = yaku_results
                 best_winning_combination = winning_combination
             elif score_result.total_points == best_score_result.total_points:
-                # 分數相同時，選擇翻數高的
+                # If scores tie, prefer higher han.
                 if score_result.han > best_score_result.han:
                     best_score_result = score_result
                     best_yaku_results = yaku_results
                     best_winning_combination = winning_combination
-                # 翻數也相同時，選擇符數高的
+                # If han also ties, prefer higher fu.
                 elif (
                     score_result.han == best_score_result.han
                     and score_result.fu > best_score_result.fu
@@ -1452,13 +1452,12 @@ class RuleEngine:
                     best_score_result = score_result
                     best_yaku_results = yaku_results
                     best_winning_combination = winning_combination
-                # 如果是役滿，通常不需要繼續檢查（除非有多倍役滿規則且可能有更高倍數）
-                # 但為了簡單起見，我們總是檢查所有組合
+                # Keep checking all combinations for simple and consistent selection.
 
         if best_score_result is None:
             return None
 
-        # 確定包牌者
+        # Determine pao responsibility.
         pao_player = None
         for result in best_yaku_results:
             if result.yaku == Yaku.DAISANGEN:
@@ -1470,7 +1469,7 @@ class RuleEngine:
                 if pao_player is not None:
                     break
 
-        # 計算得分
+        # Recalculate score with pao applied.
         score_result = self._score_calculator.calculate(
             hand,
             winning_tile,
@@ -1484,11 +1483,11 @@ class RuleEngine:
         )
 
         score_result.payment_to = player
-        # 如果是榮和，設置支付者
+        # Set payer for ron.
         if not is_tsumo and self._last_discarded_player is not None:
             score_result.payment_from = self._last_discarded_player
         elif is_chankan and self._pending_kan_tile:
-            # 搶槓和：支付者為槓牌玩家
+            # For chankan, the kan player pays.
             kan_player, _ = self._pending_kan_tile
             score_result.payment_from = kan_player
 
@@ -1509,123 +1508,123 @@ class RuleEngine:
 
     def check_multiple_ron(self, discarded_tile: Tile, discarder: int) -> List[int]:
         """
-        檢查多個玩家是否可以榮和同一張牌。
+        Check whether multiple players can ron the same discard.
 
-        根據配置返回可以榮和的玩家列表：
-        - head_bump_only=True: 只返回下家
-        - allow_double_ron=True: 最多返回2人
-        - allow_triple_ron=False且檢測到3人: 返回空列表（觸發流局）
-        - allow_triple_ron=True且檢測到3人: 返回3人
+        Return eligible ron winners according to configuration:
+        - head_bump_only=True: return only the closest next player
+        - allow_double_ron=True: return up to two players
+        - allow_triple_ron=False and three players win: return an empty list to trigger ryuukyoku
+        - allow_triple_ron=True and three players win: return three players
 
         Args:
-            discarded_tile (Tile): 被打出的牌。
-            discarder (int): 打牌者。
+            discarded_tile (Tile): Discarded tile.
+            discarder (int): Discarding player.
 
         Returns:
-            List[int]: 可以榮和的玩家列表（按逆時針順序，下家優先）。
+            List[int]: Eligible winners in turn order, with the closest next player first.
         """
-        # 收集所有可以榮和的玩家（除了打牌者）
+        # Collect all players who can ron, excluding the discarder.
         potential_winners = []
 
         for offset in range(1, self._num_players):
             player = (discarder + offset) % self._num_players
 
-            # 檢查此玩家是否可以榮和
+            # Check whether this player can ron.
             win_result = self.check_win(
                 player, discarded_tile, is_chankan=False, is_rinshan=False
             )
             if win_result is not None:
                 potential_winners.append(player)
 
-        # 如果沒有人能榮和，直接返回
+        # Return immediately when no one can ron.
         if not potential_winners:
             return []
 
-        # 如果只有一人，直接返回
+        # Return immediately for a single winner.
         if len(potential_winners) == 1:
             return potential_winners
 
-        # 多人可以榮和的情況，根據配置處理
+        # Handle multiple winners according to the ruleset.
         ruleset = self._game_state.ruleset
 
-        # 首先檢查三家和了（優先級最高，因為可能觸發流局）
+        # Check sancha_ron first because it may trigger ryuukyoku.
         if len(potential_winners) >= 3:
-            # 如果禁用三響，返回空列表（將觸發三家和了流局）
+            # If triple_ron is disabled, return empty to trigger sancha_ron ryuukyoku.
             if not ruleset.allow_triple_ron:
-                return []  # 觸發流局
-            # 如果啟用三響，返回所有玩家（最多3人）
+                return []  # Trigger ryuukyoku.
+            # If triple_ron is enabled, return up to three players.
             return potential_winners[:3]
 
-        # 頭跳模式：只允許下家榮和（適用於2人的情況）
+        # head_bump mode allows only the closest next player to win.
         if ruleset.head_bump_only:
-            # 返回第一個玩家（下家，逆時針最近）
+            # Return the closest next player.
             return [potential_winners[0]]
 
-        # 雙響情況（2人），且 head_bump_only=False
+        # double_ron case with head_bump_only disabled.
         if len(potential_winners) == 2:
             if ruleset.allow_double_ron:
                 return potential_winners
             else:
-                # 禁用雙響但不是頭跳模式，返回下家
+                # If double_ron is disabled, return the closest next player.
                 return [potential_winners[0]]
 
         return potential_winners
 
     def _check_kyuushu_kyuuhai(self, player: int) -> bool:
         """
-        檢查是否滿足九種九牌流局條件
+        Check whether kyuushu_kyuuhai abort conditions are met.
 
-        條件：
-        1. 必須是第一巡（玩家自己的第一巡）
-        2. 場上無人鳴牌（包括暗槓）
-        3. 手牌有9種以上幺九牌
+        Conditions:
+        1. It must be the player's first turn.
+        2. No player has called, including closed_kan.
+        3. The hand has at least nine unique yaochuu tiles.
         """
-        # 必須是自己的回合
+        # It must be this player's turn.
         if player != self._current_player:
             return False
 
-        # 必須是第一巡（自己尚未打過牌）
+        # It must be the player's first turn before any discard.
         if len(self._hands[player].discards) > 0:
             return False
 
-        # 場上不能有副露（包括暗槓）
+        # No melds, including closed_kan, may be on the table.
         for i in range(self._num_players):
             if len(self._hands[i].melds) > 0:
                 return False
 
-        # 手牌必須有9種以上幺九牌
+        # The hand must have at least nine unique yaochuu tiles.
         hand = self._hands[player]
         unique_yaochuu = {t for t in hand.tiles if t.is_yaochuu}
         return len(unique_yaochuu) >= 9
 
     def check_ryuukyoku(self) -> Optional[RyuukyokuType]:
         """
-        檢查是否流局。
+        Check whether the round ends in ryuukyoku.
 
         Returns:
-            Optional[ryuukyokuType]: 流局類型，否則返回 None。
+            Optional[RyuukyokuType]: Ryuukyoku type, or None otherwise.
         """
-        # 檢查四風連打（優先檢查，因為可以在第一巡發生）
+        # Check suufon_renda first because it can happen on the first turn.
         if self._check_suufon_renda():
             return RyuukyokuType.SUUFON_RENDA
 
-        # 檢查三家和了（多人和牌流局）
+        # Check sancha_ron.
         if self._check_sancha_ron():
             return RyuukyokuType.SANCHA_RON
 
-        # 檢查四槓散了（四個槓之後流局）
+        # Check suukan_sanra after four kan.
         if self._kan_count >= 4 and not self._ignore_suukan_sanra:
             return RyuukyokuType.SUUKAN_SANRA
 
-        # 牌山耗盡流局
+        # Exhaustive draw when the live wall is empty.
         if self._tile_set and self._tile_set.is_exhausted():
             return RyuukyokuType.EXHAUSTIVE_DRAW
 
-        # 檢查是否所有玩家都聽牌（全員聽牌流局）
+        # Check whether all players are in riichi.
         return RyuukyokuType.SUUCHA_RIICHI if self._check_all_riichi() else None
 
     def _check_all_riichi(self) -> bool:
-        """檢查是否所有玩家都立直"""
+        """Check whether all players have declared riichi."""
         if self._phase != GamePhase.PLAYING:
             return False
 
@@ -1633,19 +1632,19 @@ class RuleEngine:
 
     def _check_suufon_renda(self) -> bool:
         """
-        檢查是否四風連打（前四捨牌都是同一風牌）
+        Check suufon_renda, where the first four discards are the same wind.
 
         Returns:
-            是否為四風連打
+            bool: True if suufon_renda applies.
         """
-        # 必須有至少4張捨牌歷史
+        # At least four discards are required.
         if len(self._discard_history) < 4:
             return False
 
-        # 檢查前四張捨牌是否都是同一風牌
+        # Check whether the first four discards are the same wind tile.
         first_tile = self._discard_history[0][1]
 
-        # 必須是風牌（字牌 rank 1-4）
+        # It must be a wind tile: honor ranks 1-4.
         if first_tile.suit != Suit.HONORS or not (1 <= first_tile.rank <= 4):
             return False
 
@@ -1656,36 +1655,36 @@ class RuleEngine:
 
     def _check_nagashi_mangan(self, player: int) -> bool:
         """
-        檢查是否滿足流局滿貫條件
+        Check whether nagashi_mangan conditions are met.
 
-        條件：
-        1. 捨牌全部是幺九牌
-        2. 捨牌沒有被鳴牌（碰、吃、槓）
+        Conditions:
+        1. Every discard is yaochuu.
+        2. None of the discards has been called.
         """
-        # 檢查是否有捨牌被鳴牌
+        # Check whether any discard was called.
         if self._has_called_discard[player]:
             return False
 
         hand = self._hands[player]
         discards = hand.discards
 
-        # 必須有捨牌
+        # At least one discard is required.
         if not discards:
             return False
 
-        # 檢查所有捨牌是否都是幺九牌
+        # Check whether every discard is yaochuu.
         return all(tile.is_yaochuu for tile in discards)
 
     def _count_dora(self, player: int, winning_tile: Optional[Tile] = None) -> int:
         """
-        計算寶牌數量
+        Count dora.
 
         Args:
-            player: 玩家位置
-            winning_tile: 和牌牌
+            player: Player position.
+            winning_tile: Winning tile.
 
         Returns:
-            寶牌翻數（表寶牌 + 裡寶牌 + 紅寶牌）
+            Dora han from dora, ura_dora, and aka_dora.
         """
         if not self._tile_set:
             return 0
@@ -1693,17 +1692,17 @@ class RuleEngine:
         dora_count = 0
         hand = self._hands[player]
 
-        # 收集所有牌（手牌 + 和牌牌）
+        # Collect all tiles, including the winning tile when provided.
         all_tiles = hand.tiles + [winning_tile] if winning_tile else hand.tiles
 
-        # 表寶牌
+        # Dora.
         if dora_indicators := self._tile_set.get_dora_indicators(self._kan_count):
             for dora_indicator in dora_indicators:
                 dora_tile = self._tile_set.get_dora(dora_indicator)
                 if dora_tile in all_tiles:
                     dora_count += 1
 
-        # 裡寶牌（立直時）
+        # Ura_dora when in riichi.
         if hand.is_riichi:
             if ura_indicators := self._tile_set.get_ura_dora_indicators(
                 self._kan_count
@@ -1713,7 +1712,7 @@ class RuleEngine:
                     if ura_dora_tile in all_tiles:
                         dora_count += 1
 
-        # 紅寶牌
+        # Aka_dora.
         for tile in all_tiles:
             if tile.is_red:
                 dora_count += 1
@@ -1722,16 +1721,16 @@ class RuleEngine:
 
     def get_hand(self, player: int) -> Hand:
         """
-        獲取玩家的手牌。
+        Get a player's hand.
 
         Args:
-            player (int): 玩家位置。
+            player (int): Player position.
 
         Returns:
-            hand: 玩家的手牌對象。
+            Hand: Player hand object.
 
         Raises:
-            ValueError: 如果玩家位置無效。
+            ValueError: If player position is invalid.
         """
         if not (0 <= player < self._num_players):
             raise ValueError(f"玩家位置必須在 0-{self._num_players - 1} 之間")
@@ -1739,25 +1738,25 @@ class RuleEngine:
 
     def get_game_state(self) -> GameState:
         """
-        獲取遊戲狀態。
+        Get the game state.
 
         Returns:
-            GameState: 遊戲狀態對象。
+            GameState: Game state object.
         """
         return self._game_state
 
     def get_discards(self, player: int) -> List[Tile]:
         """
-        獲取玩家的舍牌。
+        Get a player's discards.
 
         Args:
-            player (int): 玩家位置。
+            player (int): Player position.
 
         Returns:
-            List[Tile]: 玩家的舍牌列表。
+            List[Tile]: Player discard list.
 
         Raises:
-            ValueError: 如果玩家位置無效。
+            ValueError: If player position is invalid.
         """
         if not (0 <= player < self._num_players):
             raise ValueError(f"玩家位置必須在 0-{self._num_players - 1} 之間")
@@ -1765,49 +1764,49 @@ class RuleEngine:
 
     def get_last_discard(self) -> Optional[Tile]:
         """
-        取得最新的捨牌（尚未被處理）。
+        Get the latest unprocessed discard.
 
         Returns:
-            Optional[Tile]: 最新的捨牌。
+            Optional[Tile]: Latest discarded tile.
         """
         return self._last_discarded_tile
 
     def get_num_players(self) -> int:
         """
-        取得玩家數量。
+        Get the number of players.
 
         Returns:
-            int: 玩家數量。
+            int: Number of players.
         """
         return self._num_players
 
     def get_wall_remaining(self) -> Optional[int]:
         """
-        取得牌山剩餘張數。
+        Get the number of tiles remaining in the live wall.
 
         Returns:
-            Optional[int]: 牌山剩餘張數。
+            Optional[int]: Number of live-wall tiles remaining.
         """
         return self._tile_set.remaining if self._tile_set else None
 
     def get_revealed_dora_indicators(self) -> List[Tile]:
         """
-        取得目前公開的寶牌指示牌。
+        Get currently revealed dora indicators.
 
         Returns:
-            List[Tile]: 公開的寶牌指示牌列表。
+            List[Tile]: Revealed dora indicator tiles.
         """
         return self._tile_set.get_dora_indicators() if self._tile_set else []
 
     def get_available_chi_sequences(self, player: int) -> List[List[Tile]]:
         """
-        取得玩家可用的吃牌組合（僅限上家捨牌）。
+        Get available chi sequences for the player against the kamicha discard.
 
         Args:
-            player (int): 玩家位置。
+            player (int): Player position.
 
         Returns:
-            List[List[Tile]]: 可用的吃牌組合列表。
+            List[List[Tile]]: Available chi sequences.
         """
 
         if self._last_discarded_tile is None or self._last_discarded_player is None:
@@ -1821,10 +1820,10 @@ class RuleEngine:
 
     def handle_ryuukyoku(self) -> RyuukyokuResult:
         """
-        處理流局。
+        Handle ryuukyoku.
 
         Returns:
-            ryuukyokuResult: 流局結果，包含流局類型、流局滿貫玩家等。
+            RyuukyokuResult: Result containing type and nagashi_mangan players.
         """
         ryuukyoku_type = self.check_ryuukyoku()
         if not ryuukyoku_type:
@@ -1835,30 +1834,30 @@ class RuleEngine:
             ryuukyoku_type=ryuukyoku_type,
         )
 
-        # 檢查流局滿貫
+        # Check nagashi_mangan.
         if ryuukyoku_type == RyuukyokuType.EXHAUSTIVE_DRAW:
             for i in range(self._num_players):
                 if self.check_flow_mangan(i):
                     result.flow_mangan_players.append(i)
-                    # 流局滿貫：3000 點
+                    # nagashi_mangan: 3000 points.
                     self._game_state.update_score(i, 3000)
                     for j in range(self._num_players):
                         if j != i:
                             self._game_state.update_score(j, -1000)
 
-        # 處理九種九牌（第一巡）
-        # 檢查九種九牌在第一巡時可以流局
+        # Handle kyuushu_kyuuhai on the first turn.
+        # Check whether kyuushu_kyuuhai can abort on the first turn.
         if self._is_first_turn_after_deal:
             for i in range(self._num_players):
                 if self._check_kyuushu_kyuuhai(i):
                     result.ryuukyoku_type = RyuukyokuType.KYUUSHU_KYUUHAI
                     result.kyuushu_kyuuhai_player = i
-                    # 九種九牌流局時，莊家連莊
+                    # Dealer repeats on kyuushu_kyuuhai.
                     break
 
-        # 處理全員聽牌流局
+        # Handle all-riichi ryuukyoku.
         if ryuukyoku_type == RyuukyokuType.SUUCHA_RIICHI:
-            # 全員聽牌流局時，莊家支付 300 點給每個閒家
+            # On all-riichi ryuukyoku, dealer pays 300 points to each non-dealer.
             dealer = self._game_state.dealer
             for i in range(self._num_players):
                 if i != dealer:
@@ -1869,10 +1868,10 @@ class RuleEngine:
 
     def apply_win_score(self, win_result: WinResult) -> None:
         """
-        應用和牌分數。
+        Apply score changes for a win.
 
         Args:
-            win_result (WinResult): 和牌結果。
+            win_result (WinResult): Win result.
         """
         score_result = win_result.score_result
         if not score_result:
@@ -1881,27 +1880,23 @@ class RuleEngine:
         winner = (
             win_result.player if hasattr(win_result, "player") else self._current_player
         )
-        # 注意：WinResult 可能沒有 player 字段，如果沒有則假設是當前玩家
-        # 但 check_win 返回的 WinResult 沒有 player 字段，我們需要確保它有
-        # 或者從外部傳入。這裡我們假設調用者會確保上下文正確。
-        # 實際上 check_win 返回的 WinResult 確實沒有 player 字段
-        # 所以這裡我們需要依賴 score_result.payment_to
+        # Older callers may not provide player context, so payment_to is authoritative.
 
         winner = score_result.payment_to
 
-        # 增加贏家分數
+        # Add points to the winner.
         self._game_state.update_score(winner, score_result.total_points)
 
-        # 扣除輸家分數
+        # Deduct points from losers.
         if score_result.is_tsumo:
-            # 自摸
+            # tsumo.
             if score_result.pao_player is not None and score_result.pao_payment > 0:
-                # 包牌自摸：包牌者全付
+                # pao tsumo: the responsible player pays everything.
                 self._game_state.update_score(
                     score_result.pao_player, -score_result.pao_payment
                 )
             else:
-                # 正常自摸
+                # Normal tsumo.
                 dealer = self._game_state.dealer
                 for i in range(self._num_players):
                     if i == winner:
@@ -1915,52 +1910,51 @@ class RuleEngine:
 
                     self._game_state.update_score(i, -payment)
         else:
-            # 榮和
+            # ron.
             loser = score_result.payment_from
 
             if score_result.pao_player is not None and score_result.pao_payment > 0:
-                # 包牌榮和（分擔）
-                # 包牌者支付 pao_payment
+                # pao ron: split payment.
+                # The responsible player pays pao_payment.
                 self._game_state.update_score(
                     score_result.pao_player, -score_result.pao_payment
                 )
 
-                # 放銃者支付剩下的
-                # 總支付 = total_points - riichi_sticks
+                # The discarder pays the remainder.
+                # Total payment = total_points - riichi_sticks.
                 total_pay = score_result.total_points - score_result.riichi_sticks_bonus
                 remaining_pay = total_pay - score_result.pao_payment
                 self._game_state.update_score(loser, -remaining_pay)
             else:
-                # 正常榮和
-                # 放銃者支付 total_points - riichi_sticks
-                # 注意：total_points 包含供託，但供託是從場上拿的，不是放銃者出的
-                # 放銃者只支付 (base + honba)
+                # Normal ron.
+                # The discarder pays total_points minus riichi_sticks.
+                # total_points includes riichi_sticks from the table, not from the discarder.
+                # The discarder pays only base plus honba.
                 # score_result.total_points = base + honba + sticks
                 payment = score_result.total_points - score_result.riichi_sticks_bonus
                 self._game_state.update_score(loser, -payment)
 
-        # 清空供託
+        # Clear riichi_sticks.
         if score_result.riichi_sticks_bonus > 0:
             self._game_state.clear_riichi_sticks()
 
-        # 清空本場 (如果是自摸或莊家榮和? 不，通常由 next_dealer 處理)
-        # 這裡只處理分數更新
+        # honba is handled by next_dealer; this method only updates scores.
 
     def _check_chankan(self, kan_player: int, kan_tile: Tile) -> List[int]:
         """
-        檢查搶槓（其他玩家是否可以榮和槓牌）
+        Check chankan, where other players can ron the kan tile.
 
         Args:
-            kan_player: 執行槓的玩家
-            kan_tile: 被槓的牌
+            kan_player: Player declaring kan.
+            kan_tile: Tile used for kan.
 
         Returns:
-            可以搶槓和牌的玩家列表
+            Players who can win by chankan.
         """
         winners = []
         for player in range(self._num_players):
             if player == kan_player:
-                continue  # 不能搶自己的槓
+                continue  # Cannot chankan on your own kan.
 
             if self.check_win(player, kan_tile, is_chankan=True):
                 winners.append(player)
@@ -1968,7 +1962,7 @@ class RuleEngine:
         return winners
 
     def _interrupt_ippatsu(self, action: GameAction, acting_player: int) -> None:
-        """處理副露或槓造成的一發中斷。"""
+        """Interrupt ippatsu after a meld or kan."""
         if not self._riichi_ippatsu:
             return
 
@@ -1989,49 +1983,49 @@ class RuleEngine:
 
     def _check_sancha_ron(self) -> bool:
         """
-        檢查是否三家和了（多人和牌流局）
+        Check whether sancha_ron applies.
 
-        當多個玩家同時可以榮和同一張牌時，如果有三個或以上玩家和牌，則為三家和了（流局）
+        If three or more players can ron the same discard, the round can end in ryuukyoku.
 
         Returns:
-            是否為三家和了
+            bool: True if sancha_ron applies.
         """
         if self._last_discarded_tile is None or self._last_discarded_player is None:
             return False
 
-        # 檢查有多少玩家可以榮和這張牌
+        # Count how many players can ron this tile.
         winning_players = []
         for player in range(self._num_players):
             if player == self._last_discarded_player:
-                continue  # 不能榮和自己的牌
+                continue  # Cannot ron your own discard.
 
             if self.check_win(player, self._last_discarded_tile):
                 winning_players.append(player)
 
-        # 如果三個或以上玩家和牌，則為三家和了
+        # Three or more ron winners means sancha_ron.
         return len(winning_players) >= 3
 
     def _check_rinshan_win(
         self, player: int, rinshan_tile: Tile
     ) -> Optional[WinResult]:
         """
-        檢查嶺上開花（槓後摸牌和牌）
+        Check rinshan after a kan draw.
 
         Args:
-            player: 玩家位置
-            rinshan_tile: 從嶺上摸到的牌
+            player: Player position.
+            rinshan_tile: Tile drawn from rinshan.
 
         Returns:
-            和牌結果，如果不能和則返回 None
+            Win result, or None if the player cannot win.
         """
         return self.check_win(player, rinshan_tile, is_rinshan=True)
 
     def _calculate_noten_bappu(self) -> Dict[int, int]:
         """
-        計算不聽罰符
+        Calculate noten_bappu.
 
         Returns:
-            玩家分數變化字典 {player_index: score_change}
+            Score deltas by player index.
         """
         tenpai_players = []
         for i in range(self._num_players):
@@ -2045,7 +2039,7 @@ class RuleEngine:
             return {}
 
         if num_tenpai == 1:
-            # 1人聽：+3000 / -1000
+            # One tenpai player: +3000 / -1000.
             winner = tenpai_players[0]
             changes[winner] = 3000
             for i in range(self._num_players):
@@ -2053,7 +2047,7 @@ class RuleEngine:
                     changes[i] = -1000
 
         elif num_tenpai == 2:
-            # 2人聽：+1500 / -1500
+            # Two tenpai players: +1500 / -1500.
             for i in range(self._num_players):
                 if i in tenpai_players:
                     changes[i] = 1500
@@ -2061,13 +2055,13 @@ class RuleEngine:
                     changes[i] = -1500
 
         elif num_tenpai == 3:
-            # 3人聽：+1000 / -3000
+            # Three tenpai players: +1000 / -3000.
             loser = [i for i in range(self._num_players) if i not in tenpai_players][0]
             changes[loser] = -3000
             for i in tenpai_players:
                 changes[i] = 1000
 
-        # 應用分數變更
+        # Apply score changes.
         for player, delta in changes.items():
             self._game_state.update_score(player, delta)
 
@@ -2075,28 +2069,28 @@ class RuleEngine:
 
     def check_furiten_discards(self, player: int) -> bool:
         """
-        檢查現物振聽：玩家打過的牌包含在聽牌牌中
+        Check genbutsu furiten: the player's discards include a winning tile.
 
         Args:
-            player: 玩家位置
+            player: Player position.
 
         Returns:
-            是否為現物振聽
+            bool: True if the player is in discard-based furiten.
         """
         hand = self._hands[player]
 
-        # 未聽牌不算振聽
+        # A player who is not in tenpai cannot be furiten.
         if not hand.is_tenpai():
             return False
 
-        # 獲取聽牌牌
+        # Get waiting tiles.
         waiting_tiles = hand.get_waiting_tiles()
         if not waiting_tiles:
             return False
 
-        # 檢查玩家的捨牌歷史
+        # Check the player's discard history.
         for discard in hand.discards:
-            # 如果打過的牌在聽牌牌中，則為現物振聽
+            # If any discard is a waiting tile, the player is in genbutsu furiten.
             if any(
                 discard.suit == wt.suit and discard.rank == wt.rank
                 for wt in waiting_tiles
@@ -2107,43 +2101,43 @@ class RuleEngine:
 
     def check_furiten_temp(self, player: int) -> bool:
         """
-        檢查同巡振聽：同巡內放過榮和機會
+        Check temporary furiten after passing on ron in the same turn cycle.
 
         Args:
-            player: 玩家位置
+            player: Player position.
 
         Returns:
-            是否為同巡振聽
+            bool: True if the player is in temporary furiten.
         """
-        # 檢查是否設置了同巡振聽
+        # Check whether temporary furiten was set.
         if not self._furiten_temp.get(player, False):
             return False
 
-        # 檢查是否是同一回合
+        # Check whether it is the same turn cycle.
         furiten_round = self._furiten_temp_round.get(player, -1)
         return furiten_round == self._turn_count
 
     def check_furiten_riichi(self, player: int) -> bool:
         """
-        檢查立直振聽：立直後放過榮和機會
+        Check riichi furiten after passing on ron during riichi.
 
         Args:
-            player: 玩家位置
+            player: Player position.
 
         Returns:
-            是否為立直振聽
+            bool: True if the player is in riichi furiten.
         """
         return self._furiten_permanent.get(player, False)
 
     def is_furiten(self, player: int) -> bool:
         """
-        綜合檢查玩家是否處於振聽狀態
+        Check whether the player is in any furiten state.
 
         Args:
-            player: 玩家位置
+            player: Player position.
 
         Returns:
-            是否處於振聽狀態
+            bool: True if the player is furiten.
         """
         return (
             self.check_furiten_discards(player)
@@ -2153,10 +2147,10 @@ class RuleEngine:
 
     def _check_tobi(self) -> bool:
         """
-        檢查是否觸發擊飛
+        Check whether tobi is triggered.
 
         Returns:
-            是否觸發擊飛
+            bool: True if any score is below zero.
         """
         if not self._game_state.ruleset.tobi_enabled:
             return False

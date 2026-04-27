@@ -1,7 +1,7 @@
 """
-牌組系統 - Tile and TileSet implementation
+Tile System - Tile and TileSet implementation
 
-提供牌的表示、牌組管理和發牌功能。
+Provides tile representation, wall management, and dealing behavior.
 """
 
 import itertools
@@ -12,7 +12,7 @@ from pyriichi.enum_utils import TranslatableEnum
 
 
 class Suit(TranslatableEnum):
-    """花色"""
+    """Tile suit."""
 
     MANZU = ("manzu", "萬子", "萬子", "Characters")
     PINZU = ("pinzu", "筒子", "筒子", "Circles")
@@ -21,7 +21,7 @@ class Suit(TranslatableEnum):
 
 
 class Tile:
-    """單張麻將牌"""
+    """Single mahjong tile."""
 
     _NUMERAL_MAP: Dict[str, Dict[int, str]] = {
         "zh": {
@@ -73,15 +73,15 @@ class Tile:
 
     def __init__(self, suit: Suit, rank: int, is_red: bool = False):
         """
-        初始化一張牌。
+        Initialize a tile.
 
         Args:
-            suit (Suit): 花色。
-            rank (int): 數字（1-9 對數牌，1-7 對字牌）。
-            is_red (bool): 是否為紅寶牌（默認 False）。
+            suit (Suit): Tile suit.
+            rank (int): Rank, 1-9 for number tiles or 1-7 for honor tiles.
+            is_red (bool): Whether this is an aka_dora tile.
 
         Raises:
-            ValueError: 如果 rank 超出範圍。
+            ValueError: If rank is out of range.
         """
         if suit == Suit.HONORS:
             if not (1 <= rank <= 7):
@@ -119,13 +119,13 @@ class Tile:
 
     def __eq__(self, other) -> bool:
         """
-        比較兩張牌是否相同（不考慮紅寶牌）。
+        Compare two tiles by suit and rank, ignoring aka_dora status.
 
         Args:
-            other (Any): 要比較的對象。
+            other (Any): Object to compare.
 
         Returns:
-            bool: 如果花色和數字相同則返回 True。
+            bool: True if suit and rank are equal.
         """
         if not isinstance(other, Tile):
             return False
@@ -149,10 +149,10 @@ class Tile:
 
     def __str__(self) -> str:
         """
-        獲取牌的字符串表示（例如：1m, 5p, r5m 表示紅寶牌）。
+        Get the compact tile notation, such as 1m, 5p, or r5m for aka_dora.
 
         Returns:
-            str: 牌的字符串表示。
+            str: Compact tile notation.
         """
         suit_map = {
             Suit.MANZU: "m",
@@ -170,10 +170,10 @@ class Tile:
     @property
     def is_yaochuu(self) -> bool:
         """
-        判斷是否為幺九牌（1, 9, 字牌）。
+        Check whether this tile is yaochuu: a 1, 9, or honor tile.
 
         Returns:
-            bool: 如果是幺九牌則返回 True。
+            bool: True if this tile is yaochuu.
         """
         if self._suit == Suit.HONORS:
             return True
@@ -198,31 +198,31 @@ class Tile:
 
     def get_name(self, locale: str = "zh") -> str:
         """
-        獲取牌的本地化名稱。
+        Get the localized tile name.
 
         Args:
-            locale (str): 語言代碼 ("zh", "ja", "en")。
+            locale (str): Locale code ("zh", "ja", "en").
 
         Returns:
-            str: 本地化名稱。
+            str: Localized name.
         """
         return self._format_name(locale)
 
 
 def create_tile(suit: str, rank: int, is_red: bool = False) -> Tile:
     """
-    創建一張牌（便捷函數）。
+    Create a tile from compact suit notation.
 
     Args:
-        suit (str): 花色字符串 ("m", "p", "s", "z")。
-        rank (int): 數字。
-        is_red (bool): 是否為紅寶牌。
+        suit (str): Suit notation ("m", "p", "s", "z").
+        rank (int): Tile rank.
+        is_red (bool): Whether this is an aka_dora tile.
 
     Returns:
-        Tile: 創建的 Tile 對象。
+        Tile: Created tile.
 
     Raises:
-        ValueError: 如果 suit 無效。
+        ValueError: If suit is invalid.
     """
     suit_map = {
         "m": Suit.MANZU,
@@ -236,14 +236,14 @@ def create_tile(suit: str, rank: int, is_red: bool = False) -> Tile:
 
 
 class TileSet:
-    """牌組管理器"""
+    """Tile wall manager."""
 
     def __init__(self, tiles: Optional[List[Tile]] = None):
         """
-        初始化牌組。
+        Initialize the tile set.
 
         Args:
-            tiles (Optional[List[Tile]]): 初始牌列表（如果為 None，則創建標準 136 張牌）。
+            tiles (Optional[List[Tile]]): Initial tiles, or None to create a standard 136-tile set.
         """
         if tiles is None:
             tiles = self._create_standard_set()
@@ -254,7 +254,7 @@ class TileSet:
     @staticmethod
     def _create_standard_set() -> List[Tile]:
         tiles = []
-        # 數牌：萬、筒、條各 36 張（1-9 各 4 張）
+        # Number tiles: manzu, pinzu, and souzu each have 36 tiles.
         for suit in [Suit.MANZU, Suit.PINZU, Suit.SOUZU]:
             for rank in range(1, 10):
                 if rank == 5:
@@ -262,7 +262,7 @@ class TileSet:
                     tiles.append(Tile(suit, rank, is_red=True))
                 else:
                     tiles.extend(Tile(suit, rank) for _ in range(4))
-        # 字牌：風牌 16 張（東南西北各 4 張），三元牌 12 張（白發中各 4 張）
+        # Honor tiles: 16 wind tiles and 12 haku/hatsu/chun tiles.
         tiles.extend(
             Tile(Suit.HONORS, rank)
             for rank, _ in itertools.product(range(1, 8), range(4))
@@ -271,7 +271,7 @@ class TileSet:
 
     def shuffle(self) -> None:
         random.shuffle(self._tiles)
-        # 初始化王牌區（最後 14 張）
+        # Initialize the dead wall from the last 14 tiles.
         self._wall = self._tiles[-14:]
         self._tiles = self._tiles[:-14]
 
@@ -283,13 +283,13 @@ class TileSet:
 
     def deal(self, num_players: int = 4) -> List[List[Tile]]:
         """
-        發牌。
+        Deal initial hands.
 
         Args:
-            num_players (int): 玩家數量（默認 4）。
+            num_players (int): Number of players, defaulting to 4.
 
         Returns:
-            List[List[Tile]]: 每個玩家的手牌列表（13 張），莊家為 14 張。
+            List[List[Tile]]: Hands for each player; dealer has 14 tiles and others have 13.
         """
         hands = [[] for _ in range(num_players)]
 
@@ -297,7 +297,7 @@ class TileSet:
             if self._tiles:
                 hands[player].append(self._tiles.pop(0))
 
-        # 莊家多發 1 張（第 14 張）
+        # Dealer receives the 14th tile.
         if self._tiles:
             hands[0].append(self._tiles.pop(0))
 
@@ -308,19 +308,19 @@ class TileSet:
 
     def draw(self) -> Optional[Tile]:
         """
-        從牌山頂端摸一張牌。
+        Draw one tile from the live wall.
 
         Returns:
-            Optional[Tile]: 摸到的牌，如果牌山為空則返回 None。
+            Optional[Tile]: Drawn tile, or None if the wall is empty.
         """
         return self._tiles.pop(0) if self._tiles else None
 
     def draw_rinshan(self) -> Optional[Tile]:
         """
-        從嶺上牌摸一張牌（用於槓後摸牌）。
+        Draw one rinshan tile after kan.
 
         Returns:
-            Optional[Tile]: 摸到的牌，如果嶺上牌為空則返回 None。
+            Optional[Tile]: Drawn tile, or None if no rinshan tiles remain.
         """
         return self._rinshan_tiles.pop(0) if self._rinshan_tiles else None
 
@@ -337,16 +337,16 @@ class TileSet:
 
     def get_dora_indicators(self, count: Optional[int] = None) -> List[Tile]:
         """
-        獲取寶牌指示牌。
+        Get revealed dora indicators.
 
         Args:
-            count (Optional[int]): 指示牌數量（如果為 None，則依照嶺上牌數量推斷）。
+            count (Optional[int]): Number of indicators, inferred from rinshan tiles if None.
 
         Returns:
-            List[Tile]: 指示牌列表。
+            List[Tile]: Dora indicator tiles.
 
         Raises:
-            ValueError: 如果指示牌不足。
+            ValueError: If there are not enough indicators.
         """
         if count is None:
             count = 5 - len(self._rinshan_tiles)
@@ -358,16 +358,16 @@ class TileSet:
 
     def get_ura_dora_indicators(self, count: Optional[int] = None) -> List[Tile]:
         """
-        獲取裡寶牌指示牌。
+        Get ura_dora indicators.
 
         Args:
-            count (Optional[int]): 指示牌數量（如果為 None，則依照嶺上牌數量推斷）。
+            count (Optional[int]): Number of indicators, inferred from rinshan tiles if None.
 
         Returns:
-            List[Tile]: 指示牌列表。
+            List[Tile]: Ura_dora indicator tiles.
 
         Raises:
-            ValueError: 如果指示牌不足。
+            ValueError: If there are not enough indicators.
         """
         if count is None:
             count = 5 - len(self._rinshan_tiles)
@@ -379,28 +379,28 @@ class TileSet:
 
     def get_dora(self, indicator: Tile) -> Tile:
         """
-        根據指示牌獲取寶牌。
+        Get the dora tile corresponding to an indicator.
 
         Args:
-            indicator (Tile): 指示牌。
+            indicator (Tile): Dora indicator.
 
         Returns:
-            Tile: 對應的寶牌。
+            Tile: Matching dora tile.
         """
         if indicator.suit == Suit.HONORS:
-            # 字牌：東→南→西→北→白→發→中→東
-            if indicator.rank == 4:  # 北
-                return Tile(Suit.HONORS, 1)  # 東
-            elif indicator.rank == 5:  # 白
-                return Tile(Suit.HONORS, 6)  # 發
-            elif indicator.rank == 6:  # 發
-                return Tile(Suit.HONORS, 7)  # 中
-            elif indicator.rank == 7:  # 中
-                return Tile(Suit.HONORS, 1)  # 東
+            # Honors: east -> south -> west -> north -> haku -> hatsu -> chun -> east.
+            if indicator.rank == 4:  # north
+                return Tile(Suit.HONORS, 1)  # east
+            elif indicator.rank == 5:  # haku
+                return Tile(Suit.HONORS, 6)  # hatsu
+            elif indicator.rank == 6:  # hatsu
+                return Tile(Suit.HONORS, 7)  # chun
+            elif indicator.rank == 7:  # chun
+                return Tile(Suit.HONORS, 1)  # east
             else:
                 return Tile(Suit.HONORS, indicator.rank + 1)
         else:
-            # 數牌：1-8→+1，9→1
+            # Number tiles: 1-8 advance by one, 9 wraps to 1.
             if indicator.rank == 9:
                 return Tile(indicator.suit, 1)
             else:

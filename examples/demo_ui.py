@@ -178,7 +178,6 @@ class TileRenderer:
 
         # Get localized name
         text = tile.get_name("zh")
-        # Remove "赤" prefix if present (we use red dot and color instead)
         text = text.replace("赤", "")
 
         # Draw Text
