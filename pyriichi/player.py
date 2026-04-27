@@ -121,12 +121,12 @@ class RandomPlayer(BasePlayer):
         # If in response phase, choose randomly, but give PASS slightly higher weight
         action = random.choice(available_actions)
 
-        if action == GameAction.RICHI:
+        if action == GameAction.DECLARE_RIICHI:
             valid_discards = hand.tenpai_discards
             if valid_discards:
-                return GameAction.RICHI, random.choice(valid_discards)
+                return GameAction.DECLARE_RIICHI, random.choice(valid_discards)
             else:
-                # Should not happen if RICHI is in available_actions
+                # Should not happen if DECLARE_RIICHI is in available_actions
                 return GameAction.PASS, None
 
         # If an action requiring parameters is chosen, temporarily return None
@@ -140,7 +140,7 @@ class SimplePlayer(BasePlayer):
 
     Strategy:
     1. Prioritize winning (RON/TSUMO).
-    2. Prioritize Riichi (RICHI).
+    2. Prioritize Riichi (DECLARE_RIICHI).
     3. Simple discard strategy: Honors -> Terminals -> Simple tiles.
     """
 
@@ -175,12 +175,12 @@ class SimplePlayer(BasePlayer):
             return GameAction.TSUMO, None
 
         # 2. Prioritize Riichi
-        if GameAction.RICHI in available_actions:
+        if GameAction.DECLARE_RIICHI in available_actions:
             valid_discards = hand.tenpai_discards
             if valid_discards:
                 # Choose the best discard from valid Riichi discards
                 best_riichi_discard = self._choose_best_discard(hand, valid_discards)
-                return GameAction.RICHI, best_riichi_discard
+                return GameAction.DECLARE_RIICHI, best_riichi_discard
 
         # 3. Handle Discard
         if GameAction.DISCARD in available_actions:
@@ -229,8 +229,8 @@ class SimplePlayer(BasePlayer):
                 score = 20
 
             else:
-                score = (
-                    30 + (5 - abs(tile.rank - 5))
+                score = 30 + (
+                    5 - abs(tile.rank - 5)
                 )  # 5 is highest score (35), 1/9 is 26 (but already captured by terminal)
 
             # Add randomness

@@ -344,7 +344,7 @@ class ScoreCalculator:
             pair_tile = pair_combination.tiles[0]
 
             # Yakuhai Pair +2 Fu
-            if pair_tile.suit == Suit.JIHAI:
+            if pair_tile.suit == Suit.HONORS:
                 if pair_tile.rank in [5, 6, 7]:  # Haku, Hatsu, Chun
                     fu += 2
 

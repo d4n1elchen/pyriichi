@@ -94,8 +94,9 @@
 - `CHI`: 吃
 - `PON`: 碰
 - `KAN`: 槓
-- `ANKAN`: 暗槓
-- `RICHI`: 立直
+- `DECLARE_ANKAN`: 暗槓
+- `DECLARE_RIICHI`: 立直
+- `DECLARE_KYUUSHU_KYUUHAI`: 九種九牌
 - `WIN`: 和牌
 - `TSUMO`: 自摸
 - `RON`: 榮和

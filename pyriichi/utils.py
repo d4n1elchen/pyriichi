@@ -28,7 +28,7 @@ def parse_tiles(tile_string: str) -> List[Tile]:
     tiles = []
     buffer = []  # List to store (rank, is_red)
     i = 0
-    suit_map = {"m": Suit.MANZU, "p": Suit.PINZU, "s": Suit.SOZU, "z": Suit.JIHAI}
+    suit_map = {"m": Suit.MANZU, "p": Suit.PINZU, "s": Suit.SOUZU, "z": Suit.HONORS}
 
     while i < len(tile_string):
         char = tile_string[i]

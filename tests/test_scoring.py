@@ -28,7 +28,7 @@ class TestScoreCalculator:
         # 234m 567m 345p 678p 4s
         tiles = parse_tiles("234m567m345p678p4s")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.SOZU, 4)
+        winning_tile = Tile(Suit.SOUZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
         assert combinations
         fu = self.calculator.calculate_fu(
@@ -70,7 +70,7 @@ class TestScoreCalculator:
         # 手牌：234m 567m 345p 678p 4s
         tiles = parse_tiles("234m567m345p678p4s")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.SOZU, 4)
+        winning_tile = Tile(Suit.SOUZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -1264,7 +1264,7 @@ class TestFuCalculationOpenMeld:
         hand._melds.append(meld1)
         hand._melds.append(meld2)
 
-        winning_tile = Tile(Suit.JIHAI, 5)
+        winning_tile = Tile(Suit.HONORS, 5)
 
         # 模擬役種結果
         yaku_results = [YakuResult(Yaku.HAKU, 1, False)]
@@ -1294,7 +1294,7 @@ class TestFuCalculationOpenMeld:
         hand = Hand(tiles)
         hand._melds.append(meld1)
 
-        winning_tile = Tile(Suit.JIHAI, 5)
+        winning_tile = Tile(Suit.HONORS, 5)
 
         combinations = hand.get_winning_combinations(winning_tile, is_tsumo=False)
         assert len(combinations) > 0
@@ -1313,9 +1313,9 @@ class TestFuCalculationOpenMeld:
         )
 
         # print(f"Calculated Fu: {fu}")
-        assert fu == 30, (
-            "Should be 30 fu (20 base + 4 open pon + 2 pair + 2 wait = 28 -> 30)"
-        )
+        assert (
+            fu == 30
+        ), "Should be 30 fu (20 base + 4 open pon + 2 pair + 2 wait = 28 -> 30)"
 
 
 if __name__ == "__main__":

@@ -74,7 +74,7 @@ def make_combination(combo_type: CombinationType, suit: Suit, rank: int) -> Comb
     """
 
     if combo_type == CombinationType.SEQUENCE:
-        if suit == Suit.JIHAI:
+        if suit == Suit.HONORS:
             raise ValueError("字牌不能組成順子")
         if not (1 <= rank <= 7):
             raise ValueError("順子起始點數必須介於 1 到 7 之間")
@@ -94,10 +94,14 @@ def make_combination(combo_type: CombinationType, suit: Suit, rank: int) -> Comb
 class MeldType(TranslatableEnum):
     """Meld type"""
 
-    CHI = ("chi", "吃", "チー", "Chi")
-    PON = ("pon", "碰", "ポン", "Pon")
-    KAN = ("kan", "明槓", "カン", "Kan")
-    ANKAN = ("ankan", "暗槓", "暗槓", "Ankan")
+    CHI = ("chi_meld", "吃", "チー", "Chi Meld")
+    PON = ("pon_meld", "碰", "ポン", "Pon Meld")
+    OPEN_KAN = ("open_kan", "明槓", "明槓", "Open Kan")
+    CLOSED_KAN = ("closed_kan", "暗槓", "暗槓", "Closed Kan")
+
+    # Legacy aliases.
+    KAN = ("open_kan", "明槓", "明槓", "Open Kan")
+    ANKAN = ("closed_kan", "暗槓", "暗槓", "Closed Kan")
 
 
 class Meld:
@@ -121,7 +125,7 @@ class Meld:
             raise ValueError("吃必須是 3 張牌")
         if meld_type == MeldType.PON and len(tiles) != 3:
             raise ValueError("碰必須是 3 張牌")
-        if meld_type in [MeldType.KAN, MeldType.ANKAN] and len(tiles) != 4:
+        if meld_type in [MeldType.OPEN_KAN, MeldType.CLOSED_KAN] and len(tiles) != 4:
             raise ValueError("槓必須是 4 張牌")
 
         self._type = meld_type
@@ -141,7 +145,7 @@ class Meld:
         return self._called_tile
 
     def is_concealed(self) -> bool:
-        return self._type == MeldType.ANKAN
+        return self._type == MeldType.CLOSED_KAN
 
     def is_open(self) -> bool:
         return not self.is_concealed()
@@ -354,7 +358,7 @@ class Hand:
             for tile, count in tile_counts.items():
                 if count == 4:
                     kan_tiles = [t for t in self._tiles if t == tile]
-                    results.append(Meld(MeldType.ANKAN, kan_tiles))
+                    results.append(Meld(MeldType.CLOSED_KAN, kan_tiles))
             for meld in self._melds:
                 if (
                     meld.type == MeldType.PON
@@ -363,7 +367,7 @@ class Hand:
                 ):
                     kan_tiles = meld.tiles + [meld.called_tile]
                     results.append(
-                        Meld(MeldType.KAN, kan_tiles, called_tile=meld.called_tile)
+                        Meld(MeldType.OPEN_KAN, kan_tiles, called_tile=meld.called_tile)
                     )
         elif self._tiles.count(tile) == 3:
             kan_tiles = []
@@ -371,11 +375,11 @@ class Hand:
                 if t == tile and len(kan_tiles) < 3:
                     kan_tiles.append(t)
             kan_tiles.append(tile)
-            results.append(Meld(MeldType.KAN, kan_tiles, called_tile=tile))
+            results.append(Meld(MeldType.OPEN_KAN, kan_tiles, called_tile=tile))
         elif self._tiles.count(tile) == 4:
             # Ankan of specific tile
             kan_tiles = [t for t in self._tiles if t == tile]
-            results.append(Meld(MeldType.ANKAN, kan_tiles))
+            results.append(Meld(MeldType.CLOSED_KAN, kan_tiles))
         elif self._tiles.count(tile) == 1:
             # Kakan (Added Kan) of specific tile
             for meld in self._melds:
@@ -385,7 +389,7 @@ class Hand:
                     and meld.called_tile == tile
                 ):
                     kan_tiles = meld.tiles + [tile]
-                    results.append(Meld(MeldType.KAN, kan_tiles, called_tile=tile))
+                    results.append(Meld(MeldType.OPEN_KAN, kan_tiles, called_tile=tile))
 
         return results
 
@@ -409,10 +413,10 @@ class Hand:
         # Use the first possible Kan combination
         meld = possible_kan[0]
 
-        if meld.type == MeldType.ANKAN:
+        if meld.type == MeldType.CLOSED_KAN:
             for t in meld.tiles:
                 self._tiles.remove(t)
-        elif meld.type == MeldType.KAN:
+        elif meld.type == MeldType.OPEN_KAN:
             if tile is None:
                 called_tile = meld.called_tile
                 if called_tile is None or self._tiles.count(called_tile) == 0:
@@ -541,7 +545,7 @@ class Hand:
         Returns:
             bool: Whether removal was successful.
         """
-        if suit == Suit.JIHAI:  # Honors cannot form a Sequence
+        if suit == Suit.HONORS:  # Honors cannot form a Sequence
             return False
 
         for i in range(3):
@@ -689,7 +693,7 @@ class Hand:
         pair_combination: Combination,
     ) -> List[List[Combination]]:
         results = []
-        for suit in [Suit.MANZU, Suit.PINZU, Suit.SOZU]:
+        for suit in [Suit.MANZU, Suit.PINZU, Suit.SOUZU]:
             for rank in range(1, 8):
                 if any(counts.get(Tile(suit, rank + i), 0) <= 0 for i in range(3)):
                     continue
@@ -756,15 +760,15 @@ class Hand:
             (Suit.MANZU, 9),
             (Suit.PINZU, 1),
             (Suit.PINZU, 9),
-            (Suit.SOZU, 1),
-            (Suit.SOZU, 9),
-            (Suit.JIHAI, 1),
-            (Suit.JIHAI, 2),
-            (Suit.JIHAI, 3),
-            (Suit.JIHAI, 4),
-            (Suit.JIHAI, 5),
-            (Suit.JIHAI, 6),
-            (Suit.JIHAI, 7),
+            (Suit.SOUZU, 1),
+            (Suit.SOUZU, 9),
+            (Suit.HONORS, 1),
+            (Suit.HONORS, 2),
+            (Suit.HONORS, 3),
+            (Suit.HONORS, 4),
+            (Suit.HONORS, 5),
+            (Suit.HONORS, 6),
+            (Suit.HONORS, 7),
         ]
 
         found_tiles = set()
@@ -839,7 +843,7 @@ class Hand:
             # Add same tile
             candidates.add(tile)
             # If number tile, add adjacent tiles
-            if suit != Suit.JIHAI:
+            if suit != Suit.HONORS:
                 if rank > 1:
                     candidates.add(Tile(suit, rank - 1))
                 if rank < 9:
@@ -853,15 +857,15 @@ class Hand:
         # If too few candidates, fallback to checking all tiles (ensure no misses)
         if len(candidates) < 10:
             for suit in Suit:
-                max_rank = 7 if suit == Suit.JIHAI else 9
+                max_rank = 7 if suit == Suit.HONORS else 9
                 for rank in range(1, max_rank + 1):
                     candidates.add(Tile(suit, rank))
 
-        for suit in [Suit.MANZU, Suit.PINZU, Suit.SOZU]:
+        for suit in [Suit.MANZU, Suit.PINZU, Suit.SOUZU]:
             for rank in [1, 9]:
                 candidates.add(Tile(suit, rank))
         for rank in range(1, 8):
-            candidates.add(Tile(Suit.JIHAI, rank))
+            candidates.add(Tile(Suit.HONORS, rank))
 
         return [
             test_tile for test_tile in candidates if self.is_winning_hand(test_tile)
@@ -889,7 +893,7 @@ class Hand:
             combo_type = CombinationType.SEQUENCE
             if meld.type == MeldType.PON:
                 combo_type = CombinationType.TRIPLET
-            elif meld.type in [MeldType.KAN, MeldType.ANKAN]:
+            elif meld.type in [MeldType.OPEN_KAN, MeldType.CLOSED_KAN]:
                 combo_type = CombinationType.KAN
 
             combo = Combination(combo_type, meld.tiles)
@@ -936,7 +940,7 @@ class Hand:
             combo_type = CombinationType.SEQUENCE
             if meld.type == MeldType.PON:
                 combo_type = CombinationType.TRIPLET
-            elif meld.type in [MeldType.KAN, MeldType.ANKAN]:
+            elif meld.type in [MeldType.OPEN_KAN, MeldType.CLOSED_KAN]:
                 combo_type = CombinationType.KAN
 
             combo = Combination(combo_type, meld.tiles)

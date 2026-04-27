@@ -56,10 +56,21 @@ Use these conventions when adding new terms:
 | chi | チー | Chi | 吃 | Call a sequence from the previous player. |
 | pon | ポン | Pon | 碰 | Call a triplet. |
 | kan | カン | Kan | 槓 | Declare a kan. |
+| declare_ankan | 暗槓 | Closed Kan | 暗槓 | Declare a concealed kan. |
 | declare_riichi | リーチ | Riichi | 立直 | Button/action form used in games. |
+| declare_kyuushu_kyuuhai | 九種九牌 | Nine Terminals Abort | 九種九牌 | Declare a nine terminals/honors abortive draw. |
 | ron | ロン | Ron | 榮和 | Win on another player's discard. |
 | tsumo | ツモ | Tsumo | 自摸 | Self-draw win. |
 | pass | パス | Pass | 過 | Decline a call or win opportunity. |
+
+## Meld Types (面子)
+
+| Code | 日本語 | English | 中文 | Notes |
+|------|--------|---------|------|-------|
+| chi_meld | チー | Chi Meld | 吃 | Open sequence meld made by chi. |
+| pon_meld | ポン | Pon Meld | 碰 | Open triplet meld made by pon. |
+| open_kan | 明槓 | Open Kan | 明槓 | Open kan meld. |
+| closed_kan | 暗槓 | Closed Kan | 暗槓 | Concealed kan meld. |
 
 ## Game State (局面)
 
@@ -70,6 +81,17 @@ Use these conventions when adding new terms:
 | honba | 本場 | Honba | 本場 | Counter for repeat/dealer-continuation bonus sticks. |
 | kyoutaku | 供託 | Deposit | 供託 | Points/sticks placed on the table. |
 | riichi_stick | 立直棒 | Riichi Stick | 立直棒 | The 1000-point stick paid on riichi declaration. |
+
+## Abortive Draw Types (途中流局)
+
+| Code | 日本語 | English | 中文 | Notes |
+|------|--------|---------|------|-------|
+| suufon_renda | 四風連打 | Four Winds Abort | 四風連打 | Abortive draw after all first discards are the same wind. |
+| sancha_ron | 三家和了 | Triple Ron Abort | 三家和了 | Abortive draw from triple ron under rules that disallow it. |
+| suukan_sanra | 四槓散了 | Four Kan Abort | 四槓散了 | Abortive draw after four kans without a qualifying win. |
+| exhaustive_draw | 流局 | Exhaustive Draw | 流局 | Round ends because the live wall is exhausted. |
+| suucha_riichi | 四家立直 | Four Riichi Abort | 四家立直 | Abortive draw after all four players declare riichi. |
+| kyuushu_kyuuhai | 九種九牌 | Nine Terminals Abort | 九種九牌 | Abortive draw from nine terminal/honor starting hand. |
 
 ## Yaku (役)
 

@@ -33,4 +33,6 @@ class TranslatableEnum(Enum):
     @property
     def en(self) -> str:
         """英文名稱，若未設定則回傳代碼。"""
-        return self._en if self._en is not None else str(self.value)  # pyright: ignore[reportAttributeAccessIssue]
+        return (
+            self._en if self._en is not None else str(self.value)
+        )  # pyright: ignore[reportAttributeAccessIssue]

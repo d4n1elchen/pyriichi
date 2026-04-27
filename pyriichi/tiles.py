@@ -14,10 +14,14 @@ from pyriichi.enum_utils import TranslatableEnum
 class Suit(TranslatableEnum):
     """花色"""
 
-    MANZU = ("m", "萬子", "萬子", "Manzu")
-    PINZU = ("p", "筒子", "筒子", "Pinzu")
-    SOZU = ("s", "索子", "索子", "Souzu")
-    JIHAI = ("z", "字牌", "字牌", "Honors")
+    MANZU = ("manzu", "萬子", "萬子", "Characters")
+    PINZU = ("pinzu", "筒子", "筒子", "Circles")
+    SOUZU = ("souzu", "索子", "索子", "Bamboo")
+    HONORS = ("honors", "字牌", "字牌", "Honor Tiles")
+
+    # Legacy aliases.
+    SOZU = ("souzu", "索子", "索子", "Bamboo")
+    JIHAI = ("honors", "字牌", "字牌", "Honor Tiles")
 
 
 class Tile:
@@ -50,14 +54,14 @@ class Tile:
     }
 
     _SUIT_SUFFIX_MAP: Dict[str, Dict[Suit, str]] = {
-        "zh": {Suit.MANZU: "萬", Suit.PINZU: "筒", Suit.SOZU: "索"},
-        "ja": {Suit.MANZU: "萬", Suit.PINZU: "筒", Suit.SOZU: "索"},
-        "en": {Suit.MANZU: "Man", Suit.PINZU: "Pin", Suit.SOZU: "Sou"},
+        "zh": {Suit.MANZU: "萬", Suit.PINZU: "筒", Suit.SOUZU: "索"},
+        "ja": {Suit.MANZU: "萬", Suit.PINZU: "筒", Suit.SOUZU: "索"},
+        "en": {Suit.MANZU: "Man", Suit.PINZU: "Pin", Suit.SOUZU: "Sou"},
     }
 
     _HONOR_NAME_MAP: Dict[str, Dict[int, str]] = {
         "zh": {1: "東", 2: "南", 3: "西", 4: "北", 5: "白", 6: "發", 7: "中"},
-        "ja": {1: "東", 2: "南", 3: "西", 4: "北", 5: "白", 6: "發", 7: "中"},
+        "ja": {1: "東", 2: "南", 3: "西", 4: "北", 5: "白", 6: "発", 7: "中"},
         "en": {
             1: "East",
             2: "South",
@@ -83,7 +87,7 @@ class Tile:
         Raises:
             ValueError: 如果 rank 超出範圍。
         """
-        if suit == Suit.JIHAI:
+        if suit == Suit.HONORS:
             if not (1 <= rank <= 7):
                 raise ValueError(f"字牌 rank 必須在 1-7 之間，得到 {rank}")
         elif not (1 <= rank <= 9):
@@ -107,15 +111,15 @@ class Tile:
 
     @property
     def is_honor(self) -> bool:
-        return self._suit == Suit.JIHAI
+        return self._suit == Suit.HONORS
 
     @property
     def is_terminal(self) -> bool:
-        return False if self._suit == Suit.JIHAI else self._rank in [1, 9]
+        return False if self._suit == Suit.HONORS else self._rank in [1, 9]
 
     @property
     def is_simple(self) -> bool:
-        return False if self._suit == Suit.JIHAI else 2 <= self._rank <= 8
+        return False if self._suit == Suit.HONORS else 2 <= self._rank <= 8
 
     def __eq__(self, other) -> bool:
         """
@@ -137,8 +141,14 @@ class Tile:
     def __lt__(self, other) -> bool:
         if not isinstance(other, Tile):
             return NotImplemented
-        if self._suit.value != other._suit.value:
-            return self._suit.value < other._suit.value
+        suit_order = {
+            Suit.MANZU: 0,
+            Suit.PINZU: 1,
+            Suit.SOUZU: 2,
+            Suit.HONORS: 3,
+        }
+        if self._suit != other._suit:
+            return suit_order[self._suit] < suit_order[other._suit]
         return self._rank < other._rank
 
     def __str__(self) -> str:
@@ -151,8 +161,8 @@ class Tile:
         suit_map = {
             Suit.MANZU: "m",
             Suit.PINZU: "p",
-            Suit.SOZU: "s",
-            Suit.JIHAI: "z",
+            Suit.SOUZU: "s",
+            Suit.HONORS: "z",
         }
         if self._is_red:
             return f"r{self._rank}{suit_map[self._suit]}"
@@ -169,7 +179,7 @@ class Tile:
         Returns:
             bool: 如果是幺九牌則返回 True。
         """
-        if self._suit == Suit.JIHAI:
+        if self._suit == Suit.HONORS:
             return True
         return self._rank == 1 or self._rank == 9
 
@@ -179,7 +189,7 @@ class Tile:
 
         prefix = self._RED_PREFIX_MAP[locale] if self._is_red else ""
 
-        if self._suit == Suit.JIHAI:
+        if self._suit == Suit.HONORS:
             return f"{prefix}{self._HONOR_NAME_MAP[locale][self._rank]}"
 
         numeral = self._NUMERAL_MAP[locale][self._rank]
@@ -221,8 +231,8 @@ def create_tile(suit: str, rank: int, is_red: bool = False) -> Tile:
     suit_map = {
         "m": Suit.MANZU,
         "p": Suit.PINZU,
-        "s": Suit.SOZU,
-        "z": Suit.JIHAI,
+        "s": Suit.SOUZU,
+        "z": Suit.HONORS,
     }
     if suit not in suit_map:
         raise ValueError(f"無效的花色: {suit}")
@@ -249,7 +259,7 @@ class TileSet:
     def _create_standard_set() -> List[Tile]:
         tiles = []
         # 數牌：萬、筒、條各 36 張（1-9 各 4 張）
-        for suit in [Suit.MANZU, Suit.PINZU, Suit.SOZU]:
+        for suit in [Suit.MANZU, Suit.PINZU, Suit.SOUZU]:
             for rank in range(1, 10):
                 if rank == 5:
                     tiles.extend(Tile(suit, rank) for _ in range(3))
@@ -258,7 +268,7 @@ class TileSet:
                     tiles.extend(Tile(suit, rank) for _ in range(4))
         # 字牌：風牌 16 張（東南西北各 4 張），三元牌 12 張（白發中各 4 張）
         tiles.extend(
-            Tile(Suit.JIHAI, rank)
+            Tile(Suit.HONORS, rank)
             for rank, _ in itertools.product(range(1, 8), range(4))
         )
         return tiles
@@ -381,18 +391,18 @@ class TileSet:
         Returns:
             Tile: 對應的寶牌。
         """
-        if indicator.suit == Suit.JIHAI:
+        if indicator.suit == Suit.HONORS:
             # 字牌：東→南→西→北→白→發→中→東
             if indicator.rank == 4:  # 北
-                return Tile(Suit.JIHAI, 1)  # 東
+                return Tile(Suit.HONORS, 1)  # 東
             elif indicator.rank == 5:  # 白
-                return Tile(Suit.JIHAI, 6)  # 發
+                return Tile(Suit.HONORS, 6)  # 發
             elif indicator.rank == 6:  # 發
-                return Tile(Suit.JIHAI, 7)  # 中
+                return Tile(Suit.HONORS, 7)  # 中
             elif indicator.rank == 7:  # 中
-                return Tile(Suit.JIHAI, 1)  # 東
+                return Tile(Suit.HONORS, 1)  # 東
             else:
-                return Tile(Suit.JIHAI, indicator.rank + 1)
+                return Tile(Suit.HONORS, indicator.rank + 1)
         else:
             # 數牌：1-8→+1，9→1
             if indicator.rank == 9:

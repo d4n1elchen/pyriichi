@@ -39,7 +39,7 @@ class TestYakuChecker:
         # 手牌：234m 567m 345p 678p 4s
         tiles = parse_tiles("234m567m345p678p4s")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.SOZU, 4)
+        winning_tile = Tile(Suit.SOUZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -70,7 +70,7 @@ class TestYakuChecker:
         # 手牌：123m 123m 456p 789s 1z
         tiles = parse_tiles("123m123m456p789s1z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 1)
+        winning_tile = Tile(Suit.HONORS, 1)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -85,7 +85,7 @@ class TestYakuChecker:
         # 手牌：123m 456p 789s 555z 1z
         tiles = parse_tiles("123m456p789s555z1z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 1)
+        winning_tile = Tile(Suit.HONORS, 1)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -105,7 +105,7 @@ class TestYakuChecker:
         # 手牌：123m 123p 123s 456p 1z
         tiles = parse_tiles("123m123p123s456p1z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 1)
+        winning_tile = Tile(Suit.HONORS, 1)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -120,7 +120,7 @@ class TestYakuChecker:
         # 手牌：123m 456m 789m 123p 1z
         tiles = parse_tiles("123m456m789m123p1z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 1)
+        winning_tile = Tile(Suit.HONORS, 1)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -165,7 +165,7 @@ class TestYakuChecker:
         # 手牌：123m 456m 789m 1112z
         tiles = parse_tiles("123m456m789m111z2z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 2)
+        winning_tile = Tile(Suit.HONORS, 2)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -229,7 +229,7 @@ class TestYakuChecker:
         # 手牌：123m 789m 123p 1112z
         tiles = parse_tiles("123m789m123p111z2z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 2)
+        winning_tile = Tile(Suit.HONORS, 2)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -247,7 +247,7 @@ class TestYakuChecker:
         # 手牌：123m 123m 456m 456m 1z
         tiles = parse_tiles("123m123m456m456m1z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 1)
+        winning_tile = Tile(Suit.HONORS, 1)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -268,7 +268,7 @@ class TestYakuChecker:
         # 手牌：111m 111p 111s 234m 1z
         tiles = parse_tiles("111m111p111s234m1z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 1)
+        winning_tile = Tile(Suit.HONORS, 1)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -283,7 +283,7 @@ class TestYakuChecker:
         # 手牌：123m 456p 5556667z
         tiles = parse_tiles("123m456p555z666z7z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 7)
+        winning_tile = Tile(Suit.HONORS, 7)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -298,7 +298,7 @@ class TestYakuChecker:
         # 手牌：111m 999m 111p 1112z
         tiles = parse_tiles("111m999m111p111z2z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 2)
+        winning_tile = Tile(Suit.HONORS, 2)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -313,7 +313,7 @@ class TestYakuChecker:
         # 手牌：123m 555666777z 1z
         tiles = parse_tiles("123m555z666z777z1z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 1)
+        winning_tile = Tile(Suit.HONORS, 1)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -413,7 +413,7 @@ class TestYakuChecker:
         # 手牌：1m 9m 1p 9p 1s 9s 123z 456z 7z
         tiles = parse_tiles("19m19p19s1z2z3z4z5z6z7z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 7)
+        winning_tile = Tile(Suit.HONORS, 7)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -440,7 +440,7 @@ class TestYakuChecker:
         # 手牌：111222333z 5556z
         tiles = parse_tiles("111z222z333z555z6z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 6)
+        winning_tile = Tile(Suit.HONORS, 6)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -475,7 +475,7 @@ class TestYakuChecker:
         # 手牌：123m 456m 345p 678p 4s
         tiles = parse_tiles("123m456m345p678p4s")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.SOZU, 4)
+        winning_tile = Tile(Suit.SOUZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -511,7 +511,7 @@ class TestYakuChecker:
         tiles = parse_tiles("234m567m345p678p4s")
         hand = Hand(tiles)
         hand.set_riichi(True)
-        winning_tile = Tile(Suit.SOZU, 4)
+        winning_tile = Tile(Suit.SOUZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -546,7 +546,7 @@ class TestYakuChecker:
         # 手牌：234s 234s 666s 888s 6z
         tiles = parse_tiles("234s234s666s888s6z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 6)
+        winning_tile = Tile(Suit.HONORS, 6)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -560,14 +560,14 @@ class TestYakuChecker:
             )
             yakuman = [r for r in results if r.is_yakuman]
             assert len(yakuman) > 0
-            ryuuiisou = [r for r in yakuman if r.yaku == Yaku.RYUIISOU]
+            ryuuiisou = [r for r in yakuman if r.yaku == Yaku.RYUUIISOU]
             if ryuuiisou:
                 assert ryuuiisou[0].han == 13
             else:
                 # 檢查判定方法
                 result = self.checker.check_ryuuiisou(hand, list(combinations[0]))
                 assert result is not None
-                assert result.yaku == Yaku.RYUIISOU
+                assert result.yaku == Yaku.RYUUIISOU
                 assert result.han == 13
 
     def test_chuuren_poutou(self):
@@ -580,7 +580,7 @@ class TestYakuChecker:
 
         result = self.checker.check_chuuren_poutou(hand, winning_tile)
         assert result is not None
-        assert result.yaku in {Yaku.CHUUREN_POUTOU, Yaku.CHUUREN_POUTOU_PURE}
+        assert result.yaku in {Yaku.CHUUREN_POUTOU, Yaku.PURE_CHUUREN_POUTOU}
         assert result.han >= 13
 
     def test_sankantsu(self):
@@ -598,8 +598,8 @@ class TestYakuChecker:
         combo_with_kan = [
             make_combination(CombinationType.KAN, Suit.MANZU, 1),
             make_combination(CombinationType.KAN, Suit.PINZU, 2),
-            make_combination(CombinationType.KAN, Suit.SOZU, 3),
-            make_combination(CombinationType.PAIR, Suit.JIHAI, 1),
+            make_combination(CombinationType.KAN, Suit.SOUZU, 3),
+            make_combination(CombinationType.PAIR, Suit.HONORS, 1),
         ]
         result = self.checker.check_sankantsu(hand, combo_with_kan)
         assert result is not None
@@ -613,7 +613,7 @@ class TestYakuChecker:
         tiles = parse_tiles("234m567m345p678p4s")
         hand = Hand(tiles)
         hand.set_riichi(True)
-        winning_tile = Tile(Suit.SOZU, 4)
+        winning_tile = Tile(Suit.SOUZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -638,7 +638,7 @@ class TestYakuChecker:
         # 手牌：234m 567m 234p 567p 5z
         tiles = parse_tiles("234m567m234p567p5z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 5)
+        winning_tile = Tile(Suit.HONORS, 5)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -661,7 +661,7 @@ class TestYakuChecker:
         # 手牌：123m 456m 789m 234p 5s
         tiles = parse_tiles("123m456m789m234p5s")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.SOZU, 5)
+        winning_tile = Tile(Suit.SOUZU, 5)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -684,7 +684,7 @@ class TestYakuChecker:
         # 手牌：222m 222p 222s 555m 1z
         tiles = parse_tiles("222m222p222s555m1z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 1)
+        winning_tile = Tile(Suit.HONORS, 1)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -706,7 +706,7 @@ class TestYakuChecker:
         # 手牌：123m 123m 789m 789m 1z
         tiles = parse_tiles("123m123m789m789m1z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 1)
+        winning_tile = Tile(Suit.HONORS, 1)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -805,7 +805,7 @@ class TestYakuChecker:
         # 手牌：111m 999m 111p 999p 1s
         tiles = parse_tiles("111m999m111p999p1s")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.SOZU, 1)
+        winning_tile = Tile(Suit.SOUZU, 1)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -837,7 +837,7 @@ class TestYakuChecker:
         # 手牌：234m 567m 234p 567p 5s
         tiles = parse_tiles("234m567m234p567p5s")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.SOZU, 5)
+        winning_tile = Tile(Suit.SOUZU, 5)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -855,7 +855,7 @@ class TestYakuChecker:
         # 手牌：123m 456m 345p 678p 4s
         tiles = parse_tiles("123m456m345p678p4s")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.SOZU, 4)
+        winning_tile = Tile(Suit.SOUZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -879,7 +879,7 @@ class TestYakuChecker:
         # 手牌：123m 456m 345p 678p 4s
         tiles = parse_tiles("123m456m345p678p4s")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.SOZU, 4)
+        winning_tile = Tile(Suit.SOUZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -904,7 +904,7 @@ class TestYakuChecker:
         # 手牌：123m 456m 345p 678p 4s
         tiles = parse_tiles("123m456m345p678p4s")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.SOZU, 4)
+        winning_tile = Tile(Suit.SOUZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -1000,7 +1000,7 @@ class TestYakuChecker:
         # 手牌：1m 9m 1p 9p 1s 9s 123z 456z 7z
         tiles = parse_tiles("19m19p19s1z2z3z4z5z6z7z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 7)
+        winning_tile = Tile(Suit.HONORS, 7)
 
         # 檢查是否為十三面聽牌
         result = self.checker.check_kokushi_musou(hand, winning_tile)
@@ -1009,7 +1009,7 @@ class TestYakuChecker:
         assert result.han == 26
         assert result.is_yakuman
 
-    def test_chuuren_poutou_junsei_direct(self):
+    def test_pure_chuuren_poutou_direct(self):
         """測試純正九蓮寶燈直接判定"""
         # 純正九蓮寶燈：九蓮寶燈且聽牌為九面聽
         # 1112345678999 + 任意一張，且該張牌是聽牌
@@ -1025,7 +1025,7 @@ class TestYakuChecker:
             )
             if result:
                 # 標準競技規則：如果是純正九蓮寶燈，應該是26翻（雙倍役滿）
-                if result.yaku == Yaku.CHUUREN_POUTOU_PURE:
+                if result.yaku == Yaku.PURE_CHUUREN_POUTOU:
                     assert result.han == 26
                     assert result.is_yakuman
                     break
@@ -1037,7 +1037,7 @@ class TestYakuChecker:
         tiles = parse_tiles("234m567m345p678p4s")
         hand = Hand(tiles)
         hand.set_riichi(True)
-        winning_tile = Tile(Suit.SOZU, 4)
+        winning_tile = Tile(Suit.SOUZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
@@ -1081,7 +1081,7 @@ class TestYakuChecker:
         tiles = parse_tiles("234m567m345p678p4s")
         hand = Hand(tiles)
         hand.set_riichi(True)
-        winning_tile = Tile(Suit.SOZU, 4)
+        winning_tile = Tile(Suit.SOUZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:

@@ -12,7 +12,7 @@ class RenhouPolicy(str, Enum):
     """Renhou rule setting."""
 
     YAKUMAN = "yakuman"
-    TWO_HAN = "2han"
+    TWO_HAN = "two_han"
     OFF = "off"
 
 
@@ -44,7 +44,7 @@ class RulesetConfig:
         suuankou_tanki_double (bool): Whether Suuankou Tanki is Double Yakuman.
             - True: Double Yakuman (26 Han, Standard competitive rule).
             - False: Single Yakuman (13 Han).
-        chuuren_pure_double (bool): Whether Junsei Chuuren Poutou is Double Yakuman.
+        pure_chuuren_poutou_double (bool): Whether Pure Nine Gates is Double Yakuman.
             - True: Double Yakuman (26 Han, Standard competitive rule).
             - False: Single Yakuman (13 Han).
         kiriage_mangan (bool): Kiriage Mangan rule.
@@ -98,7 +98,7 @@ class RulesetConfig:
     suuankou_tanki_double: bool = True
 
     # Chuuren Poutou Rule
-    chuuren_pure_double: bool = True
+    pure_chuuren_poutou_double: bool = True
 
     # Kiriage Mangan Rule
     kiriage_mangan: bool = False
@@ -141,7 +141,7 @@ class RulesetConfig:
             junchan_open_han=2,
             junchan_closed_han=3,
             suuankou_tanki_double=True,
-            chuuren_pure_double=True,
+            pure_chuuren_poutou_double=True,
             kiriage_mangan=False,
             tobi_enabled=True,
             west_round_extension=True,

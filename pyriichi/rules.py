@@ -19,16 +19,31 @@ class GameAction(TranslatableEnum):
     """Game Action"""
 
     DRAW = ("draw", "摸牌", "ツモ", "Draw")
-    DISCARD = ("discard", "打牌", "捨て牌", "Discard")
-    CHI = ("chi", "吃牌", "チー", "Chi")
-    PON = ("pon", "碰牌", "ポン", "Pon")
-    KAN = ("kan", "明槓", "カン", "Kan")
-    ANKAN = ("ankan", "暗槓", "暗槓", "Ankan")
-    RICHI = ("riichi", "立直", "リーチ", "Riichi")
+    DISCARD = ("discard", "打牌", "打牌", "Discard")
+    CHI = ("chi", "吃", "チー", "Chi")
+    PON = ("pon", "碰", "ポン", "Pon")
+    KAN = ("kan", "槓", "カン", "Kan")
+    DECLARE_ANKAN = ("declare_ankan", "暗槓", "暗槓", "Closed Kan")
+    DECLARE_RIICHI = ("declare_riichi", "立直", "リーチ", "Riichi")
     TSUMO = ("tsumo", "自摸", "ツモ", "Tsumo")
     RON = ("ron", "榮和", "ロン", "Ron")
-    KYUUSHU_KYUUHAI = ("kyuushu_kyuuhai", "九種九牌", "九種九牌", "Kyuushu Kyuuhai")
+    DECLARE_KYUUSHU_KYUUHAI = (
+        "declare_kyuushu_kyuuhai",
+        "九種九牌",
+        "九種九牌",
+        "Nine Terminals Abort",
+    )
     PASS = ("pass", "過", "パス", "Pass")
+
+    # Legacy aliases.
+    ANKAN = ("declare_ankan", "暗槓", "暗槓", "Closed Kan")
+    RICHI = ("declare_riichi", "立直", "リーチ", "Riichi")
+    KYUUSHU_KYUUHAI = (
+        "declare_kyuushu_kyuuhai",
+        "九種九牌",
+        "九種九牌",
+        "Nine Terminals Abort",
+    )
 
 
 class GamePhase(TranslatableEnum):
@@ -38,19 +53,32 @@ class GamePhase(TranslatableEnum):
     DEALING = ("dealing", "發牌", "配牌", "Dealing")
     PLAYING = ("playing", "對局中", "対局中", "Playing")
     WINNING = ("winning", "和牌處理", "和了処理", "Winning")
-    RYUUKYOKU = ("ryuukyoku", "流局", "流局", "Ryuukyoku")
+    RYUUKYOKU = ("ryuukyoku", "流局", "流局", "Exhaustive Draw")
     ENDED = ("ended", "結束", "終了", "Ended")
 
 
 class RyuukyokuType(TranslatableEnum):
     """Ryuukyoku (Exhaustive Draw) Type"""
 
-    SUUFON_RENDA = ("suufon_renda", "四風連打", "四風連打", "Suufon Renda")
-    SANCHA_RON = ("sancha_ron", "三家和了", "三家和了", "Sancha Ron")
-    SUUKANTSU = ("suukantsu", "四槓散了", "四槓散了", "Suukantsu")
-    EXHAUSTED = ("exhausted", "牌山耗盡", "牌山が尽きる", "Exhausted Wall")
-    SUUCHA_RIICHI = ("suucha_riichi", "四家立直", "四家立直", "Suucha Riichi")
-    KYUUSHU_KYUUHAI = ("kyuushu_kyuuhai", "九種九牌", "九種九牌", "Kyuushu Kyuuhai")
+    SUUFON_RENDA = ("suufon_renda", "四風連打", "四風連打", "Four Winds Abort")
+    SANCHA_RON = ("sancha_ron", "三家和了", "三家和了", "Triple Ron Abort")
+    SUUKAN_SANRA = ("suukan_sanra", "四槓散了", "四槓散了", "Four Kan Abort")
+    EXHAUSTED = ("exhaustive_draw", "流局", "流局", "Exhaustive Draw")
+    SUUCHA_RIICHI = (
+        "suucha_riichi",
+        "四家立直",
+        "四家立直",
+        "Four Riichi Abort",
+    )
+    KYUUSHU_KYUUHAI = (
+        "kyuushu_kyuuhai",
+        "九種九牌",
+        "九種九牌",
+        "Nine Terminals Abort",
+    )
+
+    # Legacy alias.
+    SUUKANTSU = ("suukan_sanra", "四槓散了", "四槓散了", "Four Kan Abort")
 
 
 @dataclass
@@ -93,13 +121,22 @@ class ActionResult:
     winners: List[int] = field(default_factory=list)
     rinshan_tile: Optional[Tile] = None
     kan: Optional[bool] = None
-    ankan: Optional[bool] = None
+    closed_kan: Optional[bool] = None
     rinshan_win: Optional[WinResult] = None
     win_results: Dict[int, WinResult] = field(default_factory=dict)
     meld: Optional[Meld] = None
     called_action: Optional[GameAction] = None
     called_tile: Optional[Tile] = None
     waiting_for: Dict[int, List[GameAction]] = field(default_factory=dict)
+
+    @property
+    def ankan(self) -> Optional[bool]:
+        """Legacy alias for closed_kan."""
+        return self.closed_kan
+
+    @ankan.setter
+    def ankan(self, value: Optional[bool]) -> None:
+        self.closed_kan = value
 
 
 class RuleEngine:
@@ -131,14 +168,14 @@ class RuleEngine:
         self._is_first_turn_after_deal: bool = True
         self._pending_kan_tile: Optional[Tuple[int, Tile]] = None
         self._winning_players: List[int] = []
-        self._ignore_suukantsu: bool = False
+        self._ignore_suukan_sanra: bool = False
 
         # Furiten (Sacred Discard) status tracking
         self._furiten_permanent: Dict[int, bool] = {}  # Riichi Furiten (Permanent)
         self._furiten_temp: Dict[int, bool] = {}  # Temporary Furiten (Same Turn)
-        self._furiten_temp_round: Dict[
-            int, int
-        ] = {}  # Round where Temporary Furiten occurred
+        self._furiten_temp_round: Dict[int, int] = (
+            {}
+        )  # Round where Temporary Furiten occurred
 
         self._pao_daisangen: Dict[int, int] = {}
         self._pao_daisuushi: Dict[int, int] = {}
@@ -148,12 +185,12 @@ class RuleEngine:
             GameAction.DISCARD: self._handle_discard,
             GameAction.PON: self._handle_pon,
             GameAction.CHI: self._handle_chi,
-            GameAction.RICHI: self._handle_riichi,
+            GameAction.DECLARE_RIICHI: self._handle_riichi,
             GameAction.KAN: self._handle_kan,
-            GameAction.ANKAN: self._handle_ankan,
+            GameAction.DECLARE_ANKAN: self._handle_declare_ankan,
             GameAction.TSUMO: self._handle_tsumo,
             GameAction.RON: self._handle_ron,
-            GameAction.KYUUSHU_KYUUHAI: self._handle_kyuushu_kyuuhai,
+            GameAction.DECLARE_KYUUSHU_KYUUHAI: self._handle_declare_kyuushu_kyuuhai,
             GameAction.PASS: self._handle_pass,
         }
 
@@ -197,7 +234,7 @@ class RuleEngine:
         self._is_first_turn_after_deal = True
         self._pending_kan_tile = None
         self._winning_players = []
-        self._ignore_suukantsu = False
+        self._ignore_suukan_sanra = False
 
         # Reset hands last drawn tile
         for hand in self._hands:
@@ -291,19 +328,19 @@ class RuleEngine:
             actions.append(GameAction.DISCARD)
 
         if self._can_riichi(player):
-            actions.append(GameAction.RICHI)
+            actions.append(GameAction.DECLARE_RIICHI)
 
         if self._can_kan(player):
             actions.append(GameAction.KAN)
 
-        if self._can_ankan(player):
-            actions.append(GameAction.ANKAN)
+        if self._can_declare_ankan(player):
+            actions.append(GameAction.DECLARE_ANKAN)
 
         if self._can_tsumo(player):
             actions.append(GameAction.TSUMO)
 
         if self._check_kyuushu_kyuuhai(player):
-            actions.append(GameAction.KYUUSHU_KYUUHAI)
+            actions.append(GameAction.DECLARE_KYUUSHU_KYUUHAI)
 
         return actions
 
@@ -390,12 +427,12 @@ class RuleEngine:
         if player == self._current_player:
             # Kakan (Added Kan): Upgrade existing Pon
             for meld in hand.can_kan(None):
-                if meld.type == MeldType.KAN and meld.called_tile is not None:
+                if meld.type == MeldType.OPEN_KAN and meld.called_tile is not None:
                     return True
 
         return False
 
-    def _can_ankan(self, player: int) -> bool:
+    def _can_declare_ankan(self, player: int) -> bool:
         hand = self._hands[player]
         possible_kans = hand.can_kan(None)
 
@@ -407,7 +444,7 @@ class RuleEngine:
 
         # After Riichi, can only Ankan (Closed Kan) if it doesn't change the waiting tiles
         # Here we need to check if each possible Ankan changes the wait
-        # Since _can_ankan only returns bool, any valid Ankan is enough
+        # Since _can_declare_ankan only returns bool, any valid Ankan is enough
         # Get current waiting tiles
         # In Riichi state, the base wait list is after "discarding the drawn tile"
         # Because if not Ankan, must Tsumogiri (discard drawn tile)
@@ -430,7 +467,7 @@ class RuleEngine:
             return False  # Should not happen, Riichi must be Tenpai
 
         for meld in possible_kans:
-            if meld.type != MeldType.ANKAN:
+            if meld.type != MeldType.CLOSED_KAN:
                 continue
 
             # Simulate Ankan
@@ -696,7 +733,9 @@ class RuleEngine:
 
         # Calculate Kan count (each Kan increases hand limit by 1)
         kan_count = sum(
-            1 for meld in hand.melds if meld.type in [MeldType.KAN, MeldType.ANKAN]
+            1
+            for meld in hand.melds
+            if meld.type in [MeldType.OPEN_KAN, MeldType.CLOSED_KAN]
         )
         limit = 14 + kan_count
 
@@ -749,8 +788,8 @@ class RuleEngine:
 
             # Chi (Next player only)
             if (
-                (i - discarded_player) % self._num_players != 1
-            ):  # Changed from == 1 to != 1 to match _can_chi logic
+                i - discarded_player
+            ) % self._num_players != 1:  # Changed from == 1 to != 1 to match _can_chi logic
                 pass  # Skip if not next player
             else:
                 if self._can_chi(i):
@@ -985,7 +1024,7 @@ class RuleEngine:
 
         return result
 
-    def _handle_ankan(
+    def _handle_declare_ankan(
         self, player: int, tile: Optional[Tile] = None, **kwargs
     ) -> ActionResult:
         result = ActionResult()
@@ -1014,7 +1053,9 @@ class RuleEngine:
         else:
             # 如果未指定，且有多個選擇，默認選第一個（或應拋出歧義錯誤）
             selected = candidates[0]
-        is_add_kan = selected.type == MeldType.KAN and selected.called_tile is not None
+        is_add_kan = (
+            selected.type == MeldType.OPEN_KAN and selected.called_tile is not None
+        )
 
         if is_add_kan:
             kan_tile = selected.tiles[0]
@@ -1029,21 +1070,21 @@ class RuleEngine:
         meld = hand.kan(selected.tiles[0])
         if meld:
             self._kan_count += 1
-        kan_type = meld.type if meld else MeldType.ANKAN
+        kan_type = meld.type if meld else MeldType.CLOSED_KAN
 
-        if kan_type == MeldType.ANKAN:
-            result.ankan = True
+        if kan_type == MeldType.CLOSED_KAN:
+            result.closed_kan = True
         else:
             result.kan = True
 
-        self._interrupt_ippatsu(GameAction.ANKAN, acting_player=player)
+        self._interrupt_ippatsu(GameAction.DECLARE_ANKAN, acting_player=player)
 
         self._draw_rinshan_tile(player, result, kan_type=kan_type)
         if self._pending_kan_tile:
             self._pending_kan_tile = None
         hand.reset_last_drawn_tile()  # 槓牌後清除最後摸的牌
 
-        result.ankan = True
+        result.closed_kan = True
         return result
 
     def _handle_tsumo(
@@ -1242,7 +1283,7 @@ class RuleEngine:
             if not has_next:
                 self._phase = GamePhase.ENDED
 
-    def _handle_kyuushu_kyuuhai(
+    def _handle_declare_kyuushu_kyuuhai(
         self, player: int, tile: Optional[Tile] = None, **kwargs
     ) -> ActionResult:
         """
@@ -1277,14 +1318,14 @@ class RuleEngine:
         if rinshan_tile := self._tile_set.draw_rinshan():
             hand.add_tile(rinshan_tile)
             result.rinshan_tile = rinshan_tile
-            if kan_type == MeldType.KAN:
+            if kan_type == MeldType.OPEN_KAN:
                 result.kan = True
             else:
-                result.ankan = True
+                result.closed_kan = True
 
             if rinshan_win := self._check_rinshan_win(player, rinshan_tile):
                 result.rinshan_win = rinshan_win
-                self._ignore_suukantsu = True
+                self._ignore_suukan_sanra = True
                 self._phase = GamePhase.WINNING
             else:
                 # 計算並設置等待動作
@@ -1474,7 +1515,7 @@ class RuleEngine:
             score_result.payment_from = kan_player
 
         if self._kan_count >= 4:
-            self._ignore_suukantsu = True
+            self._ignore_suukan_sanra = True
 
         return WinResult(
             win=True,
@@ -1595,8 +1636,8 @@ class RuleEngine:
             return RyuukyokuType.SANCHA_RON
 
         # 檢查四槓散了（四個槓之後流局）
-        if self._kan_count >= 4 and not self._ignore_suukantsu:
-            return RyuukyokuType.SUUKANTSU
+        if self._kan_count >= 4 and not self._ignore_suukan_sanra:
+            return RyuukyokuType.SUUKAN_SANRA
 
         # 牌山耗盡流局
         if self._tile_set and self._tile_set.is_exhausted():
@@ -1627,11 +1668,11 @@ class RuleEngine:
         first_tile = self._discard_history[0][1]
 
         # 必須是風牌（字牌 rank 1-4）
-        if first_tile.suit != Suit.JIHAI or not (1 <= first_tile.rank <= 4):
+        if first_tile.suit != Suit.HONORS or not (1 <= first_tile.rank <= 4):
             return False
 
         return not any(
-            tile.suit != Suit.JIHAI or tile.rank != first_tile.rank
+            tile.suit != Suit.HONORS or tile.rank != first_tile.rank
             for _, tile in self._discard_history[:4]
         )
 
@@ -1957,7 +1998,7 @@ class RuleEngine:
             GameAction.CHI,
             GameAction.PON,
             GameAction.KAN,
-            GameAction.ANKAN,
+            GameAction.DECLARE_ANKAN,
         }:
             return
 

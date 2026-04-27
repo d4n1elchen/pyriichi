@@ -81,7 +81,7 @@ class TestCompleteWinFlow:
         # 手牌：123m 456p 789s 1112z
         tiles = parse_tiles("123m456p789s111z2z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 2)  # 2z
+        winning_tile = Tile(Suit.HONORS, 2)  # 2z
 
         # 1. 檢查是否和牌（is_winning_hand 期望手牌13張，會自動添加和牌牌）
         assert hand.is_winning_hand(winning_tile)
@@ -219,8 +219,8 @@ class TestSpecialRulesFlow:
             # 嘗試立直
             result = engine.get_available_actions(current_player)
             # 如果聽牌，應該可以立直
-            if GameAction.RICHI in result:
-                engine.execute_action(current_player, GameAction.RICHI)
+            if GameAction.DECLARE_RIICHI in result:
+                engine.execute_action(current_player, GameAction.DECLARE_RIICHI)
                 # 驗證立直狀態（通過檢查一發旗標字典）
                 assert current_player in engine._riichi_ippatsu
 
@@ -242,7 +242,7 @@ class TestSpecialRulesFlow:
 class TestDrawScenarios:
     """測試流局場景"""
 
-    def test_kyuushu_kyuuhai_flow(self):
+    def test_declare_kyuushu_kyuuhai_flow(self):
         """測試九種九牌流局流程"""
         engine = RuleEngine(num_players=4)
         engine.start_game()
@@ -265,10 +265,10 @@ class TestDrawScenarios:
 
         # 檢查可用動作
         actions = engine.get_available_actions(0)
-        assert GameAction.KYUUSHU_KYUUHAI in actions
+        assert GameAction.DECLARE_KYUUSHU_KYUUHAI in actions
 
         # 執行九種九牌流局
-        result = engine.execute_action(0, GameAction.KYUUSHU_KYUUHAI)
+        result = engine.execute_action(0, GameAction.DECLARE_KYUUSHU_KYUUHAI)
 
         # 驗證結果
         assert result.ryuukyoku is not None
@@ -361,7 +361,7 @@ class TestMultiModuleIntegration:
         hand = Hand(tiles)
 
         # 執行碰操作（模擬從其他玩家碰1z，會從手牌中移除2張1z）
-        meld = hand.pon(Tile(Suit.JIHAI, 1))
+        meld = hand.pon(Tile(Suit.HONORS, 1))
 
         # 驗證副露已添加
         assert len(hand._melds) == 1
@@ -424,7 +424,7 @@ class TestRealWorldScenarios:
         # 手牌：123m 456p 789s 1112z
         tiles = parse_tiles("123m456p789s111z2z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.JIHAI, 2)
+        winning_tile = Tile(Suit.HONORS, 2)
 
         assert hand.is_winning_hand(winning_tile)
         winning_combinations = hand.get_winning_combinations(winning_tile)
@@ -535,7 +535,7 @@ class TestErrorHandling:
         # 手牌：1m 9m 1p 9p 1s 9s 123z 456z 7z
         kokushi_tiles = parse_tiles("19m19p19s1z2z3z4z5z6z7z")
         hand2 = Hand(kokushi_tiles)
-        winning_tile2 = Tile(Suit.JIHAI, 1)  # 和牌牌1z（組成11z對子）
+        winning_tile2 = Tile(Suit.HONORS, 1)  # 和牌牌1z（組成11z對子）
 
         # 國士無雙應該被識別為和牌（is_winning_hand 期望手牌13張，會自動添加和牌牌）
         assert hand2.is_winning_hand(winning_tile2)

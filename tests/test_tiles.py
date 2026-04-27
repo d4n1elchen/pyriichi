@@ -15,14 +15,14 @@ class TestTile:
         assert tile.suit == Suit.MANZU
         assert tile.rank == 1
 
-    def test_tile_creation_invalid_rank_jihai(self):
+    def test_tile_creation_invalid_rank_honors(self):
         """測試字牌無效 rank 錯誤"""
         # 字牌 rank 必須在 1-7 之間
         with pytest.raises(ValueError, match="字牌 rank 必須在 1-7 之間"):
-            Tile(Suit.JIHAI, 0)  # 無效 rank
+            Tile(Suit.HONORS, 0)  # 無效 rank
 
         with pytest.raises(ValueError, match="字牌 rank 必須在 1-7 之間"):
-            Tile(Suit.JIHAI, 8)  # 無效 rank
+            Tile(Suit.HONORS, 8)  # 無效 rank
 
     def test_tile_creation_invalid_rank_number(self):
         """測試數牌無效 rank 錯誤"""
@@ -49,7 +49,7 @@ class TestTile:
         assert tile.is_terminal == False
         assert tile.is_simple == True
 
-        tile = Tile(Suit.JIHAI, 1)
+        tile = Tile(Suit.HONORS, 1)
         assert tile.is_honor == True
         assert tile.is_terminal == False
         # 字牌 is_simple 應該返回 False
@@ -226,27 +226,27 @@ class TestTileSet:
 
         # 測試字牌寶牌
         # 北（4）→ 東（1）
-        indicator_north = Tile(Suit.JIHAI, 4)
+        indicator_north = Tile(Suit.HONORS, 4)
         dora = tile_set.get_dora(indicator_north)
-        assert dora.suit == Suit.JIHAI
+        assert dora.suit == Suit.HONORS
         assert dora.rank == 1
 
         # 白（5）→ 發（6）
-        indicator_white = Tile(Suit.JIHAI, 5)
+        indicator_white = Tile(Suit.HONORS, 5)
         dora = tile_set.get_dora(indicator_white)
-        assert dora.suit == Suit.JIHAI
+        assert dora.suit == Suit.HONORS
         assert dora.rank == 6
 
         # 發（6）→ 中（7）
-        indicator_green = Tile(Suit.JIHAI, 6)
+        indicator_green = Tile(Suit.HONORS, 6)
         dora = tile_set.get_dora(indicator_green)
-        assert dora.suit == Suit.JIHAI
+        assert dora.suit == Suit.HONORS
         assert dora.rank == 7
 
         # 中（7）→ 東（1）
-        indicator_red = Tile(Suit.JIHAI, 7)
+        indicator_red = Tile(Suit.HONORS, 7)
         dora = tile_set.get_dora(indicator_red)
-        assert dora.suit == Suit.JIHAI
+        assert dora.suit == Suit.HONORS
         assert dora.rank == 1
 
         # 測試數牌寶牌

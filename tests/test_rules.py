@@ -83,7 +83,7 @@ class TestRuleEngine:
         # Force recalculate actions (bypass cache)
         actions = self.engine._calculate_turn_actions(player_idx)
 
-        assert GameAction.RICHI in actions
+        assert GameAction.DECLARE_RIICHI in actions
 
     def test_hand_total_tile_count_includes_melds(self):
         """Total tile count should include melded tiles."""
@@ -220,7 +220,7 @@ class TestRuleEngine:
         self.engine._riichi_ippatsu = {0: True}
         self.engine._riichi_ippatsu_discard = {0: 0}
 
-        kan_tile = Tile(Suit.SOZU, 9)
+        kan_tile = Tile(Suit.SOUZU, 9)
         self.engine._hands[0] = Hand(parse_tiles("9s1122334455667m"))
         self.engine._hands[1] = Hand(parse_tiles("999s1122334455s"))
         self.engine._current_player = 0
@@ -237,7 +237,7 @@ class TestRuleEngine:
 
         assert self.engine._riichi_ippatsu[0] is False
 
-    def test_interrupt_riichi_ippatsu_on_ankan(self):
+    def test_interrupt_riichi_ippatsu_on_declare_ankan(self):
         """Test Ankan (Closed Kan) interrupts Ippatsu"""
         self._init_game()
         self.engine._riichi_ippatsu = {0: True, 1: True}
@@ -250,10 +250,10 @@ class TestRuleEngine:
         self.engine._waiting_for_actions[3] = self.engine._calculate_turn_actions(3)
         self.engine._current_player = 3
 
-        assert GameAction.ANKAN in self.engine.get_available_actions(3)
-        result = self.engine.execute_action(3, GameAction.ANKAN)
+        assert GameAction.DECLARE_ANKAN in self.engine.get_available_actions(3)
+        result = self.engine.execute_action(3, GameAction.DECLARE_ANKAN)
 
-        assert result.ankan is True or result.kan is True
+        assert result.closed_kan is True or result.kan is True
         assert all(flag is False for flag in self.engine._riichi_ippatsu.values())
 
     def test_furiten_discards_cannot_ron(self):
@@ -394,7 +394,7 @@ class TestRuleEngine:
         p1_hand._melds = []
 
         # Player 0 discards 4z
-        tile_4z = Tile(Suit.JIHAI, 4)
+        tile_4z = Tile(Suit.HONORS, 4)
         # Ensure Player 0 has this tile
         self.engine.get_hand(0)._tiles.append(tile_4z)
         self.engine.execute_action(0, GameAction.DISCARD, tile_4z)
@@ -750,7 +750,7 @@ class TestRuleEngine:
         # 10 tiles + 1 Kan (4 tiles) = 14 tiles
         hand._tiles = parse_tiles("1m2m3m4m5m6m7m8m9m1p")
         kan_tiles = parse_tiles("2p2p2p2p")
-        meld = Meld(MeldType.ANKAN, kan_tiles)
+        meld = Meld(MeldType.CLOSED_KAN, kan_tiles)
         hand._melds = [meld]
 
         # Ensure Player 0's turn
@@ -806,7 +806,7 @@ class TestRuleEngine:
         hand._tiles = parse_tiles("123m456p789s1122z")
 
         # Draw tile
-        drawn_tile = Tile(Suit.JIHAI, 3)  # 3z (West)
+        drawn_tile = Tile(Suit.HONORS, 3)  # 3z (West)
         hand.add_tile(drawn_tile)
 
         # Try to discard a tile that was not just drawn (1m)
@@ -817,7 +817,7 @@ class TestRuleEngine:
         # Should succeed
         self.engine._handle_discard(0, drawn_tile)
 
-    def test_ankan_allowed_if_wait_unchanged(self):
+    def test_closed_kan_allowed_if_wait_unchanged(self):
         """Test Ankan allowed if wait is unchanged after Riichi"""
         self._init_game()
         hand = self.engine.get_hand(0)
@@ -830,9 +830,9 @@ class TestRuleEngine:
         hand.add_tile(drawn_tile)
 
         # Should allow Ankan
-        assert self.engine._can_ankan(0)
+        assert self.engine._can_declare_ankan(0)
 
-    def test_ankan_forbidden_if_wait_changed(self):
+    def test_closed_kan_forbidden_if_wait_changed(self):
         """Test Ankan forbidden if wait is changed after Riichi"""
         self._init_game()
         hand = self.engine.get_hand(0)
@@ -844,7 +844,7 @@ class TestRuleEngine:
         hand.add_tile(drawn_tile)
 
         # Should NOT allow Ankan
-        assert not self.engine._can_ankan(0)
+        assert not self.engine._can_declare_ankan(0)
 
     def test_riichi_requires_discard_and_tenpai(self):
         """Test Riichi requires both discard and Tenpai"""
@@ -872,7 +872,7 @@ class TestRuleEngine:
         # 11123m 456p 789s 12z (Noten) + draw 3z
         hand._is_riichi = False
         hand._tiles = parse_tiles("11123m456p789s12z")
-        drawn_tile = Tile(Suit.JIHAI, 3)
+        drawn_tile = Tile(Suit.HONORS, 3)
         hand.add_tile(drawn_tile)
 
         # Try Riichi and discard 3z (Still Noten)
@@ -973,13 +973,13 @@ class TestHighScoringMethod:
         # Pinfu (1) + Tsumo (1) + Iipeikou (1) = 3 Han 20 Fu.
 
         # So we expect 3 Han 40 Fu.
-        assert result.fu == 40, (
-            f"Should choose higher scoring interpretation (40 Fu vs 20 Fu). Got {result.fu} Fu, Yaku: {[y.yaku.name for y in result.yaku]}"
-        )
+        assert (
+            result.fu == 40
+        ), f"Should choose higher scoring interpretation (40 Fu vs 20 Fu). Got {result.fu} Fu, Yaku: {[y.yaku.name for y in result.yaku]}"
 
 
-class TestDarkKanSelection:
-    def test_ankan_selection(self):
+class TestClosedKanSelection:
+    def test_closed_kan_selection(self):
         # Setup: Hand has 1111m and 2222m.
         tiles = parse_tiles("1111m2222m567p89s")
         hand = Hand(tiles)
@@ -1006,7 +1006,7 @@ class TestDarkKanSelection:
 
         # Execute Ankan 2m
         tile_to_kan = Tile(Suit.MANZU, 2)
-        result = engine.execute_action(0, GameAction.ANKAN, tile=tile_to_kan)
+        result = engine.execute_action(0, GameAction.DECLARE_ANKAN, tile=tile_to_kan)
 
         # Check success
         assert result.success
@@ -1014,7 +1014,7 @@ class TestDarkKanSelection:
         # Check hand melds
         melds = engine._hands[0].melds
         assert len(melds) == 1
-        assert melds[0].type == MeldType.ANKAN
+        assert melds[0].type == MeldType.CLOSED_KAN
         assert melds[0].tiles[0] == tile_to_kan
 
         # Check remaining tiles
@@ -1027,7 +1027,7 @@ class TestDarkKanSelection:
 
         # Now execute Ankan 1m
         tile_to_kan_1 = Tile(Suit.MANZU, 1)
-        result = engine.execute_action(0, GameAction.ANKAN, tile=tile_to_kan_1)
+        result = engine.execute_action(0, GameAction.DECLARE_ANKAN, tile=tile_to_kan_1)
         assert result.success
 
         melds = engine._hands[0].melds
@@ -1064,7 +1064,7 @@ class TestActionAvailability:
         # 123m 456m 789m 12p 4p 8p
         self.engine._hands[current_player] = Hand(parse_tiles("123456789m1248p"))
         assert not self.engine.get_hand(current_player).is_tenpai()
-        assert not self._has_action(current_player, GameAction.RICHI)
+        assert not self._has_action(current_player, GameAction.DECLARE_RIICHI)
 
     def test_cannot_action_riichi_not_concealed(self):
         """Test cannot Riichi if not concealed"""
@@ -1077,7 +1077,7 @@ class TestActionAvailability:
             )
         )
         assert self.engine.get_hand(current_player).is_concealed is False
-        assert not self._has_action(current_player, GameAction.RICHI)
+        assert not self._has_action(current_player, GameAction.DECLARE_RIICHI)
 
     def test_get_available_actions_kan(self):
         """Test if Daiminkan (Open Kan) is available"""
@@ -1106,7 +1106,7 @@ class TestActionAvailability:
 
         assert not self._has_action(current_player, GameAction.KAN)
 
-    def test_get_available_actions_ankan(self):
+    def test_get_available_actions_declare_ankan(self):
         """Test if Ankan (Closed Kan) is available"""
         self._init_game()
         # 111m 123m 456m 7m 123p
@@ -1115,7 +1115,7 @@ class TestActionAvailability:
         # Force update actions
         self.engine._waiting_for_actions[0] = self.engine._calculate_turn_actions(0)
 
-        assert self._has_action(0, GameAction.ANKAN)
+        assert self._has_action(0, GameAction.DECLARE_ANKAN)
 
     def test_get_available_actions_draw_requires_current_player(self):
         """Test Draw is only available to current player"""
@@ -1189,7 +1189,7 @@ class TestActionExecution:
         # Verify Kan success
         assert result.kan is True
         assert len(hand1.melds) == 1
-        assert hand1.melds[0].type == MeldType.KAN
+        assert hand1.melds[0].type == MeldType.OPEN_KAN
         assert hand1.melds[0].called_tile == discard_tile
 
         # Verify discard removed from P0's discards
@@ -1328,7 +1328,7 @@ class TestActionExecution:
         # Add one more tile (e.g. 9s) to discard and stay tenpai
         tiles = parse_tiles("123456789m1234p")
         hand = Hand(tiles)
-        hand.add_tile(Tile(Suit.SOZU, 9))
+        hand.add_tile(Tile(Suit.SOUZU, 9))
         self.engine._hands[current_player] = hand
 
         # Force update actions
@@ -1336,10 +1336,10 @@ class TestActionExecution:
             self.engine._calculate_turn_actions(current_player)
         )
 
-        assert self._has_action(current_player, GameAction.RICHI)
+        assert self._has_action(current_player, GameAction.DECLARE_RIICHI)
 
         result = self.engine.execute_action(
-            current_player, GameAction.RICHI, tile=Tile(Suit.SOZU, 9)
+            current_player, GameAction.DECLARE_RIICHI, tile=Tile(Suit.SOUZU, 9)
         )
         assert result.riichi is True
         assert self.engine.get_hand(current_player).is_riichi
@@ -1518,15 +1518,15 @@ class TestActionExecution:
         assert result.rinshan_tile is not None
         assert result.rinshan_win is not None
 
-    def test_execute_action_ankan_rinshan_win(self):
+    def test_execute_action_declare_ankan_rinshan_win(self):
         """Test Rinshan Kaihou after Ankan"""
         self._init_game()
 
         # Set Player 0 can Ankan
         ten_tile = Tile(Suit.PINZU, 4)
         # 1111m 234m 567m 123p 4p (Wait 4p)
-        ankan_tiles = parse_tiles("1111234567m1234p")
-        self.engine._hands[0] = Hand(ankan_tiles)
+        closed_kan_tiles = parse_tiles("1111234567m1234p")
+        self.engine._hands[0] = Hand(closed_kan_tiles)
         self.engine._current_player = 0
         assert self.engine._tile_set is not None
         self.engine._tile_set._rinshan_tiles[0] = ten_tile
@@ -1535,8 +1535,8 @@ class TestActionExecution:
         self.engine._waiting_for_actions[0] = self.engine._calculate_turn_actions(0)
 
         # Execute Ankan
-        assert self._has_action(0, GameAction.ANKAN)
-        result = self.engine.execute_action(0, GameAction.ANKAN)
+        assert self._has_action(0, GameAction.DECLARE_ANKAN)
+        result = self.engine.execute_action(0, GameAction.DECLARE_ANKAN)
         assert result.rinshan_tile is not None
         assert result.rinshan_win is not None
 
@@ -1566,8 +1566,8 @@ class TestActionExecution:
         self.engine._waiting_for_actions[0] = self.engine._calculate_turn_actions(0)
 
         # Execute Kakan, should check Chankan
-        assert self._has_action(0, GameAction.ANKAN)
-        result = self.engine.execute_action(0, GameAction.ANKAN)
+        assert self._has_action(0, GameAction.DECLARE_ANKAN)
+        result = self.engine.execute_action(0, GameAction.DECLARE_ANKAN)
         # Should trigger Chankan
         assert result.chankan is not None
         assert result.chankan is True
@@ -1616,9 +1616,9 @@ class TestActionExecution:
 
         assert result.kan is True
         assert self.engine._kan_count == 4
-        assert self.engine.check_ryuukyoku() == RyuukyokuType.SUUKANTSU
+        assert self.engine.check_ryuukyoku() == RyuukyokuType.SUUKAN_SANRA
 
-    def test_execute_action_ankan_wall_exhausted(self):
+    def test_execute_action_declare_ankan_wall_exhausted(self):
         """Test Ankan triggers Four Kans Abortion (Suukaikan)"""
         self._init_game()
 
@@ -1630,21 +1630,21 @@ class TestActionExecution:
 
         self.engine._kan_count = 3
         assert self.engine._tile_set is not None
-        self.engine._tile_set._wall = [Tile(Suit.SOZU, 5)]
+        self.engine._tile_set._wall = [Tile(Suit.SOUZU, 5)]
         self.engine._tile_set._tiles = []
         # Ensure Rinshan tile is not a winning tile (Hand tenpai is special, give unrelated honor tile to ensure no win)
-        self.engine._tile_set._rinshan_tiles = [Tile(Suit.JIHAI, 1)] * 4
+        self.engine._tile_set._rinshan_tiles = [Tile(Suit.HONORS, 1)] * 4
 
         # Force update actions
         self.engine._waiting_for_actions[player] = self.engine._calculate_turn_actions(
             player
         )
 
-        result = self.engine.execute_action(player, GameAction.ANKAN)
+        result = self.engine.execute_action(player, GameAction.DECLARE_ANKAN)
 
-        assert result.ankan is True
+        assert result.closed_kan is True
         assert self.engine._kan_count == 4
-        assert self.engine.check_ryuukyoku() == RyuukyokuType.SUUKANTSU
+        assert self.engine.check_ryuukyoku() == RyuukyokuType.SUUKAN_SANRA
 
     def test_execute_action_discard_is_last_tile(self):
         """Test check for discarding the last tile"""
@@ -1833,17 +1833,17 @@ class TestWinningAndScoring:
         self.engine._hands[0] = Hand(parse_tiles("11199m"))  # 111m 99m
 
         # Set Melds
-        meld_haku = Meld(
-            MeldType.PON, [Tile(Suit.JIHAI, 5)] * 3, 1
+        meld_white = Meld(
+            MeldType.PON, [Tile(Suit.HONORS, 5)] * 3, 1
         )  # Pon Haku (from 1)
-        meld_hatsu = Meld(
-            MeldType.PON, [Tile(Suit.JIHAI, 6)] * 3, 2
+        meld_green = Meld(
+            MeldType.PON, [Tile(Suit.HONORS, 6)] * 3, 2
         )  # Pon Hatsu (from 2)
-        meld_chun = Meld(
-            MeldType.PON, [Tile(Suit.JIHAI, 7)] * 3, 3
+        meld_red = Meld(
+            MeldType.PON, [Tile(Suit.HONORS, 7)] * 3, 3
         )  # Pon Chun (from 3) - Triggers Pao
 
-        self.engine._hands[0]._melds = [meld_haku, meld_hatsu, meld_chun]
+        self.engine._hands[0]._melds = [meld_white, meld_green, meld_red]
 
         # Set Pao state (Player 3 is Pao)
         # Note: This requires adding _pao_daisangen attribute in rules.py
@@ -1893,19 +1893,19 @@ class TestWinningAndScoring:
         self.engine._hands[0] = Hand(parse_tiles("1199m"))
 
         # Set Melds
-        meld_haku = Meld(MeldType.PON, [Tile(Suit.JIHAI, 5)] * 3, 1)
-        meld_hatsu = Meld(MeldType.PON, [Tile(Suit.JIHAI, 6)] * 3, 2)
-        meld_chun = Meld(
-            MeldType.PON, [Tile(Suit.JIHAI, 7)] * 3, 3
+        meld_white = Meld(MeldType.PON, [Tile(Suit.HONORS, 5)] * 3, 1)
+        meld_green = Meld(MeldType.PON, [Tile(Suit.HONORS, 6)] * 3, 2)
+        meld_red = Meld(
+            MeldType.PON, [Tile(Suit.HONORS, 7)] * 3, 3
         )  # Pon Chun (from 3) - Triggers Pao
 
-        self.engine._hands[0]._melds = [meld_haku, meld_hatsu, meld_chun]
+        self.engine._hands[0]._melds = [meld_white, meld_green, meld_red]
 
         # Set Pao state (Player 3 is Pao)
         self.engine._pao_daisangen[0] = 3
 
         # Player 3 discards Chun (Pao player deals in)
-        # winning_tile = Tile(Suit.JIHAI, 7) # Actually should discard 1m or 5z, because 5z is already Ponned, so discard 1m
+        # winning_tile = Tile(Suit.HONORS, 7) # Actually should discard 1m or 5z, because 5z is already Ponned, so discard 1m
         # Wait, hand is 11m 55z, Ponned 567z
         # Tenpai is 1m, 5z (Pair wait?) No, Ponned 3 triplets, hand remains 11m 55z?
         # 13 tiles: 3*3=9 tiles melded, remains 4 tiles.
@@ -1940,13 +1940,13 @@ class TestWinningAndScoring:
         self.engine._hands[0] = Hand(parse_tiles("1199m"))
 
         # Set Melds
-        meld_haku = Meld(MeldType.PON, [Tile(Suit.JIHAI, 5)] * 3, 1)
-        meld_hatsu = Meld(MeldType.PON, [Tile(Suit.JIHAI, 6)] * 3, 2)
-        meld_chun = Meld(
-            MeldType.PON, [Tile(Suit.JIHAI, 7)] * 3, 3
+        meld_white = Meld(MeldType.PON, [Tile(Suit.HONORS, 5)] * 3, 1)
+        meld_green = Meld(MeldType.PON, [Tile(Suit.HONORS, 6)] * 3, 2)
+        meld_red = Meld(
+            MeldType.PON, [Tile(Suit.HONORS, 7)] * 3, 3
         )  # Pon Chun (from 3) - Triggers Pao
 
-        self.engine._hands[0]._melds = [meld_haku, meld_hatsu, meld_chun]
+        self.engine._hands[0]._melds = [meld_white, meld_green, meld_red]
 
         # Set Pao state (Player 3 is Pao)
         self.engine._pao_daisangen[0] = 3
@@ -2293,7 +2293,7 @@ class TestRyuukyoku:
         """Test Suufon Renda (Four Winds) Ryuukyoku check"""
         self._init_game()
         # Set discard history to four identical wind tiles
-        wind_tile = Tile(Suit.JIHAI, 1)  # East
+        wind_tile = Tile(Suit.HONORS, 1)  # East
 
         # Add four identical wind tiles to discard history
         self.engine._discard_history.append((0, wind_tile))
@@ -2333,7 +2333,7 @@ class TestRyuukyoku:
         ryuukyoku_type = self.engine.check_ryuukyoku()
         assert ryuukyoku_type == RyuukyokuType.SANCHA_RON
 
-    def test_check_draw_suukantsu(self):
+    def test_check_draw_suukan_sanra(self):
         """Test Suukaikan (Four Kans) Ryuukyoku check"""
         self._init_game()
         # Set Kan count to 4
@@ -2342,7 +2342,7 @@ class TestRyuukyoku:
         # Check Suukaikan
         ryuukyoku_type = self.engine.check_ryuukyoku()
         assert ryuukyoku_type is not None
-        assert ryuukyoku_type == RyuukyokuType.SUUKANTSU
+        assert ryuukyoku_type == RyuukyokuType.SUUKAN_SANRA
 
     def test_check_draw_exhausted(self):
         """Test Exhausted Wall Ryuukyoku check"""
@@ -2359,7 +2359,7 @@ class TestRyuukyoku:
         assert ryuukyoku_type is not None
         assert ryuukyoku_type == RyuukyokuType.EXHAUSTED
 
-    def test_handle_draw_kyuushu_kyuuhai(self):
+    def test_declare_kyuushu_kyuuhai(self):
         """Test Kyuushu Kyuuhai (Nine Terminal/Honors) Ryuukyoku handling"""
         self._init_game()
         player = self.engine.get_current_player()
@@ -2375,7 +2375,7 @@ class TestRyuukyoku:
         )
 
         # Execute action
-        result = self.engine.execute_action(player, GameAction.KYUUSHU_KYUUHAI)
+        result = self.engine.execute_action(player, GameAction.DECLARE_KYUUSHU_KYUUHAI)
 
         assert result.ryuukyoku is not None
         assert result.ryuukyoku.ryuukyoku is True
@@ -2405,15 +2405,15 @@ class TestRyuukyoku:
             Tile(Suit.MANZU, 9),
             Tile(Suit.PINZU, 1),
             Tile(Suit.PINZU, 9),
-            Tile(Suit.SOZU, 1),
-            Tile(Suit.SOZU, 9),
-            Tile(Suit.JIHAI, 1),
-            Tile(Suit.JIHAI, 2),
-            Tile(Suit.JIHAI, 3),
-            Tile(Suit.JIHAI, 4),
-            Tile(Suit.JIHAI, 5),
-            Tile(Suit.JIHAI, 6),
-            Tile(Suit.JIHAI, 7),
+            Tile(Suit.SOUZU, 1),
+            Tile(Suit.SOUZU, 9),
+            Tile(Suit.HONORS, 1),
+            Tile(Suit.HONORS, 2),
+            Tile(Suit.HONORS, 3),
+            Tile(Suit.HONORS, 4),
+            Tile(Suit.HONORS, 5),
+            Tile(Suit.HONORS, 6),
+            Tile(Suit.HONORS, 7),
         ]
 
         self.engine._hands[player]._discards = yaochuu_tiles
@@ -2425,9 +2425,9 @@ class TestRyuukyoku:
         assert self.engine._check_nagashi_mangan(player) is False
 
         # 3. Failure case: Discard called
-        self.engine._hands[
-            player
-        ]._discards = yaochuu_tiles  # Reset to all terminals/honors
+        self.engine._hands[player]._discards = (
+            yaochuu_tiles  # Reset to all terminals/honors
+        )
         self.engine._has_called_discard[player] = True
         assert self.engine._check_nagashi_mangan(player) is False
 
@@ -2471,13 +2471,13 @@ class TestRyuukyoku:
         # Should end game (GamePhase.ENDED)
         assert self.engine._phase == GamePhase.ENDED
 
-    def test_fourth_kan_chankan_does_not_trigger_suukantsu(self):
+    def test_fourth_kan_chankan_does_not_trigger_suukan_sanra(self):
         """Test Chankan on fourth Kan does not trigger Suukaikan (Four Kans Abortion)"""
         self._init_game()
 
         self.engine._kan_count = 3
         self.engine._current_player = 0
-        kan_tile = Tile(Suit.SOZU, 4)
+        kan_tile = Tile(Suit.SOUZU, 4)
 
         # 444s 234m 567m 123p 4p
         hand0_tiles = parse_tiles("444s234567m1234p")
@@ -2495,12 +2495,12 @@ class TestRyuukyoku:
         # Force update actions for player 0
         self.engine._waiting_for_actions[0] = self.engine._calculate_turn_actions(0)
 
-        result = self.engine.execute_action(0, GameAction.ANKAN)
+        result = self.engine.execute_action(0, GameAction.DECLARE_ANKAN)
         assert result.chankan is True
         assert self.engine._kan_count == 3
         assert self.engine.check_ryuukyoku() is None
 
-    def test_fourth_kan_ron_does_not_trigger_suukantsu(self):
+    def test_fourth_kan_ron_does_not_trigger_suukan_sanra(self):
         """Test Ron after fourth Kan does not trigger Suukaikan (Four Kans Abortion)"""
         self._init_game()
 
@@ -2520,7 +2520,7 @@ class TestRyuukyoku:
         assert win_result is not None
         assert self.engine.check_ryuukyoku() is None
 
-    def test_fourth_kan_rinshan_win_does_not_trigger_suukantsu(self):
+    def test_fourth_kan_rinshan_win_does_not_trigger_suukan_sanra(self):
         """Test Rinshan Kaihou after fourth Kan does not trigger Suukaikan (Four Kans Abortion)"""
         self._init_game()
 
@@ -2545,7 +2545,7 @@ class TestRyuukyoku:
         )
 
         # 3. Execute Ankan
-        result = self.engine.execute_action(player, GameAction.ANKAN)
+        result = self.engine.execute_action(player, GameAction.DECLARE_ANKAN)
 
         # 4. Verify Rinshan Kaihou
         assert result.rinshan_win is not None

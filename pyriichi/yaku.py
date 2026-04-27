@@ -23,75 +23,104 @@ class Yaku(TranslatableEnum):
     RIICHI = ("riichi", "立直", "立直", "Riichi")
     DOUBLE_RIICHI = ("double_riichi", "雙立直", "ダブルリーチ", "Double Riichi")
     IPPATSU = ("ippatsu", "一發", "一発", "Ippatsu")
-    MENZEN_TSUMO = ("menzen_tsumo", "門清自摸", "門前清自摸和", "Menzen Tsumo")
-    TANYAO = ("tanyao", "斷么九", "断么九", "Tanyao")
+    MENZEN_TSUMO = (
+        "menzen_tsumo",
+        "門前清自摸和",
+        "門前清自摸和",
+        "Fully Concealed Tsumo",
+    )
+    TANYAO = ("tanyao", "斷么九", "断么九", "All Simples")
     PINFU = ("pinfu", "平和", "平和", "Pinfu")
-    IIPEIKOU = ("iipeikou", "一盃口", "一盃口", "Iipeikou")
-    RYANPEIKOU = ("ryanpeikou", "二盃口", "二盃口", "Ryanpeikou")
-    TOITOI = ("toitoi", "對對和", "対々和", "Toitoi")
-    SANANKOU = ("sanankou", "三暗刻", "三暗刻", "Sanankou")
-    SANKANTSU = ("sankantsu", "三槓子", "三槓子", "Sankantsu")
-    SANSHOKU_DOUJUN = ("sanshoku_doujun", "三色同順", "三色同順", "Sanshoku Doujun")
-    SANSHOKU_DOUKOU = ("sanshoku_doukou", "三色同刻", "三色同刻", "Sanshoku Doukou")
-    ITTSU = ("ittsu", "一氣通貫", "一気通貫", "Ittsu")
-    HONITSU = ("honitsu", "混一色", "混一色", "Honitsu")
-    CHINITSU = ("chinitsu", "清一色", "清一色", "Chinitsu")
-    JUNCHAN = ("junchan", "純全帶么九", "純全帯么九", "Junchan")
-    CHANTA = ("chanta", "全帶么九", "全帯么九", "Chanta")
-    HONROUTOU = ("honroutou", "混老頭", "混老頭", "Honroutou")
-    SHOUSANGEN = ("shousangen", "小三元", "小三元", "Shousangen")
-    DAISANGEN = ("daisangen", "大三元", "大三元", "Daisangen")
-    SUUANKOU = ("suuankou", "四暗刻", "四暗刻", "Suuankou")
-    SUUANKOU_TANKI = ("suuankou_tanki", "四暗刻單騎", "四暗刻単騎", "Suuankou Tanki")
-    SUUKANTSU = ("suukantsu", "四槓子", "四槓子", "Suukantsu")
-    SHOUSUUSHI = ("shousuushi", "小四喜", "小四喜", "Shousuushi")
-    DAISUUSHI = ("daisuushi", "大四喜", "大四喜", "Daisuushi")
-    CHINROUTOU = ("chinroutou", "清老頭", "清老頭", "Chinroutou")
-    TSUUIISOU = ("tsuuiisou", "字一色", "字一色", "Tsuuiisou")
-    RYUIISOU = ("ryuiisou", "綠一色", "緑一色", "Ryuuiisou")
-    CHUUREN_POUTOU = ("chuuren_poutou", "九蓮寶燈", "九蓮宝燈", "Chuuren Poutou")
-    CHUUREN_POUTOU_PURE = (
-        "chuuren_poutou_pure",
+    IIPEIKOU = ("iipeikou", "一盃口", "一盃口", "Pure Double Sequence")
+    RYANPEIKOU = ("ryanpeikou", "二盃口", "二盃口", "Twice Pure Double Sequence")
+    TOITOI = ("toitoi", "對對和", "対々和", "All Triplets")
+    SANANKOU = ("sanankou", "三暗刻", "三暗刻", "Three Concealed Triplets")
+    SANKANTSU = ("sankantsu", "三槓子", "三槓子", "Three Kans")
+    SANSHOKU_DOUJUN = (
+        "sanshoku_doujun",
+        "三色同順",
+        "三色同順",
+        "Mixed Triple Sequence",
+    )
+    SANSHOKU_DOUKOU = (
+        "sanshoku_doukou",
+        "三色同刻",
+        "三色同刻",
+        "Mixed Triple Triplets",
+    )
+    ITTSU = ("ittsu", "一氣通貫", "一気通貫", "Pure Straight")
+    HONITSU = ("honitsu", "混一色", "混一色", "Half Flush")
+    CHINITSU = ("chinitsu", "清一色", "清一色", "Full Flush")
+    JUNCHAN = ("junchan", "純全帶么九", "純全帯么九", "Terminal in Each Set")
+    CHANTA = ("chanta", "混全帶么九", "混全帯么九", "Outside Hand")
+    HONROUTOU = ("honroutou", "混老頭", "混老頭", "All Terminals and Honors")
+    SHOUSANGEN = ("shousangen", "小三元", "小三元", "Little Three Dragons")
+    DAISANGEN = ("daisangen", "大三元", "大三元", "Big Three Dragons")
+    SUUANKOU = ("suuankou", "四暗刻", "四暗刻", "Four Concealed Triplets")
+    SUUANKOU_TANKI = (
+        "suuankou_tanki",
+        "四暗刻單騎",
+        "四暗刻単騎",
+        "Four Concealed Triplets Single Wait",
+    )
+    SUUKANTSU = ("suukantsu", "四槓子", "四槓子", "Four Kans")
+    SHOUSUUSHI = ("shousuushi", "小四喜", "小四喜", "Little Four Winds")
+    DAISUUSHI = ("daisuushi", "大四喜", "大四喜", "Big Four Winds")
+    CHINROUTOU = ("chinroutou", "清老頭", "清老頭", "All Terminals")
+    TSUUIISOU = ("tsuuiisou", "字一色", "字一色", "All Honors")
+    RYUUIISOU = ("ryuuiisou", "綠一色", "緑一色", "All Green")
+    CHUUREN_POUTOU = ("chuuren_poutou", "九蓮寶燈", "九蓮宝燈", "Nine Gates")
+    PURE_CHUUREN_POUTOU = (
+        "pure_chuuren_poutou",
         "純正九蓮寶燈",
         "純正九蓮宝燈",
-        "Pure Chuuren Poutou",
+        "Pure Nine Gates",
     )
-    KOKUSHI_MUSOU = ("kokushi_musou", "國士無雙", "国士無双", "Kokushi Musou")
+    KOKUSHI_MUSOU = ("kokushi_musou", "國士無雙", "国士無双", "Thirteen Orphans")
     KOKUSHI_MUSOU_JUUSANMEN = (
         "kokushi_musou_juusanmen",
         "國士無雙十三面",
         "国士無双十三面",
-        "Kokushi Musou Juusanmen",
+        "Thirteen-Sided Thirteen Orphans",
     )
-    TENHOU = ("tenhou", "天和", "天和", "Tenhou")
-    CHIHOU = ("chihou", "地和", "地和", "Chihou")
-    RENHOU = ("renhou", "人和", "人和", "Renhou")
-    HAITEI = ("haitei", "海底撈月", "海底撈月", "Haitei")
-    HOUTEI = ("houtei", "河底撈魚", "河底撈魚", "Houtei")
-    RINSHAN = ("rinshan", "嶺上開花", "嶺上開花", "Rinshan Kaihou")
-    CHANKAN = ("chankan", "搶槓", "槍槓", "Chankan")
-    CHIITOITSU = ("chiitoitsu", "七對子", "七対子", "Chiitoitsu")
-    HAKU = ("haku", "白", "白", "Haku")
-    HATSU = ("hatsu", "發", "發", "Hatsu")
-    CHUN = ("chun", "中", "中", "Chun")
-    ROUND_WIND_EAST = ("round_wind_east", "場風東", "場風東", "Round Wind East")
-    ROUND_WIND_SOUTH = ("round_wind_south", "場風南", "場風南", "Round Wind South")
-    ROUND_WIND_WEST = ("round_wind_west", "場風西", "場風西", "Round Wind West")
-    ROUND_WIND_NORTH = ("round_wind_north", "場風北", "場風北", "Round Wind North")
+    TENHOU = ("tenhou", "天和", "天和", "Heavenly Hand")
+    CHIHOU = ("chihou", "地和", "地和", "Earthly Hand")
+    RENHOU = ("renhou", "人和", "人和", "Hand of Man")
+    HAITEI = ("haitei", "海底摸月", "海底摸月", "Under the Sea")
+    HOUTEI = ("houtei", "河底撈魚", "河底撈魚", "Under the River")
+    RINSHAN = ("rinshan", "嶺上開花", "嶺上開花", "After a Kan")
+    CHANKAN = ("chankan", "搶槓", "槍槓", "Robbing a Kan")
+    CHIITOITSU = ("chiitoitsu", "七對子", "七対子", "Seven Pairs")
+    HAKU = ("white", "白", "白", "White")
+    HATSU = ("green", "發", "発", "Green")
+    CHUN = ("red", "中", "中", "Red")
+    ROUND_WIND_EAST = ("round_wind_east", "場風東", "場風東", "Prevalent Wind East")
+    ROUND_WIND_SOUTH = ("round_wind_south", "場風南", "場風南", "Prevalent Wind South")
+    ROUND_WIND_WEST = ("round_wind_west", "場風西", "場風西", "Prevalent Wind West")
+    ROUND_WIND_NORTH = ("round_wind_north", "場風北", "場風北", "Prevalent Wind North")
     SEAT_WIND_EAST = ("seat_wind_east", "自風東", "自風東", "Seat Wind East")
     SEAT_WIND_SOUTH = ("seat_wind_south", "自風南", "自風南", "Seat Wind South")
     SEAT_WIND_WEST = ("seat_wind_west", "自風西", "自風西", "Seat Wind West")
     SEAT_WIND_NORTH = ("seat_wind_north", "自風北", "自風北", "Seat Wind North")
 
+    # Legacy aliases.
+    RYUIISOU = ("ryuuiisou", "綠一色", "緑一色", "All Green")
+    CHUUREN_POUTOU_PURE = (
+        "pure_chuuren_poutou",
+        "純正九蓮寶燈",
+        "純正九蓮宝燈",
+        "Pure Nine Gates",
+    )
 
-class WaitingType(Enum):
+
+class WaitingType(TranslatableEnum):
     """Tenpai (Ready Hand) Type"""
 
-    RYANMEN = "ryanmen"
-    PENCHAN = "penchan"
-    KANCHAN = "kanchan"
-    TANKI = "tanki"
-    SHABO = "shabo"
+    RYANMEN = ("ryanmen", "兩面", "両面", "Two-Sided Wait")
+    PENCHAN = ("penchan", "邊張", "辺張", "Edge Wait")
+    KANCHAN = ("kanchan", "嵌張", "嵌張", "Closed Wait")
+    TANKI = ("tanki", "單騎", "単騎", "Single Wait")
+    SHABO = ("shabo", "雙碰", "シャボ", "Pair-Pair Wait")
 
 
 @dataclass(frozen=True)
@@ -588,7 +617,7 @@ class YakuChecker:
 
         # Pair cannot be Yakuhai (Check Round Wind, Seat Wind, Dragons)
         pair_tile = sorted(pair_combination.tiles)[0]
-        if pair_tile.suit == Suit.JIHAI:
+        if pair_tile.suit == Suit.HONORS:
             sangen = [5, 6, 7]  # Haku, Hatsu, Chun
             if pair_tile.rank in sangen:
                 return None  # Dragon pair, cannot be Pinfu
@@ -755,7 +784,7 @@ class YakuChecker:
 
         for combination in honor_sets:
             tile = sorted(combination.tiles)[0]
-            if tile.suit != Suit.JIHAI:
+            if tile.suit != Suit.HONORS:
                 continue
 
             rank = tile.rank
@@ -795,7 +824,7 @@ class YakuChecker:
             return None
 
         # Count sequences
-        sequences_by_suit = {Suit.MANZU: [], Suit.PINZU: [], Suit.SOZU: []}
+        sequences_by_suit = {Suit.MANZU: [], Suit.PINZU: [], Suit.SOUZU: []}
 
         groups = self._group_combinations(winning_combination)
         for sequence in groups[CombinationType.SEQUENCE]:
@@ -807,9 +836,9 @@ class YakuChecker:
         for rank in range(1, 8):  # Sequence max rank is 7
             has_manzu = rank in sequences_by_suit[Suit.MANZU]
             has_pinzu = rank in sequences_by_suit[Suit.PINZU]
-            has_sozu = rank in sequences_by_suit[Suit.SOZU]
+            has_souzu = rank in sequences_by_suit[Suit.SOUZU]
 
-            if has_manzu and has_pinzu and has_sozu:
+            if has_manzu and has_pinzu and has_souzu:
                 return YakuResult(Yaku.SANSHOKU_DOUJUN, 2, False)
 
         return None
@@ -833,7 +862,7 @@ class YakuChecker:
             return None
 
         # Count sequences by suit
-        sequences_by_suit = {Suit.MANZU: [], Suit.PINZU: [], Suit.SOZU: []}
+        sequences_by_suit = {Suit.MANZU: [], Suit.PINZU: [], Suit.SOUZU: []}
 
         groups = self._group_combinations(winning_combination)
         for sequence in groups[CombinationType.SEQUENCE]:
@@ -842,7 +871,7 @@ class YakuChecker:
                 sequences_by_suit[suit].append(rank)
 
         # Check if Ittsu exists in any suit
-        for suit in [Suit.MANZU, Suit.PINZU, Suit.SOZU]:
+        for suit in [Suit.MANZU, Suit.PINZU, Suit.SOUZU]:
             sequences = sequences_by_suit[suit]
             # Need 1-3, 4-6, 7-9 sequences
             has_123 = 1 in sequences
@@ -900,7 +929,7 @@ class YakuChecker:
 
         suits = set()
         for tile in self._flatten_tiles(winning_combination):
-            if tile.suit == Suit.JIHAI:
+            if tile.suit == Suit.HONORS:
                 return None
             suits.add(tile.suit)
 
@@ -930,7 +959,7 @@ class YakuChecker:
         has_honor = False
 
         for tile in self._flatten_tiles(winning_combination):
-            if tile.suit == Suit.JIHAI:
+            if tile.suit == Suit.HONORS:
                 has_honor = True
             else:
                 number_suits.add(tile.suit)
@@ -1163,7 +1192,7 @@ class YakuChecker:
             return None
 
         # Count triplets
-        triplets_by_suit = {Suit.MANZU: [], Suit.PINZU: [], Suit.SOZU: []}
+        triplets_by_suit = {Suit.MANZU: [], Suit.PINZU: [], Suit.SOUZU: []}
 
         groups = self._group_combinations(winning_combination)
         for triplet in groups[CombinationType.TRIPLET]:
@@ -1175,9 +1204,9 @@ class YakuChecker:
         for rank in range(1, 10):
             has_manzu = rank in triplets_by_suit[Suit.MANZU]
             has_pinzu = rank in triplets_by_suit[Suit.PINZU]
-            has_sozu = rank in triplets_by_suit[Suit.SOZU]
+            has_souzu = rank in triplets_by_suit[Suit.SOUZU]
 
-            if has_manzu and has_pinzu and has_sozu:
+            if has_manzu and has_pinzu and has_souzu:
                 return YakuResult(Yaku.SANSHOKU_DOUKOU, 2, False)
 
         return None
@@ -1208,13 +1237,13 @@ class YakuChecker:
         triplet_like = groups[CombinationType.TRIPLET] + groups[CombinationType.KAN]
         for combination in triplet_like:
             tile = sorted(combination.tiles)[0]
-            if tile.suit == Suit.JIHAI and tile.rank in sangen:
+            if tile.suit == Suit.HONORS and tile.rank in sangen:
                 sangen_triplets.append(tile.rank)
 
         pair_combination = self._extract_pair(winning_combination)
         if pair_combination:
             pair_tile = sorted(pair_combination.tiles)[0]
-            if pair_tile.suit == Suit.JIHAI and pair_tile.rank in sangen:
+            if pair_tile.suit == Suit.HONORS and pair_tile.rank in sangen:
                 sangen_pair = pair_tile.rank
 
         # Two Dragon triplets + One Dragon pair
@@ -1274,7 +1303,7 @@ class YakuChecker:
         triplet_like = groups[CombinationType.TRIPLET] + groups[CombinationType.KAN]
         for combination in triplet_like:
             tile = sorted(combination.tiles)[0]
-            if tile.suit == Suit.JIHAI and tile.rank in sangen:
+            if tile.suit == Suit.HONORS and tile.rank in sangen:
                 sangen_triplets.append(tile.rank)
 
         # Three Dragon triplets
@@ -1387,15 +1416,15 @@ class YakuChecker:
             Tile(Suit.MANZU, 9),
             Tile(Suit.PINZU, 1),
             Tile(Suit.PINZU, 9),
-            Tile(Suit.SOZU, 1),
-            Tile(Suit.SOZU, 9),
-            Tile(Suit.JIHAI, 1),
-            Tile(Suit.JIHAI, 2),
-            Tile(Suit.JIHAI, 3),
-            Tile(Suit.JIHAI, 4),
-            Tile(Suit.JIHAI, 5),
-            Tile(Suit.JIHAI, 6),
-            Tile(Suit.JIHAI, 7),
+            Tile(Suit.SOUZU, 1),
+            Tile(Suit.SOUZU, 9),
+            Tile(Suit.HONORS, 1),
+            Tile(Suit.HONORS, 2),
+            Tile(Suit.HONORS, 3),
+            Tile(Suit.HONORS, 4),
+            Tile(Suit.HONORS, 5),
+            Tile(Suit.HONORS, 6),
+            Tile(Suit.HONORS, 7),
         ]
 
         # Count each tile
@@ -1444,13 +1473,13 @@ class YakuChecker:
         triplet_like = groups[CombinationType.TRIPLET] + groups[CombinationType.KAN]
         for combination in triplet_like:
             tile = sorted(combination.tiles)[0]
-            if tile.suit == Suit.JIHAI and tile.rank in kaze:
+            if tile.suit == Suit.HONORS and tile.rank in kaze:
                 kaze_triplets.append(tile.rank)
 
         pair_combination = self._extract_pair(winning_combination)
         if pair_combination:
             pair_tile = sorted(pair_combination.tiles)[0]
-            if pair_tile.suit == Suit.JIHAI and pair_tile.rank in kaze:
+            if pair_tile.suit == Suit.HONORS and pair_tile.rank in kaze:
                 kaze_pair = pair_tile.rank
 
         # Three Wind triplets + One Wind pair
@@ -1484,7 +1513,7 @@ class YakuChecker:
         triplet_like = groups[CombinationType.TRIPLET] + groups[CombinationType.KAN]
         for combination in triplet_like:
             tile = sorted(combination.tiles)[0]
-            if tile.suit == Suit.JIHAI and tile.rank in kaze:
+            if tile.suit == Suit.HONORS and tile.rank in kaze:
                 kaze_triplets.append(tile.rank)
 
         # Four Wind triplets
@@ -1573,12 +1602,12 @@ class YakuChecker:
 
         # Green tiles: 2, 3, 4, 6, 8 Sozu, Hatsu
         green_tiles = [
-            (Suit.SOZU, 2),
-            (Suit.SOZU, 3),
-            (Suit.SOZU, 4),
-            (Suit.SOZU, 6),
-            (Suit.SOZU, 8),
-            (Suit.JIHAI, 6),  # Hatsu
+            (Suit.SOUZU, 2),
+            (Suit.SOUZU, 3),
+            (Suit.SOUZU, 4),
+            (Suit.SOUZU, 6),
+            (Suit.SOUZU, 8),
+            (Suit.HONORS, 6),  # Hatsu
         ]
 
         green_tile_set = set(green_tiles)
@@ -1586,7 +1615,7 @@ class YakuChecker:
             if (tile.suit, tile.rank) not in green_tile_set:
                 return None
 
-        return YakuResult(Yaku.RYUIISOU, 13, True)
+        return YakuResult(Yaku.RYUUIISOU, 13, True)
 
     def check_chuuren_poutou(
         self, hand: Hand, winning_tile: Tile, game_state: Optional[GameState] = None
@@ -1617,7 +1646,7 @@ class YakuChecker:
         # Check if same number suit
         suits = set[Suit]()
         for tile in all_tiles:
-            if tile.suit != Suit.JIHAI:  # Only check number tiles
+            if tile.suit != Suit.HONORS:  # Only check number tiles
                 suits.add(tile.suit)
             else:
                 return None  # Has honors, not Chuuren Poutou
@@ -1657,10 +1686,10 @@ class YakuChecker:
 
         if is_pure:
             ruleset = game_state.ruleset if game_state else None
-            if ruleset and ruleset.chuuren_pure_double:
-                return YakuResult(Yaku.CHUUREN_POUTOU_PURE, 26, True)
+            if ruleset and ruleset.pure_chuuren_poutou_double:
+                return YakuResult(Yaku.PURE_CHUUREN_POUTOU, 26, True)
             else:
-                return YakuResult(Yaku.CHUUREN_POUTOU_PURE, 13, True)
+                return YakuResult(Yaku.PURE_CHUUREN_POUTOU, 13, True)
 
         return YakuResult(Yaku.CHUUREN_POUTOU, 13, True)
 

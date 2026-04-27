@@ -14,21 +14,21 @@ from pyriichi.tiles import Suit, Tile
 class Wind(TranslatableEnum):
     """Wind"""
 
-    EAST = ("e", "東", "東", "East")
-    SOUTH = ("s", "南", "南", "South")
-    WEST = ("w", "西", "西", "West")
-    NORTH = ("n", "北", "北", "North")
+    EAST = ("east", "東", "東", "East")
+    SOUTH = ("south", "南", "南", "South")
+    WEST = ("west", "西", "西", "West")
+    NORTH = ("north", "北", "北", "North")
 
     @property
     def tile(self) -> Tile:
         if self == Wind.EAST:
-            return Tile(Suit.JIHAI, 1)
+            return Tile(Suit.HONORS, 1)
         elif self == Wind.SOUTH:
-            return Tile(Suit.JIHAI, 2)
+            return Tile(Suit.HONORS, 2)
         elif self == Wind.WEST:
-            return Tile(Suit.JIHAI, 3)
+            return Tile(Suit.HONORS, 3)
         elif self == Wind.NORTH:
-            return Tile(Suit.JIHAI, 4)
+            return Tile(Suit.HONORS, 4)
         else:
             raise ValueError(f"Invalid wind: {self}")
 

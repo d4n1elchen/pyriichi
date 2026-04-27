@@ -32,7 +32,7 @@ class TestPlayer:
         action, tile = player.decide_action(self.game_state, 0, hand, available_actions)
 
         assert action == GameAction.DISCARD
-        assert tile == Tile(Suit.JIHAI, 1)  # 應該打出東
+        assert tile == Tile(Suit.HONORS, 1)  # 應該打出東
 
     def test_defensive_player_genbutsu(self):
         player = DefensivePlayer("Defense")
@@ -80,7 +80,7 @@ class TestPlayer:
 
         # 應該像 SimplePlayer 一樣行動（打出字牌）
         assert action == GameAction.DISCARD
-        assert tile == Tile(Suit.JIHAI, 1)
+        assert tile == Tile(Suit.HONORS, 1)
 
 
 if __name__ == "__main__":
