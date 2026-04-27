@@ -22,7 +22,7 @@ def parse_tiles(tile_string: str) -> List[Tile]:
     Example:
         >>> parse_tiles("1m2m3m4p5p6p")
         [Tile(MANZU, 1), Tile(MANZU, 2), Tile(MANZU, 3), ...]
-        >>> parse_tiles("r5p6p7p")  # Red Dora uses 'r' prefix (Standard format)
+        >>> parse_tiles("r5p6p7p")  # red_dora uses 'r' prefix (Standard format)
         [Tile(PINZU, 5, red=True), Tile(PINZU, 6), Tile(PINZU, 7)]
     """
     tiles = []
@@ -85,7 +85,7 @@ def is_winning_hand(tiles: List[Tile], winning_tile: Tile) -> bool:
     Quick check if hand is winning (Convenience function).
 
     Args:
-        tiles (List[Tile]): Hand tiles (13 tiles).
+        tiles (List[Tile]): hand tiles (13 tiles).
         winning_tile (Tile): Winning tile.
 
     Returns:

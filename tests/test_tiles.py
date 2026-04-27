@@ -232,20 +232,20 @@ class TestTileSet:
         assert dora.rank == 1
 
         # 白（5）→ 發（6）
-        indicator_white = Tile(Suit.HONORS, 5)
-        dora = tile_set.get_dora(indicator_white)
+        indicator_haku = Tile(Suit.HONORS, 5)
+        dora = tile_set.get_dora(indicator_haku)
         assert dora.suit == Suit.HONORS
         assert dora.rank == 6
 
         # 發（6）→ 中（7）
-        indicator_green = Tile(Suit.HONORS, 6)
-        dora = tile_set.get_dora(indicator_green)
+        indicator_hatsu = Tile(Suit.HONORS, 6)
+        dora = tile_set.get_dora(indicator_hatsu)
         assert dora.suit == Suit.HONORS
         assert dora.rank == 7
 
         # 中（7）→ 東（1）
-        indicator_red = Tile(Suit.HONORS, 7)
-        dora = tile_set.get_dora(indicator_red)
+        indicator_chun = Tile(Suit.HONORS, 7)
+        dora = tile_set.get_dora(indicator_chun)
         assert dora.suit == Suit.HONORS
         assert dora.rank == 1
 

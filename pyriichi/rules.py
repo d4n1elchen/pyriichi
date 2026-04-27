@@ -35,16 +35,6 @@ class GameAction(TranslatableEnum):
     )
     PASS = ("pass", "過", "パス", "Pass")
 
-    # Legacy aliases.
-    ANKAN = ("declare_ankan", "暗槓", "暗槓", "Closed Kan")
-    RICHI = ("declare_riichi", "立直", "リーチ", "Riichi")
-    KYUUSHU_KYUUHAI = (
-        "declare_kyuushu_kyuuhai",
-        "九種九牌",
-        "九種九牌",
-        "Nine Terminals Abort",
-    )
-
 
 class GamePhase(TranslatableEnum):
     """Game Phase"""
@@ -58,12 +48,12 @@ class GamePhase(TranslatableEnum):
 
 
 class RyuukyokuType(TranslatableEnum):
-    """Ryuukyoku (Exhaustive Draw) Type"""
+    """ryuukyoku (Exhaustive Draw) Type"""
 
     SUUFON_RENDA = ("suufon_renda", "四風連打", "四風連打", "Four Winds Abort")
     SANCHA_RON = ("sancha_ron", "三家和了", "三家和了", "Triple Ron Abort")
     SUUKAN_SANRA = ("suukan_sanra", "四槓散了", "四槓散了", "Four Kan Abort")
-    EXHAUSTED = ("exhaustive_draw", "流局", "流局", "Exhaustive Draw")
+    EXHAUSTIVE_DRAW = ("exhaustive_draw", "流局", "流局", "Exhaustive Draw")
     SUUCHA_RIICHI = (
         "suucha_riichi",
         "四家立直",
@@ -76,9 +66,6 @@ class RyuukyokuType(TranslatableEnum):
         "九種九牌",
         "Nine Terminals Abort",
     )
-
-    # Legacy alias.
-    SUUKANTSU = ("suukan_sanra", "四槓散了", "四槓散了", "Four Kan Abort")
 
 
 @dataclass
@@ -98,7 +85,7 @@ class WinResult:
 
 @dataclass
 class RyuukyokuResult:
-    """Ryuukyoku (Exhaustive Draw) Result"""
+    """ryuukyoku (Exhaustive Draw) Result"""
 
     ryuukyoku: bool
     ryuukyoku_type: Optional[RyuukyokuType] = None
@@ -128,15 +115,6 @@ class ActionResult:
     called_action: Optional[GameAction] = None
     called_tile: Optional[Tile] = None
     waiting_for: Dict[int, List[GameAction]] = field(default_factory=dict)
-
-    @property
-    def ankan(self) -> Optional[bool]:
-        """Legacy alias for closed_kan."""
-        return self.closed_kan
-
-    @ankan.setter
-    def ankan(self, value: Optional[bool]) -> None:
-        self.closed_kan = value
 
 
 class RuleEngine:
@@ -170,12 +148,12 @@ class RuleEngine:
         self._winning_players: List[int] = []
         self._ignore_suukan_sanra: bool = False
 
-        # Furiten (Sacred Discard) status tracking
-        self._furiten_permanent: Dict[int, bool] = {}  # Riichi Furiten (Permanent)
-        self._furiten_temp: Dict[int, bool] = {}  # Temporary Furiten (Same Turn)
+        # furiten (Sacred Discard) status tracking
+        self._furiten_permanent: Dict[int, bool] = {}  # riichi furiten (Permanent)
+        self._furiten_temp: Dict[int, bool] = {}  # temp_furiten (Same Turn)
         self._furiten_temp_round: Dict[int, int] = (
             {}
-        )  # Round where Temporary Furiten occurred
+        )  # Round where temp_furiten occurred
 
         self._pao_daisangen: Dict[int, int] = {}
         self._pao_daisuushi: Dict[int, int] = {}
@@ -203,7 +181,7 @@ class RuleEngine:
         self, player: int, tile: Optional[Tile] = None, **kwargs
     ) -> ActionResult:
         """
-        Handle PASS action.
+        handle PASS action.
 
         PASS action is usually intercepted and handled by execute_action in waiting state.
         If this method is called directly, it means it is called in a non-waiting state,
@@ -247,7 +225,7 @@ class RuleEngine:
         self._pao_daisangen = {}
         self._pao_daisuushi = {}
 
-        # Nagashi Mangan tracking: Record if player's discards were called
+        # Nagashi mangan tracking: Record if player's discards were called
         self._has_called_discard = {i: False for i in range(self._num_players)}
 
     def deal(self) -> Dict[int, List[Tile]]:
@@ -412,7 +390,7 @@ class RuleEngine:
         if hand.is_riichi:
             return False
 
-        # Daiminkan (Big Open Kan) on other player's discard
+        # open_kan on another player's discard
         if (
             self._last_discarded_tile is not None
             and self._last_discarded_player is not None
@@ -423,9 +401,9 @@ class RuleEngine:
         ):
             return True
 
-        # Self Kan (must be current player)
+        # Self kan (must be current player)
         if player == self._current_player:
-            # Kakan (Added Kan): Upgrade existing Pon
+            # open_kan: upgrade existing pon_meld
             for meld in hand.can_kan(None):
                 if meld.type == MeldType.OPEN_KAN and meld.called_tile is not None:
                     return True
@@ -442,15 +420,15 @@ class RuleEngine:
         if not hand.is_riichi:
             return True
 
-        # After Riichi, can only Ankan (Closed Kan) if it doesn't change the waiting tiles
-        # Here we need to check if each possible Ankan changes the wait
-        # Since _can_declare_ankan only returns bool, any valid Ankan is enough
+        # After riichi, can only declare_ankan if it doesn't change the waiting tiles
+        # Here we need to check if each possible closed_kan changes the wait
+        # Since _can_declare_ankan only returns bool, any valid closed_kan is enough
         # Get current waiting tiles
-        # In Riichi state, the base wait list is after "discarding the drawn tile"
-        # Because if not Ankan, must Tsumogiri (discard drawn tile)
+        # In riichi state, the base wait list is after "discarding the drawn tile"
+        # Because if not declare_ankan, must tsumogiri
         last_drawn = hand.last_drawn_tile
         if last_drawn is None:
-            return False  # Should not happen in Riichi turn
+            return False  # Should not happen in riichi turn
 
         # Temporarily remove the drawn tile
         try:
@@ -464,18 +442,18 @@ class RuleEngine:
         hand._tiles.append(last_drawn)
 
         if not current_waits:
-            return False  # Should not happen, Riichi must be Tenpai
+            return False  # Should not happen, riichi must be tenpai
 
         for meld in possible_kans:
             if meld.type != MeldType.CLOSED_KAN:
                 continue
 
-            # Simulate Ankan
+            # Simulate closed_kan
             temp_hand = Hand([t for t in hand.tiles])
             temp_hand._melds = [m for m in hand.melds]
             temp_hand._is_riichi = True
 
-            # Execute Ankan (Simulated)
+            # Execute closed_kan
             tiles_to_remove = meld.tiles
             try:
                 for t in tiles_to_remove:
@@ -483,7 +461,7 @@ class RuleEngine:
             except ValueError:
                 continue
 
-            # Add Ankan
+            # Add closed_kan
             temp_hand._melds.append(meld)
 
             # Check if waiting tiles changed
@@ -496,7 +474,7 @@ class RuleEngine:
         return False
 
     def _can_tsumo(self, player: int) -> bool:
-        """Check if player can Tsumo (Self-Draw Win)"""
+        """Check if player can tsumo (tsumo Win)"""
         if player != self._current_player:
             return False
 
@@ -510,12 +488,12 @@ class RuleEngine:
         return self.check_win(player, last_tile, is_rinshan=False) is not None
 
     def _can_ron(self, player: int) -> bool:
-        """Check if player can Ron (Discard Win)"""
+        """Check if player can ron (Discard Win)"""
         if self._last_discarded_tile is None or self._last_discarded_player is None:
             return False
 
         if player == self._last_discarded_player:
-            return False  # Cannot Ron on own discard
+            return False  # Cannot ron on own discard
 
         winners = self.check_multiple_ron(
             self._last_discarded_tile, self._last_discarded_player
@@ -564,7 +542,7 @@ class RuleEngine:
             # Record response
             self._incoming_actions[player] = (action, tile, kwargs)
 
-            # If player missed Ron (had Ron opportunity but chose PASS or other), set Temporary Furiten
+            # If player missed ron (had ron opportunity but chose PASS or other), set temp_furiten
             if GameAction.RON in allowed_actions and action != GameAction.RON:
                 self._furiten_temp[player] = True
                 self._furiten_temp_round[player] = self._turn_count
@@ -577,17 +555,17 @@ class RuleEngine:
                 # Wait for other players
                 return ActionResult(success=True)
 
-        # Non-waiting state, execute directly (e.g., Tsumo, Ankan, Discard)
+        # Non-waiting state, execute directly (e.g., tsumo, declare_ankan, discard)
         return handler(player, tile=tile, **kwargs)
 
     def _resolve_decisions(self) -> ActionResult:
         """Resolve all player responses, execute highest priority action"""
-        # Priority: Ron > Pon/Kan > Chi > PASS
+        # Priority: ron > pon/kan > chi > PASS
 
         actions = self._incoming_actions
         self._incoming_actions = {}  # Clear
 
-        # 0. Check current player's action (Discard/Tsumo/Ankan/Riichi)
+        # 0. Check current player's action (discard/tsumo/declare_ankan/riichi)
         # In this case, _waiting_for_actions should only contain current player
         # and actions should only have one entry
         if len(actions) == 1:
@@ -608,14 +586,14 @@ class RuleEngine:
                 else:
                     raise ValueError(f"動作 {action} 尚未實作")
 
-        # 1. Check Ron
+        # 1. Check ron
         ron_players = [p for p, (a, _, _) in actions.items() if a == GameAction.RON]
         if ron_players:
-            # Execute Ron (Handle multiple Ron)
-            # Note: If multiple Rons, need to handle in order
-            # If Double Ron, we should set all at once?
+            # Execute ron (handle multiple ron)
+            # Note: If multiple rons, need to handle in order
+            # If double_ron, we should set all at once?
 
-            # Use check_multiple_ron to get real winners (considering Head Bump / Atama Hane)
+            # Use check_multiple_ron to get real winners (considering head_bump)
             if self._last_discarded_tile is None or self._last_discarded_player is None:
                 raise ValueError("無法執行榮和：無捨牌")
 
@@ -623,14 +601,14 @@ class RuleEngine:
                 self._last_discarded_tile, self._last_discarded_player
             )
 
-            # Filter out players not in real_winners (e.g. intercepted by Head Bump)
+            # Filter out players not in real_winners (e.g. intercepted by head_bump)
             valid_ron_players = [p for p in ron_players if p in real_winners]
 
             if not valid_ron_players:
                 # Should not happen unless logic error
                 return ActionResult(success=False)
 
-            # Execute Ron
+            # Execute ron
             # Can we call _handle_ron for the first winner and manually add others?
             # Or _handle_ron should be refactored to support multiple winners?
             # Currently _handle_ron calls check_win internally and sets result.winners = [player]
@@ -638,23 +616,23 @@ class RuleEngine:
 
             return self._handle_ron_multiple(valid_ron_players)
 
-        # 2. Check Pon/Kan
+        # 2. Check pon/kan
         pon_kan_players = [
             p
             for p, (a, _, _) in actions.items()
             if a in (GameAction.PON, GameAction.KAN)
         ]
         if pon_kan_players:
-            # Only one player can Pon/Kan (except special rules, but usually only one discard)
+            # Only one player can pon/kan (except special rules, but usually only one discard)
             # If multiple (impossible unless tile set error), take first
             player = pon_kan_players[0]
             action, tile, kwargs = actions[player]
             if action == GameAction.PON:
                 return self._handle_pon(player, tile, **kwargs)
             else:
-                return self._handle_kan(player, tile, **kwargs)  # This is Daiminkan
+                return self._handle_kan(player, tile, **kwargs)  # This is open_kan
 
-        # 3. Check Chi
+        # 3. Check chi
         chi_players = [p for p, (a, _, _) in actions.items() if a == GameAction.CHI]
         if chi_players:
             player = chi_players[0]
@@ -668,7 +646,7 @@ class RuleEngine:
         return result
 
     def _handle_ron_multiple(self, winners: List[int]) -> ActionResult:
-        """Handle multiple Ron"""
+        """handle multiple ron"""
         result = ActionResult()
         result.winners = winners
         result.win_results = {}
@@ -680,11 +658,11 @@ class RuleEngine:
         for player in winners:
             win_res = self.check_win(
                 player, tile, is_rinshan=False
-            )  # Ron is not Rinshan
+            )  # ron is not Rinshan
             if win_res:
                 result.win_results[player] = win_res
 
-        # Handle score settlement (simplified here, end directly)
+        # handle score settlement (simplified here, end directly)
         # Actually should call _process_win_scoring etc.
         # To maintain compatibility, do we call _handle_ron for first player then supplement?
         # No, set state directly
@@ -694,7 +672,7 @@ class RuleEngine:
         # We assume demo_ui will handle result.win_results
 
         # Update scores
-        # Note: In multiple winners, deposit sticks (Riichi sticks) distribution depends on rules (usually Head Bump or split)
+        # Note: In multiple winners, deposit sticks (riichi sticks) distribution depends on rules (usually head_bump or split)
         # Simplified here: Each winner calculates score, deducted from discarder.
 
         loser = self._last_discarded_player
@@ -706,7 +684,7 @@ class RuleEngine:
             self._game_state.update_score(loser, -points)
             self._game_state.update_score(player, points)
 
-        # Handle Riichi stick ownership (give to first winner)
+        # handle riichi stick ownership (give to first winner)
         if self._game_state.riichi_sticks > 0:
             first_winner = winners[0]  # In order? check_multiple_ron returns order?
             # Assume check_multiple_ron is in counter-clockwise order
@@ -715,10 +693,10 @@ class RuleEngine:
             )
             self._game_state.clear_riichi_sticks()
 
-        # Honba (Counter Sticks) - Usually added to each winner? Or only first?
-        # Standard rule: Honba only for Head Bump. In Double Ron, usually added to all? Or only first?
-        # Tenhou: Double Ron both get Honba.
-        # Not handling complex Honba logic here, assume calculated in check_win (check_win includes Honba? Usually yes)
+        # honba (Counter Sticks) - Usually added to each winner? Or only first?
+        # Standard rule: honba only for head_bump. In double_ron, usually added to all? Or only first?
+        # tenhou: double_ron both get honba.
+        # Not handling complex honba logic here, assume calculated in check_win (check_win includes honba? Usually yes)
 
         return result
 
@@ -731,7 +709,7 @@ class RuleEngine:
         if not self._tile_set:
             raise ValueError("牌組未初始化")
 
-        # Calculate Kan count (each Kan increases hand limit by 1)
+        # Calculate kan count (each kan increases hand limit by 1)
         kan_count = sum(
             1
             for meld in hand.melds
@@ -756,19 +734,19 @@ class RuleEngine:
         if not drawn_tile:
             self._phase = GamePhase.RYUUKYOKU
             result.ryuukyoku = RyuukyokuResult(
-                ryuukyoku=True, ryuukyoku_type=RyuukyokuType.EXHAUSTED
+                ryuukyoku=True, ryuukyoku_type=RyuukyokuType.EXHAUSTIVE_DRAW
             )
         return result
 
     def _check_interrupts(
         self, tile: Tile, discarded_player: int
     ) -> Dict[int, List[GameAction]]:
-        """Check if any player can call or Ron on the discarded tile"""
+        """Check if any player can call or ron on the discarded tile"""
         interrupts = {}
 
-        # Check Ron - All other players
-        # Check Pon/Kan - All other players
-        # Check Chi - Next player only
+        # Check ron - All other players
+        # Check pon/kan - All other players
+        # Check chi - Next player only
 
         for i in range(self._num_players):
             if i == discarded_player:
@@ -776,17 +754,17 @@ class RuleEngine:
 
             actions = []
 
-            # Ron
+            # ron
             if self._can_ron(i):
                 actions.append(GameAction.RON)
 
-            # Pon/Kan
+            # pon/kan
             if self._can_pon(i):
                 actions.append(GameAction.PON)
             if self._can_kan(i):
                 actions.append(GameAction.KAN)
 
-            # Chi (Next player only)
+            # chi (Next player only)
             if (
                 i - discarded_player
             ) % self._num_players != 1:  # Changed from == 1 to != 1 to match _can_chi logic
@@ -813,7 +791,7 @@ class RuleEngine:
 
         hand = self._hands[player]
 
-        # After Riichi, can only discard the drawn tile (unless Ankan, but Ankan is handled in _handle_kan)
+        # After riichi, can only discard the drawn tile (unless declare_ankan, but declare_ankan is handled in _handle_kan)
         if hand.is_riichi:
             if hand.last_drawn_tile and tile != hand.last_drawn_tile:
                 raise ValueError("立直後只能打出剛摸到的牌")
@@ -837,7 +815,7 @@ class RuleEngine:
             result.discarded = True
             hand.reset_last_drawn_tile()  # Clear last drawn tile after discard
 
-            # Check if other players can call or Ron
+            # Check if other players can call or ron
             interrupts = self._check_interrupts(tile, player)
 
             if interrupts:
@@ -990,13 +968,13 @@ class RuleEngine:
         result = ActionResult()
         hand = self._hands[player]
 
-        # If tile is None, try to use last discarded tile (Daiminkan)
+        # If tile is None, try to use last discarded tile (open_kan)
         if tile is None:
             if self._last_discarded_tile is None:
                 raise ValueError("明槓必須指定被槓的牌")
             tile = self._last_discarded_tile
 
-        # Check if it's a Daiminkan (Open Kan) on discard
+        # Check if it's an open_kan on discard
         # Must be an interrupt (player != current_player)
         if (
             self._last_discarded_tile
@@ -1336,7 +1314,7 @@ class RuleEngine:
 
         self._phase = GamePhase.RYUUKYOKU
         result.ryuukyoku = RyuukyokuResult(
-            ryuukyoku=True, ryuukyoku_type=RyuukyokuType.EXHAUSTED
+            ryuukyoku=True, ryuukyoku_type=RyuukyokuType.EXHAUSTIVE_DRAW
         )
         return False
 
@@ -1625,7 +1603,7 @@ class RuleEngine:
         檢查是否流局。
 
         Returns:
-            Optional[RyuukyokuType]: 流局類型，否則返回 None。
+            Optional[ryuukyokuType]: 流局類型，否則返回 None。
         """
         # 檢查四風連打（優先檢查，因為可以在第一巡發生）
         if self._check_suufon_renda():
@@ -1641,7 +1619,7 @@ class RuleEngine:
 
         # 牌山耗盡流局
         if self._tile_set and self._tile_set.is_exhausted():
-            return RyuukyokuType.EXHAUSTED
+            return RyuukyokuType.EXHAUSTIVE_DRAW
 
         # 檢查是否所有玩家都聽牌（全員聽牌流局）
         return RyuukyokuType.SUUCHA_RIICHI if self._check_all_riichi() else None
@@ -1750,7 +1728,7 @@ class RuleEngine:
             player (int): 玩家位置。
 
         Returns:
-            Hand: 玩家的手牌對象。
+            hand: 玩家的手牌對象。
 
         Raises:
             ValueError: 如果玩家位置無效。
@@ -1846,7 +1824,7 @@ class RuleEngine:
         處理流局。
 
         Returns:
-            RyuukyokuResult: 流局結果，包含流局類型、流局滿貫玩家等。
+            ryuukyokuResult: 流局結果，包含流局類型、流局滿貫玩家等。
         """
         ryuukyoku_type = self.check_ryuukyoku()
         if not ryuukyoku_type:
@@ -1858,7 +1836,7 @@ class RuleEngine:
         )
 
         # 檢查流局滿貫
-        if ryuukyoku_type == RyuukyokuType.EXHAUSTED:
+        if ryuukyoku_type == RyuukyokuType.EXHAUSTIVE_DRAW:
             for i in range(self._num_players):
                 if self.check_flow_mangan(i):
                     result.flow_mangan_players.append(i)

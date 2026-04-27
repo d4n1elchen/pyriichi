@@ -121,7 +121,7 @@ class GameState:
 
     def add_honba(self, count: int = 1) -> None:
         """
-        Add Honba count.
+        Add honba count.
 
         Args:
             count (int): Amount to add (default 1).
@@ -129,15 +129,15 @@ class GameState:
         self._honba += count
 
     def reset_honba(self) -> None:
-        """Reset Honba count to 0."""
+        """Reset honba count to 0."""
         self._honba = 0
 
     def add_riichi_stick(self) -> None:
-        """Add Riichi stick (deposit)."""
+        """Add riichi stick (deposit)."""
         self._riichi_sticks += 1
 
     def clear_riichi_sticks(self) -> None:
-        """Clear Riichi sticks."""
+        """Clear riichi sticks."""
         self._riichi_sticks = 0
 
     @property

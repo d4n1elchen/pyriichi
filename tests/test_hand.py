@@ -1,5 +1,5 @@
 """
-Hand 類的單元測試
+hand 類的單元測試
 """
 
 import pytest
@@ -195,7 +195,7 @@ class TestHand:
         assert hand.can_pon(tile)
 
         meld = hand.pon(tile)
-        assert meld.type == MeldType.PON
+        assert meld.type == MeldType.PON_MELD
         assert len(meld.tiles) == 3
         assert not hand.is_concealed
 
@@ -210,7 +210,7 @@ class TestHand:
         assert len(sequences) > 0
 
         meld = hand.chi(tile, sequences[0])
-        assert meld.type == MeldType.CHI
+        assert meld.type == MeldType.CHI_MELD
         assert len(meld.tiles) == 3
         assert not hand.is_concealed
 
@@ -265,14 +265,14 @@ class TestHand:
         # 吃必須是 3 張牌
         with pytest.raises(ValueError, match="吃必須是 3 張牌"):
             # 手牌：12m
-            Meld(MeldType.CHI, parse_tiles("1m2m"))  # 只有 2 張
+            Meld(MeldType.CHI_MELD, parse_tiles("1m2m"))  # 只有 2 張
 
     def test_meld_invalid_pon(self):
         """測試無效的碰操作"""
         # 碰必須是 3 張牌
         with pytest.raises(ValueError, match="碰必須是 3 張牌"):
             # 手牌：11m
-            Meld(MeldType.PON, parse_tiles("1m1m"))  # 只有 2 張
+            Meld(MeldType.PON_MELD, parse_tiles("1m1m"))  # 只有 2 張
 
     def test_meld_invalid_kan(self):
         """測試無效的槓操作"""
@@ -332,7 +332,7 @@ class TestHand:
 
     def test_tsumo_winning_hand(self):
         """測試自摸和牌"""
-        # 123m 456p 789s 11z 22z + 2z (Tsumo)
+        # 123m 456p 789s 11z 22z + 2z (tsumo)
         tiles = parse_tiles("123m456p789s11z22z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.HONORS, 2)

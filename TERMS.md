@@ -43,9 +43,9 @@ Use these conventions when adding new terms:
 
 | Code | 日本語 | English | 中文 | Notes |
 |------|--------|---------|------|-------|
-| white | 白 | White | 白 | White dragon. |
-| green | 発 | Green | 發 | Green dragon. |
-| red | 中 | Red | 中 | Red dragon. |
+| haku | 白 | White | 白 | White dragon. |
+| hatsu | 発 | Green | 發 | Green dragon. |
+| chun | 中 | Red | 中 | Red dragon. |
 
 ## Calls and Turn Actions (鳴き・動作)
 

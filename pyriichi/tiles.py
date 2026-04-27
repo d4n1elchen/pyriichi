@@ -19,10 +19,6 @@ class Suit(TranslatableEnum):
     SOUZU = ("souzu", "索子", "索子", "Bamboo")
     HONORS = ("honors", "字牌", "字牌", "Honor Tiles")
 
-    # Legacy aliases.
-    SOZU = ("souzu", "索子", "索子", "Bamboo")
-    JIHAI = ("honors", "字牌", "字牌", "Honor Tiles")
-
 
 class Tile:
     """單張麻將牌"""

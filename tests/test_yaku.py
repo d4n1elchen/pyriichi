@@ -224,7 +224,7 @@ class TestYakuChecker:
             assert result.han == 3
 
     def test_honchan(self):
-        """測試全帶么九（Chanta）"""
+        """測試全帶么九（chanta）"""
         # 全帶么九：包含1或9的順子 + 字牌
         # 手牌：123m 789m 123p 1112z
         tiles = parse_tiles("123m789m123p111z2z")
@@ -593,7 +593,7 @@ class TestYakuChecker:
 
         # 注意：實際的 winning_combination 可能不會包含 'kan' 類型
         # 因為 get_winning_combinations 返回的是標準和牌組合
-        # 三槓子需要通過 Hand 的 melds 來實現
+        # 三槓子需要通過 hand 的 melds 來實現
         # 這裡測試判定邏輯
         combo_with_kan = [
             make_combination(CombinationType.KAN, Suit.MANZU, 1),
@@ -931,7 +931,7 @@ class TestYakuChecker:
         hand = Hand(tiles)
 
         # 測試自摸最後一張牌
-        result = self.checker.check_haitei_raoyue(
+        result = self.checker.check_haitei_houtei(
             hand, is_tsumo=True, is_last_tile=True
         )
         assert result is not None
@@ -947,7 +947,7 @@ class TestYakuChecker:
         hand = Hand(tiles)
 
         # 測試榮和最後一張牌
-        result = self.checker.check_haitei_raoyue(
+        result = self.checker.check_haitei_houtei(
             hand, is_tsumo=False, is_last_tile=True
         )
         assert result is not None
@@ -963,7 +963,7 @@ class TestYakuChecker:
         hand = Hand(tiles)
 
         # 測試嶺上開花
-        result = self.checker.check_rinshan_kaihou(hand, is_rinshan=True)
+        result = self.checker.check_rinshan(hand, is_rinshan=True)
         assert result is not None
         assert result.yaku == Yaku.RINSHAN
         assert result.han == 1
@@ -974,7 +974,7 @@ class TestYakuChecker:
         # 四槓子：四個槓子
         # 注意：實際的 winning_combination 可能不會包含 'kan' 類型
         # 因為 get_winning_combinations 返回的是標準和牌組合
-        # 四槓子需要通過 Hand 的 melds 來實現
+        # 四槓子需要通過 hand 的 melds 來實現
         # 這裡測試判定邏輯
         # 手牌：123m 12p
         tiles = parse_tiles("123m12p")
@@ -1125,7 +1125,7 @@ class TestYakuChecker:
         assert double_riichi[0].han == 2
 
 
-class TestPinfuSelfWind:
+class TestPinfuSeatWind:
     def test_pinfu_with_self_wind_pair(self):
         # 設置：手牌包含順子和自風（東）對子
         # 玩家是東家（莊家）。場風是東。
@@ -1166,7 +1166,7 @@ class TestPinfuSelfWind:
             player_position=0,
         )
 
-        assert result is None, "Should not be Pinfu because pair is Self Wind (East)"
+        assert result is None, "Should not be pinfu because pair is seat_wind (east)"
 
 
 if __name__ == "__main__":

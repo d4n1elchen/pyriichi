@@ -51,12 +51,12 @@ FONT_TILE = (
     "Kaiti TC",
     24,
     "bold",
-)  # Use a nice Chinese font if available, fallback to sans
+)  # Use a nice chinese font if available, fallback to sans
 FONT_TILE_SMALL = ("Arial", 10, "bold")  # For the number/suit indicator
 
 
 class TileRenderer:
-    """Handles drawing of Mahjong tiles on a Canvas using text."""
+    """handles drawing of Mahjong tiles on a Canvas using text."""
 
     @staticmethod
     def draw_tile(
@@ -151,14 +151,14 @@ class TileRenderer:
             color = "#B22222"  # Red
         elif tile.suit == Suit.PINZU:
             color = "#000080"  # Navy Blue
-        elif tile.suit == Suit.SOZU:
+        elif tile.suit == Suit.SOUZU:
             color = "#006400"  # Green
-        elif tile.suit == Suit.JIHAI:
-            if tile.rank == 5:  # Haku (White)
+        elif tile.suit == Suit.HONORS:
+            if tile.rank == 5:  # haku
                 color = "#000000"  # Black as requested
-            elif tile.rank == 6:  # Hatsu (Green)
+            elif tile.rank == 6:  # hatsu
                 color = "#006400"
-            elif tile.rank == 7:  # Chun (Red)
+            elif tile.rank == 7:  # chun
                 color = "#B22222"
             else:
                 color = "#000000"  # Winds are black
@@ -187,7 +187,7 @@ class TileRenderer:
         font = ("Kaiti TC", font_size, "bold")
 
         # Vertical layout for number + suit if needed
-        if len(text) > 1 and tile.suit != Suit.JIHAI:
+        if len(text) > 1 and tile.suit != Suit.HONORS:
             # Vertical layout
             # We need to position them relative to center, but rotated.
             # Offset for top char (Number) and bottom char (Suit)
@@ -233,7 +233,7 @@ class TileRenderer:
                 cx2, cy2, text=suit_char, fill=color, font=split_font, angle=angle
             )
         else:
-            # Single char or Honors
+            # Single char or honors
             canvas.create_text(cx, cy, text=text, fill=color, font=font, angle=angle)
 
         if tile.is_red:
@@ -282,7 +282,7 @@ class MahjongTable(tk.Canvas):
         self.selected_tile_idx: int = -1
         self.on_tile_click_callback = None
 
-        # Riichi Selection Mode
+        # riichi Selection Mode
         self.riichi_mode: bool = False
         self.valid_riichi_discards: List[Tile] = []
 
@@ -292,7 +292,7 @@ class MahjongTable(tk.Canvas):
     def update_state(self, state: dict):
         self.hands = state.get(
             "hands_obj", {}
-        )  # Expecting Hand objects or list of Tiles
+        )  # Expecting hand objects or list of Tiles
         self.discards = state.get("discards_obj", {})  # Expecting list of Tiles
         self.melds = state.get("melds_obj", {})
         self.scores = state.get("scores", {})
@@ -313,7 +313,7 @@ class MahjongTable(tk.Canvas):
         # Draw Center Info
         self._render_center_info()
 
-        # Draw Players (Hands, Discards)
+        # Draw Players (hands, Discards)
         for i in range(4):
             rel_pos = (i - self.human_seat) % 4
             self._render_player(i, rel_pos)
@@ -359,7 +359,7 @@ class MahjongTable(tk.Canvas):
             justify="center",
         )
 
-        # Riichi Sticks (Unclaimed)
+        # riichi Sticks (Unclaimed)
         active_riichi_count = 0
         for hand in self.hands.values():
             if hand and hand.is_riichi:  # Ensure hand is not None
@@ -379,7 +379,7 @@ class MahjongTable(tk.Canvas):
                 anchor="w",
             )
 
-        # Dora
+        # dora
         self.create_text(
             self.center_x,
             self.center_y + 15,
@@ -400,7 +400,7 @@ class MahjongTable(tk.Canvas):
             )
 
     def _draw_riichi_stick(self, x, y, w, h, angle=0):
-        """Draw a 1000 point stick (Riichi stick)"""
+        """Draw a 1000 point stick (riichi stick)"""
 
         # Helper for rotation
         def rotate_point(px, py, ox, oy, theta):
@@ -451,7 +451,7 @@ class MahjongTable(tk.Canvas):
         # Center of the table
         cx, cy = self.center_x, self.center_y
 
-        # Hand & River Parameters
+        # hand & River Parameters
         hand_offset = 30  # Distance from edge
 
         # Score Position (Inside Center Panel) & Rotation
@@ -459,7 +459,7 @@ class MahjongTable(tk.Canvas):
         score_radius = 95
 
         if rel_pos == 0:  # Bottom (Human)
-            # Hand centered horizontally at bottom
+            # hand centered horizontally at bottom
             hand_len = 13
             hand = self.hands.get(player_idx)
             if hand:
@@ -473,7 +473,7 @@ class MahjongTable(tk.Canvas):
             score_angle = 0
 
         elif rel_pos == 1:  # Right
-            # Hand centered vertically at right
+            # hand centered vertically at right
             hand_len = 13
             hand = self.hands.get(player_idx)
             if hand:
@@ -489,7 +489,7 @@ class MahjongTable(tk.Canvas):
             score_angle = 90
 
         elif rel_pos == 2:  # Top
-            # Hand centered horizontally at top
+            # hand centered horizontally at top
             hand_len = 13
             hand = self.hands.get(player_idx)
             if hand:
@@ -503,7 +503,7 @@ class MahjongTable(tk.Canvas):
             score_angle = 180
 
         elif rel_pos == 3:  # Left
-            # Hand centered vertically at left
+            # hand centered vertically at left
             hand_len = 13
             hand = self.hands.get(player_idx)
             if hand:
@@ -524,7 +524,7 @@ class MahjongTable(tk.Canvas):
             else self.scores.get(player_idx, 25000)
         )
 
-        # Calculate Seat Wind
+        # Calculate seat_wind
         # 0=East, 1=South, 2=West, 3=North
         winds = [Wind.EAST, Wind.SOUTH, Wind.WEST, Wind.NORTH]
         seat_wind_idx = (player_idx - self.dealer) % 4
@@ -540,7 +540,7 @@ class MahjongTable(tk.Canvas):
             angle=score_angle,
         )
 
-        # Draw Riichi Stick if player is in Riichi
+        # Draw riichi Stick if player is in riichi
         hand = self.hands.get(player_idx)
         if hand and hand.is_riichi:
             offset = 25
@@ -566,7 +566,7 @@ class MahjongTable(tk.Canvas):
         discards = self.discards.get(player_idx, [])
         self._render_river(discards, 0, 0, rel_pos)
 
-        # Draw Hand
+        # Draw hand
         hand = self.hands.get(player_idx)
         melds = self.melds.get(player_idx, [])
 
@@ -668,7 +668,7 @@ class MahjongTable(tk.Canvas):
 
             if i == self.selected_tile_idx:
                 is_highlighted = True
-                # If in Riichi mode, only lift if valid discard.
+                # If in riichi mode, only lift if valid discard.
                 if self.riichi_mode and tile not in self.valid_riichi_discards:
                     is_highlighted = False
                 # Not in riichi mode but already riichi, only allow last tile to be discarded
@@ -943,9 +943,9 @@ class GameThread(threading.Thread):
             "round_number": self.engine.game_state.round_number,
             "honba": self.engine.game_state.honba,
             "riichi_sticks": self.engine.game_state.riichi_sticks,
-            "wall_remaining": self.engine.tileset.remaining
-            if self.engine.tileset
-            else 0,
+            "wall_remaining": (
+                self.engine.tileset.remaining if self.engine.tileset else 0
+            ),
             "scores": self.engine.game_state.scores,
             "dora_indicators_obj": self.engine.tileset.get_dora_indicators(1),
             "hands_obj": {i: self.engine.get_hand(i) for i in range(4)},
@@ -1256,7 +1256,9 @@ class GameApp:
     def on_tile_click(self, tile: Tile):
         if self.table.riichi_mode:
             if tile in self.table.valid_riichi_discards:
-                self.human_input_queue.put({"action": GameAction.RICHI, "tile": tile})
+                self.human_input_queue.put(
+                    {"action": GameAction.DECLARE_RIICHI, "tile": tile}
+                )
                 self._exit_riichi_mode()
             return
 
@@ -1266,7 +1268,7 @@ class GameApp:
             self.current_actions = []
 
     def on_action_click(self, action: GameAction):
-        if action == GameAction.RICHI:
+        if action == GameAction.DECLARE_RIICHI:
             self._enter_riichi_mode()
             return
 

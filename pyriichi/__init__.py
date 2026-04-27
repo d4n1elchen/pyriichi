@@ -1,7 +1,7 @@
 """
-PyRiichi - Python Riichi Mahjong Engine
+PyRiichi - Python riichi mahjong engine
 
-Complete implementation of Riichi Mahjong rule engine.
+Complete implementation of riichi mahjong rule engine.
 """
 
 __version__ = "0.1.0"
@@ -22,7 +22,7 @@ from pyriichi.rules_config import RulesetConfig
 from pyriichi.scoring import ScoreCalculator, ScoreResult
 from pyriichi.tiles import Suit, Tile, TileSet
 
-# Convenience Functions
+# Convenience functions
 from pyriichi.utils import format_tiles, is_winning_hand, parse_tiles
 from pyriichi.yaku import Yaku, YakuChecker, YakuResult
 
@@ -49,7 +49,7 @@ __all__ = [
     "ScoreCalculator",
     "ScoreResult",
     "RulesetConfig",
-    # Utility Functions
+    # Utility functions
     "parse_tiles",
     "format_tiles",
     "is_winning_hand",

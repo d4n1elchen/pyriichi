@@ -366,7 +366,7 @@ class TestScoreCalculator:
 
         hand = Hand(tiles)
         # 手牌：111s
-        meld = Meld(MeldType.PON, parse_tiles("1s1s1s"))
+        meld = Meld(MeldType.PON_MELD, parse_tiles("1s1s1s"))
         hand._melds.append(meld)
 
         winning_tile = Tile(Suit.MANZU, 9)
@@ -485,7 +485,7 @@ class TestScoreCalculator:
 
         hand = Hand(tiles)
         # 手牌：111s
-        meld = Meld(MeldType.PON, parse_tiles("1s1s1s"))
+        meld = Meld(MeldType.PON_MELD, parse_tiles("1s1s1s"))
         hand._melds.append(meld)
 
         winning_tile = Tile(Suit.PINZU, 3)
@@ -538,7 +538,7 @@ class TestScoreCalculator:
 
         hand = Hand(tiles)
         # 手牌：111s
-        meld = Meld(MeldType.PON, parse_tiles("1s1s1s"))
+        meld = Meld(MeldType.PON_MELD, parse_tiles("1s1s1s"))
         hand._melds.append(meld)
 
         winning_tile = Tile(Suit.PINZU, 3)
@@ -846,7 +846,7 @@ class TestScoreCalculator:
 
         hand = Hand(tiles)
         # 手牌：111s
-        meld = Meld(MeldType.PON, parse_tiles("1s1s1s"))
+        meld = Meld(MeldType.PON_MELD, parse_tiles("1s1s1s"))
         hand._melds.append(meld)
 
         winning_tile = Tile(Suit.PINZU, 3)
@@ -877,7 +877,7 @@ class TestScoreCalculator:
 
         hand = Hand(tiles)
         # 手牌：111s
-        meld = Meld(MeldType.PON, parse_tiles("1s1s1s"))
+        meld = Meld(MeldType.PON_MELD, parse_tiles("1s1s1s"))
         hand._melds.append(meld)
 
         winning_tile = Tile(Suit.PINZU, 3)
@@ -906,7 +906,7 @@ class TestScoreCalculator:
 
         hand = Hand(tiles)
         # 手牌：111s
-        meld = Meld(MeldType.PON, parse_tiles("1s1s1s"))
+        meld = Meld(MeldType.PON_MELD, parse_tiles("1s1s1s"))
         hand._melds.append(meld)
 
         winning_tile = Tile(Suit.PINZU, 3)
@@ -974,7 +974,7 @@ class TestScoreCalculator:
 
         hand = Hand(tiles)
         # 手牌：111s
-        meld = Meld(MeldType.PON, parse_tiles("1s1s1s"))
+        meld = Meld(MeldType.PON_MELD, parse_tiles("1s1s1s"))
         hand._melds.append(meld)
 
         winning_tile = Tile(Suit.PINZU, 3)
@@ -1230,9 +1230,9 @@ class TestFuCalculationOpenMeld:
         tiles = parse_tiles("22345m")
 
         # 明碰 1m
-        meld1 = Meld(MeldType.PON, [Tile(Suit.MANZU, 1)] * 3)
+        meld1 = Meld(MeldType.PON_MELD, [Tile(Suit.MANZU, 1)] * 3)
         # 明碰 9m
-        meld2 = Meld(MeldType.PON, [Tile(Suit.MANZU, 9)] * 3)
+        meld2 = Meld(MeldType.PON_MELD, [Tile(Suit.MANZU, 9)] * 3)
 
         hand = Hand(tiles)
         hand._melds.append(meld1)
@@ -1312,7 +1312,7 @@ class TestFuCalculationOpenMeld:
             player_position=0,
         )
 
-        # print(f"Calculated Fu: {fu}")
+        # print(f"Calculated fu: {fu}")
         assert (
             fu == 30
         ), "Should be 30 fu (20 base + 4 open pon + 2 pair + 2 wait = 28 -> 30)"

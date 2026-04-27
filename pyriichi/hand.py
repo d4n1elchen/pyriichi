@@ -1,5 +1,5 @@
 """
-Hand Management System - Hand and Meld implementation
+hand Management System - hand and Meld implementation
 
 Provides hand operations, meld management, and winning hand determination.
 """
@@ -94,18 +94,14 @@ def make_combination(combo_type: CombinationType, suit: Suit, rank: int) -> Comb
 class MeldType(TranslatableEnum):
     """Meld type"""
 
-    CHI = ("chi_meld", "吃", "チー", "Chi Meld")
-    PON = ("pon_meld", "碰", "ポン", "Pon Meld")
+    CHI_MELD = ("chi_meld", "吃", "チー", "Chi Meld")
+    PON_MELD = ("pon_meld", "碰", "ポン", "Pon Meld")
     OPEN_KAN = ("open_kan", "明槓", "明槓", "Open Kan")
     CLOSED_KAN = ("closed_kan", "暗槓", "暗槓", "Closed Kan")
 
-    # Legacy aliases.
-    KAN = ("open_kan", "明槓", "明槓", "Open Kan")
-    ANKAN = ("closed_kan", "暗槓", "暗槓", "Closed Kan")
-
 
 class Meld:
-    """Meld (Open Triplet, Open Sequence, Open Kan, Closed Kan)"""
+    """Meld."""
 
     def __init__(
         self, meld_type: MeldType, tiles: List[Tile], called_tile: Optional[Tile] = None
@@ -116,14 +112,14 @@ class Meld:
         Args:
             meld_type (MeldType): Meld type.
             tiles (List[Tile]): List of tiles in the meld.
-            called_tile (Optional[Tile]): The called tile (required for Chi/Pon).
+            called_tile (Optional[Tile]): The called tile (required for chi/pon).
 
         Raises:
             ValueError: If tile count is invalid.
         """
-        if meld_type == MeldType.CHI and len(tiles) != 3:
+        if meld_type == MeldType.CHI_MELD and len(tiles) != 3:
             raise ValueError("吃必須是 3 張牌")
-        if meld_type == MeldType.PON and len(tiles) != 3:
+        if meld_type == MeldType.PON_MELD and len(tiles) != 3:
             raise ValueError("碰必須是 3 張牌")
         if meld_type in [MeldType.OPEN_KAN, MeldType.CLOSED_KAN] and len(tiles) != 4:
             raise ValueError("槓必須是 4 張牌")
@@ -159,11 +155,11 @@ class Meld:
 
 
 class Hand:
-    """Hand Manager"""
+    """hand Manager"""
 
     def __init__(self, tiles: List[Tile]):
         """
-        Initialize Hand.
+        Initialize hand.
 
         Args:
             tiles (List[Tile]): Initial hand tiles (13 or 14 tiles).
@@ -233,19 +229,19 @@ class Hand:
 
     def can_chi(self, tile: Tile, from_player: int) -> List[List[Tile]]:
         """
-        Check if Chi is possible.
+        Check if chi is possible.
 
         Args:
             tile (Tile): The tile being called.
-            from_player (int): Discarding player position (0=Kamicha, 1=Toimen, 2=Shimocha).
+            from_player (int): Discarding player position (0=kamicha, 1=toimen, 2=shimocha).
 
         Returns:
             List[List[Tile]]: List of possible sequences (each sequence contains 3 tiles).
         """
-        if from_player != 0:  # Can only Chi from Kamicha (Left player)
+        if from_player != 0:  # Can only chi from kamicha (Left player)
             return []
 
-        if tile.is_honor:  # Honors cannot form a Sequence
+        if tile.is_honor:  # honors cannot form a Sequence
             return []
 
         results = []
@@ -267,7 +263,7 @@ class Hand:
 
     def chi(self, tile: Tile, sequence: List[Tile]) -> Meld:
         """
-        Execute Chi.
+        Execute chi.
 
         Args:
             tile (Tile): The tile being called.
@@ -277,7 +273,7 @@ class Hand:
             Meld: Created Meld object.
 
         Raises:
-            ValueError: If Chi is not possible.
+            ValueError: If chi is not possible.
         """
         if not self.can_chi(tile, 0):
             raise ValueError("不能吃這張牌")
@@ -286,7 +282,7 @@ class Hand:
             self._tiles.remove(t)
 
         all_tiles = sequence + [tile]
-        meld = Meld(MeldType.CHI, all_tiles, called_tile=tile)
+        meld = Meld(MeldType.CHI_MELD, all_tiles, called_tile=tile)
         self._melds.append(meld)
         self._tile_counts_cache = None
         self._tenpai_discards = self.calculate_tenpai_discards()
@@ -295,13 +291,13 @@ class Hand:
 
     def can_pon(self, tile: Tile) -> bool:
         """
-        Check if Pon is possible.
+        Check if pon is possible.
 
         Args:
             tile (Tile): The tile being called.
 
         Returns:
-            bool: Whether Pon is possible.
+            bool: Whether pon is possible.
         """
 
         count = self._tiles.count(tile)
@@ -309,7 +305,7 @@ class Hand:
 
     def pon(self, tile: Tile) -> Meld:
         """
-        Execute Pon.
+        Execute pon.
 
         Args:
             tile (Tile): The tile being called.
@@ -318,7 +314,7 @@ class Hand:
             Meld: Created Meld object.
 
         Raises:
-            ValueError: If Pon is not possible.
+            ValueError: If pon is not possible.
         """
         if not self.can_pon(tile):
             raise ValueError("不能碰這張牌")
@@ -334,7 +330,7 @@ class Hand:
             self._tiles.remove(t)
 
         meld_tiles = tiles_to_remove + [tile]
-        meld = Meld(MeldType.PON, meld_tiles, called_tile=tile)
+        meld = Meld(MeldType.PON_MELD, meld_tiles, called_tile=tile)
         self._melds.append(meld)
         self._tile_counts_cache = None
         self._tenpai_discards = self.calculate_tenpai_discards()
@@ -343,13 +339,13 @@ class Hand:
 
     def can_kan(self, tile: Optional[Tile] = None) -> List[Meld]:
         """
-        Check if Kan is possible.
+        Check if kan is possible.
 
         Args:
-            tile (Optional[Tile]): The tile being called (required for Daiminkan, None for Ankan/Kakan).
+            tile (Optional[Tile]): The tile being called (required for open_kan, None for closed_kan/open_kan).
 
         Returns:
-            List[Meld]: List of possible Kan combinations.
+            List[Meld]: List of possible kan combinations.
         """
         results = []
 
@@ -361,7 +357,7 @@ class Hand:
                     results.append(Meld(MeldType.CLOSED_KAN, kan_tiles))
             for meld in self._melds:
                 if (
-                    meld.type == MeldType.PON
+                    meld.type == MeldType.PON_MELD
                     and meld.called_tile is not None
                     and self._tiles.count(meld.called_tile) > 0
                 ):
@@ -377,14 +373,14 @@ class Hand:
             kan_tiles.append(tile)
             results.append(Meld(MeldType.OPEN_KAN, kan_tiles, called_tile=tile))
         elif self._tiles.count(tile) == 4:
-            # Ankan of specific tile
+            # closed_kan of specific tile
             kan_tiles = [t for t in self._tiles if t == tile]
             results.append(Meld(MeldType.CLOSED_KAN, kan_tiles))
         elif self._tiles.count(tile) == 1:
-            # Kakan (Added Kan) of specific tile
+            # open_kan of specific tile
             for meld in self._melds:
                 if (
-                    meld.type == MeldType.PON
+                    meld.type == MeldType.PON_MELD
                     and meld.called_tile is not None
                     and meld.called_tile == tile
                 ):
@@ -395,22 +391,22 @@ class Hand:
 
     def kan(self, tile: Optional[Tile]) -> Meld:
         """
-        Execute Kan.
+        Execute kan.
 
         Args:
-            tile (Optional[Tile]): The tile being called (required for Daiminkan, None for Ankan/Kakan).
+            tile (Optional[Tile]): The tile being called (required for open_kan, None for closed_kan/open_kan).
 
         Returns:
             Meld: Created Meld object.
 
         Raises:
-            ValueError: If Kan is not possible.
+            ValueError: If kan is not possible.
         """
         possible_kan = self.can_kan(tile)
         if not possible_kan:
             raise ValueError("不能槓這張牌")
 
-        # Use the first possible Kan combination
+        # Use the first possible kan combination
         meld = possible_kan[0]
 
         if meld.type == MeldType.CLOSED_KAN:
@@ -423,7 +419,7 @@ class Hand:
                     raise ValueError("沒有可用的牌升級為加槓")
                 for existing_meld in self._melds:
                     if (
-                        existing_meld.type == MeldType.PON
+                        existing_meld.type == MeldType.PON_MELD
                         and existing_meld.called_tile == called_tile
                     ):
                         self._melds.remove(existing_meld)
@@ -457,26 +453,26 @@ class Hand:
 
     @property
     def is_concealed(self) -> bool:
-        """Is Menzen (Concealed, no open melds)"""
+        """Is menzen (Concealed, no open melds)"""
         return len(self._melds) == 0
 
     @property
     def is_riichi(self) -> bool:
-        """Is Riichi"""
+        """Is riichi"""
         return self._is_riichi
 
     @property
     def tenpai_discards(self) -> List[Tile]:
-        """Get tiles that can be discarded to reach Tenpai"""
+        """Get tiles that can be discarded to reach tenpai"""
         return [] if self._tenpai_discards is None else self._tenpai_discards.copy()
 
     def set_riichi(self, is_riichi: bool = True, turn: Optional[int] = None) -> None:
         """
-        Set Riichi state.
+        Set riichi state.
 
         Args:
-            is_riichi (bool): Whether Riichi.
-            turn (Optional[int]): Turn number of Riichi.
+            is_riichi (bool): Whether riichi.
+            turn (Optional[int]): Turn number of riichi.
         """
         self._is_riichi = is_riichi
         self._riichi_turn = turn
@@ -545,7 +541,7 @@ class Hand:
         Returns:
             bool: Whether removal was successful.
         """
-        if suit == Suit.HONORS:  # Honors cannot form a Sequence
+        if suit == Suit.HONORS:  # honors cannot form a Sequence
             return False
 
         for i in range(3):
@@ -719,7 +715,7 @@ class Hand:
 
     def _is_seven_pairs(self, tiles: List[Tile]) -> bool:
         """
-        Check if Seven Pairs (Chiitoitsu).
+        Check if chiitoitsu.
 
         Args:
             tiles (List[Tile]): List of tiles (14 tiles).
@@ -743,18 +739,18 @@ class Hand:
 
     def _is_kokushi_musou(self, tiles: List[Tile]) -> bool:
         """
-        Check if Kokushi Musou (Thirteen Orphans).
+        Check if kokushi_musou.
 
         Args:
             tiles (List[Tile]): List of tiles (14 tiles).
 
         Returns:
-            bool: Whether it is Kokushi Musou.
+            bool: Whether it is kokushi_musou.
         """
         if len(tiles) != 14:
             return False
 
-        # 13 Terminals and Honors required for Kokushi Musou
+        # 13 terminals and honors required for kokushi_musou
         required_tiles = [
             (Suit.MANZU, 1),
             (Suit.MANZU, 9),
@@ -792,19 +788,19 @@ class Hand:
 
     def is_tenpai(self) -> bool:
         """
-        Check if Tenpai (Ready Hand) (Optimized: only check potentially relevant tiles).
+        Check if tenpai (Optimized: only check potentially relevant tiles).
 
         Returns:
-            bool: Whether Tenpai.
+            bool: Whether tenpai.
         """
         return len(self.get_waiting_tiles()) > 0
 
     def calculate_tenpai_discards(self) -> List[Tile]:
         """
-        Get list of tiles that can be discarded to reach Tenpai.
+        Get list of tiles that can be discarded to reach tenpai.
 
         Returns:
-            List[Tile]: List of tiles that can be discarded to reach Tenpai.
+            List[Tile]: List of tiles that can be discarded to reach tenpai.
         """
 
         valid_discards = []
@@ -877,7 +873,7 @@ class Hand:
 
         Args:
             winning_tile (Tile): Winning tile.
-            is_tsumo (bool): Is Tsumo (default False).
+            is_tsumo (bool): Is tsumo (default False).
 
         Returns:
             bool: Whether it is a winning hand.
@@ -891,7 +887,7 @@ class Hand:
         existing_melds = []
         for meld in self._melds:
             combo_type = CombinationType.SEQUENCE
-            if meld.type == MeldType.PON:
+            if meld.type == MeldType.PON_MELD:
                 combo_type = CombinationType.TRIPLET
             elif meld.type in [MeldType.OPEN_KAN, MeldType.CLOSED_KAN]:
                 combo_type = CombinationType.KAN
@@ -905,8 +901,8 @@ class Hand:
         if is_winning:
             return True
 
-        # Check Seven Pairs (Must be Menzen)
-        # Seven Pairs does not allow any melds (including Ankan)
+        # Check Seven Pairs (Must be menzen)
+        # chiitoitsu does not allow any melds (including closed_kan)
         if self.is_concealed:
             if self._is_seven_pairs(concealed_tiles):
                 return True
@@ -919,11 +915,11 @@ class Hand:
         self, winning_tile: Tile, is_tsumo: bool = False
     ) -> List[List[Combination]]:
         """
-        Get winning combinations (for Yaku determination).
+        Get winning combinations (for yaku determination).
 
         Args:
             winning_tile (Tile): Winning tile.
-            is_tsumo (bool): Is Tsumo (default False).
+            is_tsumo (bool): Is tsumo (default False).
 
         Returns:
             List[List[Combination]]: All possible winning combinations (each combination contains 4 Melds and 1 Pair).
@@ -938,7 +934,7 @@ class Hand:
         existing_melds = []
         for meld in self._melds:
             combo_type = CombinationType.SEQUENCE
-            if meld.type == MeldType.PON:
+            if meld.type == MeldType.PON_MELD:
                 combo_type = CombinationType.TRIPLET
             elif meld.type in [MeldType.OPEN_KAN, MeldType.CLOSED_KAN]:
                 combo_type = CombinationType.KAN

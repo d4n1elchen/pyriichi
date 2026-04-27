@@ -20,7 +20,7 @@ class PublicInfo:
     dora_indicators: List[Tile]
     discards: Dict[int, List[Tile]]  # Discards of each player
     melds: Dict[int, List[Meld]]  # Melds of each player
-    riichi_players: List[int]  # List of players who declared Riichi
+    riichi_players: List[int]  # List of players who declared riichi
     scores: List[int]  # Player scores
 
 
@@ -66,7 +66,7 @@ class RandomPlayer(BasePlayer):
     """
     Random Action AI Player.
 
-    Strategy is completely random, only following rules when necessary (e.g., must discard drawn tile after Riichi).
+    Strategy is completely random, only following rules when necessary (e.g., must discard drawn tile after riichi).
     """
 
     def decide_action(
@@ -93,7 +93,7 @@ class RandomPlayer(BasePlayer):
         if not available_actions:
             return GameAction.PASS, None
 
-        # Simple strategy: Prioritize winning, then Riichi, otherwise random
+        # Simple strategy: Prioritize winning, then riichi, otherwise random
 
         # If winning is possible, prioritize winning
         if GameAction.RON in available_actions:
@@ -108,7 +108,7 @@ class RandomPlayer(BasePlayer):
             # Randomly discard a tile
 
             if hand.is_riichi:
-                # After Riichi, must discard the drawn tile
+                # After riichi, must discard the drawn tile
                 tile_to_discard = hand.last_drawn_tile
                 if tile_to_discard is None:
                     # Should not happen if we just drew a tile, but fallback to last tile just in case
@@ -140,8 +140,8 @@ class SimplePlayer(BasePlayer):
 
     Strategy:
     1. Prioritize winning (RON/TSUMO).
-    2. Prioritize Riichi (DECLARE_RIICHI).
-    3. Simple discard strategy: Honors -> Terminals -> Simple tiles.
+    2. Prioritize riichi (DECLARE_RIICHI).
+    3. Simple discard strategy: honors -> terminals -> Simple tiles.
     """
 
     def decide_action(
@@ -174,28 +174,28 @@ class SimplePlayer(BasePlayer):
         if GameAction.TSUMO in available_actions:
             return GameAction.TSUMO, None
 
-        # 2. Prioritize Riichi
+        # 2. Prioritize riichi
         if GameAction.DECLARE_RIICHI in available_actions:
             valid_discards = hand.tenpai_discards
             if valid_discards:
-                # Choose the best discard from valid Riichi discards
+                # Choose the best discard from valid riichi discards
                 best_riichi_discard = self._choose_best_discard(hand, valid_discards)
                 return GameAction.DECLARE_RIICHI, best_riichi_discard
 
-        # 3. Handle Discard
+        # 3. handle Discard
         if GameAction.DISCARD in available_actions:
-            # If in Riichi, must discard the drawn tile
+            # If in riichi, must discard the drawn tile
             if hand.is_riichi:
                 tile_to_discard = hand.last_drawn_tile
                 if tile_to_discard is None:
                     tile_to_discard = hand.tiles[-1]
                 return GameAction.DISCARD, tile_to_discard
 
-            # Simple discard strategy: Honors -> Terminals -> Simple tiles (Isolated tiles first)
+            # Simple discard strategy: honors -> terminals -> Simple tiles (Isolated tiles first)
             best_discard = self._choose_best_discard(hand)
             return GameAction.DISCARD, best_discard
 
-        # 4. Handle Melds
+        # 4. handle Melds
         if GameAction.PASS in available_actions:
             return GameAction.PASS, None
 
@@ -208,7 +208,7 @@ class SimplePlayer(BasePlayer):
         Choose the best discard.
 
         Args:
-            hand (Hand): Hand.
+            hand (Hand): hand.
             candidates (Optional[List[Tile]]): List of candidate tiles. If None, choose from hand.
 
         Returns:
@@ -249,10 +249,10 @@ class DefensivePlayer(SimplePlayer):
 
     Strategy:
     1. Default to SimplePlayer's attack strategy.
-    2. When an opponent declares Riichi, enter defense mode:
-       - Prioritize discarding Riichi player's Genbutsu (Safe Tiles).
-       - If no Genbutsu, try discarding Honors or Suji (Currently only Genbutsu implemented).
-       - Betaori (Fold): Do not call melds.
+    2. When an opponent declares riichi, enter defense mode:
+       - Prioritize discarding riichi player's genbutsu (Safe Tiles).
+       - If no genbutsu, try discarding honors or suji (Currently only genbutsu implemented).
+       - betaori (Fold): Do not call melds.
     """
 
     def decide_action(
@@ -287,20 +287,20 @@ class DefensivePlayer(SimplePlayer):
 
         # Defense Mode
 
-        # 1. If winning is possible, still win (Chase Riichi / Push, or lucky)
+        # 1. If winning is possible, still win (Chase riichi / Push, or lucky)
         if GameAction.RON in available_actions:
             return GameAction.RON, None
         if GameAction.TSUMO in available_actions:
             return GameAction.TSUMO, None
 
-        # 2. Betaori (Fold): No Riichi, No Melds
+        # 2. betaori (Fold): No riichi, No Melds
         if GameAction.DISCARD in available_actions:
             # Find safe tile
             safe_tile = self._find_safe_tile(hand, public_info, threatening_players)
             if safe_tile:
                 return GameAction.DISCARD, safe_tile
 
-            # If no completely safe tile, fallback to SimplePlayer's discard logic (at least discard Honors/Terminals)
+            # If no completely safe tile, fallback to SimplePlayer's discard logic (at least discard honors/terminals)
             # But we want it to be more conservative, here temporarily call parent class
             return super().decide_action(
                 game_state, player_index, hand, available_actions, public_info
@@ -318,15 +318,15 @@ class DefensivePlayer(SimplePlayer):
         public_info: Optional[PublicInfo],
         threatening_players: List[int],
     ) -> Optional[Tile]:
-        """Find safe tile (Genbutsu) in hand."""
+        """Find safe tile (genbutsu) in hand."""
         if not public_info:
             return None
 
-        # Collect Genbutsu of all threatening players
+        # Collect genbutsu of all threatening players
 
-        # Simplified handling: As long as it is Genbutsu of any Riichi player, consider it "relatively" safe
-        # Stricter defense should target Common Safe Tiles of all Riichi players
-        # But if cannot cover all, prioritize defending against Shimocha/Toimen/Kamicha? Or random?
+        # Simplified handling: As long as it is genbutsu of any riichi player, consider it "relatively" safe
+        # Stricter defense should target Common Safe Tiles of all riichi players
+        # But if cannot cover all, prioritize defending against shimocha/toimen/kamicha? Or random?
         # Here we take intersection (Safe against all), if none then take union (Safe against at least one)
 
         common_safe_tiles = None
@@ -346,7 +346,7 @@ class DefensivePlayer(SimplePlayer):
                 if tile in common_safe_tiles:
                     return tile
 
-        # If no common safe tiles, try to find safe tile against a specific Riichi player (Avoid dealing into the most dangerous one?)
+        # If no common safe tiles, try to find safe tile against a specific riichi player (Avoid dealing into the most dangerous one?)
         # Temporarily choose a safe tile against someone randomly
         all_safe_tiles = set()
         for player_idx in threatening_players:

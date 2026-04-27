@@ -1,7 +1,7 @@
 """
 Score Calculator System - ScoreCalculator implementation
 
-Provides functionality for calculating Fu, Han, and Points.
+Provides functionality for calculating fu, han, and Points.
 """
 
 from dataclasses import dataclass
@@ -17,44 +17,44 @@ from pyriichi.yaku import WaitingType, Yaku, YakuResult
 class ScoreResult:
     """Score Calculation Result"""
 
-    han: int  # Han
-    fu: int  # Fu
+    han: int  # han
+    fu: int  # fu
     base_points: int  # Base Points
     total_points: (
-        int  # Total Points (Payment per person for Tsumo, total payment for Ron)
+        int  # Total Points (Payment per person for tsumo, total payment for ron)
     )
-    payment_from: int  # Payer position (for Ron)
+    payment_from: int  # Payer position (for ron)
     payment_to: int  # Receiver position
-    is_yakuman: bool  # Is Yakuman
-    yakuman_count: int  # Yakuman multiplier
-    is_tsumo: bool = False  # Is Tsumo
-    dealer_payment: int = 0  # Dealer payment (for Tsumo)
-    non_dealer_payment: int = 0  # Non-dealer payment (for Tsumo)
-    honba_bonus: int = 0  # Honba bonus
-    riichi_sticks_bonus: int = 0  # Riichi sticks distribution
-    kiriage_mangan_enabled: bool = False  # Is Kiriage Mangan enabled
-    pao_player: Optional[int] = None  # Pao player position
-    pao_payment: int = 0  # Pao player payment amount
+    is_yakuman: bool  # Is yakuman
+    yakuman_count: int  # yakuman multiplier
+    is_tsumo: bool = False  # Is tsumo
+    dealer_payment: int = 0  # dealer payment (for tsumo)
+    non_dealer_payment: int = 0  # Non-dealer payment (for tsumo)
+    honba_bonus: int = 0  # honba bonus
+    riichi_sticks_bonus: int = 0  # riichi sticks distribution
+    kiriage_mangan_enabled: bool = False  # Is kiriage_mangan enabled
+    pao_player: Optional[int] = None  # pao player position
+    pao_payment: int = 0  # pao player payment amount
 
     def __post_init__(self):
         """Calculate final score."""
         if self.is_yakuman:
             self.total_points = 8000 * self.yakuman_count
         elif self.han >= 13:
-            self.total_points = 8000  # Yakuman (Kazoe)
+            self.total_points = 8000  # yakuman (Kazoe)
         elif self.han >= 11:
-            self.total_points = 6000  # Sanbaiman
+            self.total_points = 6000  # sanbaiman
         elif self.han >= 8:
-            self.total_points = 4000  # Baiman
+            self.total_points = 4000  # baiman
         elif self.han >= 6:
-            self.total_points = 3000  # Haneman
+            self.total_points = 3000  # haneman
         elif self.han >= 5 or (self.han == 4 and self.fu >= 40):
-            self.total_points = 2000  # Mangan
+            self.total_points = 2000  # mangan
         elif self.kiriage_mangan_enabled and (
             (self.han == 4 and self.fu == 30) or (self.han == 3 and self.fu == 60)
         ):
-            # Kiriage Mangan: 30 Fu 4 Han or 60 Fu 3 Han counts as Mangan
-            self.total_points = 2000  # Mangan
+            # kiriage_mangan: 30 fu 4 han or 60 fu 3 han counts as mangan
+            self.total_points = 2000  # mangan
         else:
             base = self.fu * (2 ** (self.han + 2))
             self.base_points = base
@@ -65,26 +65,26 @@ class ScoreResult:
         """
         Calculate payment distribution.
 
-        Tsumo Payment:
-        - Dealer Tsumo: Each non-dealer pays base_payment + honba, total 3 * (base_payment + honba)
-        - Non-dealer Tsumo: Dealer pays 2 * (base_payment + honba), other non-dealers pay base_payment + honba, total 2 * (base_payment + honba) + (base_payment + honba) * 2
+        tsumo Payment:
+        - dealer tsumo: Each non-dealer pays base_payment + honba, total 3 * (base_payment + honba)
+        - non-dealer tsumo: dealer pays 2 * (base_payment + honba), other non-dealers pay base_payment + honba, total 2 * (base_payment + honba) + (base_payment + honba) * 2
 
-        Ron Payment:
-        - Payer pays full total_points (including Honba)
+        ron Payment:
+        - Payer pays full total_points (including honba)
 
-        Pao Payment (Yakuman):
-        - Tsumo: Pao player pays all
-        - Ron (Pao player deals in): Pao player pays all
-        - Ron (Non-Pao player deals in): Pao player and deal-in player split payment
+        pao Payment (yakuman):
+        - tsumo: pao player pays all
+        - ron (pao player deals in): pao player pays all
+        - ron (Non-pao player deals in): pao player and deal-in player split payment
 
-        Honba Bonus:
-        - +300 points per Honba (Paid by everyone for Tsumo, by deal-in player for Ron)
+        honba Bonus:
+        - +300 points per honba (Paid by everyone for tsumo, by deal-in player for ron)
 
-        Riichi Sticks:
-        - All Riichi sticks go to the winner
+        riichi Sticks:
+        - All riichi sticks go to the winner
 
         Args:
-            game_state (GameState): Game state (used to get Honba count and Riichi sticks).
+            game_state (GameState): Game state (used to get honba count and riichi sticks).
         """
 
         self.honba_bonus = game_state.honba * 300
@@ -96,13 +96,13 @@ class ScoreResult:
         if self.pao_player is not None and self.is_yakuman:
             if self.is_tsumo:
                 if self.payment_to == game_state.dealer:
-                    # Dealer Tsumo: 16000 all -> 48000
+                    # dealer tsumo: 16000 all -> 48000
                     total_win = (base_payment * 6 + 99) // 100 * 100
                 else:
-                    # Non-dealer Tsumo: 8000/16000 -> 32000
+                    # non-dealer tsumo: 8000/16000 -> 32000
                     total_win = (base_payment * 4 + 99) // 100 * 100
 
-                # Add Honba (For Tsumo, Honba is paid by everyone 100*honba, total 300*honba)
+                # Add honba (For tsumo, honba is paid by everyone 100*honba, total 300*honba)
                 total_honba = game_state.honba * 300
 
                 self.total_points = total_win + total_honba + self.riichi_sticks_bonus
@@ -122,7 +122,7 @@ class ScoreResult:
                 self.total_points = total_win + total_honba + self.riichi_sticks_bonus
 
                 if self.payment_from != self.pao_player:
-                    # Split between Pao player and deal-in player (Halved)
+                    # Split between pao player and deal-in player (Halved)
 
                     total_pay = total_win + total_honba
                     half_pay = total_pay // 2
@@ -131,8 +131,8 @@ class ScoreResult:
                     # Deal-in player pays the rest (usually also half)
                     pass
                 else:
-                    # Pao player deals in: Normal payment
-                    self.pao_payment = 0  # Paid by payment_from (i.e., pao_player), not considered extra Pao payment
+                    # pao player deals in: normal payment
+                    self.pao_payment = 0  # Paid by payment_from (i.e., pao_player), not considered extra pao payment
 
                 self.dealer_payment = 0
                 self.non_dealer_payment = 0
@@ -163,8 +163,8 @@ class ScoreResult:
                     + self.riichi_sticks_bonus
                 )
         else:
-            # Non-dealer Ron: 4 * Basic + 300 * honba
-            # Dealer Ron: 6 * Basic + 300 * honba
+            # non-dealer ron: 4 * basic + 300 * honba
+            # dealer ron: 6 * basic + 300 * honba
 
             total_honba = game_state.honba * 300
 
@@ -175,7 +175,7 @@ class ScoreResult:
 
             self.total_points = win_points + total_honba + self.riichi_sticks_bonus
             self.dealer_payment = 0
-            self.non_dealer_payment = 0  # Paid by payment_from for Ron, dealer/non_dealer payment not set here
+            self.non_dealer_payment = 0  # Paid by payment_from for ron, dealer/non_dealer payment not set here
 
 
 class ScoreCalculator:
@@ -226,21 +226,21 @@ class ScoreCalculator:
         Calculate score.
 
         Args:
-            hand (Hand): Hand tiles.
+            hand (Hand): hand tiles.
             winning_tile (Tile): Winning tile.
             winning_combination (List): Winning combinations.
-            yaku_results (List[YakuResult]): List of Yaku results.
-            dora_count (int): Number of Dora.
+            yaku_results (List[YakuResult]): List of yaku results.
+            dora_count (int): Number of dora.
             game_state (GameState): Game state.
-            is_tsumo (bool): Whether Tsumo.
+            is_tsumo (bool): Whether tsumo.
             player_position (int): Player position.
-            pao_player (Optional[int]): Pao player position.
+            pao_player (Optional[int]): pao player position.
 
         Returns:
             ScoreResult: Score calculation result.
         """
         # ... (Calculate fu, han, yakuman)
-        # Calculate Fu
+        # Calculate fu
         fu = self.calculate_fu(
             hand,
             winning_tile,
@@ -285,27 +285,27 @@ class ScoreCalculator:
         player_position: int = 0,
     ) -> int:
         """
-        Calculate Fu.
+        Calculate fu.
 
         Args:
-            hand (Hand): Hand tiles.
+            hand (Hand): hand tiles.
             winning_tile (Tile): Winning tile.
             winning_combination (List): Winning combinations.
-            yaku_results (List[YakuResult]): List of Yaku results.
+            yaku_results (List[YakuResult]): List of yaku results.
             game_state (GameState): Game state.
-            is_tsumo (bool): Whether Tsumo.
-            player_position (int): Player position (used for Seat Wind Pair Fu).
+            is_tsumo (bool): Whether tsumo.
+            player_position (int): Player position (used for seat_wind pair fu).
 
         Returns:
-            int: Fu value.
+            int: fu value.
         """
         if any(r.yaku == Yaku.CHIITOITSU for r in yaku_results):
-            return 25  # Chiitoitsu fixed 25 Fu
+            return 25  # chiitoitsu fixed 25 fu
 
         if any(r.yaku == Yaku.PINFU for r in yaku_results):
-            return 30 if is_tsumo else 20  # Pinfu fixed 30 Fu (Tsumo) or 20 Fu (Ron)
+            return 30 if is_tsumo else 20  # pinfu fixed 30 fu (tsumo) or 20 fu (ron)
 
-        fu = 20  # Base Fu
+        fu = 20  # Base fu
 
         if hand.is_concealed and not is_tsumo:
             fu += 10
@@ -323,8 +323,8 @@ class ScoreCalculator:
 
             is_open = combination.is_open
 
-            # If Ron, and the combination contains the winning tile (and was originally concealed), treat as Open Triplet
-            # Note: Only needed for Triplets (Sequence Fu is 0, Kans are always formed)
+            # If ron, and the combination contains the winning tile (and was originally concealed), treat as Open Triplet
+            # Note: Only needed for Triplets (Sequence fu is 0, kans are always formed)
             if (
                 not is_tsumo
                 and not is_open
@@ -343,9 +343,9 @@ class ScoreCalculator:
         if pair_combination := self._extract_pair(winning_combination):
             pair_tile = pair_combination.tiles[0]
 
-            # Yakuhai Pair +2 Fu
+            # yakuhai Pair +2 fu
             if pair_tile.suit == Suit.HONORS:
-                if pair_tile.rank in [5, 6, 7]:  # Haku, Hatsu, Chun
+                if pair_tile.rank in [5, 6, 7]:  # haku, hatsu, chun
                     fu += 2
 
                 round_wind_tile = game_state.round_wind.tile
@@ -366,7 +366,7 @@ class ScoreCalculator:
             WaitingType.KANCHAN,
         }:
             fu += 2
-        # Ryanmen and Shabo do not add Fu
+        # ryanmen and shabo do not add fu
 
         return ((fu + 9) // 10) * 10
 
@@ -429,14 +429,14 @@ class ScoreCalculator:
 
     def calculate_han(self, yaku_results: List[YakuResult], dora_count: int) -> int:
         """
-        Calculate Han.
+        Calculate han.
 
         Args:
-            yaku_results (List[YakuResult]): List of Yaku results.
-            dora_count (int): Number of Dora.
+            yaku_results (List[YakuResult]): List of yaku results.
+            dora_count (int): Number of dora.
 
         Returns:
-            int: Han value.
+            int: han value.
         """
         han = sum(r.han for r in yaku_results)
         han += dora_count
