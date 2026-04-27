@@ -522,9 +522,9 @@ class YakuChecker:
         self, hand: Hand, game_state: GameState, is_tsumo: bool = False
     ) -> Optional[YakuResult]:
         """
-        Check menzen tsumo (Concealed tsumo).
+        Check menzen_tsumo.
 
-        menzen tsumo: tsumo win while menzen (Concealed).
+        menzen_tsumo: tsumo win while menzen.
 
         Args:
             hand (Hand): hand.
@@ -609,8 +609,8 @@ class YakuChecker:
         # Pair cannot be yakuhai (check round_wind, seat_wind, haku/hatsu/chun)
         pair_tile = sorted(pair_combination.tiles)[0]
         if pair_tile.suit == Suit.HONORS:
-            sangen = [5, 6, 7]  # haku, hatsu, chun
-            if pair_tile.rank in sangen:
+            haku_hatsu_chun_ranks = [5, 6, 7]
+            if pair_tile.rank in haku_hatsu_chun_ranks:
                 return None  # haku/hatsu/chun pair, cannot be pinfu
 
             if game_state is not None:
@@ -755,8 +755,7 @@ class YakuChecker:
         if not winning_combination:
             return results
 
-        # haku, hatsu, chun
-        sangen = [5, 6, 7]
+        haku_hatsu_chun_ranks = [5, 6, 7]
         wind_rank_mapping = {
             1: (Wind.EAST, Yaku.ROUND_WIND_EAST, Yaku.SEAT_WIND_EAST),
             2: (Wind.SOUTH, Yaku.ROUND_WIND_SOUTH, Yaku.SEAT_WIND_SOUTH),
@@ -779,7 +778,7 @@ class YakuChecker:
                 continue
 
             rank = tile.rank
-            if rank in sangen:
+            if rank in haku_hatsu_chun_ranks:
                 if rank == 5:
                     results.append(YakuResult(Yaku.HAKU, 1, False))
                 elif rank == 6:
@@ -1220,25 +1219,28 @@ class YakuChecker:
         if not winning_combination:
             return None
 
-        sangen = [5, 6, 7]  # haku, hatsu, chun
-        sangen_triplets = []
-        sangen_pair = None
+        haku_hatsu_chun_ranks = [5, 6, 7]
+        haku_hatsu_chun_triplets = []
+        haku_hatsu_chun_pair = None
 
         groups = self._group_combinations(winning_combination)
         triplet_like = groups[CombinationType.TRIPLET] + groups[CombinationType.KAN]
         for combination in triplet_like:
             tile = sorted(combination.tiles)[0]
-            if tile.suit == Suit.HONORS and tile.rank in sangen:
-                sangen_triplets.append(tile.rank)
+            if tile.suit == Suit.HONORS and tile.rank in haku_hatsu_chun_ranks:
+                haku_hatsu_chun_triplets.append(tile.rank)
 
         pair_combination = self._extract_pair(winning_combination)
         if pair_combination:
             pair_tile = sorted(pair_combination.tiles)[0]
-            if pair_tile.suit == Suit.HONORS and pair_tile.rank in sangen:
-                sangen_pair = pair_tile.rank
+            if (
+                pair_tile.suit == Suit.HONORS
+                and pair_tile.rank in haku_hatsu_chun_ranks
+            ):
+                haku_hatsu_chun_pair = pair_tile.rank
 
         # Two haku/hatsu/chun triplets + one haku/hatsu/chun pair
-        if len(sangen_triplets) == 2 and sangen_pair is not None:
+        if len(haku_hatsu_chun_triplets) == 2 and haku_hatsu_chun_pair is not None:
             return YakuResult(Yaku.SHOUSANGEN, 2, False)
 
         return None
@@ -1287,18 +1289,18 @@ class YakuChecker:
         if not winning_combination:
             return None
 
-        sangen = [5, 6, 7]  # haku, hatsu, chun
-        sangen_triplets = []
+        haku_hatsu_chun_ranks = [5, 6, 7]
+        haku_hatsu_chun_triplets = []
 
         groups = self._group_combinations(winning_combination)
         triplet_like = groups[CombinationType.TRIPLET] + groups[CombinationType.KAN]
         for combination in triplet_like:
             tile = sorted(combination.tiles)[0]
-            if tile.suit == Suit.HONORS and tile.rank in sangen:
-                sangen_triplets.append(tile.rank)
+            if tile.suit == Suit.HONORS and tile.rank in haku_hatsu_chun_ranks:
+                haku_hatsu_chun_triplets.append(tile.rank)
 
         # Three haku/hatsu/chun triplets
-        if len(sangen_triplets) == 3:
+        if len(haku_hatsu_chun_triplets) == 3:
             return YakuResult(Yaku.DAISANGEN, 13, True)
 
         return None
@@ -1579,7 +1581,7 @@ class YakuChecker:
         """
         Check ryuuiisou.
 
-        ryuuiisou: Composed entirely of green tiles (2, 3, 4, 6, 8 souzu, hatsu).
+        ryuuiisou: Composed entirely of ryuuiisou tiles (2, 3, 4, 6, 8 souzu, hatsu).
 
         Args:
             hand (Hand): hand.

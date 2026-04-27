@@ -225,7 +225,7 @@ class RuleEngine:
         self._pao_daisangen = {}
         self._pao_daisuushi = {}
 
-        # Nagashi mangan tracking: Record if player's discards were called
+        # nagashi_mangan tracking: Record if player's discards were called
         self._has_called_discard = {i: False for i in range(self._num_players)}
 
     def deal(self) -> Dict[int, List[Tile]]:
@@ -658,7 +658,7 @@ class RuleEngine:
         for player in winners:
             win_res = self.check_win(
                 player, tile, is_rinshan=False
-            )  # ron is not Rinshan
+            )  # ron is not rinshan
             if win_res:
                 result.win_results[player] = win_res
 

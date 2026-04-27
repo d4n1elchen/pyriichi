@@ -79,7 +79,7 @@ class TestYakuChecker:
             assert result.yaku == Yaku.IIPEIKOU
             assert result.han == 1
 
-    def test_yakuhai_sangen(self):
+    def test_yakuhai_haku_hatsu_chun(self):
         """測試役牌（三元牌）"""
         # 有三元牌刻子的和牌型
         # 手牌：123m 456p 789s 555z 1z
@@ -94,10 +94,10 @@ class TestYakuChecker:
             )
             # 檢查是否有三元牌
 
-            has_sangen = any(
+            has_haku_hatsu_chun = any(
                 r.yaku in {Yaku.HAKU, Yaku.HATSU, Yaku.CHUN} for r in results
             )
-            assert has_sangen
+            assert has_haku_hatsu_chun
 
     def test_sanshoku_doujun(self):
         """測試三色同順"""

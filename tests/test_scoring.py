@@ -385,7 +385,7 @@ class TestScoreCalculator:
             # 非門清榮和：20 + 0 = 20，進位到 20
             assert fu >= 20
 
-    def test_fu_pair_sangen(self):
+    def test_fu_pair_haku_hatsu_chun(self):
         """測試三元牌對子符數（+2符）"""
         # 創建一個有三元牌對子的手牌
         # 手牌：123m 456m 78m 123p 55z

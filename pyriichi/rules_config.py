@@ -58,7 +58,7 @@ class RulesetConfig:
             - False: Game ends at end of South 4.
         return_score (int): Return score / Target score.
             - When game ends, if 1st place score is below this score, and West Round Extension is enabled, game extends.
-        agari_yame (bool): Agari Yame.
+        agari_yame (bool): agari_yame.
             - True: If dealer wins in the last round (south 4 or west 4) and is 1st place, game ends.
             - False: dealer repeats (renchan), game continues.
         chombo_penalty_enabled (bool): Chombo penalty rule.
@@ -73,7 +73,7 @@ class RulesetConfig:
             Note: Requires head_bump_only = False.
         allow_triple_ron (bool): triple_ron rule.
             - True: Allow three players to ron simultaneously.
-            - False: Three players ron leads to ryuukyoku (Sancha ron).
+            - False: Three players ron leads to ryuukyoku (sancha_ron).
             Note: Requires head_bump_only = False and allow_double_ron = True.
     """
 

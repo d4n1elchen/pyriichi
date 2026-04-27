@@ -43,9 +43,22 @@ Use these conventions when adding new terms:
 
 | Code | 日本語 | English | 中文 | Notes |
 |------|--------|---------|------|-------|
-| haku | 白 | White | 白 | White dragon. |
-| hatsu | 発 | Green | 發 | Green dragon. |
-| chun | 中 | Red | 中 | Red dragon. |
+| haku | 白 | White | 白 | White dragon and yakuhai. |
+| hatsu | 発 | Green | 發 | Green dragon and yakuhai. |
+| chun | 中 | Red | 中 | Red dragon and yakuhai. |
+
+## Yakuhai Wind Yaku (役牌)
+
+| Code | 日本語 | English | 中文 | Notes |
+|------|--------|---------|------|-------|
+| round_wind_east | 場風東 | Prevalent Wind East | 場風東 | East round wind yakuhai. |
+| round_wind_south | 場風南 | Prevalent Wind South | 場風南 | South round wind yakuhai. |
+| round_wind_west | 場風西 | Prevalent Wind West | 場風西 | West round wind yakuhai. |
+| round_wind_north | 場風北 | Prevalent Wind North | 場風北 | North round wind yakuhai. |
+| seat_wind_east | 自風東 | Seat Wind East | 自風東 | East seat wind yakuhai. |
+| seat_wind_south | 自風南 | Seat Wind South | 自風南 | South seat wind yakuhai. |
+| seat_wind_west | 自風西 | Seat Wind West | 自風西 | West seat wind yakuhai. |
+| seat_wind_north | 自風北 | Seat Wind North | 自風北 | North seat wind yakuhai. |
 
 ## Calls and Turn Actions (鳴き・動作)
 
@@ -81,6 +94,8 @@ Use these conventions when adding new terms:
 | honba | 本場 | Honba | 本場 | Counter for repeat/dealer-continuation bonus sticks. |
 | kyoutaku | 供託 | Deposit | 供託 | Points/sticks placed on the table. |
 | riichi_stick | 立直棒 | Riichi Stick | 立直棒 | The 1000-point stick paid on riichi declaration. |
+| renchan | 連荘 | Dealer Repeat | 連莊 | Dealer continuation after a qualifying result. |
+| agari_yame | アガリ止め | Agari Yame | 和牌止莊 | Last-round dealer win that ends the game under ruleset settings. |
 
 ## Abortive Draw Types (途中流局)
 
@@ -162,6 +177,10 @@ Use these conventions when adding new terms:
 | baiman | 倍満 | Baiman | 倍滿 | |
 | sanbaiman | 三倍満 | Sanbaiman | 三倍滿 | |
 | yakuman | 役満 | Yakuman | 役滿 | |
+| kiriage_mangan | 切り上げ満貫 | Rounded-Up Mangan | 切上滿貫 | Rule that rounds specific near-mangan scores up to mangan. |
+| noten_bappu | ノーテン罰符 | Noten Penalty | 未聽罰符 | End-of-round payment between tenpai and noten players. |
+| pao | 包 | Pao | 包牌 | Responsibility payment rule for specific yakuman hands. |
+| tobi | 飛び | Bankruptcy | 飛 | Player score dropping below zero. |
 
 ## Dora and Bonus Indicators (ドラ)
 
@@ -177,11 +196,25 @@ Use these conventions when adding new terms:
 |------|--------|---------|------|-------|
 | furiten | 振聴 | Furiten | 振聽 | Cannot ron due to discard/win-pass constraints. |
 | temp_furiten | 一時振聴 | Temporary Furiten | 暫時振聽 | Temporary furiten after passing a ron opportunity. |
+| menzen | 門前 | Fully Concealed | 門前 | Closed hand with no open melds. |
 | tenpai | 聴牌 | Tenpai | 聽牌 | One tile from winning. |
+| noten | ノーテン | Noten | 未聽 | Not in tenpai. |
 | shanten | 向聴 | Shanten | 向聽 | Distance from tenpai. |
 | discarded | 捨て牌 | Discarded Tile | 捨牌 | The tile after it has been discarded. |
 | genbutsu | 現物 | Safe Tile | 現物 | Tile known safe against a player because they discarded it. |
 | betaori | ベタオリ | Full Fold | 棄和防守 | Full defense/folding. |
+| suji | 筋 | Suji | 筋牌 | Defensive tile-safety pattern. |
 | wall | 壁 | Wall | 壁 | Tile-wall safety concept. |
 | river | 河 | Discard River | 牌河 | Discard river. |
 | ryuukyoku | 流局 | Exhaustive Draw | 流局 | Drawn hand. |
+
+## Table Position and Multi-Win Rules (席順・複数和了)
+
+| Code | 日本語 | English | 中文 | Notes |
+|------|--------|---------|------|-------|
+| shimocha | 下家 | Shimocha | 下家 | Player to the left in turn order. |
+| toimen | 対面 | Toimen | 對家 | Player across the table. |
+| kamicha | 上家 | Kamicha | 上家 | Player to the right in turn order. |
+| head_bump | 頭ハネ | Head Bump | 頭跳 | Rule where the closest winner in turn order takes priority. |
+| double_ron | ダブロン | Double Ron | 雙響 | Two players win by ron on the same discard. |
+| triple_ron | トリプルロン | Triple Ron | 三響 | Three players win by ron on the same discard. |

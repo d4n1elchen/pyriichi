@@ -374,7 +374,7 @@ class TestRuleEngine:
     def test_kan_updates_current_player(self):
         """
         Regression Test: Verify open_kan updates current player.
-        Ensure kan player can discard after drawing Rinshan tile.
+        Ensure kan player can discard after drawing rinshan tile.
         """
         self._init_game()
 
@@ -413,7 +413,7 @@ class TestRuleEngine:
         # Critical check: Current player should update to 1
         assert self.engine.get_current_player() == 1
 
-        # Verify Player 1 can discard (after automatically drawing Rinshan tile)
+        # Verify Player 1 can discard (after automatically drawing rinshan tile)
         # _handle_kan calls _draw_rinshan_tile to add a tile
         p1_actions = self.engine.get_available_actions(1)
         assert GameAction.DISCARD in p1_actions
@@ -522,7 +522,7 @@ class TestRuleEngine:
         assert result is None or result.win is False
 
     def test_noten_bappu_one_tenpai(self):
-        """Test noten Bappu: One tenpai (+3000 / -1000)"""
+        """Test noten_bappu: One tenpai (+3000 / -1000)"""
         self._init_game()
 
         # Set Player 0 tenpai
@@ -555,7 +555,7 @@ class TestRuleEngine:
             assert self.engine._game_state.scores[i] == initial_scores[i] - 1000
 
     def test_noten_bappu_two_tenpai(self):
-        """Test noten Bappu: Two tenpai (+1500 / -1500)"""
+        """Test noten_bappu: Two tenpai (+1500 / -1500)"""
         self._init_game()
 
         # Set Player 0, 1 tenpai
@@ -581,7 +581,7 @@ class TestRuleEngine:
         assert self.engine._game_state.scores[3] == initial_scores[3] - 1500
 
     def test_noten_bappu_three_tenpai(self):
-        """Test noten Bappu: Three tenpai (+1000 / -3000)"""
+        """Test noten_bappu: Three tenpai (+1000 / -3000)"""
         self._init_game()
 
         # Set Player 0, 1, 2 tenpai
@@ -607,7 +607,7 @@ class TestRuleEngine:
         assert self.engine._game_state.scores[3] == initial_scores[3] - 3000
 
     def test_noten_bappu_all_tenpai(self):
-        """Test noten Bappu: All tenpai (0)"""
+        """Test noten_bappu: All tenpai (0)"""
         self._init_game()
 
         # Set all players tenpai
@@ -626,7 +626,7 @@ class TestRuleEngine:
             assert self.engine._game_state.scores[i] == initial_scores[i]
 
     def test_noten_bappu_no_tenpai(self):
-        """Test noten Bappu: No tenpai (0)"""
+        """Test noten_bappu: No tenpai (0)"""
         self._init_game()
 
         # Set all players noten
@@ -696,7 +696,7 @@ class TestRuleEngine:
         assert self.engine.get_phase() == GamePhase.ENDED
 
     def test_tobi_noten_bappu(self):
-        """Test tobi (Bankruptcy): noten Bappu causes score < 0"""
+        """Test tobi (Bankruptcy): noten_bappu causes score < 0"""
         self._init_game()
         self.engine._game_state.ruleset.tobi_enabled = True
 
@@ -1634,7 +1634,7 @@ class TestActionExecution:
         assert self.engine._tile_set is not None
         self.engine._tile_set._wall = [Tile(Suit.SOUZU, 5)]
         self.engine._tile_set._tiles = []
-        # Ensure Rinshan tile is not a winning tile (hand tenpai is special, give unrelated honor tile to ensure no win)
+        # Ensure rinshan tile is not a winning tile (hand tenpai is special, give unrelated honor tile to ensure no win)
         self.engine._tile_set._rinshan_tiles = [Tile(Suit.HONORS, 1)] * 4
 
         # Force update actions
@@ -1703,7 +1703,7 @@ class TestWinningAndScoring:
         self._init_game()
         # Set a hand that can win on rinshan
         # Create a winning hand
-        # hand: 123m 456m 789m 123p 4p (Rinshan tile 4p)
+        # hand: 123m 456m 789m 123p 4p (rinshan tile 4p)
         self.engine._hands[0] = Hand(parse_tiles("123456789m12344p"))
         self.engine._current_player = 0
 
@@ -2187,7 +2187,7 @@ class TestWinningAndScoring:
 
         # Players 1, 2, 3 each get 1000.
 
-        # Wait, calculate_score might give more if dora/uradora etc.
+        # Wait, calculate_score might give more if dora/ura_dora etc.
         # Let's just verify scores changed in the right direction.
 
         score_diff_0 = self.engine._game_state.scores[0] - initial_scores[0]
@@ -2309,7 +2309,7 @@ class TestRyuukyoku:
         assert ryuukyoku_type == RyuukyokuType.SUUFON_RENDA
 
     def test_check_draw_sancha_ron(self):
-        """Test Sancha ron (Three ron) ryuukyoku check"""
+        """Test sancha_ron (Three ron) ryuukyoku check"""
         self._init_game()
 
         # Set triple_ron to allow ryuukyoku
@@ -2385,7 +2385,7 @@ class TestRyuukyoku:
         assert result.ryuukyoku.kyuushu_kyuuhai_player == player
 
     def test_handle_draw_suucha_riichi(self):
-        """Test Suucha riichi (Four riichi) ryuukyoku handling"""
+        """Test suucha_riichi (Four riichi) ryuukyoku handling"""
         self._init_game()
 
         # Set all players riichi
@@ -2397,11 +2397,11 @@ class TestRyuukyoku:
         assert ryuukyoku_type == RyuukyokuType.SUUCHA_RIICHI
 
     def test_check_nagashi_mangan(self):
-        """Test Nagashi mangan check"""
+        """Test nagashi_mangan check"""
         self._init_game()
         player = 0
 
-        # 1. Normal Nagashi mangan: All discards are terminals/honors, and not called
+        # 1. Normal nagashi_mangan: All discards are terminals/honors, and not called
         yaochuu_tiles = [
             Tile(Suit.MANZU, 1),
             Tile(Suit.MANZU, 9),
@@ -2434,7 +2434,7 @@ class TestRyuukyoku:
         assert self.engine._check_nagashi_mangan(player) is False
 
     def test_check_sancha_ron(self):
-        """Test Sancha ron (Three ron) check"""
+        """Test sancha_ron (Three ron) check"""
         self._init_game()
 
         # Set last discard
@@ -2448,7 +2448,7 @@ class TestRyuukyoku:
         self.engine._hands[2] = Hand(parse_tiles("123456789m1234p"))
         self.engine._hands[3] = Hand(parse_tiles("123456789m1234p"))
 
-        # Check Sancha ron
+        # Check sancha_ron
         result = self.engine._check_sancha_ron()
         assert result is True
 
@@ -2536,7 +2536,7 @@ class TestRyuukyoku:
         hand_tiles = parse_tiles("1111m234567m1234p")
         self.engine._hands[player] = Hand(hand_tiles)
 
-        # 2. Set Rinshan tile to winning tile (4p) - Wait 1p/4p
+        # 2. Set rinshan tile to winning tile (4p) - Wait 1p/4p
         rinshan_tile = Tile(Suit.PINZU, 4)
         assert self.engine._tile_set is not None
         self.engine._tile_set._rinshan_tiles[0] = rinshan_tile
@@ -2577,7 +2577,7 @@ class TestRyuukyoku:
         winners = self.engine.check_multiple_ron(discard_tile, 0)
 
         # Detect three players can ron but triple_ron disabled, return empty list (trigger ryuukyoku)
-        assert len(winners) == 0  # Empty list means Sancha ron ryuukyoku
+        assert len(winners) == 0  # Empty list means sancha_ron ryuukyoku
 
 
 class TestGameEndConditions:
@@ -2637,7 +2637,7 @@ class TestGameEndConditions:
         self.engine.game_state.set_round(Wind.SOUTH, 4)
         self.engine.game_state.set_dealer(0)  # Assume Player 0 is dealer
 
-        # Set Player 0 as Top and over 30000 (Usually Agari Yame just requires Top? Need to confirm rules)
+        # Set Player 0 as Top and over 30000 (Usually agari_yame just requires Top? Need to confirm rules)
         # Standard rule: Just need to be Top to end.
         self.engine.game_state._scores = [35000, 20000, 20000, 25000]
 
