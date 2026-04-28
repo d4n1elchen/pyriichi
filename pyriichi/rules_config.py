@@ -64,6 +64,7 @@ class RulesetConfig:
         chombo_penalty_enabled (bool): Chombo penalty rule.
             - True: Pay mangan penalty and end the round when violation occurs.
             - False: Ignore violation or just reject action.
+        riichi_min_remaining_tiles (int): Minimum live wall tiles required to declare riichi.
         head_bump_only (bool): head_bump rule (only shimocha wins).
             - True: When multiple players can ron, only the discarder's shimocha (closest counter-clockwise) wins.
             - False: Allow multiple ron (Requires allow_double_ron or allow_triple_ron).
@@ -116,6 +117,8 @@ class RulesetConfig:
     # Violation Penalty Rule
     chombo_penalty_enabled: bool = True
 
+    riichi_min_remaining_tiles: int = 4
+
     # head_bump / double_ron / triple_ron rules
     head_bump_only: bool = True
 
@@ -148,4 +151,5 @@ class RulesetConfig:
             return_score=30000,
             agari_yame=True,
             chombo_penalty_enabled=True,
+            riichi_min_remaining_tiles=4,
         )

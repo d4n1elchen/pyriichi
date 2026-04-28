@@ -1455,6 +1455,20 @@ class TestActionExecution:
         assert current_player in self.engine._riichi_ippatsu
         assert self.engine._riichi_ippatsu[current_player]
 
+    def test_riichi_requires_remaining_wall_tiles(self):
+        """Test riichi requires enough remaining live wall tiles."""
+        self._init_game()
+        current_player = self.engine.get_current_player()
+        tiles = parse_tiles("123456789m1234p")
+        hand = Hand(tiles)
+        hand.add_tile(Tile(Suit.SOUZU, 9))
+        self.engine._hands[current_player] = hand
+        self.engine._tile_set._tiles = [Tile(Suit.MANZU, 1)] * 3
+
+        assert not self.engine._can_riichi(current_player)
+        with pytest.raises(ValueError, match="立直時牌山剩餘張數不足"):
+            self.engine._handle_riichi(current_player, tile=Tile(Suit.SOUZU, 9))
+
     def test_execute_action_kan_no_tile(self):
         """Test open_kan without specifying tile"""
         self._init_game()

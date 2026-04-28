@@ -384,6 +384,12 @@ class RuleEngine:
 
     def _can_riichi(self, player: int) -> bool:
         hand = self._hands[player]
+        if (
+            self._tile_set
+            and self._tile_set.remaining
+            < self._game_state.ruleset.riichi_min_remaining_tiles
+        ):
+            return False
         return (
             hand.is_concealed and not hand.is_riichi and len(hand.tenpai_discards) > 0
         )
@@ -933,6 +939,13 @@ class RuleEngine:
     ) -> ActionResult:
         if tile is None:
             raise ValueError("立直必須同時打出一張牌")
+
+        if (
+            self._tile_set
+            and self._tile_set.remaining
+            < self._game_state.ruleset.riichi_min_remaining_tiles
+        ):
+            raise ValueError("立直時牌山剩餘張數不足")
 
         hand = self._hands[player]
 
