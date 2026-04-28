@@ -145,7 +145,7 @@ class TileRenderer:
         # Determine color
         color = "#000000"
 
-        if tile.is_red:
+        if tile.is_red_dora:
             color = "#FF0000"
         elif tile.suit == Suit.MANZU:
             color = "#B22222"  # Red
@@ -235,7 +235,7 @@ class TileRenderer:
             # Single char or honors
             canvas.create_text(cx, cy, text=text, fill=color, font=font, angle=angle)
 
-        if tile.is_red:
+        if tile.is_red_dora:
             # Add a small red dot indicator
             # Rotate position
             import math
@@ -358,7 +358,7 @@ class MahjongTable(tk.Canvas):
             justify="center",
         )
 
-        # riichi Sticks (Unclaimed)
+        # Riichi Sticks (Unclaimed)
         active_riichi_count = 0
         for hand in self.hands.values():
             if hand and hand.is_riichi:  # Ensure hand is not None
@@ -399,7 +399,7 @@ class MahjongTable(tk.Canvas):
             )
 
     def _draw_riichi_stick(self, x, y, w, h, angle=0):
-        """Draw a 1000 point stick (riichi stick)"""
+        """Draw a 1000 point Riichi Stick."""
 
         # Helper for rotation
         def rotate_point(px, py, ox, oy, theta):
@@ -539,7 +539,7 @@ class MahjongTable(tk.Canvas):
             angle=score_angle,
         )
 
-        # Draw riichi Stick if player is in riichi
+        # Draw Riichi Stick if player is in riichi.
         hand = self.hands.get(player_idx)
         if hand and hand.is_riichi:
             offset = 25
@@ -648,7 +648,7 @@ class MahjongTable(tk.Canvas):
         if hand.last_drawn_tile and hand.last_drawn_tile in tiles:
             drawn_tile = hand.last_drawn_tile
             tiles.remove(drawn_tile)
-        tiles = sorted(tiles, key=lambda t: (t.suit.value, t.rank, t.is_red))
+        tiles = sorted(tiles, key=lambda t: (t.suit.value, t.rank, t.is_red_dora))
         if drawn_tile:
             tiles.append(drawn_tile)
 
@@ -827,7 +827,7 @@ class MahjongTable(tk.Canvas):
                 hand = self.hands.get(self.human_seat)
                 if hand and isinstance(hand, Hand):
                     tiles = sorted(
-                        hand.tiles, key=lambda t: (t.suit.value, t.rank, t.is_red)
+                        hand.tiles, key=lambda t: (t.suit.value, t.rank, t.is_red_dora)
                     )
                     drawn_tile = hand.last_drawn_tile
                     if drawn_tile and drawn_tile in tiles:

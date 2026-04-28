@@ -50,7 +50,7 @@ class TestGameState:
         assert self.game_state.honba == 0
 
     def test_add_riichi_stick(self):
-        """Test add riichi stick."""
+        """Test add Riichi Stick."""
         self.game_state.add_riichi_stick()
         assert self.game_state.riichi_sticks == 1
 
@@ -58,7 +58,7 @@ class TestGameState:
         assert self.game_state.riichi_sticks == 2
 
     def test_clear_riichi_sticks(self):
-        """Test clear riichi sticks."""
+        """Test clear Riichi Stick."""
         self.game_state.add_riichi_stick()
         self.game_state.add_riichi_stick()
         self.game_state.add_riichi_stick()

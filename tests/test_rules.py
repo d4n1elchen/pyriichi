@@ -67,7 +67,7 @@ class TestRuleEngine:
         hand._tiles = []
 
         # Construct hand: 11 123 123 123 566 (manzu)
-        # After discarding 5m, remains 11 123 123 123 66 -> tenpai (Wait on 6m)
+        # After discarding 5m, remains 11 123 123 123 66 -> tenpai (machi on 6m)
         tiles = []
         tiles.extend([Tile(Suit.MANZU, 1) for _ in range(2)])
         tiles.extend([Tile(Suit.MANZU, 2) for _ in range(3)])
@@ -260,8 +260,8 @@ class TestRuleEngine:
         """Test furiten (Discards): Cannot ron if winning tile is in discards"""
         self._init_game()
 
-        # Set Player 0 tenpai (Wait 3p)
-        # hand: 123m 456m 789m 12p 33p (Wait 3p)
+        # Set Player 0 tenpai (machi 3p)
+        # hand: 123m 456m 789m 12p 33p (machi 3p)
         tiles = parse_tiles("123456789m1233p")
         self.engine._hands[0] = Hand(tiles)
 
@@ -287,8 +287,8 @@ class TestRuleEngine:
         """Test furiten (Discards): Can tsumo even if furiten"""
         self._init_game()
 
-        # Set Player 0 tenpai (Wait 3p)
-        # hand: 123m 456m 789m 12p 33p (13 tiles, Wait 3p)
+        # Set Player 0 tenpai (machi 3p)
+        # hand: 123m 456m 789m 12p 33p (13 tiles, machi 3p)
         tiles = parse_tiles("123456789m1233p")
         self.engine._hands[0] = Hand(tiles)
 
@@ -316,7 +316,7 @@ class TestRuleEngine:
         """Test temp_furiten (Same Turn): Cannot ron if passed winning tile in same turn"""
         self._init_game()
 
-        # Set Player 0 tenpai (Wait 4p)
+        # Set Player 0 tenpai (machi 4p)
         # hand: 123m 456m 789m 123p 4p
         tiles = parse_tiles("123456789m1234p")
         self.engine._hands[0] = Hand(tiles)
@@ -344,7 +344,7 @@ class TestRuleEngine:
         """Test temp_furiten: Can ron in next turn"""
         self._init_game()
 
-        # Set Player 0 tenpai (Wait 4p)
+        # Set Player 0 tenpai (machi 4p)
         tiles = parse_tiles("123456789m1234p")
         self.engine._hands[0] = Hand(tiles)
 
@@ -360,7 +360,7 @@ class TestRuleEngine:
         self.engine._current_player = 0
         self.engine._last_drawn_tile = None
 
-        # Check furiten status (Should not be temporary furiten)
+        # Check furiten status (Should not be temp_furiten)
         assert self.engine.check_furiten_temp(0) is False
         assert self.engine.is_furiten(0) is False
 
@@ -381,9 +381,9 @@ class TestRuleEngine:
         self.engine._current_player = 0
 
         # Ensure other players don't interrupt
-        safe_tiles = parse_tiles("1s1s1s1s2s2s2s2s3s3s3s3s4s")
+        non_interrupt_tiles = parse_tiles("1s1s1s1s2s2s2s2s3s3s3s3s4s")
         for i in [0, 2, 3]:
-            self.engine._hands[i] = Hand(safe_tiles)
+            self.engine._hands[i] = Hand(non_interrupt_tiles)
 
         # Give Player 1 three 4z
         p1_hand = self.engine.get_hand(1)
@@ -431,7 +431,7 @@ class TestRuleEngine:
         """Test riichi furiten: Permanent furiten after passing ron in riichi"""
         self._init_game()
 
-        # Set Player 0 riichi and tenpai (Wait 4p)
+        # Set Player 0 riichi and tenpai (machi 4p)
         tiles = parse_tiles("123456789m1234p")
         self.engine._hands[0] = Hand(tiles)
         self.engine._hands[0].set_riichi(True)
@@ -457,7 +457,7 @@ class TestRuleEngine:
         """Test riichi furiten: Can tsumo even if permanent furiten"""
         self._init_game()
 
-        # Set Player 0 riichi and tenpai (Wait 4p)
+        # Set Player 0 riichi and tenpai (machi 4p)
         tiles = parse_tiles("123456789m12344p")
         self.engine._hands[0] = Hand(tiles)
         self.engine._hands[0].set_riichi(True)
@@ -492,22 +492,22 @@ class TestRuleEngine:
         assert self.engine.check_furiten_discards(0) is False
         assert self.engine.is_furiten(0) is False
 
-    def test_furiten_multiple_waiting_tiles(self):
-        """Test furiten with multiple waiting tiles"""
+    def test_furiten_multiple_machi_tiles(self):
+        """Test furiten with multiple machi tiles."""
         self._init_game()
 
-        # Set Player 0 multi-wait (Wait 4p 5p)
-        # hand: 123m 456m 789m 44p 55p (Shanpon wait 4p 5p)
+        # Set Player 0 multi-machi (machi 4p 5p)
+        # hand: 123m 456m 789m 44p 55p (Shanpon machi 4p 5p)
         tiles = parse_tiles("123456789m4455p")
         self.engine._hands[0] = Hand(tiles)
 
-        # Player 0 discarded 4p before (one of the waiting tiles)
+        # Player 0 discarded 4p before (one of the machi tiles).
         self.engine._hands[0]._discards.append(Tile(Suit.PINZU, 4))
 
-        # Check furiten status (Discarded one of the waiting tiles)
+        # Check furiten status after discarding one of the winning tiles.
         assert self.engine.check_furiten_discards(0) is True
 
-        # Even if discarded tile is 5p (the other waiting tile), cannot ron
+        # Even if the discarded is 5p, the other winning tile, ron is blocked.
         winning_tile = Tile(Suit.PINZU, 5)
         self.engine._last_discarded_tile = winning_tile
         self.engine._last_discarded_player = 1
@@ -643,7 +643,7 @@ class TestRuleEngine:
         self.engine._game_state._scores[1] = 1000
 
         # Player 0 tenpai, ron Player 1
-        # 123m 456m 789m 123p 4p (Wait 4p)
+        # 123m 456m 789m 123p 4p (machi 4p)
         self.engine._hands[0] = Hand(parse_tiles("123456789m1234p"))
 
         # Player 1 discards 4p
@@ -806,12 +806,12 @@ class TestRuleEngine:
         self.engine._handle_discard(0, drawn_tile)
 
     def test_closed_kan_allowed_if_wait_unchanged(self):
-        """Test declare_ankan allowed if wait is unchanged after riichi"""
+        """Test declare_ankan allowed if machi is unchanged after riichi"""
         self._init_game()
         hand = self.engine.get_hand(0)
         hand._is_riichi = True
 
-        # tenpai: 111m (Triplet) + 456m + 789p + 23s (Wait 1s, 4s) + 77z (Pair)
+        # tenpai: 111m (Triplet) + 456m + 789p + 23s (machi 1s, 4s) + 77z (Pair)
         # Here 111m can only be interpreted as a triplet, not a pair (because 1m is not connected to 456m)
         hand._tiles = parse_tiles("111456m789p23s77z")
         drawn_tile = Tile(Suit.MANZU, 1)
@@ -821,12 +821,12 @@ class TestRuleEngine:
         assert self.engine._can_declare_ankan(0)
 
     def test_closed_kan_forbidden_if_wait_changed(self):
-        """Test declare_ankan forbidden if wait is changed after riichi"""
+        """Test declare_ankan forbidden if machi is changed after riichi"""
         self._init_game()
         hand = self.engine.get_hand(0)
         hand._is_riichi = True
 
-        # tenpai: 3334m (wait 2m, 3m, 4m, 5m) -> closed_kan 3m -> 4m (tanki 4m)
+        # tenpai: 3334m (machi 2m, 3m, 4m, 5m) -> closed_kan 3m -> 4m (tanki 4m)
         hand._tiles = parse_tiles("3334m456p789s11z")
         drawn_tile = Tile(Suit.MANZU, 3)
         hand.add_tile(drawn_tile)
@@ -839,7 +839,7 @@ class TestRuleEngine:
         self._init_game()
         hand = self.engine.get_hand(0)
 
-        # Set tenpai hand: 11123m (Wait 1m, 4m) + 456p + 789s + 11z
+        # Set tenpai hand: 11123m (machi 1m, 4m) + 456p + 789s + 11z
         # Draw 2p (Not tenpai)
         hand._tiles = parse_tiles("11123m456p789s11z")
         drawn_tile = Tile(Suit.PINZU, 2)
@@ -875,13 +875,13 @@ class TestRuleEngine:
         self.engine._game_state.ruleset.head_bump_only = False
         self.engine._game_state.ruleset.allow_double_ron = True
 
-        # Set Player 1 tenpai (Wait 5p)
-        # 123m 456s 789p 11z + 46p (Wait 5p for 456p)
+        # Set Player 1 tenpai (machi 5p)
+        # 123m 456s 789p 11z + 46p (machi 5p for 456p)
         self.engine.get_hand(1)._tiles = parse_tiles("123m456s789p11z46p")
         self.engine.get_hand(1)._melds = []
 
-        # Set Player 2 tenpai (Wait 5p)
-        # 123m 456s 789p 22z + 46p (Wait 5p for 456p)
+        # Set Player 2 tenpai (machi 5p)
+        # 123m 456s 789p 22z + 46p (machi 5p for 456p)
         self.engine.get_hand(2)._tiles = parse_tiles("123m456s789p22z46p")
         self.engine.get_hand(2)._melds = []
 
@@ -1512,7 +1512,7 @@ class TestActionExecution:
 
         # Set Player 0 can declare_ankan
         ten_tile = Tile(Suit.PINZU, 4)
-        # 1111m 234m 567m 123p 4p (Wait 4p)
+        # 1111m 234m 567m 123p 4p (machi 4p)
         closed_kan_tiles = parse_tiles("1111234567m1234p")
         self.engine._hands[0] = Hand(closed_kan_tiles)
         self.engine._current_player = 0
@@ -1544,8 +1544,8 @@ class TestActionExecution:
         self.engine._last_discarded_tile = None
         self.engine._last_discarded_player = None
 
-        # Set Player 1 can chankan (Wait 1m)
-        # hand: 23m 456m 789p 123p 44p (Wait 1m)
+        # Set Player 1 can chankan (machi 1m)
+        # hand: 23m 456m 789p 123p 44p (machi 1m)
         test_tiles = parse_tiles("23456m12344789p")
         test_hand = Hand(test_tiles)
         self.engine._hands[1] = test_hand
@@ -1589,10 +1589,10 @@ class TestActionExecution:
         self.engine._kan_count = 3
         assert self.engine._tile_set is not None
         self.engine._tile_set._wall = [Tile(Suit.PINZU, 2)]
-        # Set dead wall to safe tiles to avoid accidental rinshan
-        safe_tiles = [Tile(Suit.PINZU, 1)] * 14
-        self.engine._tile_set._dead_wall = safe_tiles
-        self.engine._tile_set._rinshan_tiles = safe_tiles[:4]
+        # Set dead wall to non-winning tiles to avoid accidental rinshan.
+        non_winning_tiles = [Tile(Suit.PINZU, 1)] * 14
+        self.engine._tile_set._dead_wall = non_winning_tiles
+        self.engine._tile_set._rinshan_tiles = non_winning_tiles[:4]
         self.engine._tile_set._tiles = []
 
         # Force update actions
@@ -1666,8 +1666,8 @@ class TestWinningAndScoring:
         """Test chankan check"""
         self._init_game()
 
-        # Set Player 0 can chankan (Wait 6p, tanyao)
-        # hand: 234m 567m 234p 66p 78p (Wait 6p/9p)
+        # Set Player 0 can chankan (machi 6p, tanyao)
+        # hand: 234m 567m 234p 66p 78p (machi 6p/9p)
         test_tiles = parse_tiles("234567m2346678p")
         self.engine._hands[0] = Hand(test_tiles)
 
@@ -1792,9 +1792,9 @@ class TestWinningAndScoring:
 
         # Test red_dora
         # hand: r5p
-        red_tiles = parse_tiles("r5p")
+        red_dora_tiles = parse_tiles("r5p")
 
-        test_hand = Hand(red_tiles)
+        test_hand = Hand(red_dora_tiles)
         self.engine._hands[0] = test_hand
         dora_count = self.engine._count_dora(0, Tile(Suit.PINZU, 5))
         assert dora_count >= 1  # At least one red_dora
@@ -1894,10 +1894,10 @@ class TestWinningAndScoring:
 
         # Player 3 discards chun (pao player deals in)
         # winning_tile = Tile(Suit.HONORS, 7) # Actually should discard 1m or 5z, because 5z is already ponned, so discard 1m
-        # Wait, hand is 11m 55z, ponned 567z
-        # tenpai is 1m, 5z (Pair wait?) No, ponned 3 triplets, hand remains 11m 55z?
+        # The hand is 11m 55z after ponning 567z.
+        # tenpai should be 1m and 5z by shabo.
         # 13 tiles: 3*3=9 tiles melded, remains 4 tiles.
-        # 11m 55z -> Wait 1m, 5z (Shanpon)
+        # 11m 55z -> machi 1m, 5z (Shanpon)
         # Assume Player 3 discards 1m
         winning_tile = Tile(Suit.MANZU, 1)
 
@@ -2069,7 +2069,7 @@ class TestWinningAndScoring:
         discard_tile = Tile(Suit.PINZU, 4)
 
         # Set Player 1 and 2 hands (tanyao pinfu)
-        # 234m 567m 234p 56p 88s (Wait 4p/7p)
+        # 234m 567m 234p 56p 88s (machi 4p/7p)
         # 30 fu 2 han = 2000 points (non-dealer)
         hand_tiles = parse_tiles("234567m23456p88s")
         self.engine._hands[1] = Hand(hand_tiles)
@@ -2146,7 +2146,7 @@ class TestWinningAndScoring:
         # Player 0 discards 5p, Player 1, 2, 3 all ron with tanyao
         discard_tile = Tile(Suit.PINZU, 5)
 
-        # 234m 345m 678m 234p 5p (Wait 5p)
+        # 234m 345m 678m 234p 5p (machi 5p)
         hand_str = "233445678m2345p"
         self.engine._hands[1] = Hand(parse_tiles(hand_str))
         self.engine._hands[2] = Hand(parse_tiles(hand_str))
@@ -2173,7 +2173,7 @@ class TestWinningAndScoring:
 
         # Players 1, 2, 3 each get 1000.
 
-        # Wait, calculate_score might give more if dora/ura_dora etc.
+        # Note: calculate_score might give more with dora/ura_dora.
         # Let's just verify scores changed in the right direction.
 
         score_diff_0 = self.engine._game_state.scores[0] - initial_scores[0]
@@ -2186,7 +2186,7 @@ class TestWinningAndScoring:
         assert score_diff_2 > 0
         assert score_diff_3 > 0
 
-        # Verify total balance is zero (assuming no riichi sticks)
+        # Verify total balance is zero (assuming no riichi_stick)
         assert score_diff_0 + score_diff_1 + score_diff_2 + score_diff_3 == 0
 
     def test_double_ron_with_furiten(self):
@@ -2200,7 +2200,7 @@ class TestWinningAndScoring:
         # Player 0 discards 5p
         discard_tile = Tile(Suit.PINZU, 5)
 
-        # 234m 345m 678m 234p 5p (Wait 5p) - tanyao
+        # 234m 345m 678m 234p 5p (machi 5p) - tanyao
         hand_str = "233445678m2345p"
 
         # Player 1 can ron
@@ -2234,7 +2234,7 @@ class TestWinningAndScoring:
         # Player 0 discards 5p, Player 2 and 3 can ron
         discard_tile = Tile(Suit.PINZU, 5)
 
-        # 234m 345m 678m 234p 5p (Wait 5p) - tanyao
+        # 234m 345m 678m 234p 5p (machi 5p) - tanyao
         hand_str = "233445678m2345p"
 
         self.engine._hands[2] = Hand(parse_tiles(hand_str))
@@ -2307,7 +2307,7 @@ class TestRyuukyoku:
         self.engine._last_discarded_player = 0
 
         # Set three players can win
-        # 123m 456m 789m 123p 4p (Wait 4p)
+        # 123m 456m 789m 123p 4p (machi 4p)
         tenpai_hand = Hand(parse_tiles("123456789m1234p"))
         self.engine._hands[1] = tenpai_hand
         self.engine._hands[2] = tenpai_hand
@@ -2413,9 +2413,7 @@ class TestRyuukyoku:
         assert self.engine._check_nagashi_mangan(player) is False
 
         # 3. Failure case: Discard called
-        self.engine._hands[player]._discards = (
-            yaochuu_tiles  # Reset to all terminals/honors
-        )
+        self.engine._hands[player]._discards = yaochuu_tiles  # Reset to yaochuu tiles.
         self.engine._has_called_discard[player] = True
         assert self.engine._check_nagashi_mangan(player) is False
 
@@ -2429,7 +2427,7 @@ class TestRyuukyoku:
         self.engine._last_discarded_player = 0
 
         # Set three players can win
-        # 123m 456m 789m 123p 4p (Wait 4p)
+        # 123m 456m 789m 123p 4p (machi 4p)
         self.engine._hands[1] = Hand(parse_tiles("123456789m1234p"))
         self.engine._hands[2] = Hand(parse_tiles("123456789m1234p"))
         self.engine._hands[3] = Hand(parse_tiles("123456789m1234p"))
@@ -2476,7 +2474,7 @@ class TestRyuukyoku:
         self.engine._last_discarded_tile = None
         self.engine._last_discarded_player = None
 
-        # hand: 23s 234m 567m 789p 44p (Wait 4s)
+        # hand: 23s 234m 567m 789p 44p (machi 4s)
         winning_tiles = parse_tiles("23s234567m789p44p")
         self.engine._hands[1] = Hand(winning_tiles)
 
@@ -2522,7 +2520,7 @@ class TestRyuukyoku:
         hand_tiles = parse_tiles("1111m234567m1234p")
         self.engine._hands[player] = Hand(hand_tiles)
 
-        # 2. Set rinshan tile to winning tile (4p) - Wait 1p/4p
+        # 2. Set rinshan tile to winning tile (4p) - machi 1p/4p
         rinshan_tile = Tile(Suit.PINZU, 4)
         assert self.engine._tile_set is not None
         self.engine._tile_set._rinshan_tiles[0] = rinshan_tile
@@ -2574,7 +2572,7 @@ class TestGameEndConditions:
         self.engine.game_state._scores = [25000] * 4
 
     def test_west_round_extension(self):
-        """Test West Round Extension: South 4 ends with no one reaching 30000, enter West Round"""
+        """Test west_round_extension: South 4 ends with no one reaching 30000, enter west round"""
         # Set to South 4
         self.engine.game_state.set_round(Wind.SOUTH, 4)
         self.engine.game_state.set_dealer(3)  # Player 3 is dealer
@@ -2582,7 +2580,7 @@ class TestGameEndConditions:
         # Set scores all below 30000
         self.engine.game_state._scores = [25000, 25000, 25000, 25000]
 
-        # Ensure West Round Extension enabled
+        # Ensure west_round_extension enabled
         self.engine.game_state.ruleset.west_round_extension = True
         self.engine.game_state.ruleset.return_score = 30000
 
@@ -2595,7 +2593,7 @@ class TestGameEndConditions:
         assert self.engine.game_state.round_number == 1
 
     def test_west_round_sudden_death(self):
-        """Test West Round Sudden Death: Someone reaches 30000 in West Round, game ends"""
+        """Test west_round_extension end check: Someone reaches 30000 in west round, game ends"""
         # Set to West 1
         self.engine.game_state.set_round(Wind.WEST, 1)
 
@@ -2610,7 +2608,7 @@ class TestGameEndConditions:
         assert has_next is False
 
     def test_no_west_round_if_score_reached(self):
-        """Test No West Round if score reached: South 4 ends with someone reaching 30000, game ends"""
+        """Test No west round if score reached: South 4 ends with someone reaching 30000, game ends"""
         self.engine.game_state.set_round(Wind.SOUTH, 4)
         self.engine.game_state._scores = [31000, 20000, 20000, 29000]
 

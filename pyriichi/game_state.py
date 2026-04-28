@@ -99,7 +99,7 @@ class GameState:
         Set round.
 
         Args:
-            round_wind (Wind): Round wind.
+            round_wind (Wind): Prevalent Wind.
             round_number (int): Round number.
         """
         self._round_wind = round_wind
@@ -133,11 +133,11 @@ class GameState:
         self._honba = 0
 
     def add_riichi_stick(self) -> None:
-        """Add riichi stick (deposit)."""
+        """Add one Riichi Stick to Deposit."""
         self._riichi_sticks += 1
 
     def clear_riichi_sticks(self) -> None:
-        """Clear riichi sticks."""
+        """Clear Riichi Stick count."""
         self._riichi_sticks = 0
 
     @property
@@ -178,8 +178,8 @@ class GameState:
         Returns:
             bool: Whether there is a next round (False if game ended).
         """
-        # Sudden Death rule after West Round
-        # If in West Round and someone reaches target score (usually 30000), game ends
+        # west_round_extension end check.
+        # In west round, the game ends once someone reaches return_score.
         if self._round_wind == Wind.WEST:
             max_score = max(self._scores)
             if max_score >= self.ruleset.return_score:
@@ -201,10 +201,10 @@ class GameState:
                     self._round_wind = Wind.WEST
                     self._round_number = 1
                 else:
-                    # Target score reached or West Round Extension disabled, game ends
+                    # return_score reached or west_round_extension disabled, game ends.
                     return False
             elif self._round_wind == Wind.WEST:
-                # West Round ends (Forced end)
+                # west round ends.
                 return False
 
         return True

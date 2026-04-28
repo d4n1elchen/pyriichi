@@ -36,35 +36,35 @@ class TestUtils:
         assert tiles[5].rank == 6
 
     def test_parse_tiles_red_dora(self):
-        """Test parse tiles red dora."""
+        """Test parse tiles red_dora."""
         tiles = parse_tiles("r5p")
         assert len(tiles) == 1
-        assert tiles[0].is_red
+        assert tiles[0].is_red_dora
         assert tiles[0].rank == 5
         assert tiles[0].suit == Suit.PINZU
 
     def test_parse_tiles_with_red_dora(self):
-        """Test parse tiles with red dora."""
+        """Test parse tiles with red_dora."""
         tiles = parse_tiles("r567p")
         assert len(tiles) == 3
-        assert tiles[0].is_red
+        assert tiles[0].is_red_dora
         assert tiles[0].rank == 5
-        assert not tiles[1].is_red
+        assert not tiles[1].is_red_dora
         assert tiles[1].rank == 6
-        assert not tiles[2].is_red
+        assert not tiles[2].is_red_dora
         assert tiles[2].rank == 7
 
-    def test_parse_tiles_mixed_shorthand_red(self):
-        """Test parse tiles mixed shorthand red."""
+    def test_parse_tiles_mixed_shorthand_red_dora(self):
+        """Test parse tiles mixed shorthand red_dora."""
         # 12r5p -> 1p 2p r5p
         tiles = parse_tiles("12r5p")
         assert len(tiles) == 3
         assert tiles[0].rank == 1
-        assert not tiles[0].is_red
+        assert not tiles[0].is_red_dora
         assert tiles[1].rank == 2
-        assert not tiles[1].is_red
+        assert not tiles[1].is_red_dora
         assert tiles[2].rank == 5
-        assert tiles[2].is_red
+        assert tiles[2].is_red_dora
         assert all(t.suit == Suit.PINZU for t in tiles)
 
     def test_parse_tiles_invalid_char(self):

@@ -420,11 +420,11 @@ class RuleEngine:
         if not hand.is_riichi:
             return True
 
-        # After riichi, can only declare_ankan if it doesn't change the waiting tiles
-        # Here we need to check if each possible closed_kan changes the wait
+        # After riichi, can only declare_ankan if it doesn't change the machi tiles.
+        # Here we need to check if each possible closed_kan changes the machi.
         # Since _can_declare_ankan only returns bool, any valid closed_kan is enough
-        # Get current waiting tiles
-        # In riichi state, the base wait list is after "discarding the drawn tile"
+        # Get current machi tiles.
+        # In riichi state, the base machi list is after "discarding the drawn tile"
         # Because if not declare_ankan, must tsumogiri
         last_drawn = hand.last_drawn_tile
         if last_drawn is None:
@@ -436,12 +436,12 @@ class RuleEngine:
         except ValueError:
             return False
 
-        current_waits = hand.get_waiting_tiles()
+        current_machi_tiles = hand.get_machi_tiles()
 
         # Restore
         hand._tiles.append(last_drawn)
 
-        if not current_waits:
+        if not current_machi_tiles:
             return False  # Should not happen, riichi must be tenpai
 
         for meld in possible_kans:
@@ -464,11 +464,11 @@ class RuleEngine:
             # Add closed_kan
             temp_hand._melds.append(meld)
 
-            # Check if waiting tiles changed
-            new_waits = temp_hand.get_waiting_tiles()
+            # Check if machi tiles changed.
+            new_machi_tiles = temp_hand.get_machi_tiles()
 
-            # Compare waiting lists
-            if sorted(current_waits) == sorted(new_waits):
+            # Compare machi tile lists.
+            if sorted(current_machi_tiles) == sorted(new_machi_tiles):
                 return True
 
         return False
@@ -552,7 +552,7 @@ class RuleEngine:
             if not self._waiting_for_actions:
                 return self._resolve_decisions()
             else:
-                # Wait for other players
+                # Need more player responses.
                 return ActionResult(success=True)
 
         # Non-waiting state, execute directly (e.g., tsumo, declare_ankan, discard)
@@ -672,7 +672,7 @@ class RuleEngine:
         # We assume demo_ui will handle result.win_results
 
         # Update scores
-        # Note: In multiple winners, deposit sticks (riichi sticks) distribution depends on rules (usually head_bump or split)
+        # Note: In multiple winners, kyoutaku sticks (riichi_stick) distribution depends on rules (usually head_bump or split)
         # Simplified here: Each winner calculates score, deducted from discarder.
 
         loser = self._last_discarded_player
@@ -684,7 +684,7 @@ class RuleEngine:
             self._game_state.update_score(loser, -points)
             self._game_state.update_score(player, points)
 
-        # handle riichi stick ownership (give to first winner)
+        # handle riichi_stick ownership (give to first winner)
         if self._game_state.riichi_sticks > 0:
             first_winner = winners[0]  # In order? check_multiple_ron returns order?
             # Assume check_multiple_ron is in counter-clockwise order
@@ -741,7 +741,7 @@ class RuleEngine:
     def _check_interrupts(
         self, tile: Tile, discarded_player: int
     ) -> Dict[int, List[GameAction]]:
-        """Check if any player can call or ron on the discarded tile"""
+        """Check if any player can call or ron on the discarded."""
         interrupts = {}
 
         # Check ron - All other players
@@ -968,7 +968,7 @@ class RuleEngine:
         result = ActionResult()
         hand = self._hands[player]
 
-        # If tile is None, try to use last discarded tile (open_kan)
+        # If tile is None, try to use the last discarded for open_kan.
         if tile is None:
             if self._last_discarded_tile is None:
                 raise ValueError("明槓必須指定被槓的牌")
@@ -1121,7 +1121,7 @@ class RuleEngine:
 
         Args:
             player (int): Player declaring ron, possibly one of multiple winners.
-            tile (Optional[Tile]): Winning tile, normally the last discarded tile.
+            tile (Optional[Tile]): Winning tile, normally the last discarded.
             **kwargs: Additional parameters.
 
         Returns:
@@ -1132,7 +1132,7 @@ class RuleEngine:
         """
         result = ActionResult()
 
-        # Get the tile won by ron, normally the last discarded tile.
+        # Get the tile won by ron, normally the last discarded.
         if self._last_discarded_tile is None or self._last_discarded_player is None:
             raise ValueError("沒有可榮和的捨牌")
 
@@ -1219,7 +1219,7 @@ class RuleEngine:
                     self._phase = GamePhase.ENDED
         else:
             # Handle ryuukyoku.
-            # On exhaustive draw, check nagashi_mangan and noten_bappu.
+            # On exhaustive_draw, check nagashi_mangan and noten_bappu.
             if self._tile_set and self._tile_set.is_exhausted():
                 # Check nagashi_mangan.
                 flow_mangan_players = []
@@ -1517,7 +1517,7 @@ class RuleEngine:
         - allow_triple_ron=True and three players win: return three players
 
         Args:
-            discarded_tile (Tile): Discarded tile.
+            discarded_tile (Tile): Discarded Tile.
             discarder (int): Discarding player.
 
         Returns:
@@ -1616,7 +1616,7 @@ class RuleEngine:
         if self._kan_count >= 4 and not self._ignore_suukan_sanra:
             return RyuukyokuType.SUUKAN_SANRA
 
-        # Exhaustive draw when the live wall is empty.
+        # exhaustive_draw when the live wall is empty.
         if self._tile_set and self._tile_set.is_exhausted():
             return RyuukyokuType.EXHAUSTIVE_DRAW
 
@@ -1684,7 +1684,7 @@ class RuleEngine:
             winning_tile: Winning tile.
 
         Returns:
-            Dora han from dora, ura_dora, and aka_dora.
+            Dora han from dora, ura_dora, and red_dora.
         """
         if not self._tile_set:
             return 0
@@ -1712,9 +1712,9 @@ class RuleEngine:
                     if ura_dora_tile in all_tiles:
                         dora_count += 1
 
-        # Aka_dora.
+        # red_dora.
         for tile in all_tiles:
-            if tile.is_red:
+            if tile.is_red_dora:
                 dora_count += 1
 
         return dora_count
@@ -1764,10 +1764,10 @@ class RuleEngine:
 
     def get_last_discard(self) -> Optional[Tile]:
         """
-        Get the latest unprocessed discard.
+        Get the latest unprocessed discarded.
 
         Returns:
-            Optional[Tile]: Latest discarded tile.
+            Optional[Tile]: Latest discarded.
         """
         return self._last_discarded_tile
 
@@ -2009,7 +2009,7 @@ class RuleEngine:
         self, player: int, rinshan_tile: Tile
     ) -> Optional[WinResult]:
         """
-        Check rinshan after a kan draw.
+        Check rinshan after drawing from the dead wall.
 
         Args:
             player: Player position.
@@ -2083,17 +2083,17 @@ class RuleEngine:
         if not hand.is_tenpai():
             return False
 
-        # Get waiting tiles.
-        waiting_tiles = hand.get_waiting_tiles()
-        if not waiting_tiles:
+        # Get machi tiles.
+        machi_tiles = hand.get_machi_tiles()
+        if not machi_tiles:
             return False
 
         # Check the player's discard history.
         for discard in hand.discards:
-            # If any discard is a waiting tile, the player is in genbutsu furiten.
+            # If any discard is a machi tile, the player is in genbutsu furiten.
             if any(
-                discard.suit == wt.suit and discard.rank == wt.rank
-                for wt in waiting_tiles
+                discard.suit == machi_tile.suit and discard.rank == machi_tile.rank
+                for machi_tile in machi_tiles
             ):
                 return True
 
@@ -2101,15 +2101,15 @@ class RuleEngine:
 
     def check_furiten_temp(self, player: int) -> bool:
         """
-        Check temporary furiten after passing on ron in the same turn cycle.
+        Check temp_furiten after passing on ron in the same turn cycle.
 
         Args:
             player: Player position.
 
         Returns:
-            bool: True if the player is in temporary furiten.
+            bool: True if the player is in temp_furiten.
         """
-        # Check whether temporary furiten was set.
+        # Check whether temp_furiten was set.
         if not self._furiten_temp.get(player, False):
             return False
 

@@ -79,23 +79,23 @@ class TestHand:
 
         winning_tile = Tile(Suit.SOUZU, 8)
 
-        waiting_tiles = hand.get_waiting_tiles()
-        assert winning_tile in waiting_tiles
+        machi_tiles = hand.get_machi_tiles()
+        assert winning_tile in machi_tiles
 
         assert hand.is_winning_hand(winning_tile)
         combinations = hand.get_winning_combinations(winning_tile)
         assert len(combinations) > 0
 
-    def test_seven_pairs(self):
-        """Test seven pairs."""
+    def test_chiitoitsu(self):
+        """Test chiitoitsu."""
         tiles = parse_tiles("11m99m11p99p11s99s1z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.HONORS, 1)
 
         assert hand.is_tenpai()
 
-        waiting_tiles = hand.get_waiting_tiles()
-        assert len(waiting_tiles) == 1
+        machi_tiles = hand.get_machi_tiles()
+        assert len(machi_tiles) == 1
 
         assert hand.is_winning_hand(winning_tile)
 
@@ -107,8 +107,8 @@ class TestHand:
 
         assert hand.is_tenpai()
 
-        waiting_tiles = hand.get_waiting_tiles()
-        assert len(waiting_tiles) == 1
+        machi_tiles = hand.get_machi_tiles()
+        assert len(machi_tiles) == 1
 
         assert hand.is_winning_hand(winning_tile)
 
@@ -119,8 +119,8 @@ class TestHand:
 
         assert hand.is_tenpai()
 
-        waiting_tiles = hand.get_waiting_tiles()
-        assert len(waiting_tiles) == 13
+        machi_tiles = hand.get_machi_tiles()
+        assert len(machi_tiles) == 13
 
         assert hand.is_winning_hand(Tile(Suit.MANZU, 1))
         assert hand.is_winning_hand(Tile(Suit.MANZU, 9))
@@ -151,8 +151,8 @@ class TestHand:
 
         assert hand.is_tenpai()
 
-        waiting_tiles = hand.get_waiting_tiles()
-        assert Tile(Suit.PINZU, 4) in waiting_tiles
+        machi_tiles = hand.get_machi_tiles()
+        assert Tile(Suit.PINZU, 4) in machi_tiles
 
     def test_tenpai_with_open_meld(self):
         """Test tenpai with open meld."""
@@ -166,8 +166,8 @@ class TestHand:
 
         assert hand.total_tile_count() == 13
         assert hand.is_tenpai()
-        waiting_tiles = hand.get_waiting_tiles()
-        assert Tile(Suit.MANZU, 4) in waiting_tiles
+        machi_tiles = hand.get_machi_tiles()
+        assert Tile(Suit.MANZU, 4) in machi_tiles
 
     def test_pon(self):
         """Test pon."""
@@ -212,7 +212,7 @@ class TestHand:
         assert len(possible_closed_kan) > 0
 
     def test_cannot_open_kan_from_pair(self):
-        """Test cannot open kan from pair."""
+        """Test cannot open_kan from pair."""
 
         # 111m 234m 567m 89m 11p
         hand = Hand(parse_tiles("111m234m567m89m11p"))
@@ -222,7 +222,7 @@ class TestHand:
         assert kan_options == []
 
     def test_open_kan_upgrade_after_pon(self):
-        """Test open kan upgrade after pon."""
+        """Test open_kan upgrade after pon."""
 
         # 123m 456m 789m 11p 99p
         hand = Hand(parse_tiles("123m456m789m11p99p"))
@@ -255,7 +255,7 @@ class TestHand:
             Meld(MeldType.CLOSED_KAN, parse_tiles("1m1m"))
 
     def test_closed_kan(self):
-        """Test closed kan."""
+        """Test closed_kan."""
         # 111m 123m 456m 7m 123p
         tiles = parse_tiles("1111m234m567m123p")
         hand = Hand(tiles)
@@ -267,7 +267,7 @@ class TestHand:
         assert len(hand.tiles) == initial_tile_count - 4
 
     def test_open_kan(self):
-        """Test open kan."""
+        """Test open_kan."""
         # 111m 234m 567m 123p 4p
         tiles = parse_tiles("111m234m567m123p4p")
         hand = Hand(tiles)
@@ -281,7 +281,7 @@ class TestHand:
         assert len(hand.tiles) == initial_tile_count - 3
 
     def test_open_kan_upgrade(self):
-        """Test open kan upgrade."""
+        """Test open_kan upgrade."""
         # 123m 456m 789m 11p 99p
         tiles = parse_tiles("123m456m789m11p99p")
         hand = Hand(tiles)

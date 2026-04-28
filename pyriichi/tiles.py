@@ -69,16 +69,16 @@ class Tile:
         },
     }
 
-    _RED_PREFIX_MAP: Dict[str, str] = {"zh": "赤", "ja": "赤", "en": "Red "}
+    _RED_DORA_PREFIX_MAP: Dict[str, str] = {"zh": "赤", "ja": "赤", "en": "Red "}
 
-    def __init__(self, suit: Suit, rank: int, is_red: bool = False):
+    def __init__(self, suit: Suit, rank: int, is_red_dora: bool = False):
         """
         Initialize a tile.
 
         Args:
             suit (Suit): Tile suit.
-            rank (int): Rank, 1-9 for number tiles or 1-7 for honor tiles.
-            is_red (bool): Whether this is an aka_dora tile.
+            rank (int): Rank, 1-9 for number tiles or 1-7 for honors.
+            is_red_dora (bool): Whether this is a Red Dora tile.
 
         Raises:
             ValueError: If rank is out of range.
@@ -91,7 +91,7 @@ class Tile:
 
         self._suit = suit
         self._rank = rank
-        self._is_red = is_red
+        self._is_red_dora = is_red_dora
 
     @property
     def suit(self) -> Suit:
@@ -102,8 +102,8 @@ class Tile:
         return self._rank
 
     @property
-    def is_red(self) -> bool:
-        return self._is_red
+    def is_red_dora(self) -> bool:
+        return self._is_red_dora
 
     @property
     def is_honor(self) -> bool:
@@ -119,7 +119,7 @@ class Tile:
 
     def __eq__(self, other) -> bool:
         """
-        Compare two tiles by suit and rank, ignoring aka_dora status.
+        Compare two tiles by suit and rank, ignoring red_dora status.
 
         Args:
             other (Any): Object to compare.
@@ -149,7 +149,7 @@ class Tile:
 
     def __str__(self) -> str:
         """
-        Get the compact tile notation, such as 1m, 5p, or r5m for aka_dora.
+        Get the compact tile notation, such as 1m, 5p, or r5m for red_dora.
 
         Returns:
             str: Compact tile notation.
@@ -160,12 +160,12 @@ class Tile:
             Suit.SOUZU: "s",
             Suit.HONORS: "z",
         }
-        if self._is_red:
+        if self._is_red_dora:
             return f"r{self._rank}{suit_map[self._suit]}"
         return f"{self._rank}{suit_map[self._suit]}"
 
     def __repr__(self) -> str:
-        return f"Tile({self._suit.name}, {self._rank}, red={self._is_red})"
+        return f"Tile({self._suit.name}, {self._rank}, red_dora={self._is_red_dora})"
 
     @property
     def is_yaochuu(self) -> bool:
@@ -183,7 +183,7 @@ class Tile:
         if locale not in {"zh", "ja", "en"}:
             raise ValueError(f"Unsupported locale: {locale}")
 
-        prefix = self._RED_PREFIX_MAP[locale] if self._is_red else ""
+        prefix = self._RED_DORA_PREFIX_MAP[locale] if self._is_red_dora else ""
 
         if self._suit == Suit.HONORS:
             return f"{prefix}{self._HONOR_NAME_MAP[locale][self._rank]}"
@@ -209,14 +209,14 @@ class Tile:
         return self._format_name(locale)
 
 
-def create_tile(suit: str, rank: int, is_red: bool = False) -> Tile:
+def create_tile(suit: str, rank: int, is_red_dora: bool = False) -> Tile:
     """
     Create a tile from compact suit notation.
 
     Args:
         suit (str): Suit notation ("m", "p", "s", "z").
         rank (int): Tile rank.
-        is_red (bool): Whether this is an aka_dora tile.
+        is_red_dora (bool): Whether this is a Red Dora tile.
 
     Returns:
         Tile: Created tile.
@@ -232,7 +232,7 @@ def create_tile(suit: str, rank: int, is_red: bool = False) -> Tile:
     }
     if suit not in suit_map:
         raise ValueError(f"無效的花色: {suit}")
-    return Tile(suit_map[suit], rank, is_red)
+    return Tile(suit_map[suit], rank, is_red_dora)
 
 
 class TileSet:
@@ -259,10 +259,10 @@ class TileSet:
             for rank in range(1, 10):
                 if rank == 5:
                     tiles.extend(Tile(suit, rank) for _ in range(3))
-                    tiles.append(Tile(suit, rank, is_red=True))
+                    tiles.append(Tile(suit, rank, is_red_dora=True))
                 else:
                     tiles.extend(Tile(suit, rank) for _ in range(4))
-        # Honor tiles: 16 wind tiles and 12 haku/hatsu/chun tiles.
+        # honors: 16 wind tiles and 12 haku/hatsu/chun tiles.
         tiles.extend(
             Tile(Suit.HONORS, rank)
             for rank, _ in itertools.product(range(1, 8), range(4))
@@ -358,7 +358,7 @@ class TileSet:
 
     def get_ura_dora_indicators(self, count: Optional[int] = None) -> List[Tile]:
         """
-        Get ura_dora indicators.
+        Get Ura Dora indicators.
 
         Args:
             count (Optional[int]): Number of indicators, inferred from rinshan tiles if None.

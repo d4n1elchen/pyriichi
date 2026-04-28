@@ -7,7 +7,7 @@ from pyriichi.hand import CombinationType, Hand, Meld, MeldType, make_combinatio
 from pyriichi.scoring import ScoreCalculator, ScoreResult
 from pyriichi.tiles import Suit, Tile
 from pyriichi.utils import parse_tiles
-from pyriichi.yaku import WaitingType, Yaku, YakuChecker, YakuResult
+from pyriichi.yaku import Machi, Yaku, YakuChecker, YakuResult
 
 
 class TestScoreCalculator:
@@ -137,8 +137,8 @@ class TestScoreCalculator:
             assert score_result.han >= 2
             assert score_result.total_points >= 1000
 
-    def test_waiting_type_tanki(self):
-        """Test waiting type tanki."""
+    def test_machi_tanki(self):
+        """Test machi tanki."""
         tiles = parse_tiles("123m456m789m123p4p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.PINZU, 4)
@@ -156,8 +156,8 @@ class TestScoreCalculator:
             )
             assert fu >= 30
 
-    def test_waiting_type_penchan(self):
-        """Test waiting type penchan."""
+    def test_machi_penchan(self):
+        """Test machi penchan."""
         tiles = parse_tiles("12m456m789m123p45p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 3)
@@ -233,27 +233,25 @@ class TestScoreCalculator:
 
         assert score_result.dealer_payment >= 0
 
-    def test_determine_waiting_type(self):
-        """Test determine waiting type."""
+    def test_determine_machi(self):
+        """Test determine machi."""
         tiles = parse_tiles("123m456m789m123p4p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.PINZU, 4)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
-            waiting_type = self.calculator._determine_waiting_type(
-                winning_tile, combinations[0]
-            )
-            assert waiting_type in {
-                WaitingType.RYANMEN,
-                WaitingType.PENCHAN,
-                WaitingType.KANCHAN,
-                WaitingType.TANKI,
-                WaitingType.SHABO,
+            machi = self.calculator._determine_machi(winning_tile, combinations[0])
+            assert machi in {
+                Machi.RYANMEN,
+                Machi.PENCHAN,
+                Machi.KANCHAN,
+                Machi.TANKI,
+                Machi.SHABO,
             }
 
-    def test_waiting_type_kanchan(self):
-        """Test waiting type kanchan."""
+    def test_machi_kanchan(self):
+        """Test machi kanchan."""
         tiles = parse_tiles("2m456m789m123p45p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 3)
@@ -271,8 +269,8 @@ class TestScoreCalculator:
             )
             assert fu >= 30
 
-    def test_waiting_type_ryanmen(self):
-        """Test waiting type ryanmen."""
+    def test_machi_ryanmen(self):
+        """Test machi ryanmen."""
         tiles = parse_tiles("45m789m123p456p")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 6)
@@ -290,11 +288,11 @@ class TestScoreCalculator:
             )
             assert fu >= 30
 
-    def test_waiting_type_empty_combination(self):
-        """Test waiting type empty combination."""
+    def test_machi_empty_combination(self):
+        """Test machi empty combination."""
         winning_tile = Tile(Suit.MANZU, 1)
-        waiting_type = self.calculator._determine_waiting_type(winning_tile, [])
-        assert waiting_type == WaitingType.RYANMEN
+        machi = self.calculator._determine_machi(winning_tile, [])
+        assert machi == Machi.RYANMEN
 
     def test_fu_kan_concealed(self):
         """Test fu kan concealed."""
@@ -359,7 +357,7 @@ class TestScoreCalculator:
             assert fu >= 30
 
     def test_fu_pair_round_wind(self):
-        """Test fu pair round wind."""
+        """Test fu pair round_wind."""
         self.game_state.set_round(Wind.EAST, 1)
         tiles = parse_tiles("123m456m78m123p11z")
         hand = Hand(tiles)
@@ -379,7 +377,7 @@ class TestScoreCalculator:
             assert fu >= 30
 
     def test_fu_pair_round_wind_south(self):
-        """Test fu pair round wind south."""
+        """Test fu pair round_wind south."""
         self.game_state.set_round(Wind.SOUTH, 1)
         tiles = parse_tiles("123m456m78m123p22z")
         hand = Hand(tiles)
@@ -484,8 +482,8 @@ class TestScoreCalculator:
         )
         assert fu >= 20
 
-    def test_waiting_type_penchan_rank1(self):
-        """Test waiting type penchan rank1."""
+    def test_machi_penchan_rank1(self):
+        """Test machi penchan rank1."""
         winning_tile = Tile(Suit.MANZU, 1)
         combo = [
             make_combination(CombinationType.SEQUENCE, Suit.MANZU, 1),
@@ -493,11 +491,11 @@ class TestScoreCalculator:
             make_combination(CombinationType.SEQUENCE, Suit.MANZU, 7),
             make_combination(CombinationType.PAIR, Suit.PINZU, 1),
         ]
-        waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
-        assert waiting_type == WaitingType.PENCHAN
+        machi = self.calculator._determine_machi(winning_tile, combo)
+        assert machi == Machi.PENCHAN
 
-    def test_waiting_type_penchan_rank7(self):
-        """Test waiting type penchan rank7."""
+    def test_machi_penchan_rank7(self):
+        """Test machi penchan rank7."""
         winning_tile = Tile(Suit.MANZU, 9)
         combo = [
             make_combination(CombinationType.SEQUENCE, Suit.MANZU, 7),
@@ -505,11 +503,11 @@ class TestScoreCalculator:
             make_combination(CombinationType.SEQUENCE, Suit.MANZU, 1),
             make_combination(CombinationType.PAIR, Suit.PINZU, 1),
         ]
-        waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
-        assert waiting_type == WaitingType.PENCHAN
+        machi = self.calculator._determine_machi(winning_tile, combo)
+        assert machi == Machi.PENCHAN
 
-    def test_waiting_type_kanchan_middle(self):
-        """Test waiting type kanchan middle."""
+    def test_machi_kanchan_middle(self):
+        """Test machi kanchan middle."""
         winning_tile = Tile(Suit.MANZU, 3)
         combo = [
             make_combination(CombinationType.SEQUENCE, Suit.MANZU, 2),
@@ -517,11 +515,11 @@ class TestScoreCalculator:
             make_combination(CombinationType.SEQUENCE, Suit.MANZU, 6),
             make_combination(CombinationType.PAIR, Suit.PINZU, 1),
         ]
-        waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
-        assert waiting_type == WaitingType.KANCHAN
+        machi = self.calculator._determine_machi(winning_tile, combo)
+        assert machi == Machi.KANCHAN
 
-    def test_waiting_type_kanchan_other(self):
-        """Test waiting type kanchan other."""
+    def test_machi_kanchan_other(self):
+        """Test machi kanchan other."""
         winning_tile = Tile(Suit.MANZU, 4)
         combo = [
             make_combination(CombinationType.SEQUENCE, Suit.MANZU, 2),
@@ -529,11 +527,11 @@ class TestScoreCalculator:
             make_combination(CombinationType.SEQUENCE, Suit.MANZU, 6),
             make_combination(CombinationType.PAIR, Suit.PINZU, 1),
         ]
-        waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
-        assert waiting_type == WaitingType.RYANMEN
+        machi = self.calculator._determine_machi(winning_tile, combo)
+        assert machi == Machi.RYANMEN
 
-    def test_waiting_type_not_in_sequence(self):
-        """Test waiting type not in sequence."""
+    def test_machi_not_in_sequence(self):
+        """Test machi not in sequence."""
         winning_tile = Tile(Suit.PINZU, 5)
         combo = [
             make_combination(CombinationType.SEQUENCE, Suit.MANZU, 1),
@@ -541,8 +539,8 @@ class TestScoreCalculator:
             make_combination(CombinationType.SEQUENCE, Suit.MANZU, 7),
             make_combination(CombinationType.PAIR, Suit.PINZU, 1),
         ]
-        waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
-        assert waiting_type == WaitingType.RYANMEN
+        machi = self.calculator._determine_machi(winning_tile, combo)
+        assert machi == Machi.RYANMEN
 
     def test_score_result_yakuman_13_han(self):
         """Test score result yakuman 13 han."""
@@ -636,8 +634,8 @@ class TestScoreCalculator:
         assert score_result.non_dealer_payment > 0
         assert score_result.total_points > 0
 
-    def test_calculate_fu_seven_pairs(self):
-        """Test calculate fu seven pairs."""
+    def test_calculate_fu_chiitoitsu(self):
+        """Test calculate fu chiitoitsu."""
         tiles = parse_tiles("11m22m33m44m55m66m7m")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 7)
@@ -796,8 +794,8 @@ class TestScoreCalculator:
         )
         assert fu >= 20
 
-    def test_waiting_type_kanchan_other_rank(self):
-        """Test waiting type kanchan other rank."""
+    def test_machi_kanchan_other_rank(self):
+        """Test machi kanchan other rank."""
         winning_tile = Tile(Suit.MANZU, 2)
         combo = [
             make_combination(CombinationType.SEQUENCE, Suit.MANZU, 2),
@@ -805,11 +803,11 @@ class TestScoreCalculator:
             make_combination(CombinationType.SEQUENCE, Suit.MANZU, 6),
             make_combination(CombinationType.PAIR, Suit.PINZU, 1),
         ]
-        waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
-        assert waiting_type == WaitingType.RYANMEN
+        machi = self.calculator._determine_machi(winning_tile, combo)
+        assert machi == Machi.RYANMEN
 
-    def test_waiting_type_in_sequence_check(self):
-        """Test waiting type in sequence check."""
+    def test_machi_in_sequence_check(self):
+        """Test machi in sequence check."""
         winning_tile = Tile(Suit.MANZU, 4)
         combo = [
             make_combination(CombinationType.SEQUENCE, Suit.MANZU, 3),
@@ -817,11 +815,11 @@ class TestScoreCalculator:
             make_combination(CombinationType.SEQUENCE, Suit.MANZU, 7),
             make_combination(CombinationType.PAIR, Suit.PINZU, 1),
         ]
-        waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
-        assert waiting_type in {
-            WaitingType.KANCHAN,
-            WaitingType.PENCHAN,
-            WaitingType.RYANMEN,
+        machi = self.calculator._determine_machi(winning_tile, combo)
+        assert machi in {
+            Machi.KANCHAN,
+            Machi.PENCHAN,
+            Machi.RYANMEN,
         }
 
     def test_calculate_fu_open_tsumo_direct(self):
@@ -850,17 +848,17 @@ class TestScoreCalculator:
             make_combination(CombinationType.SEQUENCE, Suit.MANZU, 7),
             make_combination(CombinationType.PAIR, Suit.PINZU, 1),
         ]
-        waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
-        assert waiting_type in {
-            WaitingType.KANCHAN,
-            WaitingType.PENCHAN,
-            WaitingType.RYANMEN,
-            WaitingType.TANKI,
-            WaitingType.SHABO,
+        machi = self.calculator._determine_machi(winning_tile, combo)
+        assert machi in {
+            Machi.KANCHAN,
+            Machi.PENCHAN,
+            Machi.RYANMEN,
+            Machi.TANKI,
+            Machi.SHABO,
         }
 
-    def test_waiting_type_shabo(self):
-        """Test waiting type shabo."""
+    def test_machi_shabo(self):
+        """Test machi shabo."""
         winning_tile = Tile(Suit.MANZU, 1)
         combo = [
             make_combination(CombinationType.TRIPLET, Suit.MANZU, 3),
@@ -868,15 +866,15 @@ class TestScoreCalculator:
             make_combination(CombinationType.TRIPLET, Suit.PINZU, 1),
             make_combination(CombinationType.PAIR, Suit.MANZU, 1),
         ]
-        waiting_type = self.calculator._determine_waiting_type(winning_tile, combo)
-        assert waiting_type in {
-            WaitingType.TANKI,
-            WaitingType.RYANMEN,
-            WaitingType.SHABO,
+        machi = self.calculator._determine_machi(winning_tile, combo)
+        assert machi in {
+            Machi.TANKI,
+            Machi.RYANMEN,
+            Machi.SHABO,
         }
 
-    def test_fu_waiting_type_shabo_no_fu(self):
-        """Test fu waiting type shabo no fu."""
+    def test_fu_machi_shabo_no_fu(self):
+        """Test fu machi shabo no fu."""
         tiles = parse_tiles("11m22m33m456p789s")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.MANZU, 1)
@@ -892,11 +890,11 @@ class TestScoreCalculator:
                 self.game_state,
                 False,
             )
-            waiting_type = self.calculator._determine_waiting_type(
+            machi = self.calculator._determine_machi(
                 winning_tile, list(combinations[0])
             )
             assert fu >= 30
-            if waiting_type == WaitingType.SHABO:
+            if machi == Machi.SHABO:
                 pass
 
     def test_fu_pair_player_wind(self):
@@ -1096,7 +1094,7 @@ class TestFuCalculationOpenMeld:
         # print(f"Calculated fu: {fu}")
         assert (
             fu == 30
-        ), "Should be 30 fu (20 base + 4 open pon + 2 pair + 2 wait = 28 -> 30)"
+        ), "Should be 30 fu (20 base + 4 open pon + 2 pair + 2 machi = 28 -> 30)"
 
 
 if __name__ == "__main__":

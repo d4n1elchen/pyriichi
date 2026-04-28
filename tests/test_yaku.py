@@ -857,7 +857,7 @@ class TestYakuChecker:
                     break
 
     def test_double_riichi(self):
-        """Test double riichi."""
+        """Test double_riichi."""
         tiles = parse_tiles("234m567m345p678p4s")
         hand = Hand(tiles)
         hand.set_riichi(True)
@@ -896,7 +896,7 @@ class TestYakuChecker:
             assert len(double_riichi) == 0
 
     def test_double_riichi_with_ippatsu(self):
-        """Test double riichi with ippatsu."""
+        """Test double_riichi with ippatsu."""
         tiles = parse_tiles("234m567m345p678p4s")
         hand = Hand(tiles)
         hand.set_riichi(True)
@@ -921,7 +921,7 @@ class TestYakuChecker:
             assert ippatsu[0].han == 1
 
     def test_double_riichi_with_chiitoitsu(self):
-        """Test double riichi with chiitoitsu."""
+        """Test double_riichi with chiitoitsu."""
         tiles = parse_tiles("11m22m33m44m55m66m7m")
         hand = Hand(tiles)
         hand.set_riichi(True)

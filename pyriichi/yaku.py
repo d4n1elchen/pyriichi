@@ -104,8 +104,8 @@ class Yaku(TranslatableEnum):
     SEAT_WIND_NORTH = ("seat_wind_north", "自風北", "自風北", "Seat Wind North")
 
 
-class WaitingType(TranslatableEnum):
-    """tenpai type"""
+class Machi(TranslatableEnum):
+    """machi."""
 
     RYANMEN = ("ryanmen", "兩面", "両面", "Two-Sided Wait")
     PENCHAN = ("penchan", "邊張", "辺張", "Edge Wait")
@@ -579,7 +579,7 @@ class YakuChecker:
         1. menzen (Concealed).
         2. Composed entirely of sequences (except pair).
         3. Pair cannot be yakuhai (round_wind, seat_wind, haku/hatsu/chun).
-        4. Wait must be ryanmen (Two-sided wait) (depending on rules).
+        4. machi must be ryanmen (Two-sided wait) (depending on rules).
 
         Args:
             hand (Hand): hand.
@@ -630,14 +630,12 @@ class YakuChecker:
                 if player_wind.tile == pair_tile:
                     return None  # seat_wind pair, cannot be pinfu
 
-        # Check wait type (ryanmen) - depending on rules
+        # Check machi (ryanmen / Two-sided wait) - depending on rules.
         ruleset = game_state.ruleset if game_state else None
         if ruleset and ruleset.pinfu_require_ryanmen and winning_tile is not None:
-            waiting_type = self._determine_waiting_type(
-                winning_tile, winning_combination
-            )
-            if waiting_type != WaitingType.RYANMEN:
-                return None  # Not ryanmen wait, cannot be pinfu
+            machi = self._determine_machi(winning_tile, winning_combination)
+            if machi != Machi.RYANMEN:
+                return None  # Not ryanmen machi, cannot be pinfu.
 
         return YakuResult(Yaku.PINFU, 1, False)
 
@@ -903,7 +901,7 @@ class YakuChecker:
         self, hand: Hand, winning_combination: List[Combination]
     ) -> Optional[YakuResult]:
         """
-        Check chinitsu (full Flush).
+        Check chinitsu (Full Flush).
 
         chinitsu: Composed entirely of tiles from a single suit.
 
@@ -966,7 +964,7 @@ class YakuChecker:
         """
         Check chiitoitsu.
 
-        chiitoitsu: Seven pairs.
+        chiitoitsu: Seven Pairs.
         Note: chiitoitsu does not have standard winning combinations, needs special handling.
 
         Args:
@@ -1387,7 +1385,7 @@ class YakuChecker:
         Check kokushi_musou.
 
         kokushi_musou: One of each of the 13 terminals and honors, plus one duplicate.
-        kokushi_musou_juusanmen: One of each of the 13 terminals and honors, plus one duplicate, and that tile is the wait.
+        kokushi_musou_juusanmen: one of each of the 13 terminals and honors, plus one duplicate, and that tile is the machi.
 
         Args:
             hand (Hand): hand.
@@ -1875,9 +1873,7 @@ class YakuChecker:
         """
         return YakuResult(Yaku.RINSHAN, 1, False) if is_rinshan else None
 
-    def _determine_waiting_type(
-        self, winning_tile: Tile, winning_combination: List
-    ) -> WaitingType:
+    def _determine_machi(self, winning_tile: Tile, winning_combination: List) -> Machi:
         """
         Determine tenpai type.
 
@@ -1886,16 +1882,17 @@ class YakuChecker:
             winning_combination (List): Winning combinations.
 
         Returns:
-            WaitingType: tenpai type: ryanmen (Two-sided), penchan (Edge), kanchan (Closed), tanki (Single), shabo (Dual).
+            Machi: machi value: ryanmen (Two-sided), penchan (Edge),
+                kanchan (Closed), tanki (Single), shabo (Dual).
         """
         if not winning_combination:
-            return WaitingType.RYANMEN  # Default to ryanmen
+            return Machi.RYANMEN  # Default to ryanmen
 
         pair_combination = self._extract_pair(winning_combination)
         if pair_combination and any(
             tile == winning_tile for tile in pair_combination.tiles
         ):
-            return WaitingType.TANKI
+            return Machi.TANKI
 
         for combination in winning_combination:
             if combination.type != CombinationType.SEQUENCE:
@@ -1923,17 +1920,17 @@ class YakuChecker:
                     continue
 
             if index == 1:
-                return WaitingType.KANCHAN
+                return Machi.KANCHAN
 
             first_rank = tiles[0].rank
             last_rank = tiles[-1].rank
             if index == 0 or index == 2:
                 if first_rank == 1 or last_rank == 9:
-                    return WaitingType.PENCHAN
-                return WaitingType.RYANMEN
+                    return Machi.PENCHAN
+                return Machi.RYANMEN
 
         # Default to ryanmen
-        return WaitingType.RYANMEN
+        return Machi.RYANMEN
 
     def check_chankan(
         self, hand: Hand, is_chankan: bool = False

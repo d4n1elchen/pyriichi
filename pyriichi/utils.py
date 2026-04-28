@@ -23,10 +23,10 @@ def parse_tiles(tile_string: str) -> List[Tile]:
         >>> parse_tiles("1m2m3m4p5p6p")
         [Tile(MANZU, 1), Tile(MANZU, 2), Tile(MANZU, 3), ...]
         >>> parse_tiles("r5p6p7p")  # red_dora uses 'r' prefix (Standard format)
-        [Tile(PINZU, 5, red=True), Tile(PINZU, 6), Tile(PINZU, 7)]
+        [Tile(PINZU, 5, is_red_dora=True), Tile(PINZU, 6), Tile(PINZU, 7)]
     """
     tiles = []
-    buffer = []  # List to store (rank, is_red)
+    buffer = []  # List to store (rank, is_red_dora)
     i = 0
     suit_map = {"m": Suit.MANZU, "p": Suit.PINZU, "s": Suit.SOUZU, "z": Suit.HONORS}
 
@@ -51,8 +51,8 @@ def parse_tiles(tile_string: str) -> List[Tile]:
 
         if char in suit_map:
             suit = suit_map[char]
-            for rank, is_red in buffer:
-                tiles.append(Tile(suit, rank, is_red))
+            for rank, is_red_dora in buffer:
+                tiles.append(Tile(suit, rank, is_red_dora))
             buffer = []
             i += 1
             continue

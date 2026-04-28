@@ -10,7 +10,7 @@ from typing import List, Optional
 from pyriichi.game_state import GameState
 from pyriichi.hand import Combination, CombinationType, Hand
 from pyriichi.tiles import Suit, Tile
-from pyriichi.yaku import WaitingType, Yaku, YakuResult
+from pyriichi.yaku import Machi, Yaku, YakuResult
 
 
 @dataclass
@@ -31,7 +31,7 @@ class ScoreResult:
     dealer_payment: int = 0  # dealer payment (for tsumo)
     non_dealer_payment: int = 0  # Non-dealer payment (for tsumo)
     honba_bonus: int = 0  # honba bonus
-    riichi_sticks_bonus: int = 0  # riichi sticks distribution
+    riichi_sticks_bonus: int = 0  # Riichi Stick distribution
     kiriage_mangan_enabled: bool = False  # Is kiriage_mangan enabled
     pao_player: Optional[int] = None  # pao player position
     pao_payment: int = 0  # pao player payment amount
@@ -80,11 +80,11 @@ class ScoreResult:
         honba Bonus:
         - +300 points per honba (Paid by everyone for tsumo, by deal-in player for ron)
 
-        riichi Sticks:
-        - All riichi sticks go to the winner
+        Riichi Stick:
+        - All Riichi Sticks go to the winner
 
         Args:
-            game_state (GameState): Game state (used to get honba count and riichi sticks).
+            game_state (GameState): Game state (used to get honba count and Riichi Sticks).
         """
 
         self.honba_bonus = game_state.honba * 300
@@ -358,39 +358,37 @@ class ScoreCalculator:
                     if player_wind_tile == pair_tile:
                         fu += 2
 
-        waiting_type = self._determine_waiting_type(winning_tile, winning_combination)
+        machi = self._determine_machi(winning_tile, winning_combination)
 
-        if waiting_type in {
-            WaitingType.TANKI,
-            WaitingType.PENCHAN,
-            WaitingType.KANCHAN,
+        if machi in {
+            Machi.TANKI,
+            Machi.PENCHAN,
+            Machi.KANCHAN,
         }:
             fu += 2
         # ryanmen and shabo do not add fu
 
         return ((fu + 9) // 10) * 10
 
-    def _determine_waiting_type(
-        self, winning_tile: Tile, winning_combination: List
-    ) -> WaitingType:
+    def _determine_machi(self, winning_tile: Tile, winning_combination: List) -> Machi:
         """
-        Determine waiting type.
+        Determine machi.
 
         Args:
             winning_tile (Tile): Winning tile.
             winning_combination (List): Winning combinations.
 
         Returns:
-            WaitingType: Waiting type: 'ryanmen' (Two-sided), 'penchan' (Edge), 'kanchan' (Closed), 'tanki' (Single), 'shabo' (Dual).
+            Machi: machi value: ryanmen, penchan, kanchan, tanki, or shabo.
         """
         if not winning_combination:
-            return WaitingType.RYANMEN
+            return Machi.RYANMEN
 
         pair_combination = self._extract_pair(winning_combination)
         if pair_combination and any(
             tile == winning_tile for tile in pair_combination.tiles
         ):
-            return WaitingType.TANKI
+            return Machi.TANKI
 
         for combination in winning_combination:
             if combination.type != CombinationType.SEQUENCE:
@@ -416,16 +414,16 @@ class ScoreCalculator:
                     continue
 
             if index == 1:
-                return WaitingType.KANCHAN
+                return Machi.KANCHAN
 
             first_rank = tiles[0].rank
             last_rank = tiles[-1].rank
             if index in {0, 2}:
                 if first_rank == 1 or last_rank == 9:
-                    return WaitingType.PENCHAN
-                return WaitingType.RYANMEN
+                    return Machi.PENCHAN
+                return Machi.RYANMEN
 
-        return WaitingType.RYANMEN
+        return Machi.RYANMEN
 
     def calculate_han(self, yaku_results: List[YakuResult], dora_count: int) -> int:
         """

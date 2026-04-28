@@ -713,7 +713,7 @@ class Hand:
                     counts[Tile(suit, rank + i)] = original_values[Tile(suit, rank + i)]
         return results
 
-    def _is_seven_pairs(self, tiles: List[Tile]) -> bool:
+    def _is_chiitoitsu(self, tiles: List[Tile]) -> bool:
         """
         Check if chiitoitsu.
 
@@ -721,7 +721,7 @@ class Hand:
             tiles (List[Tile]): List of tiles (14 tiles).
 
         Returns:
-            bool: Whether it is Seven Pairs.
+            bool: Whether it is chiitoitsu.
         """
         if len(tiles) != 14:
             return False
@@ -793,7 +793,7 @@ class Hand:
         Returns:
             bool: Whether tenpai.
         """
-        return len(self.get_waiting_tiles()) > 0
+        return len(self.get_machi_tiles()) > 0
 
     def calculate_tenpai_discards(self) -> List[Tile]:
         """
@@ -824,14 +824,14 @@ class Hand:
 
         return valid_discards
 
-    def get_waiting_tiles(self) -> List[Tile]:
+    def get_machi_tiles(self) -> List[Tile]:
         """
-        Get waiting tiles (Optimized: only check potentially relevant tiles).
+        Get machi tiles (Optimized: only check potentially relevant tiles).
 
         Returns:
             List[Tile]: List of all winning tiles.
         """
-        # Collect all possible waiting candidates (tiles related to hand)
+        # Collect all possible machi candidates (tiles related to hand)
         candidates = set[Tile]()
 
         for tile in self._tiles:
@@ -901,10 +901,10 @@ class Hand:
         if is_winning:
             return True
 
-        # Check Seven Pairs (Must be menzen)
+        # Check chiitoitsu; it must be menzen.
         # chiitoitsu does not allow any melds (including closed_kan)
         if self.is_concealed:
-            if self._is_seven_pairs(concealed_tiles):
+            if self._is_chiitoitsu(concealed_tiles):
                 return True
             if self._is_kokushi_musou(concealed_tiles):
                 return True

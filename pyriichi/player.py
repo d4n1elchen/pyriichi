@@ -250,7 +250,7 @@ class DefensivePlayer(SimplePlayer):
     Strategy:
     1. Default to SimplePlayer's attack strategy.
     2. When an opponent declares riichi, enter defense mode:
-       - Prioritize discarding riichi player's genbutsu (Safe Tiles).
+       - Prioritize discarding riichi player's genbutsu.
        - If no genbutsu, try discarding honors or suji (Currently only genbutsu implemented).
        - betaori (Fold): Do not call melds.
     """
@@ -295,12 +295,12 @@ class DefensivePlayer(SimplePlayer):
 
         # 2. betaori (Fold): No riichi, No Melds
         if GameAction.DISCARD in available_actions:
-            # Find safe tile
-            safe_tile = self._find_safe_tile(hand, public_info, threatening_players)
-            if safe_tile:
-                return GameAction.DISCARD, safe_tile
+            # Find genbutsu
+            genbutsu = self._find_genbutsu(hand, public_info, threatening_players)
+            if genbutsu:
+                return GameAction.DISCARD, genbutsu
 
-            # If no completely safe tile, fallback to SimplePlayer's discard logic (at least discard honors/terminals)
+            # If no genbutsu is available, fall back to SimplePlayer's discard logic.
             # But we want it to be more conservative, here temporarily call parent class
             return super().decide_action(
                 game_state, player_index, hand, available_actions, public_info
@@ -312,48 +312,50 @@ class DefensivePlayer(SimplePlayer):
 
         return GameAction.PASS, None
 
-    def _find_safe_tile(
+    def _find_genbutsu(
         self,
         hand: Hand,
         public_info: Optional[PublicInfo],
         threatening_players: List[int],
     ) -> Optional[Tile]:
-        """Find safe tile (genbutsu) in hand."""
+        """Find genbutsu in hand."""
         if not public_info:
             return None
 
         # Collect genbutsu of all threatening players
 
         # Simplified handling: As long as it is genbutsu of any riichi player, consider it "relatively" safe
-        # Stricter defense should target Common Safe Tiles of all riichi players
+        # Stricter defense should target common genbutsu of all riichi players
         # But if cannot cover all, prioritize defending against shimocha/toimen/kamicha? Or random?
-        # Here we take intersection (Safe against all), if none then take union (Safe against at least one)
+        # Here we take intersection first; if none, take the union.
 
-        common_safe_tiles = None
+        common_genbutsu_tiles = None
 
         for player_idx in threatening_players:
             discards = public_info.discards.get(player_idx, [])
-            player_safe_tiles = set(discards)
+            player_genbutsu_tiles = set(discards)
 
-            if common_safe_tiles is None:
-                common_safe_tiles = player_safe_tiles
+            if common_genbutsu_tiles is None:
+                common_genbutsu_tiles = player_genbutsu_tiles
             else:
-                common_safe_tiles = common_safe_tiles.intersection(player_safe_tiles)
+                common_genbutsu_tiles = common_genbutsu_tiles.intersection(
+                    player_genbutsu_tiles
+                )
 
-        # Check if there are common safe tiles in hand
-        if common_safe_tiles:
+        # Check if there are common genbutsu in hand
+        if common_genbutsu_tiles:
             for tile in hand.tiles:
-                if tile in common_safe_tiles:
+                if tile in common_genbutsu_tiles:
                     return tile
 
-        # If no common safe tiles, try to find safe tile against a specific riichi player (Avoid dealing into the most dangerous one?)
-        # Temporarily choose a safe tile against someone randomly
-        all_safe_tiles = set()
+        # If no common genbutsu, try to find genbutsu against a specific riichi player (Avoid dealing into the most dangerous one?)
+        # Temporarily choose a genbutsu against someone randomly
+        all_genbutsu_tiles = set()
         for player_idx in threatening_players:
-            all_safe_tiles.update(public_info.discards.get(player_idx, []))
+            all_genbutsu_tiles.update(public_info.discards.get(player_idx, []))
 
         for tile in hand.tiles:
-            if tile in all_safe_tiles:
+            if tile in all_genbutsu_tiles:
                 return tile
 
         return None

@@ -17,7 +17,6 @@ Use these conventions when adding new terms:
 - Pick one translation. Do not list alternatives in a cell or add notes like "also common" unless the note explains a real code distinction.
 - Split terms by context when the same Japanese surface form has different meanings. For example, `draw` and `tsumo` may both use `ツモ`, but they represent different UI/game concepts.
 - Do not add speculative terms. Before adding a new glossary entry, search the codebase and docs for the Japanese, Chinese, and existing code/API names. If a term is not used and has no clear source, leave it out.
-- Remove stale glossary-only terms instead of quarantining them indefinitely.
 
 ## Tile Groups (牌種)
 

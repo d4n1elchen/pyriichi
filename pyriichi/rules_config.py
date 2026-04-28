@@ -28,9 +28,9 @@ class RulesetConfig:
             - YAKUMAN: yakuman (13 han).
             - TWO_HAN: 2 han (Standard competitive rule).
             - OFF: Disabled.
-        pinfu_require_ryanmen (bool): Whether pinfu requires ryanmen (Two-sided) wait.
-            - True: Must be ryanmen wait (Standard competitive rule).
-            - False: Do not check wait type.
+        pinfu_require_ryanmen (bool): Whether pinfu requires ryanmen (Two-Sided Wait) machi.
+            - True: Must be ryanmen (Two-Sided Wait) machi (Standard competitive rule).
+            - False: Do not check machi.
         ippatsu_interrupt_on_meld_or_kan (bool): Whether ippatsu is interrupted by Meld/kan.
             - True: Meld or kan interrupts ippatsu (Standard competitive rule).
             - False: Do not check interruption condition.
@@ -53,12 +53,12 @@ class RulesetConfig:
         tobi_enabled (bool): tobi (Bankruptcy) rule.
             - True: Game ends when player points < 0.
             - False: Game continues until round ends.
-        west_round_extension (bool): West Round Extension rule (Enchousen).
-            - True: If no one reaches target score (return_score) at end of South 4, enter West round.
+        west_round_extension (bool): west_round_extension rule (Enchousen).
+            - True: If no one reaches return_score at end of south 4, enter west round.
             - False: Game ends at end of South 4.
-        return_score (int): Return score / Target score.
-            - When game ends, if 1st place score is below this score, and West Round Extension is enabled, game extends.
-        agari_yame (bool): agari_yame.
+        return_score (int): Return score threshold.
+            - When game ends, if 1st place score is below this score, and west_round_extension is enabled, game extends.
+        agari_yame (bool): Agari Yame.
             - True: If dealer wins in the last round (south 4 or west 4) and is 1st place, game ends.
             - False: dealer repeats (renchan), game continues.
         chombo_penalty_enabled (bool): Chombo penalty rule.

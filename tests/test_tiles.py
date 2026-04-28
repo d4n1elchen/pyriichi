@@ -30,9 +30,9 @@ class TestTile:
             Tile(Suit.MANZU, 10)
 
     def test_tile_red_dora(self):
-        """Test tile red dora."""
-        tile = Tile(Suit.PINZU, 5, is_red=True)
-        assert tile.is_red == True
+        """Test tile red_dora."""
+        tile = Tile(Suit.PINZU, 5, is_red_dora=True)
+        assert tile.is_red_dora == True
 
     def test_tile_properties(self):
         """Test tile properties."""
@@ -87,8 +87,8 @@ class TestTile:
         assert result is NotImplemented
 
     def test_tile_str_red_dora(self):
-        """Test tile str red dora."""
-        tile = Tile(Suit.PINZU, 5, is_red=True)
+        """Test tile str red_dora."""
+        tile = Tile(Suit.PINZU, 5, is_red_dora=True)
         tile_str = str(tile)
         assert tile_str == "r5p"
         assert tile_str.startswith("r")
@@ -97,7 +97,7 @@ class TestTile:
 
     def test_tile_repr(self):
         """Test tile repr."""
-        tile = Tile(Suit.MANZU, 1, is_red=False)
+        tile = Tile(Suit.MANZU, 1, is_red_dora=False)
         repr_str = repr(tile)
         assert "Tile" in repr_str
         assert "MANZU" in repr_str
@@ -237,10 +237,10 @@ class TestTileSet:
         assert tile.suit == Suit.MANZU
         assert tile.rank == 1
 
-        tile = create_tile("p", 5, is_red=True)
+        tile = create_tile("p", 5, is_red_dora=True)
         assert tile.suit == Suit.PINZU
         assert tile.rank == 5
-        assert tile.is_red == True
+        assert tile.is_red_dora == True
 
 
 if __name__ == "__main__":
