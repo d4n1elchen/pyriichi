@@ -409,6 +409,27 @@ class TestYakuChecker:
             assert yakuman[0].yaku == Yaku.DAISANGEN
             assert yakuman[0].han == 13
 
+    def test_yakuman_excludes_non_yakuman_yaku(self):
+        """Test yakuman excludes non-yakuman yaku."""
+        tiles = parse_tiles("123m555z666z777z1z")
+        hand = Hand(tiles)
+        hand.set_riichi(True)
+        winning_tile = Tile(Suit.HONORS, 1)
+        combinations = hand.get_winning_combinations(winning_tile)
+
+        assert combinations
+        results = self.checker.check_all(
+            hand,
+            winning_tile,
+            list(combinations[0]),
+            self.game_state,
+            is_tsumo=False,
+            is_ippatsu=True,
+        )
+
+        assert any(result.yaku == Yaku.DAISANGEN for result in results)
+        assert all(result.is_yakuman for result in results)
+
     def test_suuankou(self):
         """Test suuankou."""
         tiles = parse_tiles("111m222m333m444m5m")
@@ -500,6 +521,28 @@ class TestYakuChecker:
                 Yaku.KOKUSHI_MUSOU_JUUSANMEN,
             }
             assert yakuman[0].han == 13
+
+    def test_kokushi_musou_excludes_non_yakuman_yaku(self):
+        """Test kokushi musou excludes non-yakuman yaku."""
+        tiles = parse_tiles("19m19p19s1z2z3z4z5z6z7z")
+        hand = Hand(tiles)
+        hand.set_riichi(True)
+        winning_tile = Tile(Suit.HONORS, 7)
+
+        results = self.checker.check_all(
+            hand,
+            winning_tile,
+            [],
+            self.game_state,
+            is_tsumo=False,
+            is_ippatsu=True,
+        )
+
+        assert any(
+            result.yaku in {Yaku.KOKUSHI_MUSOU, Yaku.KOKUSHI_MUSOU_JUUSANMEN}
+            for result in results
+        )
+        assert all(result.is_yakuman for result in results)
 
     def test_tsuuiisou(self):
         """Test tsuuiisou."""

@@ -25,7 +25,7 @@ This audit compares the current codebase against the rule requirements in this d
 | Abortive draws | Partial | Suufon Renda, Kyuushu Kyuuhai, Suucha Riichi, Suukan Sanra, and Sancha Ron exist; dealer-continuation behavior is incomplete. |
 | Yaku coverage | Partial | Most listed yaku exist, but several standard rule details do not match requirements. |
 | Open-hand reductions | Met | Chanta, Junchan, Sanshoku Doujun, Ittsu, Honitsu, and Chinitsu apply open-hand han reductions. |
-| Yaku combination filtering | Partial | Pinfu now combines with Iipeikou and Ryanpeikou. Yakuman paths still add Riichi in some cases. Chiitoitsu combination handling is too narrow. |
+| Yaku combination filtering | Partial | Pinfu now combines with Iipeikou and Ryanpeikou, and yakuman results exclude non-yakuman yaku. Chiitoitsu combination handling is still too narrow. |
 | Scoring calculations | Partial | Fu, han, limits, payment rounding, honba, kyoutaku, Kiriage Mangan, Noten Bappu, and Pao have support, with important bugs noted below. |
 | Payment context | Mismatch | `ScoreCalculator.calculate()` computes payments before `payment_to` and `payment_from` are set, so dealer/non-dealer payment branches can be wrong. |
 | Pinfu tsumo fu | Mismatch | `calculate_fu()` returns 30 fu for Pinfu tsumo; requirement says Pinfu tsumo is 20 fu. |
@@ -69,9 +69,8 @@ This audit compares the current codebase against the rule requirements in this d
 ### Yakuman and Non-Yakuman Yaku
 
 - Requirement: yakuman do not score with non-yakuman yaku.
-- Code: `YakuChecker.check_all()` adds Riichi to Kokushi and other yakuman paths.
-- Impact: yaku result lists can contain non-yakuman yaku alongside yakuman.
-- Suggested fix: return only yakuman results once any yakuman is present.
+- Status: fixed.
+- Code: `YakuChecker.check_all()` returns only yakuman results once any yakuman is present.
 
 ### Chiitoitsu Combination Handling
 

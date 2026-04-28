@@ -263,13 +263,7 @@ class YakuChecker:
 
         # kokushi_musou check first as yakuman
         if result := self.check_kokushi_musou(hand, winning_tile):
-            results = [result]
-            # kokushi_musou can combine with riichi
-            is_double_riichi = is_first_turn and hand.is_concealed
-            results.extend(
-                self.check_riichi(hand, game_state, is_ippatsu, is_double_riichi)
-            )
-            return results
+            return [result]
 
         # chiitoitsu check
         if result := self.check_chiitoitsu(hand, winning_tile):
@@ -310,13 +304,8 @@ class YakuChecker:
         if result := self.check_chuuren_poutou(hand, winning_tile, game_state):
             yakuman_results.append(result)
 
-        # If yakuman exists, return only yakuman (yakuman does not combine with other yaku, but multiple yakuman can combine)
+        # If yakuman exists, return only yakuman.
         if yakuman_results:
-            # yakuman can combine with riichi
-            is_double_riichi = is_first_turn and hand.is_concealed
-            yakuman_results.extend(
-                self.check_riichi(hand, game_state, is_ippatsu, is_double_riichi)
-            )
             return yakuman_results
 
         results = []
