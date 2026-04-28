@@ -871,6 +871,7 @@ class RuleEngine:
         result.meld = meld
         result.called_action = GameAction.PON
         result.called_tile = tile_to_claim
+        self._update_pao_responsibility(player, discarder, meld)
 
         self._interrupt_ippatsu(GameAction.PON, acting_player=player)
 
@@ -979,6 +980,8 @@ class RuleEngine:
                 raise ValueError("明槓必須指定被槓的牌")
             tile = self._last_discarded_tile
 
+        responsible_player = None
+
         # Check if it's an open_kan on discard
         # Must be an interrupt (player != current_player)
         if (
@@ -988,6 +991,7 @@ class RuleEngine:
         ):
             # Remove from discarder
             if self._last_discarded_player is not None:
+                responsible_player = self._last_discarded_player
                 self._remove_last_discard(self._last_discarded_player, tile)
 
             # Clear last discard state
@@ -995,6 +999,8 @@ class RuleEngine:
             self._last_discarded_player = None
 
         meld = hand.kan(tile)
+        if responsible_player is not None and meld.type == MeldType.OPEN_KAN:
+            self._update_pao_responsibility(player, responsible_player, meld)
         self._kan_count += 1
         result.kan = True
         hand.reset_last_drawn_tile()  # Clear the last drawn tile after kan.
@@ -1294,6 +1300,53 @@ class RuleEngine:
 
                 self._game_state.update_score(i, -pay_amount)
                 self._game_state.update_score(winner, pay_amount)
+
+    def _update_pao_responsibility(
+        self, player: int, responsible_player: int, called_meld: Meld
+    ) -> None:
+        called_rank = self._honor_triplet_rank(called_meld)
+        if called_rank is None:
+            return
+
+        dragon_triplets = set()
+        wind_triplets = set()
+        for meld in self._hands[player].melds:
+            rank = self._honor_triplet_rank(meld)
+            if rank is None:
+                continue
+            if rank in {5, 6, 7}:
+                dragon_triplets.add(rank)
+            elif rank in {1, 2, 3, 4}:
+                wind_triplets.add(rank)
+
+        if (
+            called_rank in {5, 6, 7}
+            and len(dragon_triplets) == 3
+            and player not in self._pao_daisangen
+        ):
+            self._pao_daisangen[player] = responsible_player
+
+        if (
+            called_rank in {1, 2, 3, 4}
+            and len(wind_triplets) == 4
+            and player not in self._pao_daisuushi
+        ):
+            self._pao_daisuushi[player] = responsible_player
+
+    @staticmethod
+    def _honor_triplet_rank(meld: Meld) -> Optional[int]:
+        if meld.type not in {MeldType.PON_MELD, MeldType.OPEN_KAN}:
+            return None
+
+        tiles = meld.tiles
+        if not tiles:
+            return None
+
+        first = tiles[0]
+        if first.suit != Suit.HONORS:
+            return None
+
+        return first.rank if all(tile == first for tile in tiles) else None
 
     def _draw_rinshan_tile(
         self, player: int, result: ActionResult, *, kan_type: MeldType

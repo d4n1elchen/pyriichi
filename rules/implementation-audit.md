@@ -111,9 +111,8 @@ This audit compares the current codebase against the rule requirements in this d
 ### Pao Tracking
 
 - Requirement: Pao responsibility is triggered when the final qualifying call confirms Daisangen or Daisuushi.
-- Code: Pao payment support exists, but automatic responsibility tracking was not found; tests manually set `_pao_daisangen`.
-- Impact: responsibility payment will not trigger naturally during normal play.
-- Suggested fix: update call handling to detect when a call confirms Daisangen or Daisuushi and record the responsible player.
+- Status: fixed.
+- Code: pon and open kan handling record the responsible player when the final qualifying call confirms Daisangen or Daisuushi.
 
 ### Chombo
 

@@ -1993,6 +1993,47 @@ class TestWinningAndScoring:
             self.engine._game_state.scores[2] == initial_scores[2]
         )  # Others don't pay
 
+    def test_pao_daisangen_tracks_final_dragon_call(self):
+        """Test pao_daisangen tracks final dragon call."""
+        self._init_game()
+        player = 0
+        responsible_player = 3
+        called_tile = Tile(Suit.HONORS, 7)
+        hand = Hand(parse_tiles("77z123m456p789s1m"))
+        hand._melds = [
+            Meld(MeldType.PON_MELD, [Tile(Suit.HONORS, 5)] * 3, called_tile=Tile(Suit.HONORS, 5)),
+            Meld(MeldType.PON_MELD, [Tile(Suit.HONORS, 6)] * 3, called_tile=Tile(Suit.HONORS, 6)),
+        ]
+        self.engine._hands[player] = hand
+        self.engine._hands[responsible_player]._discards = [called_tile]
+        self.engine._last_discarded_tile = called_tile
+        self.engine._last_discarded_player = responsible_player
+
+        self.engine._handle_pon(player)
+
+        assert self.engine._pao_daisangen[player] == responsible_player
+
+    def test_pao_daisuushi_tracks_final_wind_call(self):
+        """Test pao_daisuushi tracks final wind call."""
+        self._init_game()
+        player = 0
+        responsible_player = 2
+        called_tile = Tile(Suit.HONORS, 4)
+        hand = Hand(parse_tiles("44z123m456p789s1m"))
+        hand._melds = [
+            Meld(MeldType.PON_MELD, [Tile(Suit.HONORS, 1)] * 3, called_tile=Tile(Suit.HONORS, 1)),
+            Meld(MeldType.PON_MELD, [Tile(Suit.HONORS, 2)] * 3, called_tile=Tile(Suit.HONORS, 2)),
+            Meld(MeldType.PON_MELD, [Tile(Suit.HONORS, 3)] * 3, called_tile=Tile(Suit.HONORS, 3)),
+        ]
+        self.engine._hands[player] = hand
+        self.engine._hands[responsible_player]._discards = [called_tile]
+        self.engine._last_discarded_tile = called_tile
+        self.engine._last_discarded_player = responsible_player
+
+        self.engine._handle_pon(player)
+
+        assert self.engine._pao_daisuushi[player] == responsible_player
+
     def test_pao_daisangen_ron_pao_player(self):
         """Test pao: daisangen ron pao player (normal payment)"""
         self._init_game()
