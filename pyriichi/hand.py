@@ -512,20 +512,19 @@ class Hand:
 
         return counts
 
-    def _remove_triplet(self, counts: dict[Tile, int], tile: Tile, count: int) -> bool:
+    def _remove_triplet(self, counts: dict[Tile, int], tile: Tile) -> bool:
         """
         Remove a triplet (three identical tiles) from counts.
 
         Args:
             counts (Dict[Tile, int]): Tile count dictionary.
             tile (Tile): Tile.
-            count (int): Tile count.
 
         Returns:
             bool: Whether removal was successful.
         """
-        if counts.get(tile, 0) >= count:
-            counts[tile] -= count
+        if counts.get(tile, 0) >= 3:
+            counts[tile] -= 3
             return True
         return False
 
@@ -668,18 +667,13 @@ class Hand:
     ) -> List[List[Combination]]:
         results = []
         for tile, count in counts.items():
-            if count < 3 or not self._remove_triplet(counts, tile, count):
+            if count < 3 or not self._remove_triplet(counts, tile):
                 continue
-            if count == 3:
-                combination = Combination(CombinationType.TRIPLET, [tile, tile, tile])
-            elif count == 4:
-                combination = Combination(CombinationType.KAN, [tile, tile, tile, tile])
-            else:
-                raise ValueError(f"Invalid count: {count} for tile: {tile}")
+            combination = Combination(CombinationType.TRIPLET, [tile, tile, tile])
             new_combinations = current_combinations + [combination]
             if result := self._find_melds(counts, new_combinations, pair_combination):
                 results.extend(result)
-            counts[tile] += count
+            counts[tile] += 3
         return results
 
     def _search_sequence_melds(

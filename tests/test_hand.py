@@ -86,6 +86,16 @@ class TestHand:
         combinations = hand.get_winning_combinations(winning_tile)
         assert len(combinations) > 0
 
+    def test_concealed_four_tiles_can_decompose_as_triplet(self):
+        """Test four concealed identical tiles can leave one tile for another meld."""
+        tiles = parse_tiles("11112m234p234s55z")
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.MANZU, 3)
+
+        assert hand.is_winning_hand(winning_tile)
+        combinations = hand.get_winning_combinations(winning_tile)
+        assert len(combinations) > 0
+
     def test_chiitoitsu(self):
         """Test chiitoitsu."""
         tiles = parse_tiles("11m99m11p99p11s99s1z")

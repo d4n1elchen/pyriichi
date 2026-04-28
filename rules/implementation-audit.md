@@ -15,7 +15,7 @@ This audit compares the current codebase against the rule requirements in this d
 | Initial deal | Met | `TileSet.deal()` is dealer-aware, and `RuleEngine.deal()` passes `GameState.dealer`. |
 | Hand operations | Met | Draw, discard, chi, pon, kan, and closed kan exist. |
 | Winning-hand detection | Partial | Standard, Chiitoitsu, and Kokushi Musou exist in `Hand`; `RuleEngine.check_win()` now allows special hands without standard combinations. Known decomposition issues remain for four identical concealed tiles. |
-| Tenpai and machi listing | Partial | Implemented, but known decomposition issues remain for four identical concealed tiles. |
+| Tenpai and machi listing | Met | Implemented, including decomposition paths where four identical concealed tiles can be used as a triplet plus a leftover tile. |
 | Action priority | Met | `_resolve_decisions()` prioritizes ron, then pon/kan, then chi. |
 | Multiple ron rules | Partial | Head Bump, Double Ron, Triple Ron, and Sancha Ron are represented, but multiple-ron score settlement is simplified. |
 | Furiten | Partial | Genbutsu and temp furiten exist; riichi furiten storage exists but is not set when a riichi player passes ron. |
@@ -51,9 +51,8 @@ This audit compares the current codebase against the rule requirements in this d
 ### Four Identical Concealed Tiles
 
 - Requirement: standard winning-hand detection should find legal decompositions.
-- Code: the hand decomposition has a known issue where four identical concealed tiles can block the triplet-plus-leftover search.
-- Impact: legal hands with four identical concealed tiles may be reported not winning.
-- Suggested fix: when count is four, also try using three as a triplet and leaving one tile for other decomposition paths.
+- Status: fixed.
+- Code: concealed hand decomposition now removes three identical tiles as a triplet and leaves any fourth copy available for other meld paths.
 
 ### Open-Hand Han Reductions
 
