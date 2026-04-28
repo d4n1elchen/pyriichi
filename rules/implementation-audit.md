@@ -14,7 +14,7 @@ This audit compares the current codebase against the rule requirements in this d
 | Tile set and compact notation | Met | `Tile`, `TileSet`, `parse_tiles`, and `format_tiles` cover the standard tile set and Red Dora notation. |
 | Initial deal | Met | `TileSet.deal()` is dealer-aware, and `RuleEngine.deal()` passes `GameState.dealer`. |
 | Hand operations | Met | Draw, discard, chi, pon, kan, and closed kan exist. |
-| Winning-hand detection | Partial | Standard, Chiitoitsu, and Kokushi Musou exist in `Hand`; `RuleEngine.check_win()` now allows special hands without standard combinations. Known decomposition issues remain for four identical concealed tiles. |
+| Winning-hand detection | Met | Standard, Chiitoitsu, and Kokushi Musou are accepted by `Hand` and `RuleEngine.check_win()`. |
 | Tenpai and machi listing | Met | Implemented, including decomposition paths where four identical concealed tiles can be used as a triplet plus a leftover tile. |
 | Action priority | Met | `_resolve_decisions()` prioritizes ron, then pon/kan, then chi. |
 | Multiple ron rules | Partial | Head Bump, Double Ron, Triple Ron, and Sancha Ron are represented, but multiple-ron score settlement is simplified. |
