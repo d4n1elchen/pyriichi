@@ -1,758 +1,758 @@
-# PyRiichi 開發計劃
+# PyRiichi Development Plan
 
-## 開發時間表
+## Development Timeline
 
-### 階段 1：專案基礎架構（✅ 已完成）
+### Phase 1: Project Foundation (✅ Completed)
 
-#### 1.1 專案初始化
-- [x] 建立專案目錄結構
-- [x] 建立 requirements.txt
-- [x] 建立 setup.py
-- [x] 配置開發環境
-- [x] 初始化 Git 倉庫
+#### 1.1 Project Initialization
+- [x] Create the project directory structure.
+- [x] Create `requirements.txt`.
+- [x] Create `setup.py`.
+- [x] Configure the development environment.
+- [x] Initialize the Git repository.
 
-#### 1.2 基礎模組 - 牌組系統
-- [x] 實現牌型枚舉（Tile）
-  - [x] 萬子、筒子、條子、字牌
-  - [x] 牌的表示和比較
-  - [x] 牌的序列化
-  - [x] 紅寶牌支持（is_red 標記）
-  - [x] 標準字串格式（r5m 格式，符合日本麻將社區標準）
-- [x] 實現牌組類（TileSet）
-  - [x] 洗牌算法
-  - [x] 發牌邏輯
-  - [x] 摸牌邏輯
-  - [x] 牌山管理
-  - [x] 寶牌指示牌系統
+#### 1.2 Core Module - Tile System
+- [x] Implement tile enums and tile representation (`Tile`).
+  - [x] Manzu, pinzu, souzu, and honor tiles.
+  - [x] Tile representation and comparison.
+  - [x] Tile serialization.
+  - [x] Red Dora support through the `is_red_dora` flag.
+  - [x] Standard string notation, such as `r5m`, matching common Japanese mahjong community conventions.
+- [x] Implement the tile set class (`TileSet`).
+  - [x] Shuffle algorithm.
+  - [x] Deal logic.
+  - [x] Draw logic.
+  - [x] Wall management.
+  - [x] Dora indicator system.
 
-**交付物**：
-- [x] `tiles.py` - 完整的牌組系統
-- [x] 單元測試（整合在相關測試中）
-
----
-
-### 階段 2：手牌管理系統（✅ 已完成）
-
-#### 2.1 手牌表示
-- [x] 實現手牌類（Hand）
-  - [x] 手牌存儲（13/14 張）
-  - [x] 副露管理（明刻、明順，通過 Meld 類）
-  - [x] 暗刻、暗槓管理（在手牌中）
-- [x] 手牌操作
-  - [x] 打牌（discard）
-  - [x] 吃（chi）
-  - [x] 碰（pon）
-  - [x] 槓（kan，基本實現）
-  - [x] 自摸（add_tile）
-
-#### 2.2 手牌分析
-- [x] 手牌排序（通過 Tile 的比較）
-- [x] 手牌統計（_get_tile_counts 方法）
-- [x] 聽牌判定（is_tenpai, get_waiting_tiles）
-- [x] 和牌判定（is_winning_hand, get_winning_combinations）
-
-**交付物**：
-- [x] `hand.py` - 手牌管理系統
-- [x] `test_hand.py` - 單元測試（9個測試用例）
+**Deliverables**:
+- [x] `tiles.py` - complete tile system.
+- [x] Unit tests, integrated into the related test files.
 
 ---
 
-### 階段 3：和牌判定系統（✅ 已完成）
+### Phase 2: Hand Management System (✅ Completed)
 
-#### 3.1 基本和牌判定
-- [x] 標準和牌型判定
-  - [x] 4 組面子 + 1 對子
-  - [x] 遞迴算法實現（_find_melds 方法）
-- [x] 特殊和牌型判定
-  - [x] 七對子（_is_seven_pairs）
-  - [x] 國士無雙（_is_kokushi_musou）
-  - [ ] 十三不搭（流局判定，可選功能）
+#### 2.1 Hand Representation
+- [x] Implement the hand class (`Hand`).
+  - [x] Hand storage for 13 or 14 tiles.
+  - [x] Meld management, including open triplets and open sequences through the `Meld` class.
+  - [x] Concealed triplet and closed kan management inside the hand.
+- [x] Hand operations.
+  - [x] Discard (`discard`).
+  - [x] Chi (`chi`).
+  - [x] Pon (`pon`).
+  - [x] Kan (`kan`, basic implementation).
+  - [x] Tsumo/draw (`add_tile`).
 
-#### 3.2 聽牌判定
-- [x] 聽牌檢測算法（is_tenpai）
-- [x] 聽牌牌列表（get_waiting_tiles）
-- [x] 和牌組合列表（get_winning_combinations）
+#### 2.2 Hand Analysis
+- [x] Hand sorting through `Tile` comparison.
+- [x] Hand statistics through `_get_tile_counts`.
+- [x] Tenpai detection (`is_tenpai`, `get_machi_tiles`).
+- [x] Winning-hand detection (`is_winning_hand`, `get_winning_combinations`).
 
-#### 3.3 面子分解
-- [x] 順子判定（_remove_sequence）
-- [x] 刻子判定（_remove_triplet）
-- [x] 對子判定（_remove_pair）
-- [x] 槓子判定（整合在刻子判定中）
-
-**交付物**：
-- [x] 整合到 `hand.py` - 和牌判定系統
-- [x] `test_hand.py` - 單元測試（包含和牌判定測試）
+**Deliverables**:
+- [x] `hand.py` - hand management system.
+- [x] `test_hand.py` - unit tests, 9 test cases.
 
 ---
 
-### 階段 4：役種（Yaku）判定系統（✅ 已完成，45+ 役種）
+### Phase 3: Winning-Hand Detection System (✅ Completed)
 
-#### 4.1 基礎架構
-- [x] 役種基類設計（YakuResult dataclass）
-- [x] 役種判定接口（YakuChecker.check_all）
-- [x] 多語言支持（日文、英文、中文）
+#### 3.1 Basic Winning-Hand Detection
+- [x] Standard winning-hand shape detection.
+  - [x] Four sets plus one pair.
+  - [x] Recursive algorithm implementation (`_find_melds`).
+- [x] Special winning-hand shape detection.
+  - [x] Chiitoitsu (`_is_chiitoitsu`).
+  - [x] Kokushi Musou (`_is_kokushi_musou`).
+  - [ ] Thirteen Unconnected Tiles, optional draw detection.
 
-#### 4.2 基本役實現（1 翻）
-- [x] 立直（リーチ）
-- [x] 一發（一発）
-- [x] 門清自摸（門前清自摸和）
-- [x] 斷么九（斷么九）
-- [x] 平和（平和）- 已完善（檢查雀頭是否為役牌）
-- [x] 一盃口（一盃口）
-- [x] 役牌（場風、自風、三元牌）- 已完成（包含自風判定）
+#### 3.2 Tenpai Detection
+- [x] Tenpai detection algorithm (`is_tenpai`).
+- [x] Machi tile list (`get_machi_tiles`).
+- [x] Winning-combination list (`get_winning_combinations`).
 
-#### 4.3 特殊役實現（2-3 翻）
-- [x] 三色同順（三色同順）
-- [x] 三色同刻（三色同刻）
-- [x] 一氣通貫（一気通貫）
-- [x] 對對和（対々和）
-- [x] 三暗刻（三暗刻）
-- [x] 三槓子（三槓子）
-- [x] 小三元（小三元）
-- [x] 混老頭（混老頭）
-- [x] 七對子（七対子）
+#### 3.3 Set Decomposition
+- [x] Sequence detection (`_remove_sequence`).
+- [x] Triplet detection (`_remove_triplet`).
+- [x] Pair detection (`_remove_pair`).
+- [x] Kan detection, integrated into triplet detection.
 
-#### 4.4 高級役實現（滿貫以上）
-- [x] 清一色（清一色）- 6翻
-- [x] 混一色（混一色）- 3翻
-- [x] 純全帶么九（純全帯么九）- 3翻
-- [x] 混全帶么九（混全帯么九）- 2翻
-- [x] 二盃口（二盃口）- 3翻
-
-#### 4.5 役滿實現
-- [x] 天和、地和、人和 - 已完成（基於遊戲狀態追蹤）
-- [x] 大三元、小四喜、大四喜
-- [x] 四暗刻、四暗刻單騎 - 四暗刻已實現
-- [x] 四槓子
-- [x] 九蓮寶燈、純正九蓮寶燈
-- [x] 國士無雙、國士無雙十三面 - 已完成（包含十三面判定）
-- [x] 綠一色、清老頭、字一色
-- [x] 四歸一 - 已實現
-
-#### 4.6 複合役處理
-- [x] 多役疊加邏輯（check_all 方法）
-- [x] 翻數計算（han 字段累加）
-- [x] 役種衝突檢測 - 完整實現（包含所有衝突規則）
-
-**當前實現的衝突處理**：
-- ✅ 七對子：不能與其他役種複合（除了立直）
-- ✅ 國士無雙：不能與其他役種複合（除了立直）
-- ✅ 役滿：不與非役滿役種複合（除了立直）
-- ✅ 平和與役牌：衝突檢測已實現
-- ✅ 斷么九與包含幺九的役種：衝突檢測已實現
-- ✅ 對對和與需要順子的役種：衝突檢測已實現
-- ✅ 一盃口與二盃口：互斥檢測已實現
-- ✅ 清一色與混一色：互斥檢測已實現
-- ✅ 純全帶与混全帶：互斥檢測已實現
-- ✅ 平和與對對和：衝突檢測已實現
-- ✅ 平和與一盃口、二盃口：衝突檢測已實現
-
-**實現的衝突檢測**：
-- [x] 平和與役牌衝突檢測
-- [x] 斷么九與包含幺九役種衝突檢測
-- [x] 對對和與順子役種衝突檢測
-- [x] 一盃口與二盃口互斥檢測
-- [x] 清一色與混一色互斥檢測
-- [x] 純全帶与混全帶互斥檢測
-
-**交付物**：
-- [x] `yaku.py` - 役種判定系統
-- [x] `test_yaku.py` - 單元測試（29個測試用例，涵蓋45+個役種和衝突檢測）
-
-**已完成役種列表（45+個）**：
-- 基本役（6個）：立直、斷么九、平和、一盃口、一發、門清自摸
-- 特殊役（9個）：對對和、三色同順、三色同刻、一氣通貫、三暗刻、三槓子、小三元、混老頭、七對子
-- 高級役（5個）：清一色（6翻）、混一色（3翻）、純全帶么九（3翻）、混全帶么九（2翻）、二盃口（3翻）
-- 役牌（11個）：白、發、中、場風東、場風南、場風西、場風北、自風東、自風南、自風西、自風北
-- 役滿（13+個）：大三元、四暗刻、國士無雙、國士無雙十三面、小四喜、大四喜、清老頭、字一色、四槓子、綠一色、九蓮寶燈、四歸一、天和、地和、人和
-- 特殊和牌役（3個）：海底撈月、河底撈魚、嶺上開花
+**Deliverables**:
+- [x] Integrated into `hand.py` - winning-hand detection system.
+- [x] `test_hand.py` - unit tests, including winning-hand detection tests.
 
 ---
 
-### 階段 5：得分計算系統（✅ 已完成）
+### Phase 4: Yaku Detection System (✅ Completed, 45+ Yaku)
 
-#### 5.1 符數計算
-- [x] 基本符計算（20符）
-- [x] 副底符計算（門清榮和+10、門清自摸+2、非門清自摸+2）
-- [x] 面子符計算（刻子符、槓子符）
-- [x] 雀頭符計算（役牌對子+2）
-- [ ] 聽牌符計算 - 框架已實現，需完善聽牌類型判定
-- [x] 符數進位邏輯（進位到10）
-- [x] 平和特殊處理（固定20/22符）
+#### 4.1 Foundation
+- [x] Yaku result base design (`YakuResult` dataclass).
+- [x] Yaku detection interface (`YakuChecker.check_all`).
+- [x] Multilingual support: Japanese, English, and Traditional Chinese.
 
-#### 5.2 翻數計算
-- [x] 基本翻數（從役種系統）
-- [x] 寶牌計算（整合在規則引擎中）
-  - [x] 表寶牌
-  - [x] 裡寶牌（立直時）
-  - [x] 紅寶牌
-- [x] 翻數疊加
+#### 4.2 Basic Yaku Implementation, 1 Han
+- [x] Riichi.
+- [x] Ippatsu.
+- [x] Menzen Tsumo.
+- [x] Tanyao.
+- [x] Pinfu - improved by checking whether the pair is yakuhai.
+- [x] Iipeikou.
+- [x] Yakuhai - completed, including seat_wind detection.
 
-#### 5.3 點數計算
-- [x] 基本點計算（符數 × 2^(翻數+2)）
-- [x] 滿貫以上處理（滿貫、跳滿、倍滿、三倍滿、役滿）
-- [x] 支付方式計算 - 已完成
-  - [x] 自摸支付（莊家2倍、閒家1倍）
-  - [x] 榮和支付（放銃者支付全部）
-- [x] 本場和供託處理 - 已完成（本場+300點，供託分配）
+#### 4.3 Special Yaku Implementation, 2-3 Han
+- [x] Sanshoku Doujun.
+- [x] Sanshoku Doukou.
+- [x] Ittsu.
+- [x] Toitoi.
+- [x] Sanankou.
+- [x] Sankantsu.
+- [x] Shousangen.
+- [x] Honroutou.
+- [x] Chiitoitsu.
 
-#### 5.4 特殊得分
-- [x] 流局滿貫判定（在規則引擎中）
-- [x] 役滿得分計算
-- [x] 倍役滿、三倍役滿計算
+#### 4.4 Advanced Yaku Implementation, Mangan and Above
+- [x] Chinitsu - 6 han.
+- [x] Honitsu - 3 han.
+- [x] Junchan - 3 han.
+- [x] Chanta - 2 han.
+- [x] Ryanpeikou - 3 han.
 
-**交付物**：
-- [x] `scoring.py` - 得分計算系統
-- [x] `test_scoring.py` - 單元測試（6個測試用例）
+#### 4.5 Yakuman Implementation
+- [x] Tenhou, Chihou, and Renhou - completed through game-state tracking.
+- [x] Daisangen, Shousuushi, and Daisuushi.
+- [x] Suuankou and Suuankou Tanki - Suuankou implemented.
+- [x] Suukantsu.
+- [x] Chuuren Poutou and Pure Chuuren Poutou.
+- [x] Kokushi Musou and Kokushi Musou Juusanmen - completed, including thirteen-sided detection.
+- [x] Ryuuiisou, Chinroutou, and Tsuuiisou.
+- [x] Four Returns - implemented.
 
----
+#### 4.6 Combined Yaku Handling
+- [x] Multiple-yaku stacking logic (`check_all`).
+- [x] Han calculation by summing the `han` field.
+- [x] Yaku conflict detection - full implementation, including all conflict rules.
 
-### 階段 6：遊戲規則引擎（✅ 基本完成，核心功能已實現）
+**Currently Implemented Conflict Handling**:
+- ✅ Chiitoitsu cannot combine with other yaku, except Riichi.
+- ✅ Kokushi Musou cannot combine with other yaku, except Riichi.
+- ✅ Yakuman do not combine with non-yakuman yaku, except Riichi.
+- ✅ Pinfu and Yakuhai conflict detection is implemented.
+- ✅ Tanyao and terminal/honor-containing yaku conflict detection is implemented.
+- ✅ Toitoi and sequence-requiring yaku conflict detection is implemented.
+- ✅ Iipeikou and Ryanpeikou mutual exclusion is implemented.
+- ✅ Chinitsu and Honitsu mutual exclusion is implemented.
+- ✅ Junchan and Chanta mutual exclusion is implemented.
+- ✅ Pinfu and Toitoi conflict detection is implemented.
+- ✅ Pinfu and Iipeikou/Ryanpeikou conflict detection is implemented.
 
-#### 6.1 基本遊戲流程
-- [x] 遊戲初始化（start_game）
-- [x] 配牌流程（deal）
-- [x] 回合管理（摸牌、打牌）
-- [x] 鳴牌處理框架（吃、碰、槓）- 手牌層已實現，規則引擎層需完善
-- [x] 和牌流程（check_win）
-- [x] 流局流程（check_draw, handle_draw）
+**Implemented Conflict Tests**:
+- [x] Pinfu and Yakuhai conflict detection.
+- [x] Tanyao and terminal/honor-containing yaku conflict detection.
+- [x] Toitoi and sequence-yaku conflict detection.
+- [x] Iipeikou and Ryanpeikou mutual exclusion.
+- [x] Chinitsu and Honitsu mutual exclusion.
+- [x] Junchan and Chanta mutual exclusion.
 
-#### 6.2 遊戲狀態管理
-- [x] 局數管理（東、南、西、北）- GameState 已實現
-- [x] 場風、自風管理 - GameState 已實現
-- [x] 本場數管理 - GameState 已實現
-- [x] 供託棒管理 - GameState 已實現
-- [x] 玩家點數管理 - GameState 已實現
-- [x] 局數轉換和結束處理（end_round）
+**Deliverables**:
+- [x] `yaku.py` - yaku detection system.
+- [x] `test_yaku.py` - unit tests, 29 test cases covering 45+ yaku and conflict detection.
 
-#### 6.3 流局處理
-- [x] 四風連打 - 已完成（基於捨牌歷史追蹤）
-- [x] 九種九牌判定（check_kyuushu_kyuuhai）- 已完成（包含第一巡判定）
-- [x] 四家立直（全員聽牌流局，suucha_riichi）
-- [x] 四槓散了 - 已完成（基於槓次數追蹤）
-- [x] 三家和了 - 已完成
-- [x] 流局滿貫判定（check_flow_mangan）
-
-#### 6.4 特殊規則
-- [x] 立直規則（get_available_actions, execute_action）
-- [x] 一發規則 - 已完成（基於立直後回合數追蹤）
-- [x] 搶槓規則 - 已完成（明槓時檢查其他玩家是否可以和牌）
-- [x] 嶺上開花 - 已完成（槓後摸牌和牌判定）
-- [x] 海底撈月 - 已完成（自摸最後一張牌）
-- [x] 河底撈魚 - 已完成（榮和最後一張牌）
-
-#### 6.5 寶牌系統
-- [x] 表寶牌計算和顯示
-- [x] 裡寶牌計算（立直時）
-- [x] 紅寶牌識別
-- [x] 寶牌翻數統計（_count_dora）
-
-**交付物**：
-- [x] `rules.py` - 規則引擎（覆蓋率84%）
-- [x] `game_state.py` - 遊戲狀態管理（覆蓋率100%）
-- [x] `test_rules.py` - 單元測試（65個測試用例）
-
----
-
-### 階段 7：測試和優化（✅ 基本完成）
-
-#### 7.1 測試完善
-- [x] 單元測試基礎框架（215個測試用例全部通過）
-  - [x] test_hand.py（多個測試）
-  - [x] test_yaku.py（多個測試）
-  - [x] test_scoring.py（多個測試）
-  - [x] test_rules.py（多個測試）
-  - [x] test_game_state.py（多個測試）
-  - [x] test_tiles.py（多個測試）
-  - [x] test_utils.py（多個測試）
-  - [x] test_integration.py（整合測試）
-- [x] 單元測試覆蓋率檢查 - 已完成（當前覆蓋率：86%，詳見 COVERAGE_REPORT.md）
-- [x] rules.py 覆蓋率提升 - 已完成（從68%提升到84%，超過80%目標）
-- [x] 整合測試 - 已完成（test_integration.py 包含完整遊戲流程、特殊規則、流局場景等測試）
-- [x] 邊界情況測試 - 已完成（和牌、聽牌、流局、特殊規則等）
-- [x] 性能測試 - 已完成（創建 benchmark_performance.py 性能基準測試）
-
-#### 7.2 代碼優化
-- [x] 代碼結構優化（模組化設計）
-- [x] 類型警告修正（修正所有 winning_combination 類型不匹配問題）
-- [x] 字串格式標準化（紅寶牌採用標準格式 r5m，符合日本麻將社區慣例）
-- [x] 性能優化 - 已完成
-  - [x] 和牌判定算法優化（使用回溯減少字典複製，減少對象分配）
-  - [x] 牌計數緩存（減少重複計算，提升約 10% 性能）
-  - [x] 聽牌判定優化（只檢查相關牌，減少不必要的嘗試）
-  - [x] 聽牌列表獲取優化（智能候選選擇）
-- [x] 代碼風格檢查（通過 linter）
-
-#### 7.3 文檔完善
-- [x] API 文檔（API_DESIGN.md, API_SUMMARY.md）
-- [x] 使用示例（examples/basic_usage.py, README.md）
-- [x] 開發文檔（DEVELOPMENT_PLAN.md, REQUIREMENTS.md）
-- [x] 字串表示法說明（README.md 中詳細說明牌的字符串格式）
-- [x] 紅寶牌格式標準化（採用日本麻將社區標準格式 r5m）
-- [ ] 詳細的 API 參考文檔 - 待完成（可選）
-
-**交付物**：
-- [x] 完整的測試套件（215個測試用例，包含單元測試和整合測試）
-- [x] 清晰的代碼結構
-- [x] 完整的文檔（README, API設計, 開發計劃等）
-- [x] 測試覆蓋率報告（COVERAGE_REPORT.md）
+**Completed Yaku List, 45+ Total**:
+- Basic yaku, 6: Riichi, Tanyao, Pinfu, Iipeikou, Ippatsu, Menzen Tsumo.
+- Special yaku, 9: Toitoi, Sanshoku Doujun, Sanshoku Doukou, Ittsu, Sanankou, Sankantsu, Shousangen, Honroutou, Chiitoitsu.
+- Advanced yaku, 5: Chinitsu, 6 han; Honitsu, 3 han; Junchan, 3 han; Chanta, 2 han; Ryanpeikou, 3 han.
+- Yakuhai, 11: Haku, Hatsu, Chun, round_wind_east, round_wind_south, round_wind_west, round_wind_north, seat_wind_east, seat_wind_south, seat_wind_west, seat_wind_north.
+- Yakuman, 13+: Daisangen, Suuankou, Kokushi Musou, Kokushi Musou Juusanmen, Shousuushi, Daisuushi, Chinroutou, Tsuuiisou, Suukantsu, Ryuuiisou, Chuuren Poutou, Four Returns, Tenhou, Chihou, Renhou.
+- Special win yaku, 3: Haitei, Houtei, Rinshan.
 
 ---
 
-## 開發優先級
+### Phase 5: Scoring System (✅ Completed)
 
-### 高優先級（核心功能）
-1. 牌組系統
-2. 手牌管理
-3. 和牌判定
-4. 基本役種（至少 10 個）
-5. 得分計算
-6. 基本遊戲流程
+#### 5.1 Fu Calculation
+- [x] Base fu calculation, 20 fu.
+- [x] Winning-method fu calculation: closed ron +10, closed tsumo +2, open tsumo +2.
+- [x] Set fu calculation for triplets and kans.
+- [x] Pair fu calculation for yakuhai pairs, +2.
+- [ ] Wait fu calculation - framework implemented; machi type detection needs improvement.
+- [x] Fu rounding logic, rounded up to 10.
+- [x] Pinfu special handling, fixed 20/22 fu.
 
-### 中優先級（重要功能）
-1. 完整役種系統
-2. 流局處理
-3. 遊戲狀態管理
-4. 特殊規則
+#### 5.2 Han Calculation
+- [x] Base han from the yaku system.
+- [x] Dora calculation, integrated in the rule engine.
+  - [x] Visible dora.
+  - [x] Ura Dora after riichi.
+  - [x] Red Dora.
+- [x] Han stacking.
 
-### 低優先級（增強功能）
-1. 性能優化
-2. 額外的便利功能
-3. 統計和分析功能
+#### 5.3 Point Calculation
+- [x] Base point calculation: fu x 2^(han+2).
+- [x] Mangan-and-above handling: Mangan, Haneman, Baiman, Sanbaiman, Yakuman.
+- [x] Payment method calculation - completed.
+  - [x] Tsumo payments: dealer 2x, non-dealer 1x.
+  - [x] Ron payment: discarder pays the full amount.
+- [x] Honba and kyoutaku handling - completed, honba +300 points and kyoutaku distribution.
+
+#### 5.4 Special Scores
+- [x] Nagashi Mangan detection, in the rule engine.
+- [x] Yakuman score calculation.
+- [x] Double yakuman and triple yakuman calculation.
+
+**Deliverables**:
+- [x] `scoring.py` - scoring system.
+- [x] `test_scoring.py` - unit tests, 6 test cases.
 
 ---
 
-## 開發方法論
+### Phase 6: Game Rule Engine (✅ Mostly Completed, Core Features Implemented)
 
-### 測試驅動開發（TDD）
+#### 6.1 Basic Game Flow
+- [x] Game initialization (`start_game`).
+- [x] Deal flow (`deal`).
+- [x] Turn management: draw and discard.
+- [x] Call handling framework: chi, pon, and kan. Hand layer implemented; rule engine layer needs improvement.
+- [x] Win flow (`check_win`).
+- [x] Ryuukyoku flow (`check_ryuukyoku`, `handle_ryuukyoku`).
 
-本專案採用嚴格的測試驅動開發方法，遵循「紅-綠-重構」循環：
+#### 6.2 Game State Management
+- [x] Round management for east, south, west, and north - implemented in `GameState`.
+- [x] round_wind and seat_wind management - implemented in `GameState`.
+- [x] Honba management - implemented in `GameState`.
+- [x] Kyoutaku management - implemented in `GameState`.
+- [x] Player score management - implemented in `GameState`.
+- [x] Round transition and end handling (`end_round`).
 
-#### TDD 開發循環
+#### 6.3 Ryuukyoku Handling
+- [x] Suufon Renda - completed through discard-history tracking.
+- [x] Kyuushu Kyuuhai detection (`check_kyuushu_kyuuhai`) - completed, including first-turn detection.
+- [x] Suucha Riichi, all players in riichi leading to abortive draw.
+- [x] Suukan Sanra - completed through kan-count tracking.
+- [x] Sancha Ron - completed.
+- [x] Nagashi Mangan detection (`check_nagashi_mangan`).
 
-1. **紅燈階段（Red）**：編寫失敗的測試
-   - 在實現任何功能之前，先編寫測試用例
-   - 測試應該明確描述期望的行為
-   - 運行測試，確認測試失敗（因為功能尚未實現）
-   - 確保測試失敗的原因正確（而非測試本身有錯誤）
+#### 6.4 Special Rules
+- [x] Riichi rules (`get_available_actions`, `execute_action`).
+- [x] Ippatsu rules - completed through turn-count tracking after riichi.
+- [x] Chankan rules - completed by checking whether other players can win when an open kan is declared.
+- [x] Rinshan - completed by checking wins after the kan draw.
+- [x] Haitei - completed for tsumo on the last wall tile.
+- [x] Houtei - completed for ron on the last discard.
 
-2. **綠燈階段（Green）**：實現最小可行代碼
-   - 編寫剛好足夠的代碼，使測試通過
-   - 不要過度設計，專注於讓測試通過
-   - 運行測試，確認測試通過
-   - 所有既有測試也必須保持通過狀態
+#### 6.5 Dora System
+- [x] Visible dora calculation and display.
+- [x] Ura Dora calculation after riichi.
+- [x] Red Dora recognition.
+- [x] Dora han counting (`_count_dora`).
 
-3. **重構階段（Refactor）**：優化代碼質量
-   - 在測試通過的保護下，改進代碼結構
-   - 消除重複代碼
-   - 提升可讀性和可維護性
-   - 每次重構後重新運行測試，確保功能不變
+**Deliverables**:
+- [x] `rules.py` - rule engine, 84% coverage.
+- [x] `game_state.py` - game-state management, 100% coverage.
+- [x] `test_rules.py` - unit tests, 65 test cases.
 
-#### TDD 最佳實踐
+---
 
-1. **測試優先原則**
-   - 絕不在沒有失敗測試的情況下編寫產品代碼
-   - 每個新功能、bug 修復都應該從測試開始
-   - 測試是設計工具，幫助思考 API 和接口
+### Phase 7: Testing and Optimization (✅ Mostly Completed)
 
-2. **小步快跑**
-   - 每次只實現一個小功能
-   - 頻繁運行測試（每次修改後）
-   - 保持每個迭代週期短小（5-10分鐘）
+#### 7.1 Test Improvements
+- [x] Unit test foundation, all 215 test cases passing.
+  - [x] `test_hand.py`, multiple tests.
+  - [x] `test_yaku.py`, multiple tests.
+  - [x] `test_scoring.py`, multiple tests.
+  - [x] `test_rules.py`, multiple tests.
+  - [x] `test_game_state.py`, multiple tests.
+  - [x] `test_tiles.py`, multiple tests.
+  - [x] `test_utils.py`, multiple tests.
+  - [x] `test_integration.py`, integration tests.
+- [x] Unit test coverage check - completed, current coverage 86%; see `COVERAGE_REPORT.md`.
+- [x] `rules.py` coverage improvement - completed, from 68% to 84%, above the 80% target.
+- [x] Integration tests - completed; `test_integration.py` includes full game flow, special rules, ryuukyoku scenarios, and related tests.
+- [x] Edge-case tests - completed for winning hands, tenpai, ryuukyoku, special rules, and related cases.
+- [x] Performance tests - completed through the `benchmark_performance.py` benchmark script.
 
-3. **測試隔離性**
-   - 每個測試應該獨立運行
-   - 測試之間不應該有依賴關係
-   - 使用適當的 setup 和 teardown 機制
+#### 7.2 Code Optimization
+- [x] Code structure optimization through modular design.
+- [x] Type warning fixes for all `winning_combination` type mismatches.
+- [x] String format standardization: Red Dora uses the standard `r5m` format, matching Japanese mahjong community conventions.
+- [x] Performance optimization - completed.
+  - [x] Winning-hand detection algorithm optimized by using backtracking to reduce dictionary copies and object allocation.
+  - [x] Tile-count cache added to reduce repeated calculations, improving performance by about 10%.
+  - [x] Tenpai detection optimized to check only relevant tiles and avoid unnecessary attempts.
+  - [x] Machi tile listing optimized through smarter candidate selection.
+- [x] Code style checks passed through the linter.
 
-4. **測試可讀性**
-   - 使用描述性的測試名稱（test_function_scenario_expectedResult）
-   - 遵循 AAA 模式：Arrange（準備）、Act（執行）、Assert（斷言）
-   - 一個測試只驗證一個概念
+#### 7.3 Documentation Improvements
+- [x] API documentation: `API_DESIGN.md`, `API_SUMMARY.md`.
+- [x] Usage examples: `examples/basic_usage.py`, `README.md`.
+- [x] Development documentation: `DEVELOPMENT_PLAN.md`, `REQUIREMENTS.md`.
+- [x] String notation explanation: detailed explanation in `README.md`.
+- [x] Red Dora format standardization: uses the Japanese mahjong community standard `r5m` format.
+- [ ] Detailed API reference documentation - pending, optional.
 
-#### 測試策略
+**Deliverables**:
+- [x] Complete test suite, 215 test cases including unit and integration tests.
+- [x] Clear code structure.
+- [x] Complete documentation: README, API design, development plan, and related docs.
+- [x] Test coverage report: `COVERAGE_REPORT.md`.
 
-1. **單元測試**（優先級：最高）
-   - 測試單個函數或類的行為
-   - 使用 mock 隔離依賴
-   - 覆蓋率目標：≥ 90%
-   - 位置：`tests/test_*.py`
+---
 
-2. **整合測試**（優先級：高）
-   - 測試多個模組的協作
-   - 驗證端到端流程
-   - 覆蓋核心業務場景
-   - 位置：`tests/test_integration.py`
+## Development Priority
 
-3. **邊界測試**（優先級：高）
-   - 測試邊界條件和極端情況
-   - 包含空輸入、最大值、最小值等
-   - 每個功能至少包含 2-3 個邊界測試
+### High Priority, Core Features
+1. Tile system.
+2. Hand management.
+3. Winning-hand detection.
+4. Basic yaku, at least 10.
+5. Score calculation.
+6. Basic game flow.
 
-4. **錯誤處理測試**（優先級：中）
-   - 測試異常情況和錯誤處理
-   - 使用 `pytest.raises` 驗證異常
-   - 確保錯誤訊息清晰有用
+### Medium Priority, Important Features
+1. Complete yaku system.
+2. Ryuukyoku handling.
+3. Game state management.
+4. Special rules.
 
-5. **性能基準測試**（優先級：低）
-   - 關鍵算法需要性能測試
-   - 建立基準，避免性能退化
-   - 位置：`benchmark_performance.py`
+### Low Priority, Enhancements
+1. Performance optimization.
+2. Additional convenience features.
+3. Statistics and analysis features.
 
-#### 測試覆蓋率要求
+---
 
-- **總體目標**：≥ 85%（當前：87% ✅）
-- **核心模組目標**：≥ 90%
-  - `tiles.py`：≥ 90%（當前：89%）
-  - `hand.py`：≥ 90%（當前：92% ✅）
-  - `yaku.py`：≥ 85%（當前：84%）
-  - `scoring.py`：≥ 90%（當前：90% ✅）
-  - `rules.py`：≥ 85%（當前：85% ✅）
-  - `game_state.py`：≥ 95%（當前：95% ✅）
-- **最低要求**：所有新代碼 ≥ 80%
+## Development Methodology
 
-#### 測試工具
+### Test-Driven Development (TDD)
 
-- **測試框架**：pytest
-- **覆蓋率工具**：pytest-cov
-- **運行命令**：
+This project follows a strict test-driven development approach, using the red-green-refactor cycle.
+
+#### TDD Development Cycle
+
+1. **Red phase**: write a failing test.
+   - Write test cases before implementing any feature.
+   - Tests should clearly describe the expected behavior.
+   - Run the test and confirm it fails because the feature is not implemented yet.
+   - Ensure the test fails for the correct reason, not because the test itself is wrong.
+
+2. **Green phase**: implement the minimum viable code.
+   - Write just enough code to make the test pass.
+   - Avoid over-designing; focus on passing the test.
+   - Run the test and confirm it passes.
+   - All existing tests must continue to pass.
+
+3. **Refactor phase**: improve code quality.
+   - Improve code structure under the protection of passing tests.
+   - Remove duplicated code.
+   - Improve readability and maintainability.
+   - Rerun tests after each refactor to ensure behavior is unchanged.
+
+#### TDD Best Practices
+
+1. **Test-first principle**
+   - Never write production code without a failing test.
+   - Every new feature and bug fix should start with a test.
+   - Tests are a design tool that helps shape APIs and interfaces.
+
+2. **Small steps**
+   - Implement one small feature at a time.
+   - Run tests frequently after each change.
+   - Keep each iteration short, around 5-10 minutes.
+
+3. **Test isolation**
+   - Each test should run independently.
+   - Tests should not depend on each other.
+   - Use appropriate setup and teardown mechanisms.
+
+4. **Test readability**
+   - Use descriptive test names, such as `test_function_scenario_expected_result`.
+   - Follow the AAA pattern: arrange, act, assert.
+   - Each test should verify one concept.
+
+#### Test Strategy
+
+1. **Unit tests**, highest priority.
+   - Test behavior of individual functions or classes.
+   - Use mocks to isolate dependencies.
+   - Coverage target: >= 90%.
+   - Location: `tests/test_*.py`.
+
+2. **Integration tests**, high priority.
+   - Test collaboration between modules.
+   - Verify end-to-end flows.
+   - Cover core business scenarios.
+   - Location: `tests/test_integration.py`.
+
+3. **Boundary tests**, high priority.
+   - Test boundary conditions and extreme cases.
+   - Include empty input, maximum values, minimum values, and similar cases.
+   - Include at least 2-3 boundary tests for each feature.
+
+4. **Error-handling tests**, medium priority.
+   - Test exceptional cases and error handling.
+   - Use `pytest.raises` to verify exceptions.
+   - Ensure error messages are clear and useful.
+
+5. **Performance benchmarks**, low priority.
+   - Critical algorithms need performance tests.
+   - Establish baselines to prevent regressions.
+   - Location: `benchmark_performance.py`.
+
+#### Test Coverage Requirements
+
+- **Overall target**: >= 85%, current 87% ✅.
+- **Core module targets**: >= 90%.
+  - `tiles.py`: >= 90%, current 89%.
+  - `hand.py`: >= 90%, current 92% ✅.
+  - `yaku.py`: >= 85%, current 84%.
+  - `scoring.py`: >= 90%, current 90% ✅.
+  - `rules.py`: >= 85%, current 85% ✅.
+  - `game_state.py`: >= 95%, current 95% ✅.
+- **Minimum requirement**: all new code >= 80%.
+
+#### Test Tools
+
+- **Test framework**: pytest.
+- **Coverage tool**: pytest-cov.
+- **Run commands**:
   ```bash
-  # 運行所有測試
+  # Run all tests
   pytest
 
-  # 運行特定測試文件
+  # Run a specific test file
   pytest tests/test_yaku.py
 
-  # 運行測試並顯示覆蓋率
+  # Run tests and show coverage
   pytest --cov=pyriichi --cov-report=html
 
-  # 運行測試並查看詳細輸出
+  # Run tests with detailed output
   pytest -v
   ```
 
-#### 開發工作流範例
+#### Development Workflow Example
 
-對於新功能開發（例如：添加新的役種）：
+For new feature development, such as adding a new yaku:
 
-1. **創建測試用例**
+1. **Create the test case**
    ```python
    def test_check_new_yaku():
-       # Arrange：準備測試數據
+       # Arrange: prepare test data
        tiles = parse_tiles("1m 2m 3m 4p 5p 6p 7s 8s 9s 1z 1z 2z 2z")
        hand = Hand(tiles)
 
-       # Act：執行測試
+       # Act: run the test subject
        results = YakuChecker.check_all(hand, ...)
 
-       # Assert：驗證結果
+       # Assert: verify the result
        assert any(r.yaku == Yaku.NEW_YAKU for r in results)
    ```
 
-2. **運行測試，確認失敗**
+2. **Run the test and confirm it fails**
    ```bash
    pytest tests/test_yaku.py::test_check_new_yaku
-   # 應該看到失敗訊息
+   # A failure should be visible.
    ```
 
-3. **實現功能**
-   - 在 `yaku.py` 中添加新的檢查函數
-   - 在 `Yaku` enum 中添加新役種
+3. **Implement the feature**
+   - Add the new check function in `yaku.py`.
+   - Add the new yaku to the `Yaku` enum.
 
-4. **運行測試，確認通過**
+4. **Run the test and confirm it passes**
    ```bash
    pytest tests/test_yaku.py::test_check_new_yaku
-   # 應該看到測試通過
+   # The test should pass.
    ```
 
-5. **運行所有測試**
+5. **Run all tests**
    ```bash
    pytest
-   # 確保沒有破壞既有功能
+   # Ensure existing behavior is not broken.
    ```
 
-6. **檢查覆蓋率**
+6. **Check coverage**
    ```bash
    pytest --cov=pyriichi
-   # 確保覆蓋率符合要求
+   # Ensure coverage satisfies the target.
    ```
 
-7. **重構**
-   - 優化代碼結構
-   - 消除重複
-   - 重新運行測試確保通過
+7. **Refactor**
+   - Improve code structure.
+   - Remove duplication.
+   - Rerun tests to ensure they pass.
 
-### 迭代開發
-- 每個階段完成後進行測試
-- 及時發現和修復問題
-- 保持代碼可運行狀態
-- 採用短迭代週期（1-2天完成一個小功能）
-- 每次提交都應該包含測試和實現
+### Iterative Development
+- Test after each phase is completed.
+- Discover and fix problems promptly.
+- Keep the codebase runnable.
+- Use short iteration cycles, with one small feature completed in 1-2 days.
+- Each commit should include both tests and implementation.
 
-### 代碼審查
-- 每個模組完成後進行代碼審查
-- 確保代碼質量和一致性
-- 審查重點：
-  - 是否有足夠的測試覆蓋
-  - 測試是否有意義且能真正驗證功能
-  - 代碼是否符合 PEP 8 規範
-  - 是否有適當的錯誤處理
-  - API 設計是否清晰易用
-
----
-
-## 風險管理
-
-### 技術風險
-- **和牌判定算法複雜度高**
-  - 緩解：參考現有實現，使用遞迴算法
-- **役種判定可能遺漏邊界情況**
-  - 緩解：建立完整的測試用例庫
-- **得分計算規則複雜**
-  - 緩解：分階段實現，逐步驗證
-
-### 時間風險
-- **開發時間可能超出預期**
-  - 緩解：優先實現核心功能，非核心功能可後續補充
+### Code Review
+- Review code after each module is completed.
+- Ensure code quality and consistency.
+- Review focus:
+  - Whether there is sufficient test coverage.
+  - Whether tests are meaningful and truly verify behavior.
+  - Whether code follows PEP 8.
+  - Whether error handling is appropriate.
+  - Whether API design is clear and easy to use.
 
 ---
 
-## 成功標準
+## Risk Management
 
-1. ✅ 能夠正確判定所有標準和牌型（標準型、七對子、國士無雙）
-2. ✅ 能夠正確判定至少 20 個役種（當前：45+個，已大幅超越目標）
-3. ✅ 能夠正確計算得分（符數、翻數、點數）
-4. ✅ 能夠完成一局完整的遊戲流程（基本流程已實現，包含特殊規則）
-5. ✅ 單元測試覆蓋率 > 80%（215個測試用例，覆蓋率86%，已超過目標）
-6. ✅ 代碼符合 PEP 8 規範（通過 linter 檢查）
-7. ✅ 有完整的使用文檔（README, API設計, 開發計劃等）
+### Technical Risks
+- **Winning-hand detection algorithm has high complexity**
+  - Mitigation: reference existing implementations and use recursive algorithms.
+- **Yaku detection may miss edge cases**
+  - Mitigation: build a complete test-case library.
+- **Score calculation rules are complex**
+  - Mitigation: implement in phases and verify gradually.
 
-## 最近更新（2025-11-21）
-
-### Bug 修復
-- ✅ **修復七對子符數計算錯誤**：
-  - 修正 `scoring.py` 中 `calculate_fu` 方法的邏輯錯誤
-  - 修正 `test_scoring.py` 中 `test_calculate_fu_seven_pairs` 的測試數據設置
-  - 確保正確識別 `YakuResult` 對象中的役種枚舉
-
-### 性能優化
-- ✅ **和牌判定算法優化**：
-  - 使用回溯算法減少字典複製，避免每次遞迴都創建新對象
-  - 原地修改計數字典並在回溯時恢復，大幅減少內存分配
-  - 標準和牌型判定平均時間 < 0.06ms
-- ✅ **牌計數緩存**：
-  - 在手牌類中添加 `_tile_counts_cache` 緩存機制
-  - 在手牌修改時自動清除緩存
-  - 緩存命中時性能提升約 10%
-- ✅ **聽牌判定優化**：
-  - 智能候選選擇：只檢查與手牌相關的牌（相同、相鄰、順子相關）
-  - 減少從 34 種牌到平均 10-20 種候選牌
-  - 標準聽牌判定平均時間約 1.3ms
-- ✅ **性能測試工具**：
-  - 創建 `benchmark_performance.py` 性能基準測試腳本
-  - 包含和牌判定、聽牌判定、聽牌列表獲取等測試
-  - 可用於持續監控性能變化
-
-### 測試完善
-- ✅ **整合測試完成**：新增 test_integration.py，包含完整遊戲流程、特殊規則、流局場景等測試
-  - 完整和牌流程測試（自摸、榮和）
-  - 完整遊戲流程測試（包含鳴牌）
-  - 特殊規則流程測試（立直、槓）
-  - 流局場景測試（九種九牌）
-  - 多模組整合測試（手牌-役種-得分計算）
-  - 真實場景測試（多局遊戲流程）
-  - 錯誤處理測試
-- ✅ **測試數量提升**：從 215 個測試用例增加到 232 個測試用例
-- ✅ **測試覆蓋率維持**：總體覆蓋率 87%，所有核心模組覆蓋率均超過 80%
-
-### 文檔完善（2025-11-21）
-- ✅ **術語標準化**：
-  - 統一 REQUIREMENTS.md 和代碼中的日語術語
-  - 採用日本麻將遊戲中最常用的寫法（動作用Katakana，役名用Kanji）
-  - 更新 `yaku.py`、`rules.py` 中的翻譯
-- ✅ **REQUIREMENTS.md 完善**：
-  - 新增缺失的標準規則：雙立直（ダブルリーチ）、振聽（フリテン）、包牌（パオ）
-  - 新增同巡規則（頭跳ね）、槓寶牌產生時機說明
-  - 新增得分規則：不聽罰符（ノーテン罰符）、切上滿貫（切り上げ満貫）
-  - 新增遊戲結束條件：擊飛（トビ）、西入（西入）、安可（上がり止め）
-  - 新增違規處理（チョンボ）說明
-  - 更正七對子複合規則說明
-
-### 代碼質量改進
-- ✅ **類型警告修正**：修正所有 `winning_combination` 類型不匹配問題
-  - 將 `get_winning_combinations()` 返回的 `Tuple` 轉換為 `List`
-  - 更新所有測試文件（test_integration.py, test_yaku.py, test_scoring.py）
-  - 共修正 72 處類型警告
-
-### 格式標準化
-- ✅ **紅寶牌格式標準化**：採用日本麻將社區標準格式
-  - 從 `[5p]` 格式改為標準 `r5p` 格式（r 前綴）
-  - 符合日本麻將社區廣泛使用的標準
-  - 輸入和輸出格式統一，支持往返轉換
-  - 更新所有相關代碼和測試
-
-### 文檔完善
-- ✅ **README 更新**：
-  - 新增詳細的字串表示法說明章節
-  - 更新所有示例代碼使用標準格式
-  - 添加類型轉換說明和注意事項
-  - 更新功能列表，標記所有功能為已實現
-- ✅ **示例代碼更新**：
-  - 添加完整的和牌判定、役種檢查、得分計算示例
-  - 展示正確的類型轉換使用方法
-
-## 當前進度總結
-
-### ✅ 已完成的核心功能
-- 牌組系統（Tile, TileSet）- 完整實現
-- 手牌管理（Hand）- 完整實現，包含和牌判定、聽牌判定
-- 鳴牌操作（吃、碰、槓）- 完整實現
-- 役種判定系統（45+個役種）- 基本役種、高級役種和役滿已實現（包含天和、地和、人和等特殊役滿）
-- 得分計算系統（符數、翻數、點數）- 完整實現
-- 規則引擎（遊戲流程、流局、寶牌、特殊規則）- 核心功能已實現（包含一発、海底撈月、河底撈魚、四風連打、四槓散了等）
-- 遊戲狀態管理（局數、風、點數）- 完整實現
-- 專案初始化（setup.py, Git 倉庫）- 完整實現
-
-### 🟡 待實現的規則和功能
-
-#### 役種系統（優先級：高）
-- [x] **雙立直（ダブルリーチ）**：第一巡宣告立直（2翻）- 已在 Yaku enum 和 YakuChecker 中添加
-  - 已實現第一巡追蹤且未有鳴牌的檢測
-  - 已添加完整測試用例
-
-#### 役種系統（優先級：中）
-- [x] 三色同刻（2翻）- 已完成
-- [x] 小三元（2翻）- 已完成
-- [x] 混老頭（2翻）- 已完成
-- [x] 純全帶么九（3翻）- 已完成
-- [x] 混全帶么九（2翻）- 已完成
-- [x] 二盃口（3翻）- 已完成
-- [x] 三槓子（2翻）- 已完成
-- [x] 一發（1翻）- 已完成（基於立直後回合數追蹤）
-- [x] 門清自摸（1翻）- 已完成
-- [x] 大部分役滿（14個役滿）- 已完成（包含天和、地和、人和）
-- [x] 天和、地和、人和（需要遊戲狀態追蹤）- 已完成
-- [x] 國士無雙十三面（需要更精確的判定）- 已完成
-- [x] 自風判定（需完善玩家位置邏輯）- 已完成
-- [x] 海底撈月、河底撈魚 - 已完成
-
-#### 特殊規則（優先級：高）
-- [ ] **振聽（フリテン）規則**：目前未完整實現
-  - [ ] 現物振聽：自己打過的牌，不能榮和
-  - [ ] 同巡振聽：聽牌後放過和牌，同巡內不能榮和
-  - [ ] 立直振聽：立直後放過和牌，永久不能榮和（只能自摸）
-  - 需在 RuleEngine 中實現振聽檢測邏輯
-- [ ] **包牌（パオ）規則**：大三元、大四喜確定時的責任支付
-  - 需追蹤副露來源
-  - 需修改得分分配邏輯
-- [x] 槓寶牌產生時機規則 - 已實現（暗槓即時翻開，明槓/加槓在打牌後翻開）
-- [ ] **同巡規則（頭跳ね）**：多人榮和時的處理
-  - 目前 REQUIREMENTS.md 記錄為「只有放銃者下家和牌」
-  - 可選規則：雙響/三響（允許多人和牌）
-  - 需在 RuleEngine 中實現多人和牌處理
-
-#### 役種複合規則（優先級：中）
-- [x] 基本衝突檢測（七對子、國士無雙、役滿）- 已完成
-- [x] 平和與役牌衝突檢測 - 已完成
-- [x] 斷么九與包含幺九役種衝突檢測 - 已完成
-- [x] 對對和與順子役種衝突檢測 - 已完成
-- [x] 一盃口與二盃口互斥檢測 - 已完成
-- [x] 清一色與混一色互斥檢測 - 已完成
-- [x] 純全帶与混全帶互斥檢測 - 已完成
-- [x] 完整的役種複合規則測試 - 已完成
-
-#### 特殊規則（優先級：中）
-- [x] 一發規則（需記錄立直後回合數）- 已完成
-- [x] 搶槓規則（需處理明槓時的和牌判定）- 已完成
-- [x] 嶺上開花（需處理槓後摸牌）- 已完成（包含役種判定）
-- [x] 海底撈月（需判斷是否為最後一張牌）- 已完成
-- [x] 河底撈魚（需判斷是否為最後一張牌）- 已完成
-
-#### 流局處理（優先級：中）
-- [x] 四風連打（需記錄前四張捨牌）- 已完成
-- [x] 四槓散了（需記錄槓的次數）- 已完成
-- [x] 三家和了（需處理多人和牌情況）- 已完成
-- [x] 九種九牌第一巡判定（需記錄是否為第一巡）- 已完成
-- [x] 流局滿貫判定（需檢查聽牌且聽牌牌都是幺九牌）- 已完成
-
-#### 得分計算完善（優先級：中）
-- [x] 聽牌符詳細計算（需判斷聽牌類型：兩面、邊張、嵌張、單騎、雙碰）- 已完成
-- [x] 支付方式詳細計算（自摸：莊家2倍、閒家1倍；榮和：放銃者支付全部）- 已完成
-- [x] 本場和供託處理（本場+300點，供託分配）- 已完成
-- [x] **不聽罰符（ノーテン罰符）**：流局時的點數轉移
-  - 總額 3000 點在聽牌者和不聽者間分配
-  - 需在流局處理中實現點數轉移邏輯
-- [ ] **切上滿貫（切り上げ満貫）**：30符4翻或60符3翻計為滿貫（可選規則）
-  - 需在 ScoreCalculator 中添加規則配置選項
-
-#### 遊戲結束條件（優先級：中）
-- [x] **擊飛（トビ）**：玩家點數 < 0 時遊戲結束
-  - 需在 GameState 或 RuleEngine 中添加檢測邏輯
-- [x] **西入（西入）**：南4局結束時無人達到目標點數，延長至西場
-  - 需擴展 GameState 支持西場
-- [x] **安可（上がり止め）**：莊家最後一局和牌且第一名時可選擇結束
-  - 需在遊戲結束判定中添加此邏輯
-
-#### 違規處理（優先級：低）
-- [x] **錯和（チョンボ）**：沒聽牌宣告和牌、振聽宣告榮和等
-  - 需實現違規檢測
-- [x] **錯立直（チョンボ）**：沒聽牌宣告立直（流局時被發現）
-  - 需在流局時檢查立直玩家是否真的聽牌
-- [x] **罰則**：支付滿貫點數或禁止和牌
-
-#### 項目配置（優先級：低）
-- [x] setup.py（用於打包發布）- 已完成
-- [x] Git 倉庫初始化 - 已完成
-- [ ] CI/CD 配置（可選）- 待完成
-
-### 📊 測試統計
-- 總測試用例：232個（全部通過）
-- 測試通過率：100%
-- 測試文件：8個（test_hand, test_yaku, test_scoring, test_rules, test_game_state, test_tiles, test_utils, test_integration）
-- 核心模組：8個（tiles, hand, game_state, yaku, scoring, rules, utils, __init__）
-- **測試覆蓋率：87%**（已超過 80% 目標！🎉）
-- **rules.py 覆蓋率：85%**（已超過 80% 目標！🎉）
-- **完美覆蓋模組（100%）**：utils.py, rules_config.py, __init__.py
-- **優秀覆蓋模組（≥90%）**：game_state.py (95%), hand.py (92%), scoring.py (90%)
-- **良好覆蓋模組（≥80%）**：tiles.py (89%), rules.py (85%), yaku.py (84%), enum_utils.py (83%)
-
-### 🔍 檢查項目（無遺漏）
-- ✅ 牌組系統：完整實現，包含寶牌系統
-- ✅ 手牌管理：完整實現，包含和牌判定、聽牌判定、鳴牌操作（吃、碰、槓、暗槓）
-- ✅ 和牌判定：完整實現（標準型、七對子、國士無雙）
-- ✅ 役種判定：45+個役種已實現，涵蓋基本役、特殊役、高級役、役滿（包含天和、地和、人和、國士無雙十三面等）
-- ✅ 得分計算：符數、翻數、點數計算完整實現
-- ✅ 規則引擎：基本遊戲流程、流局、寶牌系統、特殊規則已實現（一発、海底撈月、河底撈魚、四風連打、四槓散了、搶槓、嶺上開花、三家和了等）
-- ✅ 遊戲狀態：局數、風、點數管理完整實現
-- ✅ 工具函數：parse_tiles, format_tiles, is_winning_hand 已實現
-  - ✅ 支持標準字串格式（1m, 2p, 3s, 1z 等）
-  - ✅ 支持紅寶牌標準格式（r5m, r5p, r5s）
-  - ✅ 輸入輸出格式統一，支持往返轉換
-- ✅ 測試覆蓋：232個測試用例（包含單元測試和整合測試），涵蓋所有核心功能、特殊規則和衝突檢測，覆蓋率87%
-- ✅ 文檔：README, API設計, 開發計劃, 需求規格完整
-  - ✅ README 包含完整的字串表示法說明
-  - ✅ 示例代碼展示和牌判定、役種檢查、得分計算完整流程
-  - ✅ 所有示例使用正確的類型轉換（list(combinations[0])）
-  - ✅ REQUIREMENTS.md 完整記錄所有標準日本麻將規則
-  - ✅ 日語術語統一標準化（動作用Katakana，役名用Kanji）
-
-### ⚠️ 未實現的規則（已記錄在 REQUIREMENTS.md）
-- ❌ 振聽（フリテン）：完整的振聽規則（現物、同巡、立直振聽）
-- ❌ 包牌（パオ）：大三元、大四喜的責任支付
-- ❌ 同巡規則（頭跳ね）：多人榮和處理
-- ❌ 不聽罰符（ノーテン罰符）：流局時點數轉移
-- ❌ 切上滿貫（切り上げ満貫）：可選的滿貫計算規則
-- ❌ 擊飛（トビ）：破產結束條件
-- ❌ 西入（西入）：延長至西場
-- ❌ 安可（上がり止め）：莊家選擇結束
-- ❌ 錯和處理（チョンボ）：違規檢測和處罰
+### Schedule Risks
+- **Development time may exceed expectations**
+  - Mitigation: prioritize core features and defer non-core features.
 
 ---
 
-## 後續擴展（未來版本）
+## Success Criteria
 
-1. 網路對戰功能
-2. 圖形界面
-3. 更強的 AI
-4. 統計和分析功能
-5. 自定義規則支持
-6. 多語言支持
+1. ✅ Correctly detect all standard winning-hand shapes: standard shape, Chiitoitsu, and Kokushi Musou.
+2. ✅ Correctly detect at least 20 yaku; current count is 45+, far beyond the target.
+3. ✅ Correctly calculate score: fu, han, and points.
+4. ✅ Complete one full round flow; the basic flow is implemented, including special rules.
+5. ✅ Unit test coverage > 80%; 215 test cases and 86% coverage, above the target.
+6. ✅ Code follows PEP 8; linter checks pass.
+7. ✅ Complete usage documentation: README, API design, development plan, and related docs.
+
+## Recent Updates, 2025-11-21
+
+### Bug Fixes
+- ✅ **Fix Chiitoitsu fu calculation error**:
+  - Fixed a logic error in the `calculate_fu` method in `scoring.py`.
+  - Fixed test data setup in `test_calculate_fu_chiitoitsu` in `test_scoring.py`.
+  - Ensured yaku enum values are correctly recognized inside `YakuResult` objects.
+
+### Performance Optimization
+- ✅ **Winning-hand detection algorithm optimization**:
+  - Used a backtracking algorithm to reduce dictionary copies and avoid creating new objects on every recursion.
+  - Modified the count dictionary in place and restored it during backtracking, greatly reducing memory allocation.
+  - Average standard winning-hand detection time is < 0.06 ms.
+- ✅ **Tile-count cache**:
+  - Added `_tile_counts_cache` to the hand class.
+  - Automatically clears the cache when the hand changes.
+  - Improves performance by about 10% on cache hits.
+- ✅ **Tenpai detection optimization**:
+  - Smart candidate selection checks only tiles related to the hand: same, adjacent, or sequence-related tiles.
+  - Reduces checks from 34 tile types to an average of 10-20 candidate tile types.
+  - Average standard tenpai detection time is about 1.3 ms.
+- ✅ **Performance testing tool**:
+  - Created the `benchmark_performance.py` benchmark script.
+  - Includes benchmarks for winning-hand detection, tenpai detection, machi tile listing, and related operations.
+  - Can be used to continuously monitor performance changes.
+
+### Test Improvements
+- ✅ **Integration tests completed**: added `test_integration.py`, including full game flow, special rules, ryuukyoku scenarios, and related tests.
+  - Complete win flow tests for tsumo and ron.
+  - Complete game flow test including calls.
+  - Special rule flow tests for riichi and kan.
+  - Ryuukyoku scenario tests for Kyuushu Kyuuhai.
+  - Multi-module integration tests for hand, yaku, and score calculation.
+  - Realistic scenario tests for multi-round game flow.
+  - Error-handling tests.
+- ✅ **Test count increased**: from 215 test cases to 232 test cases.
+- ✅ **Coverage maintained**: overall coverage is 87%, and all core modules exceed 80% coverage.
+
+### Documentation Improvements, 2025-11-21
+- ✅ **Terminology standardization**:
+  - Standardized Japanese mahjong terminology in `REQUIREMENTS.md` and the code.
+  - Adopted the most common spellings used in Japanese mahjong games: katakana for actions and kanji for yaku names.
+  - Updated translations in `yaku.py` and `rules.py`.
+- ✅ **`REQUIREMENTS.md` improvements**:
+  - Added missing standard rules: Double Riichi, Furiten, and Pao.
+  - Added same-discard rules, Head Bump, and kan dora timing notes.
+  - Added scoring rules: Noten Bappu and Kiriage Mangan.
+  - Added game-end conditions: Tobi, West round extension, and Agari Yame.
+  - Added Chombo handling.
+  - Corrected the Chiitoitsu combination-rule description.
+
+### Code Quality Improvements
+- ✅ **Type warning fixes**: fixed all `winning_combination` type mismatch issues.
+  - Converted tuples returned by `get_winning_combinations()` to lists.
+  - Updated all test files: `test_integration.py`, `test_yaku.py`, and `test_scoring.py`.
+  - Fixed 72 type warnings in total.
+
+### Format Standardization
+- ✅ **Red Dora format standardization**: adopted the Japanese mahjong community standard format.
+  - Changed from `[5p]` format to standard `r5p` format with an `r` prefix.
+  - Matches the widely used Japanese mahjong community standard.
+  - Unified input and output formats, supporting round-trip conversion.
+  - Updated all related code and tests.
+
+### Documentation Improvements
+- ✅ **README update**:
+  - Added a detailed string-notation section.
+  - Updated all example code to use the standard format.
+  - Added type-conversion notes and cautions.
+  - Updated the feature list and marked all implemented features.
+- ✅ **Example code update**:
+  - Added complete examples for winning-hand detection, yaku checking, and score calculation.
+  - Demonstrated correct type-conversion usage.
+
+## Current Progress Summary
+
+### ✅ Completed Core Features
+- Tile system (`Tile`, `TileSet`) - fully implemented.
+- Hand management (`Hand`) - fully implemented, including winning-hand detection and tenpai detection.
+- Call operations: chi, pon, kan - fully implemented.
+- Yaku detection system, 45+ yaku - basic yaku, advanced yaku, and yakuman implemented, including special yakuman such as Tenhou, Chihou, and Renhou.
+- Scoring system: fu, han, and points - fully implemented.
+- Rule engine: game flow, ryuukyoku, dora, and special rules - core features implemented, including Ippatsu, Haitei, Houtei, Suufon Renda, Suukan Sanra, and related rules.
+- Game state management: rounds, winds, and points - fully implemented.
+- Project initialization: `setup.py` and Git repository - fully implemented.
+
+### 🟡 Pending Rules and Features
+
+#### Yaku System, High Priority
+- [x] **Double Riichi**: declare riichi on the first uninterrupted turn, 2 han - added to the `Yaku` enum and `YakuChecker`.
+  - First-turn tracking and no-call detection implemented.
+  - Complete test cases added.
+
+#### Yaku System, Medium Priority
+- [x] Sanshoku Doukou, 2 han - completed.
+- [x] Shousangen, 2 han - completed.
+- [x] Honroutou, 2 han - completed.
+- [x] Junchan, 3 han - completed.
+- [x] Chanta, 2 han - completed.
+- [x] Ryanpeikou, 3 han - completed.
+- [x] Sankantsu, 2 han - completed.
+- [x] Ippatsu, 1 han - completed through turn-count tracking after riichi.
+- [x] Menzen Tsumo, 1 han - completed.
+- [x] Most yakuman, 14 yakuman - completed, including Tenhou, Chihou, and Renhou.
+- [x] Tenhou, Chihou, and Renhou, requiring game-state tracking - completed.
+- [x] Kokushi Musou Juusanmen, requiring more precise detection - completed.
+- [x] Seat Wind detection, requiring improved player-position logic - completed.
+- [x] Haitei and Houtei - completed.
+
+#### Special Rules, High Priority
+- [ ] **Furiten rules**: not fully implemented.
+  - [ ] Genbutsu furiten: a player cannot ron on a tile they previously discarded.
+  - [ ] Temp Furiten: after passing on a win while tenpai, the player cannot ron during the same turn cycle.
+  - [ ] Riichi furiten: after declaring riichi and passing on a win, the player is permanently furiten and can only win by tsumo.
+  - Furiten detection logic must be implemented in `RuleEngine`.
+- [ ] **Pao rule**: responsibility payment when Daisangen or Daisuushi is confirmed.
+  - Meld source tracking is required.
+  - Score distribution logic must be modified.
+- [x] Kan dora timing rule - implemented: closed kan reveals immediately; open kan and added kan reveal after the discard.
+- [ ] **Same-discard rule, Head Bump**: handling for multiple ron.
+  - `REQUIREMENTS.md` currently documents this as "only the player closest to the discarder wins."
+  - Optional rules: Double Ron and Triple Ron allow multiple winners.
+  - Multiple-win handling must be implemented in `RuleEngine`.
+
+#### Yaku Combination Rules, Medium Priority
+- [x] Basic conflict detection for Chiitoitsu, Kokushi Musou, and Yakuman - completed.
+- [x] Pinfu and Yakuhai conflict detection - completed.
+- [x] Tanyao and terminal/honor-containing yaku conflict detection - completed.
+- [x] Toitoi and sequence-yaku conflict detection - completed.
+- [x] Iipeikou and Ryanpeikou mutual exclusion - completed.
+- [x] Chinitsu and Honitsu mutual exclusion - completed.
+- [x] Junchan and Chanta mutual exclusion - completed.
+- [x] Complete yaku combination-rule tests - completed.
+
+#### Special Rules, Medium Priority
+- [x] Ippatsu rule, requiring turn-count tracking after riichi - completed.
+- [x] Chankan rule, requiring winning-hand detection during open kan - completed.
+- [x] Rinshan, requiring handling of the draw after kan - completed, including yaku detection.
+- [x] Haitei, requiring detection of the last wall tile - completed.
+- [x] Houtei, requiring detection of the last discard - completed.
+
+#### Ryuukyoku Handling, Medium Priority
+- [x] Suufon Renda, requiring tracking of the first four discards - completed.
+- [x] Suukan Sanra, requiring tracking the kan count - completed.
+- [x] Sancha Ron, requiring handling of multiple winners - completed.
+- [x] First-turn Kyuushu Kyuuhai detection, requiring first-turn tracking - completed.
+- [x] Nagashi Mangan detection, requiring tenpai and all winning tiles to be terminals/honors - completed.
+
+#### Scoring Improvements, Medium Priority
+- [x] Detailed wait fu calculation, requiring machi type detection: Ryanmen, Penchan, Kanchan, Tanki, Shabo - completed.
+- [x] Detailed payment calculation: tsumo with dealer 2x and non-dealer 1x; ron paid fully by the discarder - completed.
+- [x] Honba and kyoutaku handling: honba +300 points and kyoutaku distribution - completed.
+- [x] **Noten Bappu**: point transfer at ryuukyoku.
+  - Total 3000 points are distributed between tenpai and noten players.
+  - Point transfer logic must be implemented in ryuukyoku handling.
+- [ ] **Kiriage Mangan**: 30 fu 4 han or 60 fu 3 han count as mangan, optional rule.
+  - Add a rule configuration option in `ScoreCalculator`.
+
+#### Game-End Conditions, Medium Priority
+- [x] **Tobi**: game ends when a player's score is below 0.
+  - Detection logic must be added to `GameState` or `RuleEngine`.
+- [x] **West round extension**: when nobody reaches the target score after South 4, extend to the west round.
+  - `GameState` must be extended to support the west round.
+- [x] **Agari Yame**: last-round dealer may choose to end the game after winning while in first place.
+  - This logic must be added to game-end detection.
+
+#### Chombo Handling, Low Priority
+- [x] **False win**: declaring a win while not tenpai, declaring ron while furiten, and similar cases.
+  - Violation detection must be implemented.
+- [x] **Invalid riichi**: declaring riichi while not tenpai, discovered at ryuukyoku.
+  - Riichi players must be checked for real tenpai at ryuukyoku.
+- [x] **Penalty**: pay mangan-level points or forbid winning.
+
+#### Project Configuration, Low Priority
+- [x] `setup.py`, for packaging and release - completed.
+- [x] Git repository initialization - completed.
+- [ ] CI/CD configuration, optional - pending.
+
+### 📊 Test Statistics
+- Total test cases: 232, all passing.
+- Test pass rate: 100%.
+- Test files: 8, including `test_hand`, `test_yaku`, `test_scoring`, `test_rules`, `test_game_state`, `test_tiles`, `test_utils`, `test_integration`.
+- Core modules: 8, including `tiles`, `hand`, `game_state`, `yaku`, `scoring`, `rules`, `utils`, `__init__`.
+- **Test coverage: 87%**, above the 80% target.
+- **`rules.py` coverage: 85%**, above the 80% target.
+- **Perfect coverage modules, 100%**: `utils.py`, `rules_config.py`, `__init__.py`.
+- **Excellent coverage modules, >= 90%**: `game_state.py` at 95%, `hand.py` at 92%, `scoring.py` at 90%.
+- **Good coverage modules, >= 80%**: `tiles.py` at 89%, `rules.py` at 85%, `yaku.py` at 84%, `enum_utils.py` at 83%.
+
+### 🔍 Checklist, No Missing Items
+- ✅ Tile system: fully implemented, including dora system.
+- ✅ Hand management: fully implemented, including winning-hand detection, tenpai detection, and calls: chi, pon, kan, closed kan.
+- ✅ Winning-hand detection: fully implemented for standard shape, Chiitoitsu, and Kokushi Musou.
+- ✅ Yaku detection: 45+ yaku implemented, covering basic yaku, special yaku, advanced yaku, and yakuman, including Tenhou, Chihou, Renhou, and Kokushi Musou Juusanmen.
+- ✅ Score calculation: fu, han, and point calculation fully implemented.
+- ✅ Rule engine: basic game flow, ryuukyoku, dora system, and special rules implemented, including Ippatsu, Haitei, Houtei, Suufon Renda, Suukan Sanra, Chankan, Rinshan, and Sancha Ron.
+- ✅ Game state: round, wind, and score management fully implemented.
+- ✅ Utility functions: `parse_tiles`, `format_tiles`, and `is_winning_hand` implemented.
+  - ✅ Supports standard string format, such as `1m`, `2p`, `3s`, `1z`.
+  - ✅ Supports standard Red Dora format: `r5m`, `r5p`, `r5s`.
+  - ✅ Input and output formats are unified and support round-trip conversion.
+- ✅ Test coverage: 232 test cases, including unit and integration tests, covering all core features, special rules, and conflict detection; coverage is 87%.
+- ✅ Documentation: README, API design, development plan, and requirements specification are complete.
+  - ✅ README includes a complete string-notation explanation.
+  - ✅ Example code shows complete flows for winning-hand detection, yaku checking, and score calculation.
+  - ✅ All examples use correct type conversion, such as `list(combinations[0])`.
+  - ✅ `REQUIREMENTS.md` completely records all standard Japanese riichi mahjong rules.
+  - ✅ Japanese terms are standardized, using katakana for actions and kanji for yaku names.
+
+### ⚠️ Unimplemented Rules, Recorded in `REQUIREMENTS.md`
+- ❌ Furiten: complete furiten rules, including Genbutsu, Temp Furiten, and Riichi furiten.
+- ❌ Pao: responsibility payment for Daisangen and Daisuushi.
+- ❌ Same-discard rule, Head Bump: multiple-ron handling.
+- ❌ Noten Bappu: point transfer at ryuukyoku.
+- ❌ Kiriage Mangan: optional mangan calculation rule.
+- ❌ Tobi: bankruptcy end condition.
+- ❌ West round extension: extend into the west round.
+- ❌ Agari Yame: dealer chooses to end the game.
+- ❌ Chombo handling: violation detection and penalties.
+
+---
+
+## Future Extensions
+
+1. Online play.
+2. Graphical interface.
+3. Stronger AI.
+4. Statistics and analysis features.
+5. Custom rule support.
+6. Multilingual support.

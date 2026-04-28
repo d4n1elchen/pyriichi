@@ -8,29 +8,29 @@ This document tracks Japanese riichi mahjong terms used in the pyriichi codebase
 Use these conventions when adding new terms:
 
 - Start from the canonical Japanese riichi term, then choose one code form, one English display form, and one Traditional Chinese display form.
-- Preserve the table shape: `Code | 日本語 | English | 中文 | Notes`.
+- Preserve the table shape: `Code | Japanese | English | Traditional Chinese | Notes`.
 - `Code` values are developer-facing identifiers. Use lowercase `snake_case`, and make sure every `Code` value is unique across the file.
 - `English` values are game/UI display labels. Prefer wording used by English riichi games when it is clear and player-facing, for example `All Simples`, `Full Flush`, `Prevalent Wind`, `Exhaustive Draw`, and `Discard River`.
 - Keep standard riichi UI calls as romaji: `Chi`, `Pon`, `Kan`, `Riichi`, `Ron`, and `Tsumo`.
 - Keep standard scoring and bonus terms as romaji: `Mangan`, `Haneman`, `Baiman`, `Sanbaiman`, `Yakuman`, `Dora`, `Red Dora`, and `Ura Dora`.
-- Use Traditional Chinese consistently in the `中文` column.
+- Use Traditional Chinese consistently in the `Traditional Chinese` column.
 - Pick one translation. Do not list alternatives in a cell or add notes like "also common" unless the note explains a real code distinction.
-- Split terms by context when the same Japanese surface form has different meanings. For example, `draw` and `tsumo` may both use `ツモ`, but they represent different UI/game concepts.
+- Split terms by context when the same Japanese surface form has different meanings. For example, `draw` and `tsumo` may share a source term but represent different UI/game concepts.
 - Do not add speculative terms. Before adding a new glossary entry, search the codebase and docs for the Japanese, Chinese, and existing code/API names. If a term is not used and has no clear source, leave it out.
 
-## Tile Groups (牌種)
+## Tile Groups
 
-| Code | 日本語 | English | 中文 | Notes |
-|------|--------|---------|------|-------|
+| Code | Japanese | English | Traditional Chinese | Notes |
+|------|----------|---------|---------------------|-------|
 | manzu | 萬子 | Characters | 萬子 | Character suit. |
 | pinzu | 筒子 | Circles | 筒子 | Circle suit. |
 | souzu | 索子 | Bamboo | 索子 | Bamboo suit. |
 | honors | 字牌 | Honor Tiles | 字牌 | Winds and dragons. |
 
-## Winds (風牌)
+## Winds
 
-| Code | 日本語 | English | 中文 | Notes |
-|------|--------|---------|------|-------|
+| Code | Japanese | English | Traditional Chinese | Notes |
+|------|----------|---------|---------------------|-------|
 | east | 東 | East | 東 | East wind. |
 | south | 南 | South | 南 | South wind. |
 | west | 西 | West | 西 | West wind. |
@@ -38,18 +38,18 @@ Use these conventions when adding new terms:
 | round_wind | 場風 | Prevalent Wind | 場風 | Wind of the current round. |
 | seat_wind | 自風 | Seat Wind | 自風 | Wind of a player seat. |
 
-## Dragon Tiles (三元牌)
+## Dragon Tiles
 
-| Code | 日本語 | English | 中文 | Notes |
-|------|--------|---------|------|-------|
+| Code | Japanese | English | Traditional Chinese | Notes |
+|------|----------|---------|---------------------|-------|
 | haku | 白 | White | 白 | White dragon and yakuhai. |
 | hatsu | 発 | Green | 發 | Green dragon and yakuhai. |
 | chun | 中 | Red | 中 | Red dragon and yakuhai. |
 
-## Yakuhai Wind Yaku (役牌)
+## Yakuhai Wind Yaku
 
-| Code | 日本語 | English | 中文 | Notes |
-|------|--------|---------|------|-------|
+| Code | Japanese | English | Traditional Chinese | Notes |
+|------|----------|---------|---------------------|-------|
 | round_wind_east | 場風東 | Prevalent Wind East | 場風東 | East round wind yakuhai. |
 | round_wind_south | 場風南 | Prevalent Wind South | 場風南 | South round wind yakuhai. |
 | round_wind_west | 場風西 | Prevalent Wind West | 場風西 | West round wind yakuhai. |
@@ -59,10 +59,10 @@ Use these conventions when adding new terms:
 | seat_wind_west | 自風西 | Seat Wind West | 自風西 | West seat wind yakuhai. |
 | seat_wind_north | 自風北 | Seat Wind North | 自風北 | North seat wind yakuhai. |
 
-## Calls and Turn Actions (鳴き・動作)
+## Calls and Turn Actions
 
-| Code | 日本語 | English | 中文 | Notes |
-|------|--------|---------|------|-------|
+| Code | Japanese | English | Traditional Chinese | Notes |
+|------|----------|---------|---------------------|-------|
 | draw | ツモ | Draw | 摸牌 | Drawing a tile. |
 | discard | 打牌 | Discard | 打牌 | The action of discarding a tile. |
 | chi | チー | Chi | 吃 | Call a sequence from the previous player. |
@@ -75,19 +75,19 @@ Use these conventions when adding new terms:
 | tsumo | ツモ | Tsumo | 自摸 | Self-draw win. |
 | pass | パス | Pass | 過 | Decline a call or win opportunity. |
 
-## Meld Types (面子)
+## Meld Types
 
-| Code | 日本語 | English | 中文 | Notes |
-|------|--------|---------|------|-------|
+| Code | Japanese | English | Traditional Chinese | Notes |
+|------|----------|---------|---------------------|-------|
 | chi_meld | チー | Chi Meld | 吃 | Open sequence meld made by chi. |
 | pon_meld | ポン | Pon Meld | 碰 | Open triplet meld made by pon. |
 | open_kan | 明槓 | Open Kan | 明槓 | Open kan meld. |
 | closed_kan | 暗槓 | Closed Kan | 暗槓 | Concealed kan meld. |
 
-## Game State (局面)
+## Game State
 
-| Code | 日本語 | English | 中文 | Notes |
-|------|--------|---------|------|-------|
+| Code | Japanese | English | Traditional Chinese | Notes |
+|------|----------|---------|---------------------|-------|
 | round_number | 局 | Round Number | 局數 | East 1, East 2, etc. |
 | dealer | 親 | Dealer | 莊家 | Dealer/east player. |
 | honba | 本場 | Honba | 本場 | Counter for repeat/dealer-continuation bonus sticks. |
@@ -96,10 +96,10 @@ Use these conventions when adding new terms:
 | renchan | 連荘 | Dealer Repeat | 連莊 | Dealer continuation after a qualifying result. |
 | agari_yame | アガリ止め | Agari Yame | 和牌止莊 | Last-round dealer win that ends the game under ruleset settings. |
 
-## Abortive Draw Types (途中流局)
+## Abortive Draw Types
 
-| Code | 日本語 | English | 中文 | Notes |
-|------|--------|---------|------|-------|
+| Code | Japanese | English | Traditional Chinese | Notes |
+|------|----------|---------|---------------------|-------|
 | suufon_renda | 四風連打 | Four Winds Abort | 四風連打 | Abortive draw after all first discards are the same wind. |
 | sancha_ron | 三家和了 | Triple Ron Abort | 三家和了 | Abortive draw from triple ron under rules that disallow it. |
 | suukan_sanra | 四槓散了 | Four Kan Abort | 四槓散了 | Abortive draw after four kans without a qualifying win. |
@@ -107,10 +107,10 @@ Use these conventions when adding new terms:
 | suucha_riichi | 四家立直 | Four Riichi Abort | 四家立直 | Abortive draw after all four players declare riichi. |
 | kyuushu_kyuuhai | 九種九牌 | Nine Terminals Abort | 九種九牌 | Abortive draw from nine terminal/honor starting hand. |
 
-## Yaku (役)
+## Yaku
 
-| Code | 日本語 | English | 中文 | Notes |
-|------|--------|---------|------|-------|
+| Code | Japanese | English | Traditional Chinese | Notes |
+|------|----------|---------|---------------------|-------|
 | riichi | 立直 | Riichi | 立直 | Yaku name. |
 | double_riichi | ダブルリーチ | Double Riichi | 雙立直 | Yaku name. |
 | ippatsu | 一発 | Ippatsu | 一發 | |
@@ -154,10 +154,10 @@ Use these conventions when adding new terms:
 | chiitoitsu | 七対子 | Seven Pairs | 七對子 | |
 | nagashi_mangan | 流し満貫 | Nagashi Mangan | 流局滿貫 | Special win/score event. |
 
-## Wait Shapes (待ち)
+## Wait Shapes
 
-| Code | 日本語 | English | 中文 | Notes |
-|------|--------|---------|------|-------|
+| Code | Japanese | English | Traditional Chinese | Notes |
+|------|----------|---------|---------------------|-------|
 | ryanmen | 両面 | Two-Sided Wait | 兩面 | |
 | penchan | 辺張 | Edge Wait | 邊張 | |
 | kanchan | 嵌張 | Closed Wait | 嵌張 | |
@@ -165,10 +165,10 @@ Use these conventions when adding new terms:
 | shabo | シャボ | Pair-Pair Wait | 雙碰 | |
 | machi | 待ち | Wait | 聽牌形 | Generic wait shape. |
 
-## Scoring Limits (点数)
+## Scoring Limits
 
-| Code | 日本語 | English | 中文 | Notes |
-|------|--------|---------|------|-------|
+| Code | Japanese | English | Traditional Chinese | Notes |
+|------|----------|---------|---------------------|-------|
 | han | 翻 | Han | 翻 | Han value. |
 | fu | 符 | Fu | 符 | Fu value. |
 | mangan | 満貫 | Mangan | 滿貫 | |
@@ -181,18 +181,18 @@ Use these conventions when adding new terms:
 | pao | 包 | Pao | 包牌 | Responsibility payment rule for specific yakuman hands. |
 | tobi | 飛び | Bankruptcy | 飛 | Player score dropping below zero. |
 
-## Dora and Bonus Indicators (ドラ)
+## Dora and Bonus Indicators
 
-| Code | 日本語 | English | 中文 | Notes |
-|------|--------|---------|------|-------|
+| Code | Japanese | English | Traditional Chinese | Notes |
+|------|----------|---------|---------------------|-------|
 | dora | ドラ | Dora | 寶牌 | Bonus tile. |
 | red_dora | 赤ドラ | Red Dora | 赤寶牌 | Red five bonus tile. |
 | ura_dora | 裏ドラ | Ura Dora | 裏寶牌 | Hidden dora revealed after riichi wins. |
 
-## Defensive and Hand-State Concepts (守備・手牌状態)
+## Defensive and Hand-State Concepts
 
-| Code | 日本語 | English | 中文 | Notes |
-|------|--------|---------|------|-------|
+| Code | Japanese | English | Traditional Chinese | Notes |
+|------|----------|---------|---------------------|-------|
 | furiten | 振聴 | Furiten | 振聽 | Cannot ron due to discard/win-pass constraints. |
 | temp_furiten | 一時振聴 | Temporary Furiten | 暫時振聽 | Temporary furiten after passing a ron opportunity. |
 | menzen | 門前 | Fully Concealed | 門前 | Closed hand with no open melds. |
@@ -207,10 +207,10 @@ Use these conventions when adding new terms:
 | river | 河 | Discard River | 牌河 | Discard river. |
 | ryuukyoku | 流局 | Exhaustive Draw | 流局 | Drawn hand. |
 
-## Table Position and Multi-Win Rules (席順・複数和了)
+## Table Position and Multi-Win Rules
 
-| Code | 日本語 | English | 中文 | Notes |
-|------|--------|---------|------|-------|
+| Code | Japanese | English | Traditional Chinese | Notes |
+|------|----------|---------|---------------------|-------|
 | shimocha | 下家 | Shimocha | 下家 | Player to the left in turn order. |
 | toimen | 対面 | Toimen | 對家 | Player across the table. |
 | kamicha | 上家 | Kamicha | 上家 | Player to the right in turn order. |

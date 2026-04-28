@@ -1,38 +1,38 @@
-# PyRiichi - Python 日本麻將引擎
+# PyRiichi - Python Riichi Mahjong Engine
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-一個功能完整的 Python 日本麻將（Riichi Mahjong）遊戲引擎，提供完整的規則實現、役種判定、得分計算和遊戲流程管理。
+A full-featured Python Japanese riichi mahjong game engine with rule implementation, yaku detection, score calculation, and game-flow management.
 
-## 功能特色
+## Features
 
-- 🎴 **完整的牌組系統** - 支援標準 136 張麻將牌，包含紅寶牌和寶牌計算
-- 🎯 **和牌判定** - 精確的和牌判定算法，支援標準型和特殊型
-- 🏆 **役種系統** - 實現所有標準役種（立直、斷么九、平和等）和役滿
-- 💰 **得分計算** - 準確的符數、翻數和點數計算，符合日本麻將規則
-- 🎮 **遊戲引擎** - 完整的遊戲流程控制，支援吃、碰、槓、立直等操作
-- 📊 **狀態管理** - 局數、風、本場、供託等遊戲狀態管理
-- 🤖 **AI 玩家** - 內建多種 AI 策略（隨機、簡單啟發式、防守型），支援自動對局
-- ⚙️ **規則配置** - 支援標準競技規則和自定義規則配置
-- 🔧 **易於整合** - 清晰的 API 設計，易於整合到其他應用程式
+- 🎴 **Complete tile system** - Supports the standard 136-tile mahjong set, including Red Dora and dora calculation.
+- 🎯 **Winning-hand detection** - Accurate winning-hand detection for standard and special shapes.
+- 🏆 **Yaku system** - Implements standard yaku such as Riichi, Tanyao, Pinfu, and yakuman.
+- 💰 **Score calculation** - Accurate fu, han, and point calculation following Japanese riichi mahjong rules.
+- 🎮 **Game engine** - Complete game-flow control, including chi, pon, kan, riichi, and related operations.
+- 📊 **State management** - Round Number, winds, honba, kyoutaku, and other game-state management.
+- 🤖 **AI players** - Built-in AI strategies: random, simple heuristic, and defensive, with automatic game support.
+- ⚙️ **Ruleset configuration** - Supports standard competitive rules and custom rulesets.
+- 🔧 **Easy integration** - Clear API design for integration into other applications.
 
-## 專案資訊
+## Project Info
 
-- **專案狀態**：Development Status :: 3 - Alpha
-- **支援關鍵字**：mahjong、riichi、japanese、game、engine
-- **首頁**：<https://github.com/d4n1elchen/pyriichi>
-- **文件**：<https://github.com/d4n1elchen/pyriichi#readme>
-- **問題回報**：<https://github.com/d4n1elchen/pyriichi/issues>
-- **原始碼**：<https://github.com/d4n1elchen/pyriichi>
+- **Project status**: Development Status :: 3 - Alpha
+- **Keywords**: mahjong, riichi, japanese, game, engine
+- **Homepage**: <https://github.com/d4n1elchen/pyriichi>
+- **Documentation**: <https://github.com/d4n1elchen/pyriichi#readme>
+- **Issues**: <https://github.com/d4n1elchen/pyriichi/issues>
+- **Source**: <https://github.com/d4n1elchen/pyriichi>
 
-## 安裝
+## Installation
 
 ```bash
 pip install pyriichi
 ```
 
-或從源碼安裝：
+Or install from source:
 
 ```bash
 git clone https://github.com/d4n1elchen/pyriichi.git
@@ -40,15 +40,15 @@ cd pyriichi
 pip install -e .
 ```
 
-## 快速開始
+## Quick Start
 
-### 基本使用
+### Basic Usage
 
 ```python
 from pyriichi.rules import RuleEngine, GameAction, GamePhase
 from pyriichi.player import RandomPlayer
 
-# 初始化遊戲與玩家
+# Initialize the game and players.
 engine = RuleEngine(num_players=4)
 players = [RandomPlayer(f"Player {i}") for i in range(4)]
 
@@ -56,104 +56,105 @@ engine.start_game()
 engine.start_round()
 engine.deal()
 
-print(f"遊戲開始！當前階段: {engine.get_phase()}")
+print(f"Game started. Current phase: {engine.get_phase()}")
 
-# 遊戲主循環
+# Main game loop.
 while engine.get_phase() == GamePhase.PLAYING:
     current_player_idx = engine.get_current_player()
     player = players[current_player_idx]
 
-    # 獲取可用動作
+    # Get available actions.
     actions = engine.get_available_actions(current_player_idx)
-    if not actions: break
+    if not actions:
+        break
 
-    # 檢查是否有等待回應的動作（鳴牌/榮和）
+    # Check whether there are pending interrupt actions such as calls or ron.
     if engine.waiting_for_actions:
         for pid, p_actions in engine.waiting_for_actions.items():
-            # 處理中斷邏輯...
+            # Handle interrupt logic here.
             pass
         continue
 
-    # AI 決定動作
+    # Let the AI decide an action.
     action, tile = player.decide_action(
         engine.game_state,
         current_player_idx,
         engine.get_hand(current_player_idx),
-        actions
+        actions,
     )
 
-    print(f"玩家 {current_player_idx} 執行: {action.name}" + (f" {tile}" if tile else ""))
+    print(f"Player {current_player_idx} executes: {action.name}" + (f" {tile}" if tile else ""))
 
-    # 執行動作
+    # Execute the action.
     result = engine.execute_action(current_player_idx, action, tile)
 
-    # 檢查結果
+    # Check the result.
     if result.winners:
-        print("和牌！")
+        print("Win!")
         break
 ```
 
-### 牌的表示和操作
+### Tile Representation and Operations
 
-#### 字串表示法
+#### String Notation
 
-PyRiichi 使用簡潔的字串格式來表示麻將牌，方便輸入和顯示：
+PyRiichi uses compact string notation for mahjong tiles, making input and display convenient.
 
-**基本格式**：`數字 + 花色字母`
+**Basic format**: `number + suit letter`
 
-- **萬子（MANZU）**：使用 `m` 表示
-  - `1m` = 一萬, `2m` = 二萬, ..., `9m` = 九萬
+- **Manzu**: use `m`.
+  - `1m` = one manzu, `2m` = two manzu, ..., `9m` = nine manzu.
 
-- **筒子（PINZU）**：使用 `p` 表示
-  - `1p` = 一筒, `2p` = 二筒, ..., `9p` = 九筒
+- **Pinzu**: use `p`.
+  - `1p` = one pinzu, `2p` = two pinzu, ..., `9p` = nine pinzu.
 
-- **條子（SOUZU）**：使用 `s` 表示
-  - `1s` = 一條, `2s` = 二條, ..., `9s` = 九條
+- **Souzu**: use `s`.
+  - `1s` = one souzu, `2s` = two souzu, ..., `9s` = nine souzu.
 
-- **字牌（HONORS）**：使用 `z` 表示
-  - `1z` = 東, `2z` = 南, `3z` = 西, `4z` = 北
-  - `5z` = 白, `6z` = 發, `7z` = 中
+- **Honors**: use `z`.
+  - `1z` = east, `2z` = south, `3z` = west, `4z` = north.
+  - `5z` = haku, `6z` = hatsu, `7z` = chun.
 
-**紅寶牌表示**：使用 `r` 前綴（標準格式）
-- `r5p` = 紅五筒（紅寶牌）
-- `r5s` = 紅五條（紅寶牌）
-- `r5m` = 紅五萬（紅寶牌）
+**Red Dora notation**: use the `r` prefix.
+- `r5p` = red five pinzu.
+- `r5s` = red five souzu.
+- `r5m` = red five manzu.
 
-**注意**：這是日本麻將社區廣泛使用的標準格式，輸入和輸出格式統一為 `r5p`。
+**Note**: This is the standard format widely used in the Japanese mahjong community. Input and output both use the `r5p` style.
 
-**示例**：
+**Examples**:
 ```python
 from pyriichi import Tile, Suit, TileSet, parse_tiles, format_tiles
 
-# 創建單張牌
-tile = Tile(Suit.MANZU, 1)  # 一萬
-print(tile)  # 輸出: 1m
+# Create one tile.
+tile = Tile(Suit.MANZU, 1)
+print(tile)  # Output: 1m
 
-# 從字符串解析牌
+# Parse tiles from a string.
 tiles = parse_tiles("1m2m3m4p5p6p7s8s9s")
-print(format_tiles(tiles))  # 輸出: 1m2m3m4p5p6p7s8s9s
+print(format_tiles(tiles))  # Output: 1m2m3m4p5p6p7s8s9s
 
-# 解析包含紅寶牌的牌（標準格式：r5p）
-red_tiles = parse_tiles("r5p6p7p")  # 紅五筒、六筒、七筒
-print(format_tiles(red_tiles))  # 輸出: r5p6p7p（格式一致）
+# Parse tiles with Red Dora, using the standard r5p format.
+red_dora_tiles = parse_tiles("r5p6p7p")
+print(format_tiles(red_dora_tiles))  # Output: r5p6p7p
 
-# 解析字牌
-honor_tiles = parse_tiles("1z2z3z5z6z7z")  # 東南西北白發中
-print(format_tiles(honor_tiles))  # 輸出: 1z2z3z5z6z7z
+# Parse honors.
+honor_tiles = parse_tiles("1z2z3z5z6z7z")
+print(format_tiles(honor_tiles))  # Output: 1z2z3z5z6z7z
 
-# 創建和洗牌
+# Create and shuffle a tile set.
 tile_set = TileSet()
 tile_set.shuffle()
-hands = tile_set.deal()  # 發牌給 4 個玩家
+hands = tile_set.deal()  # Deal to 4 players.
 ```
 
-**注意事項**：
-- 字串中可以包含空格或其他字符，`parse_tiles()` 會自動跳過無效字符
-- 多張牌可以連續寫在一起，例如：`"1m2m3m"` 表示三張萬子
-- 使用 `format_tiles()` 可以將牌列表轉換回字串格式
-- **紅寶牌格式**：使用標準格式 `r5p`（r 前綴），輸入和輸出格式一致，支持往返轉換
+**Notes**:
+- Strings may contain spaces or other characters; `parse_tiles()` skips invalid characters automatically.
+- Multiple tiles can be written continuously, such as `"1m2m3m"` for three manzu tiles.
+- Use `format_tiles()` to convert a tile list back to string notation.
+- **Red Dora format**: use the standard `r5p` format with an `r` prefix. Input and output are consistent and support round-trip conversion.
 
-### 遊戲流程控制
+### Game Flow Control
 
 ```python
 from pyriichi import RuleEngine, GameAction
@@ -163,99 +164,100 @@ engine.start_game()
 engine.start_round()
 engine.deal()
 
-# 摸牌
+# Draw.
 current_player = engine.get_current_player()
 result = engine.execute_action(current_player, GameAction.DRAW)
 if result.drawn_tile is not None:
-    print(f"摸到: {result.drawn_tile}")
+    print(f"Drew: {result.drawn_tile}")
 
-# 打牌
+# Discard.
 hand = engine.get_hand(current_player)
 if hand.tiles:
     discard_tile = hand.tiles[0]
     engine.execute_action(current_player, GameAction.DISCARD, tile=discard_tile)
 
-# 檢查和牌
+# Check win.
 winning_result = engine.check_win(current_player, winning_tile)
 if winning_result:
-    print(f"和牌！翻數: {winning_result.han}, 符數: {winning_result.fu}")
-    print(f"得分: {winning_result.points}")
+    print(f"Win! Han: {winning_result.han}, fu: {winning_result.fu}")
+    print(f"Score: {winning_result.points}")
 ```
 
-### 手牌操作
+### Hand Operations
 
 ```python
 from pyriichi import Hand, parse_tiles
 
-# 創建手牌
+# Create a hand.
 tiles = parse_tiles("1m2m3m4p5p6p7s8s9s1z2z3z4z")
 hand = Hand(tiles)
 
-# 摸牌
+# Draw.
 from pyriichi import Tile, Suit
 new_tile = Tile(Suit.MANZU, 5)
 hand.add_tile(new_tile)
 
-# 打牌
+# Discard.
 hand.discard(new_tile)
 
-# 檢查聽牌
+# Check tenpai.
 if hand.is_tenpai():
-    waiting_tiles = hand.get_waiting_tiles()
-    print(f"聽牌: {waiting_tiles}")
+    machi_tiles = hand.get_machi_tiles()
+    print(f"Machi tiles: {machi_tiles}")
 
-# 檢查和牌
+# Check winning hand.
 winning_tile = Tile(Suit.MANZU, 1)
 if hand.is_winning_hand(winning_tile):
     combinations = hand.get_winning_combinations(winning_tile)
-    print(f"和牌組合數量: {len(combinations)}")
+    print(f"Number of winning combinations: {len(combinations)}")
     if combinations:
-        # get_winning_combinations 返回 List[List[Combination]]
+        # get_winning_combinations returns List[List[Combination]].
         winning_combination = combinations[0]
-        print("第一個和牌組合:", winning_combination)
+        print("First winning combination:", winning_combination)
 ```
 
-### 鳴牌操作
+### Calls
 
 ```python
 from pyriichi import Hand, Tile, Suit
 
-hand = Hand([...])  # 手牌
+hand = Hand([...])  # Hand tiles.
 
-# 檢查是否可以碰
+# Check pon.
 tile = Tile(Suit.PINZU, 5)
 if hand.can_pon(tile):
     meld = hand.pon(tile)
-    print(f"碰: {meld}")
+    print(f"Pon: {meld}")
 
-# 檢查是否可以吃（只能吃上家的牌）
-if hand.can_chi(tile, from_player=0):  # 0 表示上家
+# Check chi, which can only be called from kamicha.
+if hand.can_chi(tile, from_player=0):  # 0 means kamicha.
     sequences = hand.can_chi(tile, from_player=0)
     if sequences:
         meld = hand.chi(tile, sequences[0])
-        print(f"吃: {meld}")
+        print(f"Chi: {meld}")
 ```
 
-### 役種判定
+### Yaku Detection
 
 ```python
 from pyriichi import YakuChecker, Hand, GameState, parse_tiles
 from pyriichi.tiles import Tile, Suit
 
 yaku_checker = YakuChecker()
-# 創建一個和牌型手牌
+
+# Create a winning hand.
 tiles = parse_tiles("1m2m3m4p5p6p7s8s9s2m3m4m5p")
 hand = Hand(tiles)
 winning_tile = Tile(Suit.PINZU, 5)
 
-# 獲取和牌組合（注意：需要轉換為 List）
+# Get winning combinations. Convert the first combination to a list when needed.
 winning_combinations = hand.get_winning_combinations(winning_tile)
 if winning_combinations:
-    winning_combination = list(winning_combinations[0])  # 轉換為 List
+    winning_combination = list(winning_combinations[0])
 
     game_state = GameState(num_players=4)
 
-    # 檢查所有役種
+    # Check all yaku.
     yaku_results = yaku_checker.check_all(
         hand=hand,
         winning_tile=winning_tile,
@@ -266,15 +268,15 @@ if winning_combinations:
     )
 
     for result in yaku_results:
-        print(f"{result.yaku.zh} ({result.yaku.ja}): {result.han} 翻")
+        print(f"{result.yaku.en}: {result.han} han")
 
-# 檢查特定役種
+# Check a specific yaku.
 riichi_results = yaku_checker.check_riichi(hand, game_state, is_ippatsu=True)
 for result in riichi_results:
-    print(f"{result.yaku.zh}: {result.han} 翻")
+    print(f"{result.yaku.en}: {result.han} han")
 ```
 
-### 得分計算
+### Score Calculation
 
 ```python
 from pyriichi import ScoreCalculator, YakuChecker, Hand, GameState, parse_tiles
@@ -283,19 +285,19 @@ from pyriichi.tiles import Tile, Suit
 score_calculator = ScoreCalculator()
 yaku_checker = YakuChecker()
 
-# 創建一個和牌型手牌
+# Create a winning hand.
 tiles = parse_tiles("1m2m3m4p5p6p7s8s9s2m3m4m5p")
 hand = Hand(tiles)
 winning_tile = Tile(Suit.PINZU, 5)
 
-# 獲取和牌組合（注意：需要轉換為 List）
+# Get winning combinations. Convert the first combination to a list when needed.
 winning_combinations = hand.get_winning_combinations(winning_tile)
 if winning_combinations:
     winning_combination = winning_combinations[0]
 
     game_state = GameState(num_players=4)
 
-    # 先檢查役種
+    # Check yaku first.
     yaku_results = yaku_checker.check_all(
         hand=hand,
         winning_tile=winning_tile,
@@ -305,10 +307,10 @@ if winning_combinations:
         player_position=0,
     )
 
-    dora_count = 0  # 寶牌數量
-    is_tsumo = True  # 是否自摸
+    dora_count = 0
+    is_tsumo = True
 
-    # 計算得分
+    # Calculate score.
     score_result = score_calculator.calculate(
         hand=hand,
         winning_tile=winning_tile,
@@ -320,240 +322,240 @@ if winning_combinations:
         player_position=0,
     )
 
-    print(f"翻數: {score_result.han}")
-    print(f"符數: {score_result.fu}")
-    print(f"基本點: {score_result.base_points}")
-    print(f"總點數: {score_result.total_points}")
-    print(f"是否役滿: {score_result.is_yakuman}")
-    print(f"是否自摸: {score_result.is_tsumo}")
+    print(f"Han: {score_result.han}")
+    print(f"Fu: {score_result.fu}")
+    print(f"Base points: {score_result.base_points}")
+    print(f"Total points: {score_result.total_points}")
+    print(f"Yakuman: {score_result.is_yakuman}")
+    print(f"Tsumo: {score_result.is_tsumo}")
 ```
 
-### 遊戲狀態管理
+### Game State Management
 
 ```python
 from pyriichi import GameState, Wind
 
-# 創建遊戲狀態（默認使用標準競技規則）
+# Create a game state with the default standard competitive rules.
 game_state = GameState(num_players=4)
 
-# 設置局數
-game_state.set_round(Wind.EAST, 1)  # 東一局
-game_state.set_dealer(0)  # 玩家 0 為莊家
+# Set the round.
+game_state.set_round(Wind.EAST, 1)  # East 1.
+game_state.set_dealer(0)  # Player 0 is dealer.
 
-# 查詢狀態
-print(f"當前局: {game_state.round_wind} {game_state.round_number}")
-print(f"莊家: 玩家 {game_state.dealer}")
-print(f"本場數: {game_state.honba}")
-print(f"供託棒: {game_state.riichi_sticks}")
+# Query state.
+print(f"Current round: {game_state.round_wind} {game_state.round_number}")
+print(f"Dealer: Player {game_state.dealer}")
+print(f"Honba: {game_state.honba}")
+print(f"Riichi sticks: {game_state.riichi_sticks}")
 
-# 更新點數
-game_state.update_score(0, 1000)  # 玩家 0 獲得 1000 點
-print(f"玩家點數: {game_state.scores}")
+# Update score.
+game_state.update_score(0, 1000)  # Player 0 gains 1000 points.
+print(f"Player scores: {game_state.scores}")
 
-# 進入下一局
+# Advance to the next round.
 game_state.next_round()
 ```
 
-### 規則配置
+### Ruleset Configuration
 
-PyRiichi 支援標準競技規則和自定義規則配置：
+PyRiichi supports standard competitive rules and custom ruleset configuration.
 
 ```python
 from pyriichi import GameState, RulesetConfig
 from pyriichi.rules_config import RenhouPolicy
 
-# 1. 使用默認標準競技規則
+# 1. Use the default standard competitive rules.
 game_state = GameState(num_players=4)
-# game_state.ruleset 已經是 RulesetConfig.standard()
+# game_state.ruleset is already RulesetConfig.standard().
 
-# 2. 自定義規則配置
+# 2. Custom ruleset configuration.
 custom_ruleset = RulesetConfig(
-    renhou_policy=RenhouPolicy.YAKUMAN,  # 人和為役滿
-    pinfu_require_ryanmen=False,  # 平和不檢查兩面聽
+    renhou_policy=RenhouPolicy.YAKUMAN,  # Renhou is yakuman.
+    pinfu_require_ryanmen=False,  # Pinfu does not require ryanmen.
     chanta_enabled=True,
-    chanta_closed_han=2,  # 全帶么九（門清）2翻
-    chanta_open_han=1,  # 全帶么九（副露）1翻
-    junchan_closed_han=3,  # 純全帶么九（門清）3翻
-    junchan_open_han=2,  # 純全帶么九（副露）2翻
-    suuankou_tanki_double=False,  # 四暗刻單騎為單倍役滿
-    pure_chuuren_poutou_double=False,  # 純正九蓮寶燈為單倍役滿
+    chanta_closed_han=2,  # Chanta closed: 2 han.
+    chanta_open_han=1,  # Chanta open: 1 han.
+    junchan_closed_han=3,  # Junchan closed: 3 han.
+    junchan_open_han=2,  # Junchan open: 2 han.
+    suuankou_tanki_double=False,  # Suuankou Tanki is single yakuman.
+    pure_chuuren_poutou_double=False,  # Pure Chuuren Poutou is single yakuman.
 )
 game_state_custom = GameState(num_players=4, ruleset=custom_ruleset)
 
-# 規則配置會影響役種判定
-print(f"人和規則: {game_state.ruleset.renhou_policy.value}")  # 標準: "two_han"
-print(f"平和需要兩面聽: {game_state.ruleset.pinfu_require_ryanmen}")  # 標準: True
+# Ruleset configuration affects yaku detection.
+print(f"Renhou policy: {game_state.ruleset.renhou_policy.value}")  # Standard: "two_han".
+print(f"Pinfu requires ryanmen: {game_state.ruleset.pinfu_require_ryanmen}")  # Standard: True.
 ```
 
-**標準競技規則特點**：
-- 人和為 2 翻（非役滿）
-- 平和必須是兩面聽
-- 全帶么九：門清 2 翻，副露 1 翻
-- 純全帶么九：門清 3 翻，副露 2 翻
-- 四暗刻單騎為雙倍役滿（26 翻）
-- 四歸一不啟用
+**Standard competitive rule characteristics**:
+- Renhou is 2 han, not yakuman.
+- Pinfu must be ryanmen.
+- Chanta: closed 2 han, open 1 han.
+- Junchan: closed 3 han, open 2 han.
+- Suuankou Tanki is double yakuman, 26 han.
+- Four Returns is disabled.
 
-### 完整遊戲示例
+### Complete Game Example
 
 ```python
 from pyriichi import RuleEngine, GameAction, GamePhase
 
-# 初始化遊戲
+# Initialize the game.
 engine = RuleEngine(num_players=4)
 engine.start_game()
 engine.start_round()
 engine.deal()
 
-# 遊戲主循環
-max_turns = 100  # 防止無限循環
+# Main game loop.
+max_turns = 100  # Prevent infinite loops.
 turn_count = 0
 
 while engine.get_phase() == GamePhase.PLAYING and turn_count < max_turns:
     turn_count += 1
     current_player = engine.get_current_player()
 
-    # 摸牌
+    # Draw.
     result = engine.execute_action(current_player, GameAction.DRAW)
     if result.draw:
-        # 流局
-        print("流局")
+        # Ryuukyoku.
+        print("Ryuukyoku")
         break
 
     hand = engine.get_hand(current_player)
     drawn_tile = result.drawn_tile
 
-    # 檢查和牌（自摸）
+    # Check win by tsumo.
     if drawn_tile:
         win_result = engine.check_win(current_player, drawn_tile)
         if win_result:
-            print(f"玩家 {current_player} 自摸！")
-            print(f"翻數: {win_result.han}, 符數: {win_result.fu}")
-            print(f"得分: {win_result.points}")
+            print(f"Player {current_player} wins by tsumo!")
+            print(f"Han: {win_result.han}, fu: {win_result.fu}")
+            print(f"Score: {win_result.points}")
             break
 
-    # 檢查是否可以立直
+    # Check whether riichi can be declared.
     if GameAction.DECLARE_RIICHI in engine.get_available_actions(current_player):
-        # 這裡可以加入玩家的立直決策邏輯
-        # 例如：if hand.is_tenpai() and player_decision():
+        # Add player riichi decision logic here.
+        # For example: if hand.is_tenpai() and player_decision():
         pass
 
-    # 打牌（簡單策略：打第一張）
+    # Discard, using a simple strategy: discard the first tile.
     if hand.tiles:
         discard_tile = hand.tiles[0]
         engine.execute_action(current_player, GameAction.DISCARD, tile=discard_tile)
-        print(f"玩家 {current_player} 打出: {discard_tile}")
+        print(f"Player {current_player} discards: {discard_tile}")
 
-print("遊戲結束")
+print("Game ended")
 ```
 
-## 核心 API
+## Core API
 
-### 主要類別
+### Main Classes
 
-- **`RuleEngine`** - 遊戲規則引擎，管理整個遊戲流程
-- **`Hand`** - 手牌管理器，處理手牌操作和判定
-- **`TileSet`** - 牌組管理器，處理發牌和洗牌
-- **`GameState`** - 遊戲狀態管理器，管理局數、點數等
-- **`YakuChecker`** - 役種判定器，檢查所有役種
-- **`ScoreCalculator`** - 得分計算器，計算符數、翻數和點數
-- **`RulesetConfig`** - 規則配置類，支援標準競技規則和自定義規則
-- **`BasePlayer`** - AI 玩家基類
+- **`RuleEngine`** - Game rule engine that manages the full game flow.
+- **`Hand`** - Hand manager that handles hand operations and detection.
+- **`TileSet`** - Tile set manager that handles dealing and shuffling.
+- **`GameState`** - Game state manager for rounds, scores, and related state.
+- **`YakuChecker`** - Yaku detector that checks all yaku.
+- **`ScoreCalculator`** - Score calculator for fu, han, and points.
+- **`RulesetConfig`** - Ruleset configuration class for standard competitive rules and custom rules.
+- **`BasePlayer`** - Base class for AI players.
 
-### AI 玩家
+### AI Players
 
-PyRiichi 內建多種 AI 策略，可用於測試或對戰：
+PyRiichi includes several built-in AI strategies for testing or play.
 
-- **`RandomPlayer`**: 完全隨機行動，適合模糊測試。
-- **`SimplePlayer`**: 簡單啟發式策略（優先和牌 > 立直 > 切字牌）。
-- **`DefensivePlayer`**: 帶有防守意識的 AI，有人立直時會優先切現物（安全牌）。
+- **`RandomPlayer`**: completely random actions, useful for fuzz testing.
+- **`SimplePlayer`**: simple heuristic strategy: prioritize win, then riichi, then discard honors.
+- **`DefensivePlayer`**: defensive AI that prioritizes genbutsu when another player has declared riichi.
 
 ```python
 from pyriichi.player import SimplePlayer, DefensivePlayer
 
-# 創建不同策略的玩家
+# Create players with different strategies.
 p1 = SimplePlayer("Attacker")
 p2 = DefensivePlayer("Defender")
 ```
 
-### 主要枚舉
+### Main Enums
 
-- **`GameAction`** - 遊戲動作類型（摸牌、打牌、吃、碰等）
-- **`GamePhase`** - 遊戲階段（初始化、發牌、遊戲中、結束等）
-- **`Suit`** - 花色（萬、筒、條、字）
-- **`Wind`** - 風（東、南、西、北）
-- **`MeldType`** - 副露類型（吃、碰、槓、暗槓）
+- **`GameAction`** - Game action types, such as draw, discard, chi, and pon.
+- **`GamePhase`** - Game phases, such as initialization, dealing, playing, and ended.
+- **`Suit`** - Suits: manzu, pinzu, souzu, honors.
+- **`Wind`** - Winds: east, south, west, north.
+- **`MeldType`** - Meld types: chi, pon, kan, closed kan.
 
-### 便利函數
+### Utility Functions
 
-- **`parse_tiles(tile_string)`** - 從字符串解析牌
-- **`format_tiles(tiles)`** - 將牌列表格式化為字符串
-- **`is_winning_hand(tiles, winning_tile)`** - 快速檢查是否和牌
+- **`parse_tiles(tile_string)`** - Parse tiles from a string.
+- **`format_tiles(tiles)`** - Format a tile list as a string.
+- **`is_winning_hand(tiles, winning_tile)`** - Quickly check whether the tiles form a winning hand.
 
-## 完整功能列表
+## Complete Feature List
 
-### 已實現功能
+### Implemented Features
 
-- ✅ 牌組系統（標準 136 張牌）
-- ✅ 手牌基本操作（摸牌、打牌）
-- ✅ 遊戲流程控制（發牌、回合管理）
-- ✅ 遊戲狀態管理（局數、風、點數）
-- ✅ 和牌判定算法（支援標準型和特殊型）
-- ✅ 聽牌判定
-- ✅ 吃、碰、槓操作
-- ✅ 役種判定系統（包含所有標準役種和役滿）
-- ✅ 得分計算系統（符數、翻數、點數計算）
-- ✅ 流局處理（九種九牌等）
-- ✅ 規則配置系統（支援標準競技規則和自定義規則）
-- ✅ 基礎 API 架構
+- ✅ Tile set system, standard 136 tiles.
+- ✅ Basic hand operations: draw and discard.
+- ✅ Game flow control: dealing and turn management.
+- ✅ Game state management: Round Number, winds, and scores.
+- ✅ Winning-hand detection algorithm for standard and special shapes.
+- ✅ Tenpai detection.
+- ✅ Chi, pon, and kan operations.
+- ✅ Yaku detection system, including all standard yaku and yakuman.
+- ✅ Score calculation system: fu, han, and points.
+- ✅ Ryuukyoku handling, including Kyuushu Kyuuhai.
+- ✅ Ruleset configuration system for standard competitive rules and custom rules.
+- ✅ Basic API structure.
 
-### 注意事項
+### Notes
 
-- `get_winning_combinations()` 返回 `List[List[Combination]]`，可以直接使用：
+- `get_winning_combinations()` returns `List[List[Combination]]` and can be used directly:
   ```python
   combinations = hand.get_winning_combinations(winning_tile)
   if combinations:
       winning_combination = combinations[0]
   ```
 
-## 文檔
+## Documentation
 
-- [API 設計文檔](API_DESIGN.md) - 完整的 API 接口定義
-- [API 快速參考](API_SUMMARY.md) - API 快速參考指南
-- [需求規格](REQUIREMENTS.md) - 詳細的功能需求
-- [開發計劃](DEVELOPMENT_PLAN.md) - 開發計劃和時間表
+- [API design document](API_DESIGN.md) - Complete API interface definitions.
+- [API quick reference](API_SUMMARY.md) - Quick API reference guide.
+- [Requirements specification](REQUIREMENTS.md) - Detailed functional requirements.
+- [Development plan](DEVELOPMENT_PLAN.md) - Development plan and timeline.
 
-## 範例程式
+## Examples
 
-更多完整範例請查看 `examples/` 目錄：
+See the `examples/` directory for more complete examples:
 
-- `basic_usage.py` - 基本使用示例
+- `basic_usage.py` - Basic usage example.
 
-## 系統需求
+## System Requirements
 
-- Python 3.8 至 3.12（官方支援版本）
-- 核心功能無其他外部依賴
+- Python 3.8 to 3.12, officially supported versions.
+- Core features have no external dependencies.
 
-## 開發與測試
+## Development and Testing
 
-- 建議於虛擬環境中安裝專案依賴
-- 安裝完整開發工具：`pip install ".[dev]"`
-  - 內容包含：pytest>=7.0.0、pytest-cov>=4.0.0、black>=23.0.0、flake8>=6.0.0、mypy>=1.0.0
-- 僅安裝測試工具：`pip install ".[test]"`
-  - 內容包含：pytest>=7.0.0、pytest-cov>=4.0.0
+- Install project dependencies in a virtual environment.
+- Install the full development toolchain: `pip install ".[dev]"`.
+  - Includes pytest>=7.0.0, pytest-cov>=4.0.0, black>=23.0.0, flake8>=6.0.0, and mypy>=1.0.0.
+- Install only test tools: `pip install ".[test]"`.
+  - Includes pytest>=7.0.0 and pytest-cov>=4.0.0.
 
-## 貢獻
+## Contributing
 
-歡迎透過 Issue 與 Pull Request 參與開發，並於 `dev`/`test` 額外依賴協助維護測試品質。
+Issues and pull requests are welcome. Use the `dev` and `test` extras to help maintain test quality.
 
-## 授權
+## License
 
-本專案採用 MIT 授權條款，詳見 `LICENSE`。
+This project is licensed under the MIT License. See `LICENSE` for details.
 
-## 相關資源
+## Related Resources
 
-- [日本麻將規則](https://zh.wikipedia.org/wiki/日本麻雀)
-- [役種列表](https://zh.wikipedia.org/wiki/日本麻雀#役)
+- [Riichi mahjong rules](https://en.wikipedia.org/wiki/Japanese_Mahjong)
+- [List of yaku](https://en.wikipedia.org/wiki/Japanese_Mahjong_yaku)
 
 ---
 
-**注意**：本專案正在積極開發中，部分功能可能尚未完全實現。詳情請參考開發計劃文檔。
+**Note**: This project is under active development, and some features may not be fully implemented yet. See the development plan for details.

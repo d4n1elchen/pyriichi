@@ -1,210 +1,220 @@
-# PyRiichi API 接口摘要
+# PyRiichi API Summary
 
-本文檔提供 PyRiichi API 的快速參考。
+This document provides a quick reference for the PyRiichi API.
 
-## 核心類別
+## Core Classes
 
-### 1. 牌組系統
+### 1. Tile System
 
 #### `Tile`
-單張麻將牌
-- `suit`: 花色 (Suit)
-- `rank`: 數字 (1-9)
-- `is_red`: 是否紅寶牌
-- `is_honor`: 是否字牌
-- `is_terminal`: 是否老頭牌
-- `is_simple`: 是否中張牌
+Single mahjong tile.
+- `suit`: tile suit.
+- `rank`: tile rank, 1-9.
+- `is_red_dora`: whether the tile is Red Dora.
+- `is_honor`: whether the tile is an honor tile.
+- `is_terminal`: whether the tile is a terminal tile.
+- `is_simple`: whether the tile is a simple tile.
 
 #### `TileSet`
-牌組管理器
-- `shuffle()`: 洗牌
-- `deal(num_players=4)`: 發牌
-- `draw()`: 摸牌
-- `get_dora_indicators(count)`: 獲取寶牌指示牌
-- `get_dora(indicator)`: 獲取寶牌
+Tile set manager.
+- `shuffle()`: shuffle tiles.
+- `deal(num_players=4)`: deal starting hands.
+- `draw()`: draw a tile.
+- `draw_rinshan()`: draw a rinshan tile.
+- `get_dora_indicators(count=None)`: get dora indicators.
+- `get_ura_dora_indicators(count=None)`: get Ura Dora indicators.
+- `get_dora(indicator)`: get the dora tile from an indicator.
 
-### 2. 手牌管理
+### 2. Hand Management
 
 #### `Hand`
-手牌管理器
-- `add_tile(tile)`: 摸牌
-- `discard(tile)`: 打牌
-- `can_chi(tile, from_player)`: 檢查是否可以吃
-- `chi(tile, sequence)`: 執行吃
-- `can_pon(tile)`: 檢查是否可以碰
-- `pon(tile)`: 執行碰
-- `can_kan(tile)`: 檢查是否可以槓
-- `kan(tile, kan_tiles)`: 執行槓
-- `is_tenpai()`: 是否聽牌
-- `is_winning_hand(winning_tile)`: 是否和牌
-- `get_winning_combinations(winning_tile, is_tsumo=False)`: 獲取和牌組合
+Hand manager.
+- `add_tile(tile)`: add a drawn tile.
+- `discard(tile)`: discard a tile.
+- `can_chi(tile, from_player)`: check whether chi is possible.
+- `chi(tile, sequence)`: perform chi.
+- `can_pon(tile)`: check whether pon is possible.
+- `pon(tile)`: perform pon.
+- `can_kan(tile=None)`: check whether kan is possible.
+- `kan(tile)`: perform kan.
+- `is_tenpai()`: check whether the hand is tenpai.
+- `get_machi_tiles()`: get machi tiles.
+- `is_winning_hand(winning_tile)`: check whether the hand is winning.
+- `get_winning_combinations(winning_tile, is_tsumo=False)`: get winning combinations.
 
 #### `Meld`
-副露（明刻、明順、明槓、暗槓）
-- `meld_type`: 副露類型
-- `tiles`: 牌列表
-- `called_tile`: 被鳴的牌
+Meld, including open triplets, open sequences, open kans, and closed kans.
+- `type`: meld type.
+- `tiles`: tile list.
+- `called_tile`: called tile.
+- `is_open`: whether the meld is open.
 
-### 3. 遊戲狀態
+### 3. Game State
 
 #### `GameState`
-遊戲狀態管理器
-- `round_wind`: 當前局風
-- `round_number`: 當前局數
-- `dealer`: 莊家位置
-- `honba`: 本場數
-- `riichi_sticks`: 供託棒數
-- `scores`: 玩家點數列表
-- `set_round(wind, number)`: 設置局數
-- `next_round()`: 下一局
-- `update_score(player, points)`: 更新點數
+Game state manager.
+- `round_wind`: current round_wind.
+- `round_number`: current Round Number.
+- `dealer`: dealer position.
+- `seat_winds`: Seat Wind for each player.
+- `honba`: honba count.
+- `riichi_sticks`: Riichi Stick count.
+- `scores`: player score list.
+- `set_round(wind, number)`: set the round.
+- `set_dealer(dealer)`: set the dealer.
+- `next_round(dealer_won=False)`: advance to the next round.
+- `update_score(player, points)`: update a player's score.
 
-### 4. 規則引擎
+### 4. Rule Engine
 
 #### `RuleEngine`
-遊戲規則引擎
-- `start_game()`: 開始新遊戲
-- `start_round()`: 開始新一局
-- `deal()`: 發牌
-- `get_current_player()`: 獲取當前玩家
-- `get_phase()`: 獲取遊戲階段
-- `get_available_actions(player)`: 取得玩家可執行的動作列表
-- `execute_action(player, action, tile)`: 執行動作
-- `check_win(player, winning_tile)`: 檢查和牌
-- `check_draw()`: 檢查流局
-- `get_hand(player)`: 獲取玩家手牌
-- `get_game_state()`: 獲取遊戲狀態
-- `waiting_for_actions`: (屬性) 獲取當前等待回應的玩家及其可用動作
+Game rule engine.
+- `start_game()`: start a new game.
+- `start_round()`: start a new round.
+- `deal()`: deal tiles.
+- `get_current_player()`: get the current player.
+- `get_phase()`: get the game phase.
+- `get_available_actions(player)`: get the player's available actions.
+- `execute_action(player, action, tile=None, **kwargs)`: execute an action.
+- `check_win(player, winning_tile, is_tsumo=False, **kwargs)`: check a win.
+- `check_ryuukyoku()`: check ryuukyoku.
+- `get_hand(player)`: get a player's hand.
+- `get_discards(player)`: get a player's discards.
+- `get_game_state()`: get the game state.
+- `waiting_for_actions`: property containing players currently waiting for responses and their available actions.
 
 #### `ActionResult`
-動作執行結果
-- `success`: 動作是否成功
-- `phase`: 當前遊戲階段
-- `drawn_tile`: 摸到的牌 (如果是摸牌動作)
-- `discarded`: 是否執行了打牌
-- `winners`: 和牌玩家列表
-- `win_results`: 和牌結果詳情
-- `ryuukyoku`: 是否流局
-- `waiting_for`: 等待回應的玩家及其動作 (Dict[int, List[GameAction]])
+Action execution result.
+- `success`: whether the action succeeded.
+- `phase`: current game phase.
+- `drawn_tile`: drawn tile, for draw actions.
+- `discarded`: whether a discard was executed.
+- `winners`: winning player list.
+- `win_results`: detailed win results.
+- `ryuukyoku`: ryuukyoku result, when the round ended in a draw.
+- `waiting_for`: players waiting for responses and their actions, `Dict[int, List[GameAction]]`.
+- `message`: optional result message.
 
-#### `GameAction` (枚舉)
-遊戲動作類型
-- `DRAW`: 摸牌 (通常自動執行，除非特殊情況)
-- `DISCARD`: 打牌
-- `CHI`: 吃
-- `PON`: 碰
-- `KAN`: 槓
-- `DECLARE_ANKAN`: 暗槓
-- `DECLARE_RIICHI`: 立直
-- `DECLARE_KYUUSHU_KYUUHAI`: 九種九牌
-- `WIN`: 和牌
-- `TSUMO`: 自摸
-- `RON`: 榮和
-- `PASS`: 過 (用於放棄鳴牌或榮和機會)
+#### `GameAction` Enum
+Game action types.
+- `DRAW`: draw a tile, usually automatic except in special cases.
+- `DISCARD`: discard a tile.
+- `CHI`: chi.
+- `PON`: pon.
+- `KAN`: kan.
+- `DECLARE_ANKAN`: declare closed kan.
+- `DECLARE_RIICHI`: declare riichi.
+- `DECLARE_KYUUSHU_KYUUHAI`: declare Kyuushu Kyuuhai.
+- `WIN`: win.
+- `TSUMO`: tsumo.
+- `RON`: ron.
+- `PASS`: pass on a call or ron opportunity.
 
-#### `GamePhase` (枚舉)
-遊戲階段
-- `INIT`: 初始化
-- `DEALING`: 發牌
-- `PLAYING`: 遊戲中
-- `WINNING`: 和牌
-- `DRAW`: 流局
-- `ENDED`: 結束
+#### `GamePhase` Enum
+Game phases.
+- `INIT`: initialization.
+- `DEALING`: dealing.
+- `PLAYING`: playing.
+- `WINNING`: winning.
+- `DRAW`: drawn round.
+- `ENDED`: ended.
 
-### 5. 役種判定
+### 5. Yaku Detection
 
 #### `YakuChecker`
-役種判定器
-- `check_all(hand, winning_tile, winning_combination, game_state, is_tsumo=False, is_ippatsu=False, is_first_turn=False, is_last_tile=False, player_position=0, is_rinshan=False)`: 檢查所有役種
-- `check_riichi(hand, game_state, is_ippatsu=False)`: 檢查立直與一發
-- `check_tanyao(hand, winning_combination)`: 檢查斷么九
-- `check_pinfu(hand, winning_combination)`: 檢查平和
-- 其他役種檢查方法...
+Yaku detector.
+- `check_all(hand, winning_tile, winning_combination, game_state, is_tsumo=False, is_ippatsu=False, is_first_turn=False, is_last_tile=False, player_position=0, is_rinshan=False)`: check all yaku.
+- `check_riichi(hand, game_state, is_ippatsu=False)`: check Riichi and Ippatsu.
+- `check_tanyao(hand, winning_combination)`: check Tanyao.
+- `check_pinfu(hand, winning_combination)`: check Pinfu.
+- `check_chiitoitsu(hand)`: check Chiitoitsu.
+- `check_chanta(hand, winning_combination)`: check Chanta.
+- Other yaku check methods.
 
 #### `YakuResult`
-役種判定結果
-- `name`: 役種名稱（日文）
-- `name_en`: 役種名稱（英文）
-- `name_cn`: 役種名稱（中文）
-- `han`: 翻數
-- `is_yakuman`: 是否役滿
+Yaku detection result.
+- `yaku`: yaku enum value.
+- `han`: han value.
+- `is_yakuman`: whether the yaku is yakuman.
 
-### 6. 得分計算
+### 6. Score Calculation
 
 #### `ScoreCalculator`
-得分計算器
-- `calculate(hand, winning_tile, winning_combination, yaku_results, dora_count, game_state, is_tsumo, player_position=0)`: 計算得分
-- `calculate_fu(hand, winning_tile, winning_combination, yaku_results, game_state, is_tsumo, player_position=0)`: 計算符數
-- `calculate_han(yaku_results, dora_count)`: 計算翻數
+Score calculator.
+- `calculate(hand, winning_tile, winning_combination, yaku_results, dora_count, game_state, is_tsumo, player_position=0)`: calculate score.
+- `calculate_fu(hand, winning_tile, winning_combination, yaku_results, game_state, is_tsumo, player_position=0)`: calculate fu.
+- `calculate_han(yaku_results, dora_count)`: calculate han.
 
 #### `ScoreResult`
-得分計算結果
-- `han`: 翻數
-- `fu`: 符數
-- `base_points`: 基本點
-- `total_points`: 總點數
-- `payment_from`: 支付者位置
-- `payment_to`: 獲得者位置
-- `is_yakuman`: 是否役滿
-- `yakuman_count`: 役滿倍數
-- `is_tsumo`: 是否自摸
-- `dealer_payment`: 莊家支付（自摸時）
-- `non_dealer_payment`: 閒家支付（自摸時）
-- `honba_bonus`: 本場獎勵
-- `riichi_sticks_bonus`: 供託分配
+Score calculation result.
+- `han`: han value.
+- `fu`: fu value.
+- `base_points`: base points.
+- `total_points`: total points.
+- `payment_from`: paying player position.
+- `payment_to`: receiving player position.
+- `is_yakuman`: whether the hand is yakuman.
+- `yakuman_count`: yakuman multiplier.
+- `is_tsumo`: whether the win is tsumo.
+- `dealer_payment`: dealer payment for tsumo.
+- `non_dealer_payment`: non-dealer payment for tsumo.
+- `honba_bonus`: honba bonus.
+- `riichi_sticks_bonus`: kyoutaku distribution.
+- `pao_player`: responsible player for pao, when applicable.
+- `pao_payment`: pao payment amount.
 
-### 7. AI 玩家系統
+### 7. AI Player System
 
 #### `BasePlayer`
-玩家基類 (Abstract Base Class)
-- `decide_action(game_state, player_index, hand, available_actions, public_info)`: 決定下一步動作
+Player base class, abstract base class.
+- `decide_action(game_state, player_index, hand, available_actions, public_info=None)`: decide the next action.
 
 #### `RandomPlayer`
-隨機行動 AI
-- 策略：隨機選擇合法動作，優先和牌
+Random-action AI.
+- Strategy: randomly choose legal actions, prioritizing wins.
 
 #### `SimplePlayer`
-簡單啟發式 AI
-- 策略：優先和牌 > 優先立直 > 切字牌/老頭牌
+Simple heuristic AI.
+- Strategy: prioritize win, then riichi, then discard honors or terminals.
 
 #### `DefensivePlayer`
-防守型 AI
-- 策略：有人立直時優先切現物（安全牌），否則同 `SimplePlayer`
+Defensive AI.
+- Strategy: when another player has declared riichi, prioritize genbutsu; otherwise use `SimplePlayer` behavior.
 
 #### `PublicInfo`
-公開遊戲資訊
-- `discards`: 各家捨牌
-- `melds`: 各家副露
-- `riichi_players`: 立直玩家列表
+Public game information.
+- `discards`: discards for each player.
+- `melds`: melds for each player.
+- `riichi_players`: list of players who declared riichi.
 
-## 便利函數
+## Utility Functions
 
 ### `parse_tiles(tile_string)`
-從字符串解析牌
+Parse tiles from a string.
 ```python
 tiles = parse_tiles("1m2m3m4p5p6p")
 ```
 
 ### `format_tiles(tiles)`
-將牌列表格式化為字符串
+Format a tile list as a string.
 ```python
 s = format_tiles([Tile(Suit.MANZU, 1), Tile(Suit.PINZU, 5)])
 ```
 
 ### `is_winning_hand(tiles, winning_tile)`
-快速檢查是否和牌
+Quickly check whether the hand is winning.
 ```python
 if is_winning_hand(tiles, winning_tile):
-    print("和牌！")
+    print("Win!")
 ```
 
-## 使用示例
+## Usage Example
 
 ```python
 from pyriichi.rules import RuleEngine, GameAction, GamePhase
 from pyriichi.player import RandomPlayer
 
-# 初始化遊戲與玩家
+# Initialize the game and players.
 engine = RuleEngine(num_players=4)
 players = [RandomPlayer(f"Player {i}") for i in range(4)]
 
@@ -212,27 +222,28 @@ engine.start_game()
 engine.start_round()
 engine.deal()
 
-# 遊戲主循環
+# Main game loop.
 while engine.get_phase() == GamePhase.PLAYING:
     current_player_idx = engine.get_current_player()
     player = players[current_player_idx]
 
-    # 獲取可用動作
+    # Get available actions.
     actions = engine.get_available_actions(current_player_idx)
-    if not actions: break
+    if not actions:
+        break
 
-    # AI 決定動作
+    # Let the AI decide an action.
     action, tile = player.decide_action(
         engine.game_state,
         current_player_idx,
         engine.get_hand(current_player_idx),
-        actions
+        actions,
     )
 
-    # 執行動作
+    # Execute the action.
     engine.execute_action(current_player_idx, action, tile)
 ```
 
-## 詳細文檔
+## Detailed Documentation
 
-完整 API 文檔請參考 `API_DESIGN.md`。
+For complete API documentation, see `API_DESIGN.md`.

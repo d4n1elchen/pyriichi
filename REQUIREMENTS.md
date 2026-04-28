@@ -1,391 +1,391 @@
-# PyRiichi 詳細需求規格書
-
-## 1. 系統概述
-
-PyRiichi 是一個完整的日本麻將遊戲引擎，實現標準的日本麻將規則，包括完整的役種判定和得分計算系統。
-
-## 2. 功能需求
-
-### 2.1 牌組系統
-
-#### 2.1.1 牌型定義
-- **萬子牌（萬）**：1-9 萬，每種 4 張，共 36 張
-- **筒子牌（筒）**：1-9 筒，每種 4 張，共 36 張
-- **條子牌（索）**：1-9 條，每種 4 張，共 36 張
-- **字牌**：
-  - 風牌：東、南、西、北，每種 4 張，共 16 張
-  - 三元牌：白、發、中，每種 4 張，共 12 張
-- **總計**：136 張牌
-
-#### 2.1.2 牌表示方式
-- 使用標準化的牌 ID 或枚舉
-- 支援牌的比較和排序
-- 支援牌的字串表示（用於顯示和調試）
-
-#### 2.1.3 牌組操作
-- 洗牌
-- 發牌（每人 13 張，莊家 14 張）
-- 摸牌
-- 牌組剩餘數量查詢
-
-### 2.2 手牌管理
-
-#### 2.2.1 手牌表示
-- 13 張手牌（莊家 14 張）
-- 已打出的牌
-- 副露（明刻、明槓、明順）
-- 暗刻、暗槓
-
-#### 2.2.2 手牌操作
-- 打牌
-- 吃（チー）- 從上家取得順子
-- 碰（ポン）- 取得刻子
-- 槓（カン）- 取得槓子
-- 聽牌判定
-- 和牌判定
-
-### 2.3 遊戲規則
-
-#### 2.3.1 基本流程
-1. **配牌**：每人發 13 張，莊家 14 張
-2. **摸牌**：從牌山頂端摸一張牌
-3. **打牌**：選擇一張牌打出
-4. **鳴牌**：其他玩家可以吃、碰、槓
-5. **和牌**：達成和牌條件時宣告和牌
-6. **流局**：流局時進行點數計算
-
-#### 2.3.2 和牌條件
-- 基本型：4 組面子（順子/刻子）+ 1 對子
-- 特殊型：七對子、國士無雙、十三不搭等
-- 必須至少有一個役（Yaku）
-
-#### 2.3.3 聽牌判定
-- 判斷當前手牌是否聽牌
-- 計算聽牌數量
-- 列出所有可能的和牌牌型
-
-#### 2.3.4 流局處理
-- **流局滿貫**：特定條件下的流局得分
-- **途中流局**：
-  - 四風連打
-  - 九種九牌
-  - 四家立直
-  - 四槓散了
-
-#### 2.3.5 特殊規則
-- **振聽（フリテン）**：
-  - **現物振聽**：自己打過的牌，不能榮和
-  - **同巡振聽**：聽牌後，自己或他家打出和牌牌而未和，同巡內不能榮和
-  - **立直振聽**：立直後，若錯過和牌或放過和牌，永久不能榮和（只能自摸）
-- **包牌（パオ）**：
-  - 大三元、大四喜確定時，最後一張副露的提供者需負全責（自摸全付，榮和對半）
-- **槓寶牌產生時機**：
-  - 暗槓：即時翻開槓寶牌指示牌
-  - 明槓（大明槓/加槓）：打牌後（或嶺上開花後）翻開
-- **同巡規則**：
-  - **頭跳（頭跳ね）**：若同時多家榮和，只有放銃者下家（按逆時針順序最近者）和牌（可選規則：雙響/三響）
-
-### 2.4 役種（Yaku）系統
-
-#### 2.4.1 基本役（1 翻）
-- **立直（リーチ）**：聽牌時宣告立直
-- **一發（一発）**：立直後一巡內和牌
-- **門清自摸（門前清自摸和）**：門清狀態下自摸
-- **斷么九（断么九）**：全部由中張牌（2-8）組成
-- **平和（平和）**：由順子和對子組成，無刻子
-- **一盃口（一盃口）**：門清狀態下，有兩組相同的順子
-- **役牌（役牌）**：場風、自風、三元牌刻子
-
-#### 2.4.2 特殊役（2-3 翻）
-- **雙立直（ダブルリーチ）**：第一巡宣告立直（2 翻）
-- **三色同順（三色同順）**：三種花色都有相同數字的順子
-- **三色同刻（三色同刻）**：三種花色都有相同數字的刻子
-- **一氣通貫（一気通貫）**：同一花色有 1-3、4-6、7-9 的順子
-- **對對和（対々和）**：全部由刻子組成
-- **三暗刻（三暗刻）**：有三組暗刻
-- **三槓子（三槓子）**：有三組槓子
-- **小三元（小三元）**：有三元牌刻子，其中一組是對子
-- **混老頭（混老頭）**：全部由幺九牌組成，且為對對和
-- **七對子（七対子）**：七組對子
-
-#### 2.4.3 高級役（滿貫以上）
-- **清一色（清一色）**：全部由同一花色組成（6 翻）
-- **混一色（混一色）**：由一種數牌和字牌組成（3 翻）
-- **純全帶么九（純全帯么九）**：所有面子都包含幺九牌（3 翻）
-- **混全帶么九（混全帯么九）**：所有面子都包含幺九牌（2 翻）
-- **二盃口（二盃口）**：兩組一盃口（3 翻）
-
-#### 2.4.4 役滿
-- **天和（天和）**：莊家配牌時就和牌
-- **地和（地和）**：閒家第一巡自摸和牌
-- **人和（人和）**：閒家第一巡榮和
-- **大三元（大三元）**：有三組三元牌刻子
-- **小四喜（小四喜）**：有四組風牌，其中一組是對子
-- **大四喜（大四喜）**：有四組風牌刻子
-- **四暗刻（四暗刻）**：四組都是暗刻
-- **四暗刻單騎（四暗刻単騎）**：四暗刻且聽牌時是單騎聽
-- **四槓子（四槓子）**：四組槓子
-- **九蓮寶燈（九蓮宝燈）**：清一色的特殊型
-- **純正九蓮寶燈（純正九蓮宝燈）**：九蓮寶燈的特殊型
-- **國士無雙（国士無双）**：十三種幺九牌各一張，其中一種兩張
-- **國士無雙十三面（国士無双十三面）**：國士無雙的特殊型
-- **綠一色（緑一色）**：全部由綠色牌組成（2、3、4、6、8 條，發）
-- **清老頭（清老頭）**：全部由老頭牌（1、9）組成
-- **字一色（字一色）**：全部由字牌組成
-- **四歸一（四帰一）**：同一種牌四張分別在四個順子中
-
-#### 2.4.5 役種判定要求
-- 支援複合役判定（多個役可以疊加）
-- 正確處理翻數疊加
-- 處理門清和非門清狀態
-- 處理特殊情況（如四暗刻的單騎聽）
-
-#### 2.4.6 役種複合規則
-
-**不能複合的役種組合**：
-
-1. **七對子（七対子）**
-   - 不能與標準型役種複合（如平和、一盃口、對對和等）
-   - 可以與內容型役種複合（如斷么九、混一色、清一色等）
-   - 原因：七對子是特殊和牌型，與標準型（4面子+1對子）結構互斥
-
-2. **平和（平和）**
-   - 不能與役牌（場風、自風、三元牌）複合
-   - 原因：平和要求雀頭必須是非役牌的對子
-   - 不能與對對和複合（對對和需要刻子，平和需要順子）
-   - 不能與一盃口、二盃口複合（平和只能有一個對子，杯口需要兩個相同順子）
-
-3. **斷么九（斷么九）**
-   - 不能與包含幺九牌的役種複合：
-     - 一氣通貫（一気通貫）：包含1和9的順子
-     - 純全帶么九（純全帯么九）：所有面子都包含幺九牌
-     - 混全帶么九（混全帯么九）：所有面子都包含幺九牌
-     - 混老頭（混老頭）：全部由幺九牌組成
-     - 清老頭（清老頭）：全部由老頭牌（1、9）組成
-   - 原因：斷么九要求全部由中張牌（2-8）組成，不能有幺九牌
-
-4. **對對和（対々和）**
-   - 不能與平和複合（平和需要順子，對對和需要刻子）
-   - 不能與一盃口、二盃口複合（杯口需要順子）
-   - 不能與三色同順複合（需要順子）
-   - 不能與一氣通貫複合（需要順子）
-   - 不能與二盃口複合（需要兩個相同順子）
-
-5. **一盃口（一盃口）與二盃口（二盃口）**
-   - 互相排斥：二盃口包含兩個一盃口，不能同時成立
-   - 不能與對對和複合（杯口需要順子，對對和需要刻子）
-   - 不能與平和複合（平和只能有一個對子，杯口需要兩個相同順子）
-
-6. **清一色（清一色）與混一色（混一色）**
-   - 互相排斥：不能同時成立（清一色要求純數牌，混一色要求數牌+字牌）
-   - 不能與三色同順、三色同刻複合（需要多種花色）
-
-7. **純全帶么九（純全帯么九）與混全帶么九（混全帯么九）**
-   - 互相排斥：不能同時成立（純全帶要求沒有字牌，混全帶可以有字牌）
-   - 不能與斷么九複合（都要求包含幺九牌）
-
-8. **役滿（役滿）**
-   - 役滿不與非役滿役種複合（除了立直）
-   - 多個役滿可以互相複合（如四暗刻+字一色）
-
-**可以複合的役種組合**：
-
-1. **立直（リーチ）**
-   - 可以與大部分役種複合（包括七對子、役滿）
-   - 原因：立直是宣告動作，不影響手牌結構
-
-2. **一發（一発）**
-   - 可以與立直複合（必須先有立直）
-   - 可以與其他役種複合
-
-3. **門清自摸（門前清自摸和）**
-   - 可以與門清狀態下的所有役種複合
-   - 不能與榮和複合（只能自摸和牌時成立）
-
-4. **役牌（場風、自風、三元牌）**
-   - 可以互相複合（場風+自風+三元牌可以同時存在）
-   - 可以與其他役種複合（除了平和）
-
-5. **三暗刻（三暗刻）**
-   - 可以與對對和複合（如果手牌是4個刻子+1個對子）
-
-6. **三色同刻（三色同刻）**
-   - 可以與對對和複合
-   - 可以與三暗刻複合
-
-7. **小三元（小三元）**
-   - 可以與對對和、三暗刻等複合
-
-**特殊情況**：
-
-- **國士無雙（国士無双）**：只能與立直複合（特殊和牌型）
-- **七對子（七対子）**：只能與立直複合（特殊和牌型）
-- **九蓮寶燈（九蓮宝燈）**：可以與清一色複合（實際上九蓮寶燈就是清一色的特殊型）
-
-### 2.5 得分計算系統
-
-#### 2.5.1 符數計算
-- **基本符**：20 符（和牌本身）
-- **副底符**：
-  - 門清榮和：+10 符
-  - 門清自摸：+2 符
-  - 非門清榮和：+0 符
-  - 非門清自摸：+2 符
-- **面子符**：
-  - 中張順子：0 符
-  - 幺九順子：0 符
-  - 中張刻子（明）：2 符
-  - 中張刻子（暗）：4 符
-  - 幺九刻子（明）：4 符
-  - 幺九刻子（暗）：8 符
-  - 中張槓子（明）：8 符
-  - 中張槓子（暗）：16 符
-  - 幺九槓子（明）：16 符
-  - 幺九槓子（暗）：32 符
-- **雀頭符**：
-  - 非役牌對子：0 符
-  - 役牌對子：2 符
-- **聽牌符**：
-  - 單騎聽：+2 符
-  - 邊張聽：+2 符
-  - 嵌張聽：+2 符
-  - 雙碰聽：+0 符
-  - 兩面聽：+0 符
-- **符數進位**：向上取整到 10（如 32 符進位到 40）
-
-#### 2.5.2 翻數計算
-- 基本翻數：從役種系統取得
-- 寶牌（ドラ）：
-  - 表寶牌：+1 翻/張
-  - 裡寶牌（立直時）：+1 翻/張
-  - 紅寶牌：+1 翻/張
-- 翻數疊加：所有翻數相加
-
-#### 2.5.3 點數計算
-- **基本點計算**：
-  - 基本點 = 符數 × 2^(翻數+2)
-  - 滿貫：2000 點（5 翻以上，或 4 翻 40 符以上）
-  - 跳滿：3000 點（6-7 翻）
-  - 倍滿：4000 點（8-10 翻）
-  - 三倍滿：6000 點（11-12 翻）
-  - 役滿：8000 點（13 翻以上或役滿）
-  - 倍役滿：16000 點（雙倍役滿）
-- **支付方式**：
-  - 自摸：莊家支付 2 倍，閒家支付 1 倍
-  - 榮和：放銃者支付全部
-  - 莊家額外支付：莊家自摸時，閒家需支付 2 倍
-- **本場和供託**：
-  - 本場：每流局一次 +300 點
-  - 供託：立直時支付的 1000 點，和牌者獲得
-- **不聽罰符（ノーテン罰符）**：
-  - 流局時，聽牌者從不聽者處獲得點數
-  - 總額 3000 點（1人聽：+3000/-1000x3；2人聽：+1500x2/-1500x2；3人聽：+1000x3/-3000）
-- **切上滿貫（切り上げ満貫）**：
-  - 30 符 4 翻 或 60 符 3 翻，直接計算為滿貫（可選規則）
-
-#### 2.5.4 特殊得分
-- **流局滿貫**：3000 點
-- **役滿**：8000 點（基本）
-- **倍役滿**：16000 點
-- **三倍役滿**：24000 點
-
-### 2.6 遊戲狀態管理
-
-#### 2.6.1 局數管理
-- **東風局**：東 1、東 2、東 3、東 4
-- **南風局**：南 1、南 2、南 3、南 4
-- **場風**：當前局的風
-- **自風**：每個玩家的風（東、南、西、北）
-
-#### 2.6.2 玩家狀態
-- 點數：初始 25000 點
-- 立直狀態
-- 門清狀態
-- 副露狀態
-
-#### 2.6.3 遊戲狀態
-- 當前回合玩家
-- 本場數
-- 供託棒數
-- 牌山剩餘牌數
-- 流局狀態
-
-#### 2.6.4 遊戲結束條件
-- **正常結束**：完成預定局數（如南 4 局結束）
-- **擊飛（トビ）**：任一玩家點數 < 0（可選規則：<= 0）
-- **途中流局**：九種九牌等導致的流局（連莊）
-- **西入（西入）**：南 4 局結束時無人達到目標點數（通常 30000），延長至西場
-- **安可（上がり止め）**：莊家在最後一局和牌且為第一名，可選擇結束遊戲
-
-### 2.7 違規處理（チョンボ）
-- **錯和**：沒聽牌宣告和牌、振聽宣告榮和等
-- **錯立直**：沒聽牌宣告立直（流局時被發現）
-- **罰則**：通常支付滿貫點數（莊家 4000 all / 閒家 2000/4000）或僅禁止和牌（放棄和牌）
-
-### 2.7 AI 玩家（可選功能）
-
-#### 2.7.1 基本 AI
-- 簡單的打牌策略
-- 基本的聽牌判斷
-- 基本的和牌判斷
-
-#### 2.7.2 進階 AI
-- 牌效率計算
-- 防守策略
-- 進攻策略
-- 立直判斷
-- 鳴牌判斷
-
-## 3. 非功能需求
-
-### 3.1 性能需求
-- 手牌判定響應時間 < 100ms
-- 役種判定響應時間 < 500ms
-- 支援多局連續遊戲
-
-### 3.2 可維護性
-- 清晰的代碼結構
-- 完整的文檔
-- 單元測試覆蓋率 > 80%
-
-### 3.3 可擴展性
-- 模組化設計
-- 易於添加新的役種
-- 易於修改規則
-
-### 3.4 可測試性
-- 所有核心功能都有對應測試
-- 測試用例覆蓋邊界情況
-
-## 4. 技術實現細節
-
-### 4.1 數據結構
-- 使用枚舉或常量表示牌型
-- 使用列表或集合管理手牌
-- 使用字典或結構體管理遊戲狀態
-
-### 4.2 演算法
-- 和牌判定：使用遞迴或狀態機
-- 役種判定：使用規則匹配
-- 聽牌判定：枚舉可能的手牌變換
-
-### 4.3 錯誤處理
-- 輸入驗證
-- 異常處理
-- 錯誤訊息提示
-
-## 5. 測試需求
-
-### 5.1 單元測試
-- 牌組操作測試
-- 手牌操作測試
-- 役種判定測試
-- 得分計算測試
-
-### 5.2 整合測試
-- 完整遊戲流程測試
-- 特殊情況測試（流局、役滿等）
-
-### 5.3 邊界測試
-- 極端情況處理
-- 錯誤輸入處理
+# PyRiichi Detailed Requirements Specification
+
+## 1. System Overview
+
+PyRiichi is a complete Japanese riichi mahjong game engine. It implements standard riichi mahjong rules, including full yaku detection and score calculation.
+
+## 2. Functional Requirements
+
+### 2.1 Tile System
+
+#### 2.1.1 Tile Type Definitions
+- **Manzu tiles**: 1-9 manzu, four copies each, 36 tiles total.
+- **Pinzu tiles**: 1-9 pinzu, four copies each, 36 tiles total.
+- **Souzu tiles**: 1-9 souzu, four copies each, 36 tiles total.
+- **Honor tiles**:
+  - Wind tiles: east, south, west, north, four copies each, 16 tiles total.
+  - Dragon tiles: haku, hatsu, chun, four copies each, 12 tiles total.
+- **Total**: 136 tiles.
+
+#### 2.1.2 Tile Representation
+- Use standardized tile IDs or enums.
+- Support tile comparison and sorting.
+- Support string representation for display and debugging.
+
+#### 2.1.3 Tile Set Operations
+- Shuffle.
+- Deal tiles, 13 tiles per player and 14 tiles for the dealer.
+- Draw tiles.
+- Query the number of remaining tiles.
+
+### 2.2 Hand Management
+
+#### 2.2.1 Hand Representation
+- 13-tile hands, or 14 tiles for the dealer.
+- Discarded tiles.
+- Melds: open triplets, open kans, and open sequences.
+- Concealed triplets and closed kans.
+
+#### 2.2.2 Hand Operations
+- Discard.
+- Chi: claim a sequence from kamicha.
+- Pon: claim a triplet.
+- Kan: claim or declare a kan.
+- Tenpai detection.
+- Winning-hand detection.
+
+### 2.3 Game Rules
+
+#### 2.3.1 Basic Flow
+1. **Deal**: deal 13 tiles to each player and 14 tiles to the dealer.
+2. **Draw**: draw one tile from the live wall.
+3. **Discard**: choose and discard one tile.
+4. **Call**: other players may chi, pon, or kan.
+5. **Win**: declare a win when the winning conditions are met.
+6. **Drawn round**: calculate points when the round ends in a draw.
+
+#### 2.3.2 Winning Conditions
+- Standard shape: four sets plus one pair.
+- Special shapes: Chiitoitsu, Kokushi Musou, and similar optional shapes.
+- The hand must have at least one yaku.
+
+#### 2.3.3 Tenpai Detection
+- Determine whether the current hand is tenpai.
+- Count waits.
+- List all possible winning tiles.
+
+#### 2.3.4 Ryuukyoku Handling
+- **Nagashi Mangan**: special draw score under specific conditions.
+- **Abortive draws**:
+  - Suufon Renda.
+  - Kyuushu Kyuuhai.
+  - Suucha Riichi.
+  - Suukan Sanra.
+
+#### 2.3.5 Special Rules
+- **Furiten**:
+  - **Genbutsu furiten**: a player cannot ron on a tile they previously discarded.
+  - **Temp Furiten**: after a player passes on a winning tile, they cannot ron during the same turn cycle.
+  - **Riichi furiten**: after declaring riichi, passing on a win creates permanent furiten, so the player can only win by tsumo.
+- **Pao**:
+  - When Daisangen or Daisuushi is confirmed, the player who provided the final called tile takes responsibility for payment.
+- **Kan dora timing**:
+  - Closed kan: reveal the kan dora indicator immediately.
+  - Open kan, including daiminkan and added kan: reveal the kan dora indicator after the discard, or after Rinshan when applicable.
+- **Same-discard rules**:
+  - **Head Bump**: when multiple players ron the same discard, only the winner closest to the discarder in turn order wins. Optional rules may allow Double Ron or Triple Ron.
+
+### 2.4 Yaku System
+
+#### 2.4.1 Basic Yaku, 1 Han
+- **Riichi**: declare riichi while tenpai.
+- **Ippatsu**: win within one uninterrupted turn after declaring riichi.
+- **Menzen Tsumo**: tsumo with a fully concealed hand.
+- **Tanyao**: all tiles are simples, 2-8.
+- **Pinfu**: sequence hand with a non-value pair and no fu from sets.
+- **Iipeikou**: fully concealed hand with two identical sequences.
+- **Yakuhai**: triplet of round_wind, seat_wind, or dragon tiles.
+
+#### 2.4.2 Special Yaku, 2-3 Han
+- **Double Riichi**: declare riichi on the first uninterrupted turn, 2 han.
+- **Sanshoku Doujun**: same-number sequence in all three suits.
+- **Sanshoku Doukou**: same-number triplet in all three suits.
+- **Ittsu**: 1-3, 4-6, and 7-9 sequences in one suit.
+- **Toitoi**: all sets are triplets or kans.
+- **Sanankou**: three concealed triplets.
+- **Sankantsu**: three kans.
+- **Shousangen**: two dragon triplets and one dragon pair.
+- **Honroutou**: all tiles are terminals and honors, normally paired with Toitoi or Chiitoitsu.
+- **Chiitoitsu**: seven pairs.
+
+#### 2.4.3 High-Value Yaku, Mangan and Above
+- **Chinitsu**: all tiles from one suit, 6 han closed.
+- **Honitsu**: one suit plus honors, 3 han closed.
+- **Junchan**: every set contains a terminal and there are no honors, 3 han closed.
+- **Chanta**: every set contains a terminal or honor, 2 han closed.
+- **Ryanpeikou**: two Iipeikou patterns, 3 han.
+
+#### 2.4.4 Yakuman
+- **Tenhou**: dealer wins from the initial hand.
+- **Chihou**: non-dealer wins by first-turn tsumo.
+- **Renhou**: non-dealer wins by first-turn ron.
+- **Daisangen**: triplets or kans of all three dragons.
+- **Shousuushi**: three wind triplets or kans plus a wind pair.
+- **Daisuushi**: four wind triplets or kans.
+- **Suuankou**: four concealed triplets.
+- **Suuankou Tanki**: Suuankou with a single wait.
+- **Suukantsu**: four kans.
+- **Chuuren Poutou**: special Chinitsu pattern.
+- **Pure Chuuren Poutou**: true nine-sided Chuuren Poutou pattern.
+- **Kokushi Musou**: one of each terminal and honor plus one duplicate.
+- **Kokushi Musou Juusanmen**: thirteen-sided Kokushi Musou wait.
+- **Ryuuiisou**: all green tiles.
+- **Chinroutou**: all terminals.
+- **Tsuuiisou**: all honors.
+- **Four Returns**: four copies of the same tile used across four sequences.
+
+#### 2.4.5 Yaku Detection Requirements
+- Support combined yaku detection.
+- Correctly add han values.
+- Handle closed and open hand states.
+- Handle special cases, such as Suuankou Tanki.
+
+#### 2.4.6 Yaku Combination Rules
+
+**Yaku combinations that cannot combine**:
+
+1. **Chiitoitsu**
+   - Cannot combine with standard-shape yaku such as Pinfu, Iipeikou, or Toitoi.
+   - Can combine with composition yaku such as Tanyao, Honitsu, or Chinitsu.
+   - Reason: Chiitoitsu is a special winning shape and is structurally incompatible with the standard four-sets-plus-one-pair shape.
+
+2. **Pinfu**
+   - Cannot combine with Yakuhai for round_wind, seat_wind, or dragon pair value.
+   - Reason: Pinfu requires a non-value pair.
+   - Cannot combine with Toitoi because Pinfu requires sequences and Toitoi requires triplets.
+   - Cannot combine with Iipeikou or Ryanpeikou in the current documented implementation because Pinfu only has one pair while those patterns require identical sequences.
+
+3. **Tanyao**
+   - Cannot combine with yaku that require terminals or honors:
+     - Ittsu: includes 1 and 9 sequences.
+     - Junchan: every set contains a terminal.
+     - Chanta: every set contains a terminal or honor.
+     - Honroutou: all tiles are terminals and honors.
+     - Chinroutou: all tiles are terminals.
+   - Reason: Tanyao requires all tiles to be simples, 2-8.
+
+4. **Toitoi**
+   - Cannot combine with Pinfu because Pinfu requires sequences and Toitoi requires triplets.
+   - Cannot combine with Iipeikou or Ryanpeikou because those require sequences.
+   - Cannot combine with Sanshoku Doujun because it requires sequences.
+   - Cannot combine with Ittsu because it requires sequences.
+   - Cannot combine with Ryanpeikou because it requires two identical sequence pairs.
+
+5. **Iipeikou and Ryanpeikou**
+   - Mutually exclusive: Ryanpeikou contains two Iipeikou patterns, so both should not be awarded together.
+   - Cannot combine with Toitoi because Iipeikou/Ryanpeikou require sequences and Toitoi requires triplets.
+   - Cannot combine with Pinfu in the current documented implementation because Pinfu only has one pair while Iipeikou/Ryanpeikou require identical sequences.
+
+6. **Chinitsu and Honitsu**
+   - Mutually exclusive: Chinitsu requires one pure suit; Honitsu requires one suit plus honors.
+   - Cannot combine with Sanshoku Doujun or Sanshoku Doukou because those require multiple suits.
+
+7. **Junchan and Chanta**
+   - Mutually exclusive: Junchan has no honors, while Chanta may contain honors.
+   - Cannot combine with Tanyao because both require terminals.
+
+8. **Yakuman**
+   - Yakuman do not combine with non-yakuman yaku, except Riichi in the current documented behavior.
+   - Multiple yakuman may combine, such as Suuankou plus Tsuuiisou.
+
+**Yaku combinations that can combine**:
+
+1. **Riichi**
+   - Can combine with most yaku, including Chiitoitsu and yakuman.
+   - Reason: Riichi is a declaration action and does not change hand structure.
+
+2. **Ippatsu**
+   - Can combine with Riichi, which is required first.
+   - Can combine with other yaku.
+
+3. **Menzen Tsumo**
+   - Can combine with all yaku that allow a fully concealed hand.
+   - Cannot combine with ron because it only applies to tsumo wins.
+
+4. **Yakuhai**
+   - Yakuhai may combine with each other, such as round_wind plus seat_wind plus dragon tiles.
+   - Can combine with other yaku except Pinfu.
+
+5. **Sanankou**
+   - Can combine with Toitoi if the hand has four triplets plus one pair.
+
+6. **Sanshoku Doukou**
+   - Can combine with Toitoi.
+   - Can combine with Sanankou.
+
+7. **Shousangen**
+   - Can combine with Toitoi, Sanankou, and similar yaku.
+
+**Special cases**:
+
+- **Kokushi Musou**: can only combine with Riichi in the documented implementation because it is a special winning shape.
+- **Chiitoitsu**: can only combine with Riichi in the documented implementation because it is a special winning shape.
+- **Chuuren Poutou**: can combine with Chinitsu because Chuuren Poutou is a special Chinitsu shape.
+
+### 2.5 Scoring System
+
+#### 2.5.1 Fu Calculation
+- **Base fu**: 20 fu for the win itself.
+- **Winning-method fu**:
+  - Fully concealed ron: +10 fu.
+  - Fully concealed tsumo: +2 fu.
+  - Open ron: +0 fu.
+  - Open tsumo: +2 fu.
+- **Set fu**:
+  - Simple sequence: 0 fu.
+  - Terminal/honor sequence: 0 fu.
+  - Open simple triplet: 2 fu.
+  - Concealed simple triplet: 4 fu.
+  - Open terminal/honor triplet: 4 fu.
+  - Concealed terminal/honor triplet: 8 fu.
+  - Open simple kan: 8 fu.
+  - Closed simple kan: 16 fu.
+  - Open terminal/honor kan: 16 fu.
+  - Closed terminal/honor kan: 32 fu.
+- **Pair fu**:
+  - Non-value pair: 0 fu.
+  - Yakuhai pair: 2 fu.
+- **Wait fu**:
+  - Tanki: +2 fu.
+  - Penchan: +2 fu.
+  - Kanchan: +2 fu.
+  - Shabo: +0 fu.
+  - Ryanmen: +0 fu.
+- **Fu rounding**: round up to the next 10, such as 32 fu to 40 fu.
+
+#### 2.5.2 Han Calculation
+- Base han comes from the yaku system.
+- Dora:
+  - Visible dora: +1 han per tile.
+  - Ura Dora after riichi: +1 han per tile.
+  - Red Dora: +1 han per tile.
+- Han stacking: add all han values.
+
+#### 2.5.3 Point Calculation
+- **Base point calculation**:
+  - Base points = fu x 2^(han+2).
+  - Mangan: 2000 base points, at 5+ han or 4 han 40+ fu.
+  - Haneman: 3000 base points, 6-7 han.
+  - Baiman: 4000 base points, 8-10 han.
+  - Sanbaiman: 6000 base points, 11-12 han.
+  - Yakuman: 8000 base points, 13+ han or yakuman.
+  - Double yakuman: 16000 base points.
+- **Payment method**:
+  - Tsumo: dealer pays 2x and non-dealers pay 1x.
+  - Ron: the discarder pays the full amount.
+  - Dealer bonus payment: when the dealer wins by tsumo, non-dealers pay 2x.
+- **Honba and kyoutaku**:
+  - Honba: +300 points per repeat or draw counter.
+  - Kyoutaku: the winner receives the 1000-point riichi deposits.
+- **Noten Bappu**:
+  - At ryuukyoku, tenpai players receive points from noten players.
+  - Total transfer is 3000 points: one tenpai player receives +3000 and three noten players pay -1000 each; two tenpai players receive +1500 each and two noten players pay -1500 each; three tenpai players receive +1000 each and one noten player pays -3000.
+- **Kiriage Mangan**:
+  - 30 fu 4 han and 60 fu 3 han are scored directly as mangan when the optional rule is enabled.
+
+#### 2.5.4 Special Scores
+- **Nagashi Mangan**: 3000 base points.
+- **Yakuman**: 8000 base points.
+- **Double Yakuman**: 16000 base points.
+- **Triple Yakuman**: 24000 base points.
+
+### 2.6 Game State Management
+
+#### 2.6.1 Round Management
+- **East round**: East 1, East 2, East 3, East 4.
+- **South round**: South 1, South 2, South 3, South 4.
+- **Round Wind**: wind of the current round.
+- **Seat Wind**: each player's seat wind: east, south, west, or north.
+
+#### 2.6.2 Player State
+- Score: initial 25000 points.
+- Riichi state.
+- Fully concealed state.
+- Open meld state.
+
+#### 2.6.3 Game State
+- Current turn player.
+- Honba count.
+- Kyoutaku count.
+- Remaining live wall tiles.
+- Ryuukyoku state.
+
+#### 2.6.4 Game-End Conditions
+- **Normal end**: complete the scheduled rounds, such as ending after South 4.
+- **Tobi**: any player's score drops below 0, or at/below 0 under optional rules.
+- **Abortive draw**: Kyuushu Kyuuhai and similar abortive draws cause a dealer repeat.
+- **West round extension**: if nobody reaches the target score, usually 30000, after South 4, extend into the west round.
+- **Agari Yame**: when the last-round dealer wins while in first place, they may choose to end the game.
+
+### 2.7 Chombo Handling
+- **False win**: declaring a win while not tenpai, declaring ron while furiten, and similar violations.
+- **Invalid riichi**: declaring riichi while not tenpai, discovered at ryuukyoku.
+- **Penalty**: usually pay mangan-level points, 4000 all as dealer or 2000/4000 as non-dealer, or only forbid winning.
+
+### 2.7 AI Players, Optional Feature
+
+#### 2.7.1 Basic AI
+- Simple discard strategy.
+- Basic tenpai detection.
+- Basic winning-hand detection.
+
+#### 2.7.2 Advanced AI
+- Tile-efficiency calculation.
+- Defensive strategy.
+- Offensive strategy.
+- Riichi decision.
+- Call decision.
+
+## 3. Non-Functional Requirements
+
+### 3.1 Performance Requirements
+- Hand detection response time < 100 ms.
+- Yaku detection response time < 500 ms.
+- Support continuous multi-round games.
+
+### 3.2 Maintainability
+- Clear code structure.
+- Complete documentation.
+- Unit test coverage > 80%.
+
+### 3.3 Extensibility
+- Modular design.
+- Easy to add new yaku.
+- Easy to modify rules.
+
+### 3.4 Testability
+- All core features have corresponding tests.
+- Test cases cover edge cases.
+
+## 4. Technical Implementation Details
+
+### 4.1 Data Structures
+- Use enums or constants to represent tile types.
+- Use lists or sets to manage hands.
+- Use dictionaries or structures to manage game state.
+
+### 4.2 Algorithms
+- Winning-hand detection: use recursion or state machines.
+- Yaku detection: use rule matching.
+- Tenpai detection: enumerate possible hand transformations.
+
+### 4.3 Error Handling
+- Input validation.
+- Exception handling.
+- Clear error messages.
+
+## 5. Testing Requirements
+
+### 5.1 Unit Tests
+- Tile set operation tests.
+- Hand operation tests.
+- Yaku detection tests.
+- Score calculation tests.
+
+### 5.2 Integration Tests
+- Complete game flow tests.
+- Special-case tests, such as ryuukyoku and yakuman.
+
+### 5.3 Boundary Tests
+- Extreme case handling.
+- Invalid input handling.
