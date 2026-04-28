@@ -521,7 +521,8 @@ p2 = DefensivePlayer("Defender")
 
 - [API design document](API_DESIGN.md) - Complete API interface definitions.
 - [API quick reference](API_SUMMARY.md) - Quick API reference guide.
-- [Requirements specification](REQUIREMENTS.md) - Detailed functional requirements.
+- [Requirements](REQUIREMENTS.md) - Project-level requirements and links to rule requirements.
+- [Rule requirements](rules/README.md) - Split riichi rule requirements and implementation audit.
 - [Development plan](DEVELOPMENT_PLAN.md) - Development plan and timeline.
 
 ## Examples

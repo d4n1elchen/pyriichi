@@ -286,7 +286,7 @@
 #### 7.3 Documentation Improvements
 - [x] API documentation: `API_DESIGN.md`, `API_SUMMARY.md`.
 - [x] Usage examples: `examples/basic_usage.py`, `README.md`.
-- [x] Development documentation: `DEVELOPMENT_PLAN.md`, `REQUIREMENTS.md`.
+- [x] Development documentation: `DEVELOPMENT_PLAN.md`, `REQUIREMENTS.md`, and `rules/`.
 - [x] String notation explanation: detailed explanation in `README.md`.
 - [x] Red Dora format standardization: uses the Japanese mahjong community standard `r5m` format.
 - [ ] Detailed API reference documentation - pending, optional.
@@ -566,10 +566,10 @@ For new feature development, such as adding a new yaku:
 
 ### Documentation Improvements, 2025-11-21
 - ✅ **Terminology standardization**:
-  - Standardized Japanese mahjong terminology in `REQUIREMENTS.md` and the code.
+  - Standardized Japanese mahjong terminology in `REQUIREMENTS.md`, `rules/`, and the code.
   - Adopted the most common spellings used in Japanese mahjong games: katakana for actions and kanji for yaku names.
   - Updated translations in `yaku.py` and `rules.py`.
-- ✅ **`REQUIREMENTS.md` improvements**:
+- ✅ **Rule requirements improvements**:
   - Added missing standard rules: Double Riichi, Furiten, and Pao.
   - Added same-discard rules, Head Bump, and kan dora timing notes.
   - Added scoring rules: Noten Bappu and Kiriage Mangan.
@@ -646,7 +646,7 @@ For new feature development, such as adding a new yaku:
   - Score distribution logic must be modified.
 - [x] Kan dora timing rule - implemented: closed kan reveals immediately; open kan and added kan reveal after the discard.
 - [ ] **Same-discard rule, Head Bump**: handling for multiple ron.
-  - `REQUIREMENTS.md` currently documents this as "only the player closest to the discarder wins."
+  - `rules/game-flow.md` documents this as "only the winner closest to the discarder in turn order wins."
   - Optional rules: Double Ron and Triple Ron allow multiple winners.
   - Multiple-win handling must be implemented in `RuleEngine`.
 
@@ -728,14 +728,14 @@ For new feature development, such as adding a new yaku:
   - ✅ Supports standard Red Dora format: `r5m`, `r5p`, `r5s`.
   - ✅ Input and output formats are unified and support round-trip conversion.
 - ✅ Test coverage: 232 test cases, including unit and integration tests, covering all core features, special rules, and conflict detection; coverage is 87%.
-- ✅ Documentation: README, API design, development plan, and requirements specification are complete.
+- ✅ Documentation: README, API design, development plan, project requirements, and rule requirements are complete.
   - ✅ README includes a complete string-notation explanation.
   - ✅ Example code shows complete flows for winning-hand detection, yaku checking, and score calculation.
   - ✅ All examples use correct type conversion, such as `list(combinations[0])`.
-  - ✅ `REQUIREMENTS.md` completely records all standard Japanese riichi mahjong rules.
+  - ✅ `rules/` records standard Japanese riichi mahjong rules.
   - ✅ Japanese terms are standardized, using katakana for actions and kanji for yaku names.
 
-### ⚠️ Unimplemented Rules, Recorded in `REQUIREMENTS.md`
+### ⚠️ Unimplemented Rules, Recorded in `rules/implementation-audit.md`
 - ❌ Furiten: complete furiten rules, including Genbutsu, Temp Furiten, and Riichi furiten.
 - ❌ Pao: responsibility payment for Daisangen and Daisuushi.
 - ❌ Same-discard rule, Head Bump: multiple-ron handling.
