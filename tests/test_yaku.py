@@ -6,7 +6,7 @@ from pyriichi.game_state import GameState, Wind
 from pyriichi.hand import CombinationType, Hand, Meld, MeldType, make_combination
 from pyriichi.tiles import Suit, Tile
 from pyriichi.utils import parse_tiles
-from pyriichi.yaku import Yaku, YakuChecker
+from pyriichi.yaku import Yaku, YakuChecker, YakuResult
 
 
 class TestYakuChecker:
@@ -80,6 +80,48 @@ class TestYakuChecker:
             assert result is not None
             assert result.yaku == Yaku.IIPEIKOU
             assert result.han == 1
+
+    def test_pinfu_can_combine_with_iipeikou(self):
+        """Test pinfu can combine with iipeikou."""
+        tiles = parse_tiles("123m123m456p34s22z")
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.SOUZU, 2)
+        combinations = hand.get_winning_combinations(winning_tile)
+
+        assert combinations
+        results_by_combination = [
+            self.checker.check_all(
+                hand,
+                winning_tile,
+                list(combination),
+                self.game_state,
+                is_tsumo=False,
+                is_ippatsu=False,
+            )
+            for combination in combinations
+        ]
+
+        assert any(
+            any(result.yaku == Yaku.PINFU for result in results)
+            and any(result.yaku == Yaku.IIPEIKOU for result in results)
+            for results in results_by_combination
+        )
+
+    def test_pinfu_can_combine_with_ryanpeikou(self):
+        """Test pinfu can combine with ryanpeikou."""
+        results = [
+            YakuResult(Yaku.PINFU, 1, False),
+            YakuResult(Yaku.RYANPEIKOU, 3, False),
+        ]
+
+        filtered = self.checker._filter_conflicting_yaku(
+            results,
+            [],
+            self.game_state,
+        )
+
+        assert YakuResult(Yaku.PINFU, 1, False) in filtered
+        assert YakuResult(Yaku.RYANPEIKOU, 3, False) in filtered
 
     def test_yakuhai_haku_hatsu_chun(self):
         """Test yakuhai haku hatsu chun."""

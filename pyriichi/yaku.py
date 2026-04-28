@@ -468,12 +468,6 @@ class YakuChecker:
             if result.yaku == Yaku.TOITOI and Yaku.PINFU in yaku_set:
                 should_include = False
 
-            # 8. pinfu conflicts with iipeikou, ryanpeikou
-            if result.yaku == Yaku.PINFU and (
-                Yaku.IIPEIKOU in yaku_set or Yaku.RYANPEIKOU in yaku_set
-            ):
-                should_include = False
-
             if should_include:
                 filtered.append(result)
 

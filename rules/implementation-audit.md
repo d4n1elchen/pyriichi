@@ -25,7 +25,7 @@ This audit compares the current codebase against the rule requirements in this d
 | Abortive draws | Partial | Suufon Renda, Kyuushu Kyuuhai, Suucha Riichi, Suukan Sanra, and Sancha Ron exist; dealer-continuation behavior is incomplete. |
 | Yaku coverage | Partial | Most listed yaku exist, but several standard rule details do not match requirements. |
 | Open-hand reductions | Met | Chanta, Junchan, Sanshoku Doujun, Ittsu, Honitsu, and Chinitsu apply open-hand han reductions. |
-| Yaku combination filtering | Mismatch | Pinfu is still removed when Iipeikou or Ryanpeikou exists. Yakuman paths still add Riichi in some cases. Chiitoitsu combination handling is too narrow. |
+| Yaku combination filtering | Partial | Pinfu now combines with Iipeikou and Ryanpeikou. Yakuman paths still add Riichi in some cases. Chiitoitsu combination handling is too narrow. |
 | Scoring calculations | Partial | Fu, han, limits, payment rounding, honba, kyoutaku, Kiriage Mangan, Noten Bappu, and Pao have support, with important bugs noted below. |
 | Payment context | Mismatch | `ScoreCalculator.calculate()` computes payments before `payment_to` and `payment_from` are set, so dealer/non-dealer payment branches can be wrong. |
 | Pinfu tsumo fu | Mismatch | `calculate_fu()` returns 30 fu for Pinfu tsumo; requirement says Pinfu tsumo is 20 fu. |
@@ -63,9 +63,8 @@ This audit compares the current codebase against the rule requirements in this d
 ### Pinfu and Sequence Yaku
 
 - Requirement: Pinfu can combine with Iipeikou and Ryanpeikou.
-- Code: `_filter_conflicting_yaku()` still removes Pinfu when Iipeikou or Ryanpeikou exists.
-- Impact: valid hands are under-scored.
-- Suggested fix: remove that conflict rule.
+- Status: fixed.
+- Code: `_filter_conflicting_yaku()` no longer removes Pinfu when Iipeikou or Ryanpeikou exists.
 
 ### Yakuman and Non-Yakuman Yaku
 
