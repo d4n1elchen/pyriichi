@@ -549,6 +549,8 @@ class RuleEngine:
             if GameAction.RON in allowed_actions and action != GameAction.RON:
                 self._furiten_temp[player] = True
                 self._furiten_temp_round[player] = self._turn_count
+                if self._hands[player].is_riichi:
+                    self._furiten_permanent[player] = True
             del self._waiting_for_actions[player]
 
             # If all players responded, resolve decisions

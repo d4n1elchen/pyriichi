@@ -18,7 +18,7 @@ This audit compares the current codebase against the rule requirements in this d
 | Tenpai and machi listing | Met | Implemented, including decomposition paths where four identical concealed tiles can be used as a triplet plus a leftover tile. |
 | Action priority | Met | `_resolve_decisions()` prioritizes ron, then pon/kan, then chi. |
 | Multiple ron rules | Partial | Head Bump, Double Ron, Triple Ron, and Sancha Ron are represented, but multiple-ron score settlement is simplified. |
-| Furiten | Partial | Genbutsu and temp furiten exist; riichi furiten storage exists but is not set when a riichi player passes ron. |
+| Furiten | Met | Genbutsu, temp furiten, and permanent riichi furiten are implemented. |
 | Riichi action rules | Partial | Closed hand and tenpai-after-discard checks exist; 1000-point payment exists; remaining-wall requirement is not implemented. |
 | Ippatsu | Partial | Ippatsu tracking exists, but first-turn and interruption behavior needs broader verification. |
 | Kan and rinshan flow | Partial | Kan, closed kan, rinshan draw, Chankan, and Suukan Sanra exist; dora indicator timing is simplified through indicator count. |
@@ -105,9 +105,8 @@ This audit compares the current codebase against the rule requirements in this d
 ### Riichi Furiten
 
 - Requirement: passing ron after riichi creates permanent furiten.
-- Code: passing a ron opportunity sets temp furiten, but `_furiten_permanent` is not set for riichi players.
-- Impact: riichi furiten does not persist as required.
-- Suggested fix: when a riichi player passes ron, set `_furiten_permanent[player] = True`.
+- Status: fixed.
+- Code: passing a ron opportunity after riichi now sets both temp furiten and permanent riichi furiten.
 
 ### Pao Tracking
 

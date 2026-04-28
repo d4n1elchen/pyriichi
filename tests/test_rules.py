@@ -517,6 +517,25 @@ class TestRuleEngine:
         result = self.engine.check_win(0, winning_tile)
         assert result is None or result.win is False
 
+    def test_passing_ron_after_riichi_sets_permanent_furiten(self):
+        """Test passing ron after riichi sets permanent furiten."""
+        self._init_game()
+        player = 0
+        self.engine._hands[player] = Hand(parse_tiles("123456789m1234p"))
+        self.engine._hands[player].set_riichi(True)
+        self.engine._last_discarded_tile = Tile(Suit.PINZU, 4)
+        self.engine._last_discarded_player = 1
+        self.engine._waiting_for_actions = {
+            player: [GameAction.RON, GameAction.PASS],
+            2: [GameAction.PASS],
+        }
+
+        self.engine.execute_action(player, GameAction.PASS)
+
+        assert self.engine.check_furiten_temp(player) is True
+        assert self.engine.check_furiten_riichi(player) is True
+        assert self.engine.is_furiten(player) is True
+
     def test_furiten_riichi_can_tsumo(self):
         """Test riichi furiten: Can tsumo even if permanent furiten"""
         self._init_game()
