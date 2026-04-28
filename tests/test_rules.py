@@ -696,6 +696,43 @@ class TestRuleEngine:
         for i in range(4):
             assert self.engine._game_state.scores[i] == initial_scores[i]
 
+    def test_exhaustive_draw_dealer_tenpai_renchan(self):
+        """Test exhaustive_draw dealer tenpai renchan."""
+        self._init_game()
+        self.engine._game_state.set_dealer(0)
+        self.engine._game_state.set_round(Wind.EAST, 1)
+        self.engine._game_state._honba = 0
+        self.engine._hands[0] = Hand(parse_tiles("123456789m1234p"))
+        noten_hand = Hand(parse_tiles("124578m1245p78s1z"))
+        for i in range(1, 4):
+            self.engine._hands[i] = noten_hand
+        self.engine._tile_set._tiles = []
+
+        self.engine.end_round(None)
+
+        assert self.engine._game_state.dealer == 0
+        assert self.engine._game_state.round_wind == Wind.EAST
+        assert self.engine._game_state.round_number == 1
+        assert self.engine._game_state.honba == 1
+
+    def test_exhaustive_draw_dealer_noten_rotates(self):
+        """Test exhaustive_draw dealer noten rotates."""
+        self._init_game()
+        self.engine._game_state.set_dealer(0)
+        self.engine._game_state.set_round(Wind.EAST, 1)
+        self.engine._hands[0] = Hand(parse_tiles("124578m1245p78s1z"))
+        self.engine._hands[1] = Hand(parse_tiles("123456789m1234p"))
+        for i in range(2, 4):
+            self.engine._hands[i] = Hand(parse_tiles("124578m1245p78s1z"))
+        self.engine._tile_set._tiles = []
+
+        self.engine.end_round(None)
+
+        assert self.engine._game_state.dealer == 1
+        assert self.engine._game_state.round_wind == Wind.EAST
+        assert self.engine._game_state.round_number == 2
+        assert self.engine._game_state.honba == 0
+
     def test_tobi_ron(self):
         """Test tobi (Bankruptcy): ron causes score < 0"""
         self._init_game()

@@ -30,7 +30,7 @@ This audit compares the current codebase against the rule requirements in this d
 | Payment context | Met | `ScoreCalculator.calculate()` receives payment context before calculating payment branches. |
 | Pinfu tsumo fu | Met | `calculate_fu()` returns 20 fu for Pinfu tsumo and 30 fu for closed Pinfu ron. |
 | Nagashi Mangan | Met | Exhaustive-draw paths score Nagashi Mangan with mangan payments. |
-| Renchan and round progression | Partial | Dealer win renchan exists, but exhaustive-draw dealer tenpai continuation is not implemented in `end_round()`. |
+| Renchan and round progression | Met | Dealer win and exhaustive-draw dealer tenpai renchan are implemented in `end_round()`. |
 | Game-end conditions | Partial | Tobi, west round extension, and Agari Yame exist; end-round flow needs integration coverage. |
 | Chombo | Missing | Config exists, but no complete violation detection and penalty flow was found. |
 
@@ -99,9 +99,8 @@ This audit compares the current codebase against the rule requirements in this d
 ### Renchan on Exhaustive Draw
 
 - Requirement: Exhaustive Draw causes renchan when the dealer is tenpai; otherwise the dealer rotates.
-- Code: `end_round()` sets `dealer_won = False` for ryuukyoku and rotates the dealer unconditionally.
-- Impact: dealer tenpai at Exhaustive Draw does not cause renchan.
-- Suggested fix: determine dealer tenpai during exhaustive draw and pass that into dealer advancement.
+- Status: fixed.
+- Code: `end_round()` checks dealer tenpai on Exhaustive Draw and only advances the dealer and round when the dealer is not tenpai.
 
 ### Riichi Furiten
 

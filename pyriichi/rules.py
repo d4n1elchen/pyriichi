@@ -1223,6 +1223,7 @@ class RuleEngine:
         else:
             # Handle ryuukyoku.
             # On exhaustive_draw, check nagashi_mangan and noten_bappu.
+            dealer_continues = False
             if self._tile_set and self._tile_set.is_exhausted():
                 # Check nagashi_mangan.
                 nagashi_mangan_players = []
@@ -1236,17 +1237,20 @@ class RuleEngine:
                     # Calculate noten_bappu only when there is no nagashi_mangan.
                     self._calculate_noten_bappu()
 
+                dealer = self._game_state.dealer
+                dealer_continues = self._hands[dealer].is_tenpai()
+
             # Check tobi.
             if self._check_tobi():
                 self._phase = GamePhase.ENDED
                 return
 
-            dealer_won = False  # Dealer does not repeat on ryuukyoku here.
-            self._game_state.next_dealer(dealer_won)
+            self._game_state.next_dealer(dealer_continues)
 
-            has_next = self._game_state.next_round()
-            if not has_next:
-                self._phase = GamePhase.ENDED
+            if not dealer_continues:
+                has_next = self._game_state.next_round()
+                if not has_next:
+                    self._phase = GamePhase.ENDED
 
     def _handle_declare_kyuushu_kyuuhai(
         self, player: int, tile: Optional[Tile] = None, **kwargs
