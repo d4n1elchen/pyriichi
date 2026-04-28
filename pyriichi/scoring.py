@@ -309,7 +309,7 @@ class ScoreCalculator:
             return 25  # chiitoitsu fixed 25 fu
 
         if any(r.yaku == Yaku.PINFU for r in yaku_results):
-            return 30 if is_tsumo else 20  # pinfu fixed 30 fu (tsumo) or 20 fu (ron)
+            return 20 if is_tsumo else 30
 
         fu = 20  # Base fu
 

@@ -28,7 +28,7 @@ This audit compares the current codebase against the rule requirements in this d
 | Yaku combination filtering | Met | Pinfu combines with Iipeikou and Ryanpeikou, yakuman results exclude non-yakuman yaku, and Chiitoitsu includes compatible yaku. |
 | Scoring calculations | Partial | Fu, han, limits, payment rounding, honba, kyoutaku, Kiriage Mangan, Noten Bappu, and Pao have support, with important bugs noted below. |
 | Payment context | Met | `ScoreCalculator.calculate()` receives payment context before calculating payment branches. |
-| Pinfu tsumo fu | Mismatch | `calculate_fu()` returns 30 fu for Pinfu tsumo; requirement says Pinfu tsumo is 20 fu. |
+| Pinfu tsumo fu | Met | `calculate_fu()` returns 20 fu for Pinfu tsumo and 30 fu for closed Pinfu ron. |
 | Nagashi Mangan | Partial | One path scores Nagashi Mangan as mangan-like payments; `handle_ryuukyoku()` still applies a simplified +3000/-1000 transfer. |
 | Renchan and round progression | Partial | Dealer win renchan exists, but exhaustive-draw dealer tenpai continuation is not implemented in `end_round()`. |
 | Game-end conditions | Partial | Tobi, west round extension, and Agari Yame exist; end-round flow needs integration coverage. |
@@ -87,9 +87,8 @@ This audit compares the current codebase against the rule requirements in this d
 ### Pinfu Tsumo Fu
 
 - Requirement: Pinfu tsumo is 20 fu.
-- Code: `ScoreCalculator.calculate_fu()` returns 30 fu for Pinfu tsumo.
-- Impact: Pinfu tsumo is over-scored.
-- Suggested fix: return 20 fu for Pinfu tsumo and 30 fu for closed Pinfu ron.
+- Status: fixed.
+- Code: `ScoreCalculator.calculate_fu()` returns 20 fu for Pinfu tsumo and 30 fu for closed Pinfu ron.
 
 ### Nagashi Mangan Settlement
 

@@ -674,59 +674,55 @@ class TestScoreCalculator:
 
     def test_calculate_fu_pinfu_tsumo(self):
         """Test calculate fu pinfu tsumo."""
-        tiles = parse_tiles("123m456m789m123p4p")
+        tiles = parse_tiles("123m123p456p345s22z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.PINZU, 4)
-        combinations = hand.get_winning_combinations(winning_tile)
+        winning_tile = Tile(Suit.SOUZU, 5)
+        combinations = hand.get_winning_combinations(winning_tile, is_tsumo=True)
 
-        if combinations:
-            yaku_results = self.yaku_checker.check_all(
-                hand,
-                winning_tile,
-                list(combinations[0]),
-                self.game_state,
-                is_tsumo=True,
-            )
-            is_pinfu = any(r.yaku == Yaku.PINFU for r in yaku_results)
-
-            if is_pinfu:
-                fu = self.calculator.calculate_fu(
-                    hand,
-                    winning_tile,
-                    list(combinations[0]),
-                    yaku_results,
-                    self.game_state,
-                    True,
-                )
-                assert fu == 30
+        assert combinations
+        yaku_results = self.yaku_checker.check_all(
+            hand,
+            winning_tile,
+            list(combinations[0]),
+            self.game_state,
+            is_tsumo=True,
+        )
+        assert any(r.yaku == Yaku.PINFU for r in yaku_results)
+        fu = self.calculator.calculate_fu(
+            hand,
+            winning_tile,
+            list(combinations[0]),
+            yaku_results,
+            self.game_state,
+            True,
+        )
+        assert fu == 20
 
     def test_calculate_fu_pinfu_ron(self):
         """Test calculate fu pinfu ron."""
-        tiles = parse_tiles("123m456m789m123p4p")
+        tiles = parse_tiles("123m123p456p34s22z")
         hand = Hand(tiles)
-        winning_tile = Tile(Suit.PINZU, 4)
+        winning_tile = Tile(Suit.SOUZU, 5)
         combinations = hand.get_winning_combinations(winning_tile)
 
-        if combinations:
-            yaku_results = self.yaku_checker.check_all(
-                hand,
-                winning_tile,
-                list(combinations[0]),
-                self.game_state,
-                is_tsumo=False,
-            )
-            is_pinfu = any(r.yaku == Yaku.PINFU for r in yaku_results)
-
-            if is_pinfu:
-                fu = self.calculator.calculate_fu(
-                    hand,
-                    winning_tile,
-                    list(combinations[0]),
-                    yaku_results,
-                    self.game_state,
-                    False,
-                )
-                assert fu == 30
+        assert combinations
+        yaku_results = self.yaku_checker.check_all(
+            hand,
+            winning_tile,
+            list(combinations[0]),
+            self.game_state,
+            is_tsumo=False,
+        )
+        assert any(r.yaku == Yaku.PINFU for r in yaku_results)
+        fu = self.calculator.calculate_fu(
+            hand,
+            winning_tile,
+            list(combinations[0]),
+            yaku_results,
+            self.game_state,
+            False,
+        )
+        assert fu == 30
 
     def test_calculate_fu_concealed_tsumo(self):
         """Test calculate fu concealed tsumo."""
