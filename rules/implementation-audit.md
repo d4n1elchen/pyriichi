@@ -27,7 +27,7 @@ This audit compares the current codebase against the rule requirements in this d
 | Open-hand reductions | Met | Chanta, Junchan, Sanshoku Doujun, Ittsu, Honitsu, and Chinitsu apply open-hand han reductions. |
 | Yaku combination filtering | Met | Pinfu combines with Iipeikou and Ryanpeikou, yakuman results exclude non-yakuman yaku, and Chiitoitsu includes compatible yaku. |
 | Scoring calculations | Partial | Fu, han, limits, payment rounding, honba, kyoutaku, Kiriage Mangan, Noten Bappu, and Pao have support, with important bugs noted below. |
-| Payment context | Mismatch | `ScoreCalculator.calculate()` computes payments before `payment_to` and `payment_from` are set, so dealer/non-dealer payment branches can be wrong. |
+| Payment context | Met | `ScoreCalculator.calculate()` receives payment context before calculating payment branches. |
 | Pinfu tsumo fu | Mismatch | `calculate_fu()` returns 30 fu for Pinfu tsumo; requirement says Pinfu tsumo is 20 fu. |
 | Nagashi Mangan | Partial | One path scores Nagashi Mangan as mangan-like payments; `handle_ryuukyoku()` still applies a simplified +3000/-1000 transfer. |
 | Renchan and round progression | Partial | Dealer win renchan exists, but exhaustive-draw dealer tenpai continuation is not implemented in `end_round()`. |
@@ -81,9 +81,8 @@ This audit compares the current codebase against the rule requirements in this d
 ### Payment Context
 
 - Requirement: payment calculation must use the actual winner and payer.
-- Code: `ScoreCalculator.calculate()` calls `calculate_payments()` before `RuleEngine.check_win()` sets `payment_to` and `payment_from`.
-- Impact: non-dealer ron and tsumo payment branches can be calculated as if player 0 is the winner.
-- Suggested fix: pass `payment_to` and `payment_from` into scoring before payment calculation, or defer payment calculation until after those fields are set.
+- Status: fixed.
+- Code: `RuleEngine.check_win()` passes `payment_to` and `payment_from` into `ScoreCalculator.calculate()` before payment calculation runs.
 
 ### Pinfu Tsumo Fu
 

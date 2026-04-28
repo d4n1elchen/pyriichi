@@ -221,6 +221,8 @@ class ScoreCalculator:
         is_tsumo: bool,
         player_position: int = 0,
         pao_player: Optional[int] = None,
+        payment_to: Optional[int] = None,
+        payment_from: Optional[int] = None,
     ) -> ScoreResult:
         """
         Calculate score.
@@ -235,6 +237,8 @@ class ScoreCalculator:
             is_tsumo (bool): Whether tsumo.
             player_position (int): Player position.
             pao_player (Optional[int]): pao player position.
+            payment_to (Optional[int]): Winning player position.
+            payment_from (Optional[int]): Paying player position for ron.
 
         Returns:
             ScoreResult: Score calculation result.
@@ -255,14 +259,16 @@ class ScoreCalculator:
 
         is_yakuman = any(r.is_yakuman for r in yaku_results)
         yakuman_count = sum(bool(r.is_yakuman) for r in yaku_results)
+        resolved_payment_to = player_position if payment_to is None else payment_to
+        resolved_payment_from = 0 if payment_from is None else payment_from
 
         result = ScoreResult(
             han=han,
             fu=fu,
             base_points=0,
             total_points=0,
-            payment_from=0,
-            payment_to=0,
+            payment_from=resolved_payment_from,
+            payment_to=resolved_payment_to,
             is_yakuman=is_yakuman,
             yakuman_count=yakuman_count,
             is_tsumo=is_tsumo,

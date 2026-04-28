@@ -99,6 +99,25 @@ class TestRuleEngine:
         assert result.win
         assert any(yaku.yaku == Yaku.KOKUSHI_MUSOU for yaku in result.yaku)
 
+    def test_check_win_uses_non_dealer_payment_context(self):
+        """Test check_win uses non-dealer payment context."""
+        self._init_game()
+        winning_tile = Tile(Suit.SOUZU, 5)
+        hand = Hand(parse_tiles("123m456m789m123p5s"))
+        hand.set_riichi(True)
+        self.engine._hands[1] = hand
+        self.engine._last_discarded_tile = winning_tile
+        self.engine._last_discarded_player = 0
+        self.engine._is_first_turn_after_deal = False
+        self.engine._tile_set._dora_indicators = []
+
+        result = self.engine.check_win(1, winning_tile)
+
+        assert result is not None
+        assert result.score_result.payment_to == 1
+        assert result.score_result.payment_from == 0
+        assert result.score_result.total_points == 5200
+
     def test_riichi_availability_14_tiles(self):
         """Test riichi availability with 14 tiles (after draw) and tenpai after discard"""
         self.engine.start_game()

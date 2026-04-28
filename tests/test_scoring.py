@@ -84,6 +84,32 @@ class TestScoreCalculator:
             assert score_result.fu >= 20
             assert score_result.total_points > 0
 
+    def test_calculate_score_uses_payment_to_for_non_dealer_ron(self):
+        """Test calculate score uses payment_to for non-dealer ron."""
+        tiles = parse_tiles("123m456m789m123p5s")
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.SOUZU, 5)
+        combinations = hand.get_winning_combinations(winning_tile)
+        yaku_results = [YakuResult(Yaku.RIICHI, 1, False)]
+
+        assert combinations
+        score_result = self.calculator.calculate(
+            hand,
+            winning_tile,
+            combinations[0],
+            yaku_results,
+            0,
+            self.game_state,
+            False,
+            player_position=1,
+            payment_to=1,
+            payment_from=0,
+        )
+
+        assert score_result.payment_to == 1
+        assert score_result.payment_from == 0
+        assert score_result.total_points == 1300
+
     def test_calculate_score_mangan(self):
         """Test calculate score mangan."""
         yaku_results = [

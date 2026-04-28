@@ -1392,6 +1392,12 @@ class RuleEngine:
 
         # Count dora.
         dora_count = self._count_dora(player, winning_tile)
+        payment_from = 0
+        if not is_tsumo and self._last_discarded_player is not None:
+            payment_from = self._last_discarded_player
+        elif is_chankan and self._pending_kan_tile:
+            kan_player, _ = self._pending_kan_tile
+            payment_from = kan_player
 
         # Apply highest-score selection across all possible winning combinations.
         best_score_result = None
@@ -1429,6 +1435,8 @@ class RuleEngine:
                 self._game_state,
                 is_tsumo,
                 player_position=player,
+                payment_to=player,
+                payment_from=payment_from,
             )
 
             # Update the best score.
@@ -1481,16 +1489,9 @@ class RuleEngine:
             is_tsumo,
             player,
             pao_player=pao_player,
+            payment_to=player,
+            payment_from=payment_from,
         )
-
-        score_result.payment_to = player
-        # Set payer for ron.
-        if not is_tsumo and self._last_discarded_player is not None:
-            score_result.payment_from = self._last_discarded_player
-        elif is_chankan and self._pending_kan_tile:
-            # For chankan, the kan player pays.
-            kan_player, _ = self._pending_kan_tile
-            score_result.payment_from = kan_player
 
         if self._kan_count >= 4:
             self._ignore_suukan_sanra = True
