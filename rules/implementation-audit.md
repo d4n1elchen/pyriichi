@@ -12,7 +12,7 @@ This audit compares the current codebase against the rule requirements in this d
 | Area | Status | Notes |
 |------|--------|-------|
 | Tile set and compact notation | Met | `Tile`, `TileSet`, `parse_tiles`, and `format_tiles` cover the standard tile set and Red Dora notation. |
-| Initial deal | Partial | `TileSet.deal()` always gives the 14th tile to player 0, not necessarily `GameState.dealer`. |
+| Initial deal | Met | `TileSet.deal()` is dealer-aware, and `RuleEngine.deal()` passes `GameState.dealer`. |
 | Hand operations | Met | Draw, discard, chi, pon, kan, and closed kan exist. |
 | Winning-hand detection | Partial | Standard, Chiitoitsu, and Kokushi Musou exist in `Hand`, but `RuleEngine.check_win()` rejects hands with no standard combination, so Kokushi is blocked. |
 | Tenpai and machi listing | Partial | Implemented, but known decomposition issues remain for four identical concealed tiles. |
@@ -39,9 +39,8 @@ This audit compares the current codebase against the rule requirements in this d
 ### Initial Dealer Deal
 
 - Requirement: the current dealer receives 14 tiles.
-- Code: `TileSet.deal()` gives the extra tile to player 0. `RuleEngine.deal()` assigns the returned hands directly.
-- Impact: after the dealer rotates, the wrong player can start with 14 tiles.
-- Suggested fix: let `RuleEngine.deal()` pass or rotate by `GameState.dealer`, or make `TileSet.deal()` dealer-aware.
+- Status: fixed.
+- Code: `TileSet.deal()` accepts a dealer index and gives that player the extra tile. `RuleEngine.deal()` passes `GameState.dealer`.
 
 ### Kokushi Through Rule Engine
 

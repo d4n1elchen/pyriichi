@@ -54,6 +54,22 @@ class TestRuleEngine:
 
         assert self.engine.get_phase() == GamePhase.PLAYING
 
+    def test_deal_uses_current_dealer(self):
+        """Test deal uses current dealer."""
+        self.engine.start_game()
+        self.engine.game_state.set_dealer(2)
+        self.engine.start_round()
+        hands = self.engine.deal()
+
+        assert len(hands) == 4
+        assert len(hands[0]) == 13
+        assert len(hands[1]) == 13
+        assert len(hands[2]) == 14
+        assert len(hands[3]) == 13
+        assert self.engine.get_current_player() == 2
+        assert self.engine.get_available_actions(2)
+        assert not self.engine.get_available_actions(0)
+
     def test_riichi_availability_14_tiles(self):
         """Test riichi availability with 14 tiles (after draw) and tenpai after discard"""
         self.engine.start_game()

@@ -133,6 +133,22 @@ class TestTileSet:
         for i in range(1, 4):
             assert len(hands[i]) == 13
 
+    def test_tileset_deal_with_dealer(self):
+        """Test tileset deal with a non-zero dealer."""
+        tile_set = TileSet()
+        hands = tile_set.deal(num_players=4, dealer=2)
+        assert len(hands) == 4
+        assert len(hands[2]) == 14
+        assert len(hands[0]) == 13
+        assert len(hands[1]) == 13
+        assert len(hands[3]) == 13
+
+    def test_tileset_deal_invalid_dealer(self):
+        """Test tileset deal invalid dealer."""
+        tile_set = TileSet()
+        with pytest.raises(ValueError, match="Dealer position must be between 0 and 3"):
+            tile_set.deal(num_players=4, dealer=4)
+
     def test_tileset_draw(self):
         """Test tileset draw."""
         tile_set = TileSet()

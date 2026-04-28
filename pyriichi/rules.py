@@ -243,14 +243,17 @@ class RuleEngine:
 
         if not self._tile_set:
             raise ValueError("牌組未初始化")
-        hands_tiles = self._tile_set.deal(num_players=self._num_players)
+        dealer = self._game_state.dealer
+        hands_tiles = self._tile_set.deal(
+            num_players=self._num_players,
+            dealer=dealer,
+        )
         self._hands = [Hand(tiles) for tiles in hands_tiles]
 
         self._phase = GamePhase.PLAYING
         self._is_first_turn_after_deal = True
 
         # Set dealer waiting action
-        dealer = self._game_state.dealer
         actions = self._calculate_turn_actions(dealer)
         self._waiting_for_actions = {dealer: actions}
 

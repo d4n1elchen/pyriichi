@@ -281,16 +281,23 @@ class TileSet:
 
         self._ura_dora_indicators = self._wall[8:12]
 
-    def deal(self, num_players: int = 4) -> List[List[Tile]]:
+    def deal(self, num_players: int = 4, dealer: int = 0) -> List[List[Tile]]:
         """
         Deal initial hands.
 
         Args:
             num_players (int): Number of players, defaulting to 4.
+            dealer (int): Dealer player index.
 
         Returns:
             List[List[Tile]]: Hands for each player; dealer has 14 tiles and others have 13.
+
+        Raises:
+            ValueError: If dealer is out of range.
         """
+        if not (0 <= dealer < num_players):
+            raise ValueError(f"Dealer position must be between 0 and {num_players - 1}")
+
         hands = [[] for _ in range(num_players)]
 
         for _, player in itertools.product(range(13), range(num_players)):
@@ -299,7 +306,7 @@ class TileSet:
 
         # Dealer receives the 14th tile.
         if self._tiles:
-            hands[0].append(self._tiles.pop(0))
+            hands[dealer].append(self._tiles.pop(0))
 
         for hand in hands:
             hand.sort()
