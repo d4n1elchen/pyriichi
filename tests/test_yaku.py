@@ -3,7 +3,7 @@
 import pytest
 
 from pyriichi.game_state import GameState, Wind
-from pyriichi.hand import CombinationType, Hand, make_combination
+from pyriichi.hand import CombinationType, Hand, Meld, MeldType, make_combination
 from pyriichi.tiles import Suit, Tile
 from pyriichi.utils import parse_tiles
 from pyriichi.yaku import Yaku, YakuChecker
@@ -17,6 +17,18 @@ class TestYakuChecker:
         self.checker = YakuChecker()
         self.game_state = GameState()
         self.game_state.set_round(Wind.EAST, 1)
+
+    def _open_hand(self) -> Hand:
+        """Create an open hand for direct yaku checks."""
+        hand = Hand([])
+        hand._melds.append(
+            Meld(
+                MeldType.CHI_MELD,
+                parse_tiles("123m"),
+                called_tile=Tile(Suit.MANZU, 1),
+            )
+        )
+        return hand
 
     def test_riichi(self):
         """Test riichi."""
@@ -99,6 +111,23 @@ class TestYakuChecker:
             assert result.yaku == Yaku.SANSHOKU_DOUJUN
             assert result.han == 2
 
+    def test_open_sanshoku_doujun_han(self):
+        """Test open sanshoku doujun han."""
+        hand = self._open_hand()
+        winning_combination = [
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.SOUZU, 1),
+            make_combination(CombinationType.TRIPLET, Suit.HONORS, 1),
+            make_combination(CombinationType.PAIR, Suit.HONORS, 2),
+        ]
+
+        result = self.checker.check_sanshoku_doujun(hand, winning_combination)
+
+        assert result is not None
+        assert result.yaku == Yaku.SANSHOKU_DOUJUN
+        assert result.han == 1
+
     def test_ittsu(self):
         """Test ittsu."""
         tiles = parse_tiles("123m456m789m123p1z")
@@ -111,6 +140,23 @@ class TestYakuChecker:
             assert result is not None
             assert result.yaku == Yaku.ITTSU
             assert result.han == 2
+
+    def test_open_ittsu_han(self):
+        """Test open ittsu han."""
+        hand = self._open_hand()
+        winning_combination = [
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 4),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 7),
+            make_combination(CombinationType.TRIPLET, Suit.HONORS, 1),
+            make_combination(CombinationType.PAIR, Suit.HONORS, 2),
+        ]
+
+        result = self.checker.check_ittsu(hand, winning_combination)
+
+        assert result is not None
+        assert result.yaku == Yaku.ITTSU
+        assert result.han == 1
 
     def test_sanankou(self):
         """Test sanankou."""
@@ -138,6 +184,23 @@ class TestYakuChecker:
             assert result.yaku == Yaku.CHINITSU
             assert result.han == 6
 
+    def test_open_chinitsu_han(self):
+        """Test open chinitsu han."""
+        hand = self._open_hand()
+        winning_combination = [
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 4),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 7),
+            make_combination(CombinationType.TRIPLET, Suit.MANZU, 2),
+            make_combination(CombinationType.PAIR, Suit.MANZU, 9),
+        ]
+
+        result = self.checker.check_chinitsu(hand, winning_combination)
+
+        assert result is not None
+        assert result.yaku == Yaku.CHINITSU
+        assert result.han == 5
+
     def test_honitsu(self):
         """Test honitsu."""
         tiles = parse_tiles("123m456m789m111z2z")
@@ -150,6 +213,23 @@ class TestYakuChecker:
             assert result is not None
             assert result.yaku == Yaku.HONITSU
             assert result.han == 3
+
+    def test_open_honitsu_han(self):
+        """Test open honitsu han."""
+        hand = self._open_hand()
+        winning_combination = [
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 4),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 7),
+            make_combination(CombinationType.TRIPLET, Suit.HONORS, 1),
+            make_combination(CombinationType.PAIR, Suit.HONORS, 2),
+        ]
+
+        result = self.checker.check_honitsu(hand, winning_combination)
+
+        assert result is not None
+        assert result.yaku == Yaku.HONITSU
+        assert result.han == 2
 
     def test_chiitoitsu(self):
         """Test chiitoitsu."""

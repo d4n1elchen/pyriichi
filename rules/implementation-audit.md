@@ -24,7 +24,7 @@ This audit compares the current codebase against the rule requirements in this d
 | Kan and rinshan flow | Partial | Kan, closed kan, rinshan draw, Chankan, and Suukan Sanra exist; dora indicator timing is simplified through indicator count. |
 | Abortive draws | Partial | Suufon Renda, Kyuushu Kyuuhai, Suucha Riichi, Suukan Sanra, and Sancha Ron exist; dealer-continuation behavior is incomplete. |
 | Yaku coverage | Partial | Most listed yaku exist, but several standard rule details do not match requirements. |
-| Open-hand reductions | Partial | Chanta and Junchan use ruleset han; Sanshoku Doujun, Ittsu, Honitsu, and Chinitsu still return closed values for open hands. |
+| Open-hand reductions | Met | Chanta, Junchan, Sanshoku Doujun, Ittsu, Honitsu, and Chinitsu apply open-hand han reductions. |
 | Yaku combination filtering | Mismatch | Pinfu is still removed when Iipeikou or Ryanpeikou exists. Yakuman paths still add Riichi in some cases. Chiitoitsu combination handling is too narrow. |
 | Scoring calculations | Partial | Fu, han, limits, payment rounding, honba, kyoutaku, Kiriage Mangan, Noten Bappu, and Pao have support, with important bugs noted below. |
 | Payment context | Mismatch | `ScoreCalculator.calculate()` computes payments before `payment_to` and `payment_from` are set, so dealer/non-dealer payment branches can be wrong. |
@@ -57,9 +57,8 @@ This audit compares the current codebase against the rule requirements in this d
 ### Open-Hand Han Reductions
 
 - Requirement: Sanshoku Doujun and Ittsu are 2 han closed and 1 han open; Honitsu is 3/2; Chinitsu is 6/5.
-- Code: `check_sanshoku_doujun()`, `check_ittsu()`, `check_honitsu()`, and `check_chinitsu()` return fixed closed values.
-- Impact: open hands are over-scored.
-- Suggested fix: make these checks use `hand.is_concealed` and ruleset/default open values.
+- Status: fixed.
+- Code: `check_sanshoku_doujun()`, `check_ittsu()`, `check_honitsu()`, and `check_chinitsu()` now use `hand.is_concealed` to apply open-hand han reductions.
 
 ### Pinfu and Sequence Yaku
 

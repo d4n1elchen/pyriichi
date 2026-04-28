@@ -827,7 +827,8 @@ class YakuChecker:
             has_souzu = rank in sequences_by_suit[Suit.SOUZU]
 
             if has_manzu and has_pinzu and has_souzu:
-                return YakuResult(Yaku.SANSHOKU_DOUJUN, 2, False)
+                han = 2 if hand.is_concealed else 1
+                return YakuResult(Yaku.SANSHOKU_DOUJUN, han, False)
 
         return None
 
@@ -867,7 +868,8 @@ class YakuChecker:
             has_789 = 7 in sequences
 
             if has_123 and has_456 and has_789:
-                return YakuResult(Yaku.ITTSU, 2, False)
+                han = 2 if hand.is_concealed else 1
+                return YakuResult(Yaku.ITTSU, han, False)
 
         return None
 
@@ -922,7 +924,10 @@ class YakuChecker:
             suits.add(tile.suit)
 
         # Only one suit
-        return YakuResult(Yaku.CHINITSU, 6, False) if len(suits) == 1 else None
+        if len(suits) == 1:
+            han = 6 if hand.is_concealed else 5
+            return YakuResult(Yaku.CHINITSU, han, False)
+        return None
 
     def check_honitsu(
         self, hand: Hand, winning_combination: List[Combination]
@@ -954,7 +959,8 @@ class YakuChecker:
 
         # Only one number suit, and contains honors
         if len(number_suits) == 1 and has_honor:
-            return YakuResult(Yaku.HONITSU, 3, False)
+            han = 3 if hand.is_concealed else 2
+            return YakuResult(Yaku.HONITSU, han, False)
 
         return None
 
