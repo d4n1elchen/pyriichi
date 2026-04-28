@@ -54,6 +54,12 @@ PyRiichi is a complete Japanese riichi mahjong game engine. It implements standa
 5. **Win**: declare a win when the winning conditions are met.
 6. **Drawn round**: calculate points when the round ends in a draw.
 
+Call and win response priority must follow standard riichi timing:
+
+- Ron has priority over calls.
+- Pon and kan have priority over chi.
+- When multiple players may ron the same discard, resolve according to the active multi-win rule: Head Bump, Double Ron, or Triple Ron.
+
 #### 2.3.2 Winning Conditions
 - Standard shape: four sets plus one pair.
 - Special shapes: Chiitoitsu, Kokushi Musou, and similar optional shapes.
@@ -71,6 +77,7 @@ PyRiichi is a complete Japanese riichi mahjong game engine. It implements standa
   - Kyuushu Kyuuhai.
   - Suucha Riichi.
   - Suukan Sanra.
+  - Sancha Ron, when Triple Ron is disabled by the ruleset.
 
 #### 2.3.5 Special Rules
 - **Furiten**:
@@ -88,37 +95,41 @@ PyRiichi is a complete Japanese riichi mahjong game engine. It implements standa
 ### 2.4 Yaku System
 
 #### 2.4.1 Basic Yaku, 1 Han
-- **Riichi**: declare riichi while tenpai.
+- **Riichi**: declare riichi with a closed hand while tenpai, pay one Riichi Stick, and meet the ruleset's remaining-wall requirement.
 - **Ippatsu**: win within one uninterrupted turn after declaring riichi.
 - **Menzen Tsumo**: tsumo with a fully concealed hand.
-- **Tanyao**: all tiles are simples, 2-8.
+- **Tanyao**: all tiles are simples, 2-8. Open Tanyao is controlled by ruleset configuration.
 - **Pinfu**: sequence hand with a non-value pair and no fu from sets.
 - **Iipeikou**: fully concealed hand with two identical sequences.
 - **Yakuhai**: triplet of round_wind, seat_wind, or dragon tiles.
+- **Haitei**: win by tsumo on the last live wall tile.
+- **Houtei**: win by ron on the last discard.
+- **Rinshan**: win by tsumo on the rinshan tile after a kan.
+- **Chankan**: win by robbing another player's kan.
 
 #### 2.4.2 Special Yaku, 2-3 Han
 - **Double Riichi**: declare riichi on the first uninterrupted turn, 2 han.
-- **Sanshoku Doujun**: same-number sequence in all three suits.
+- **Sanshoku Doujun**: same-number sequence in all three suits, 2 han closed and 1 han open.
 - **Sanshoku Doukou**: same-number triplet in all three suits.
-- **Ittsu**: 1-3, 4-6, and 7-9 sequences in one suit.
+- **Ittsu**: 1-3, 4-6, and 7-9 sequences in one suit, 2 han closed and 1 han open.
 - **Toitoi**: all sets are triplets or kans.
 - **Sanankou**: three concealed triplets.
 - **Sankantsu**: three kans.
 - **Shousangen**: two dragon triplets and one dragon pair.
 - **Honroutou**: all tiles are terminals and honors, normally paired with Toitoi or Chiitoitsu.
 - **Chiitoitsu**: seven pairs.
+- **Renhou**: non-dealer wins by first-turn ron. Its value is ruleset-dependent, commonly treated as a yakuman, mangan, or regular yaku depending on the ruleset.
 
 #### 2.4.3 High-Value Yaku, Mangan and Above
-- **Chinitsu**: all tiles from one suit, 6 han closed.
-- **Honitsu**: one suit plus honors, 3 han closed.
-- **Junchan**: every set contains a terminal and there are no honors, 3 han closed.
-- **Chanta**: every set contains a terminal or honor, 2 han closed.
+- **Chinitsu**: all tiles from one suit, 6 han closed and 5 han open.
+- **Honitsu**: one suit plus honors, 3 han closed and 2 han open.
+- **Junchan**: every set contains a terminal and there are no honors, 3 han closed and 2 han open.
+- **Chanta**: every set contains a terminal or honor, 2 han closed and 1 han open.
 - **Ryanpeikou**: two Iipeikou patterns, 3 han.
 
 #### 2.4.4 Yakuman
 - **Tenhou**: dealer wins from the initial hand.
 - **Chihou**: non-dealer wins by first-turn tsumo.
-- **Renhou**: non-dealer wins by first-turn ron.
 - **Daisangen**: triplets or kans of all three dragons.
 - **Shousuushi**: three wind triplets or kans plus a wind pair.
 - **Daisuushi**: four wind triplets or kans.
@@ -132,7 +143,8 @@ PyRiichi is a complete Japanese riichi mahjong game engine. It implements standa
 - **Ryuuiisou**: all green tiles.
 - **Chinroutou**: all terminals.
 - **Tsuuiisou**: all honors.
-- **Four Returns**: four copies of the same tile used across four sequences.
+
+Optional local yakuman and legacy variants may be configured separately, but they are not part of the standard modern yaku list.
 
 #### 2.4.5 Yaku Detection Requirements
 - Support combined yaku detection.
@@ -153,7 +165,7 @@ PyRiichi is a complete Japanese riichi mahjong game engine. It implements standa
    - Cannot combine with Yakuhai for round_wind, seat_wind, or dragon pair value.
    - Reason: Pinfu requires a non-value pair.
    - Cannot combine with Toitoi because Pinfu requires sequences and Toitoi requires triplets.
-   - Cannot combine with Iipeikou or Ryanpeikou in the current documented implementation because Pinfu only has one pair while those patterns require identical sequences.
+   - Can combine with Iipeikou or Ryanpeikou when the hand also satisfies Pinfu requirements.
 
 3. **Tanyao**
    - Cannot combine with yaku that require terminals or honors:
@@ -174,7 +186,7 @@ PyRiichi is a complete Japanese riichi mahjong game engine. It implements standa
 5. **Iipeikou and Ryanpeikou**
    - Mutually exclusive: Ryanpeikou contains two Iipeikou patterns, so both should not be awarded together.
    - Cannot combine with Toitoi because Iipeikou/Ryanpeikou require sequences and Toitoi requires triplets.
-   - Cannot combine with Pinfu in the current documented implementation because Pinfu only has one pair while Iipeikou/Ryanpeikou require identical sequences.
+   - Can combine with Pinfu when the hand also satisfies Pinfu requirements.
 
 6. **Chinitsu and Honitsu**
    - Mutually exclusive: Chinitsu requires one pure suit; Honitsu requires one suit plus honors.
@@ -182,16 +194,16 @@ PyRiichi is a complete Japanese riichi mahjong game engine. It implements standa
 
 7. **Junchan and Chanta**
    - Mutually exclusive: Junchan has no honors, while Chanta may contain honors.
-   - Cannot combine with Tanyao because both require terminals.
+   - Cannot combine with Tanyao because Junchan and Chanta require terminals or honors, while Tanyao excludes them.
 
 8. **Yakuman**
-   - Yakuman do not combine with non-yakuman yaku, except Riichi in the current documented behavior.
+   - Yakuman do not score together with non-yakuman yaku.
    - Multiple yakuman may combine, such as Suuankou plus Tsuuiisou.
 
 **Yaku combinations that can combine**:
 
 1. **Riichi**
-   - Can combine with most yaku, including Chiitoitsu and yakuman.
+   - Can combine with most non-yakuman yaku, including Chiitoitsu.
    - Reason: Riichi is a declaration action and does not change hand structure.
 
 2. **Ippatsu**
@@ -218,8 +230,8 @@ PyRiichi is a complete Japanese riichi mahjong game engine. It implements standa
 
 **Special cases**:
 
-- **Kokushi Musou**: can only combine with Riichi in the documented implementation because it is a special winning shape.
-- **Chiitoitsu**: can only combine with Riichi in the documented implementation because it is a special winning shape.
+- **Kokushi Musou**: does not combine with standard-shape yaku because it is a special winning shape. Kokushi Musou Juusanmen may be treated as double yakuman depending on the ruleset.
+- **Chiitoitsu**: can combine with compatible composition yaku such as Tanyao, Honitsu, Chinitsu, Honroutou, Riichi, Menzen Tsumo, and dora.
 - **Chuuren Poutou**: can combine with Chinitsu because Chuuren Poutou is a special Chinitsu shape.
 
 ### 2.5 Scoring System
@@ -231,6 +243,7 @@ PyRiichi is a complete Japanese riichi mahjong game engine. It implements standa
   - Fully concealed tsumo: +2 fu.
   - Open ron: +0 fu.
   - Open tsumo: +2 fu.
+  - Pinfu tsumo is a special 20-fu hand and does not receive tsumo fu.
 - **Set fu**:
   - Simple sequence: 0 fu.
   - Terminal/honor sequence: 0 fu.
@@ -245,6 +258,7 @@ PyRiichi is a complete Japanese riichi mahjong game engine. It implements standa
 - **Pair fu**:
   - Non-value pair: 0 fu.
   - Yakuhai pair: 2 fu.
+  - Double wind pair behavior is ruleset-dependent: some rules award 2 fu, while others award 4 fu when round_wind and seat_wind are the same.
 - **Wait fu**:
   - Tanki: +2 fu.
   - Penchan: +2 fu.
@@ -274,6 +288,7 @@ PyRiichi is a complete Japanese riichi mahjong game engine. It implements standa
   - Tsumo: dealer pays 2x and non-dealers pay 1x.
   - Ron: the discarder pays the full amount.
   - Dealer bonus payment: when the dealer wins by tsumo, non-dealers pay 2x.
+  - Final payments are rounded up to the nearest 100 points.
 - **Honba and kyoutaku**:
   - Honba: +300 points per repeat or draw counter.
   - Kyoutaku: the winner receives the 1000-point riichi deposits.
@@ -284,7 +299,7 @@ PyRiichi is a complete Japanese riichi mahjong game engine. It implements standa
   - 30 fu 4 han and 60 fu 3 han are scored directly as mangan when the optional rule is enabled.
 
 #### 2.5.4 Special Scores
-- **Nagashi Mangan**: 3000 base points.
+- **Nagashi Mangan**: scored as mangan.
 - **Yakuman**: 8000 base points.
 - **Double Yakuman**: 16000 base points.
 - **Triple Yakuman**: 24000 base points.
@@ -316,6 +331,13 @@ PyRiichi is a complete Japanese riichi mahjong game engine. It implements standa
 - **Abortive draw**: Kyuushu Kyuuhai and similar abortive draws cause a dealer repeat.
 - **West round extension**: if nobody reaches the target score, usually 30000, after South 4, extend into the west round.
 - **Agari Yame**: when the last-round dealer wins while in first place, they may choose to end the game.
+
+Renchan and counter handling must follow the active ruleset:
+
+- Dealer win causes renchan and increments honba.
+- Exhaustive Draw causes renchan when the dealer is tenpai; otherwise the dealer rotates.
+- Abortive draw dealer-continuation behavior is ruleset-dependent.
+- Kyoutaku carries forward until the next winning hand.
 
 ### 2.7 Chombo Handling
 - **False win**: declaring a win while not tenpai, declaring ron while furiten, and similar violations.
