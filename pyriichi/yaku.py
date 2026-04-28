@@ -195,6 +195,13 @@ class YakuChecker:
             tiles.extend(combination.tiles)
         return tiles
 
+    @staticmethod
+    def _complete_hand_tiles(hand: Hand, winning_tile: Optional[Tile]) -> List[Tile]:
+        tiles = hand.tiles
+        if len(tiles) == 14 or winning_tile is None:
+            return tiles
+        return tiles + [winning_tile]
+
     def _extract_pair(
         self, winning_combination: Optional[List[Combination]]
     ) -> Optional[Combination]:
@@ -268,15 +275,18 @@ class YakuChecker:
         # chiitoitsu check
         if result := self.check_chiitoitsu(hand, winning_tile):
             results = [result]
-            if hand.is_riichi:
-                # double_riichi priority over riichi
-                is_double_riichi = is_first_turn and hand.is_concealed
-                if is_double_riichi:
-                    results.insert(0, YakuResult(Yaku.DOUBLE_RIICHI, 2, False))
-                else:
-                    results.insert(0, YakuResult(Yaku.RIICHI, 1, False))
-                if is_ippatsu:
-                    results.insert(1, YakuResult(Yaku.IPPATSU, 1, False))
+            results.extend(
+                self._check_chiitoitsu_compatible_yaku(
+                    hand,
+                    winning_tile,
+                    game_state,
+                    is_tsumo,
+                    is_ippatsu,
+                    is_first_turn,
+                    is_last_tile,
+                    is_rinshan,
+                )
+            )
             return results
 
         # Other yakuman checks (Check first as yakuman overrides other yaku)
@@ -963,7 +973,7 @@ class YakuChecker:
         Returns:
             Optional[YakuResult]: yaku result, or None if not matching.
         """
-        all_tiles = hand.tiles + [winning_tile] if winning_tile else hand.tiles
+        all_tiles = self._complete_hand_tiles(hand, winning_tile)
         if not hand.is_concealed or len(all_tiles) != 14:
             return None
 
@@ -975,6 +985,48 @@ class YakuChecker:
 
         pairs = [count for count in counts.values() if count == 2]
         return None if len(pairs) != 7 else YakuResult(Yaku.CHIITOITSU, 2, False)
+
+    def _check_chiitoitsu_compatible_yaku(
+        self,
+        hand: Hand,
+        winning_tile: Optional[Tile],
+        game_state: GameState,
+        is_tsumo: bool,
+        is_ippatsu: bool,
+        is_first_turn: bool,
+        is_last_tile: bool,
+        is_rinshan: bool,
+    ) -> List[YakuResult]:
+        results: List[YakuResult] = []
+        tiles = self._complete_hand_tiles(hand, winning_tile)
+
+        is_double_riichi = is_first_turn and hand.is_concealed
+        results.extend(
+            self.check_riichi(hand, game_state, is_ippatsu, is_double_riichi)
+        )
+
+        if result := self.check_menzen_tsumo(hand, game_state, is_tsumo):
+            results.append(result)
+        if result := self.check_haitei_houtei(hand, is_tsumo, is_last_tile):
+            results.append(result)
+        if result := self.check_rinshan(hand, is_rinshan):
+            results.append(result)
+
+        if all(tile.is_simple for tile in tiles):
+            results.append(YakuResult(Yaku.TANYAO, 1, False))
+
+        number_suits = {tile.suit for tile in tiles if tile.suit != Suit.HONORS}
+        has_honor = any(tile.suit == Suit.HONORS for tile in tiles)
+        if len(number_suits) == 1:
+            if has_honor:
+                results.append(YakuResult(Yaku.HONITSU, 3, False))
+            else:
+                results.append(YakuResult(Yaku.CHINITSU, 6, False))
+
+        if all(tile.is_yaochuu for tile in tiles):
+            results.append(YakuResult(Yaku.HONROUTOU, 2, False))
+
+        return results
 
     def check_junchan(
         self,

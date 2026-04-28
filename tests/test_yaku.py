@@ -301,6 +301,58 @@ class TestYakuChecker:
         has_chiitoitsu = any(r.yaku == Yaku.CHIITOITSU for r in results)
         assert has_chiitoitsu
 
+    def test_chiitoitsu_can_combine_with_tanyao_and_tsumo(self):
+        """Test chiitoitsu can combine with tanyao and menzen_tsumo."""
+        hand = Hand(parse_tiles("22334455667788m"))
+        winning_tile = Tile(Suit.MANZU, 8)
+
+        results = self.checker.check_all(
+            hand,
+            winning_tile,
+            [],
+            self.game_state,
+            is_tsumo=True,
+            is_ippatsu=False,
+        )
+
+        assert any(result.yaku == Yaku.CHIITOITSU for result in results)
+        assert any(result.yaku == Yaku.TANYAO for result in results)
+        assert any(result.yaku == Yaku.MENZEN_TSUMO for result in results)
+
+    def test_chiitoitsu_can_combine_with_honitsu(self):
+        """Test chiitoitsu can combine with honitsu."""
+        hand = Hand(parse_tiles("1122334455m66z7z"))
+        winning_tile = Tile(Suit.HONORS, 7)
+
+        results = self.checker.check_all(
+            hand,
+            winning_tile,
+            [],
+            self.game_state,
+            is_tsumo=False,
+            is_ippatsu=False,
+        )
+
+        assert any(result.yaku == Yaku.CHIITOITSU for result in results)
+        assert any(result.yaku == Yaku.HONITSU for result in results)
+
+    def test_chiitoitsu_can_combine_with_honroutou(self):
+        """Test chiitoitsu can combine with honroutou."""
+        hand = Hand(parse_tiles("1199m1199p1199s1z"))
+        winning_tile = Tile(Suit.HONORS, 1)
+
+        results = self.checker.check_all(
+            hand,
+            winning_tile,
+            [],
+            self.game_state,
+            is_tsumo=False,
+            is_ippatsu=False,
+        )
+
+        assert any(result.yaku == Yaku.CHIITOITSU for result in results)
+        assert any(result.yaku == Yaku.HONROUTOU for result in results)
+
     def test_junchan(self):
         """Test junchan."""
         tiles = parse_tiles("123m789m123p789s1m")

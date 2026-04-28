@@ -25,7 +25,7 @@ This audit compares the current codebase against the rule requirements in this d
 | Abortive draws | Partial | Suufon Renda, Kyuushu Kyuuhai, Suucha Riichi, Suukan Sanra, and Sancha Ron exist; dealer-continuation behavior is incomplete. |
 | Yaku coverage | Partial | Most listed yaku exist, but several standard rule details do not match requirements. |
 | Open-hand reductions | Met | Chanta, Junchan, Sanshoku Doujun, Ittsu, Honitsu, and Chinitsu apply open-hand han reductions. |
-| Yaku combination filtering | Partial | Pinfu now combines with Iipeikou and Ryanpeikou, and yakuman results exclude non-yakuman yaku. Chiitoitsu combination handling is still too narrow. |
+| Yaku combination filtering | Met | Pinfu combines with Iipeikou and Ryanpeikou, yakuman results exclude non-yakuman yaku, and Chiitoitsu includes compatible yaku. |
 | Scoring calculations | Partial | Fu, han, limits, payment rounding, honba, kyoutaku, Kiriage Mangan, Noten Bappu, and Pao have support, with important bugs noted below. |
 | Payment context | Mismatch | `ScoreCalculator.calculate()` computes payments before `payment_to` and `payment_from` are set, so dealer/non-dealer payment branches can be wrong. |
 | Pinfu tsumo fu | Mismatch | `calculate_fu()` returns 30 fu for Pinfu tsumo; requirement says Pinfu tsumo is 20 fu. |
@@ -75,9 +75,8 @@ This audit compares the current codebase against the rule requirements in this d
 ### Chiitoitsu Combination Handling
 
 - Requirement: Chiitoitsu can combine with compatible composition yaku.
-- Code: the Chiitoitsu branch only adds Riichi, Double Riichi, and Ippatsu.
-- Impact: compatible yaku such as Tanyao, Honitsu, Chinitsu, Honroutou, Menzen Tsumo, and dora-related han are not fully represented through yaku results.
-- Suggested fix: evaluate compatible composition yaku for Chiitoitsu using tile composition, while still excluding standard-shape yaku.
+- Status: fixed.
+- Code: the Chiitoitsu branch now includes compatible yaku such as Tanyao, Honitsu, Chinitsu, Honroutou, Menzen Tsumo, riichi-family yaku, and last-tile context yaku.
 
 ### Payment Context
 
