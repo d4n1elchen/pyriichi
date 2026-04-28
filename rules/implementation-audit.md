@@ -14,7 +14,7 @@ This audit compares the current codebase against the rule requirements in this d
 | Tile set and compact notation | Met | `Tile`, `TileSet`, `parse_tiles`, and `format_tiles` cover the standard tile set and Red Dora notation. |
 | Initial deal | Met | `TileSet.deal()` is dealer-aware, and `RuleEngine.deal()` passes `GameState.dealer`. |
 | Hand operations | Met | Draw, discard, chi, pon, kan, and closed kan exist. |
-| Winning-hand detection | Partial | Standard, Chiitoitsu, and Kokushi Musou exist in `Hand`, but `RuleEngine.check_win()` rejects hands with no standard combination, so Kokushi is blocked. |
+| Winning-hand detection | Partial | Standard, Chiitoitsu, and Kokushi Musou exist in `Hand`; `RuleEngine.check_win()` now allows special hands without standard combinations. Known decomposition issues remain for four identical concealed tiles. |
 | Tenpai and machi listing | Partial | Implemented, but known decomposition issues remain for four identical concealed tiles. |
 | Action priority | Met | `_resolve_decisions()` prioritizes ron, then pon/kan, then chi. |
 | Multiple ron rules | Partial | Head Bump, Double Ron, Triple Ron, and Sancha Ron are represented, but multiple-ron score settlement is simplified. |
@@ -45,9 +45,8 @@ This audit compares the current codebase against the rule requirements in this d
 ### Kokushi Through Rule Engine
 
 - Requirement: Kokushi Musou is a supported winning shape.
-- Code: `Hand.is_winning_hand()` supports Kokushi, but `RuleEngine.check_win()` returns `None` when `get_winning_combinations()` is empty.
-- Impact: Kokushi wins are rejected before yaku checking.
-- Suggested fix: allow special hands with empty standard decompositions to continue to `YakuChecker`.
+- Status: fixed.
+- Code: `Hand.is_winning_hand()` supports Kokushi, and `RuleEngine.check_win()` now lets special hands without standard decompositions continue to `YakuChecker`.
 
 ### Four Identical Concealed Tiles
 

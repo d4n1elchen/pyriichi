@@ -70,6 +70,35 @@ class TestRuleEngine:
         assert self.engine.get_available_actions(2)
         assert not self.engine.get_available_actions(0)
 
+    def test_check_win_allows_kokushi_musou_ron(self):
+        """Test check_win allows kokushi_musou ron."""
+        self._init_game()
+        winning_tile = Tile(Suit.HONORS, 1)
+        self.engine._hands[1] = Hand(parse_tiles("19m19p19s22z3z4z5z6z7z"))
+        self.engine._last_discarded_tile = winning_tile
+        self.engine._last_discarded_player = 0
+        self.engine._is_first_turn_after_deal = False
+
+        result = self.engine.check_win(1, winning_tile)
+
+        assert result is not None
+        assert result.win
+        assert any(yaku.yaku == Yaku.KOKUSHI_MUSOU for yaku in result.yaku)
+
+    def test_check_win_allows_kokushi_musou_tsumo(self):
+        """Test check_win allows kokushi_musou tsumo."""
+        self._init_game()
+        winning_tile = Tile(Suit.HONORS, 7)
+        self.engine._hands[1] = Hand(parse_tiles("19m19p19s1z2z3z4z5z6z77z"))
+        self.engine._last_drawn_tile = (1, winning_tile)
+        self.engine._is_first_turn_after_deal = False
+
+        result = self.engine.check_win(1, winning_tile)
+
+        assert result is not None
+        assert result.win
+        assert any(yaku.yaku == Yaku.KOKUSHI_MUSOU for yaku in result.yaku)
+
     def test_riichi_availability_14_tiles(self):
         """Test riichi availability with 14 tiles (after draw) and tenpai after discard"""
         self.engine.start_game()

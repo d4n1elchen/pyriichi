@@ -1376,8 +1376,6 @@ class RuleEngine:
 
         # Get winning combinations.
         combinations = hand.get_winning_combinations(winning_tile, is_tsumo)
-        if not combinations:
-            return None
 
         # Check furiten for ron; furiten players can still win by tsumo.
         if not is_tsumo and self.is_furiten(player):

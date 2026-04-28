@@ -1397,7 +1397,10 @@ class YakuChecker:
         if not hand.is_concealed:
             return None
 
-        tiles = hand.tiles + [winning_tile] if winning_tile else hand.tiles
+        if len(hand.tiles) == 14:
+            tiles = hand.tiles
+        else:
+            tiles = hand.tiles + [winning_tile] if winning_tile else hand.tiles
         if len(tiles) != 14:
             return None
 
