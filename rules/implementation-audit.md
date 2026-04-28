@@ -29,7 +29,7 @@ This audit compares the current codebase against the rule requirements in this d
 | Scoring calculations | Partial | Fu, han, limits, payment rounding, honba, kyoutaku, Kiriage Mangan, Noten Bappu, and Pao have support, with important bugs noted below. |
 | Payment context | Met | `ScoreCalculator.calculate()` receives payment context before calculating payment branches. |
 | Pinfu tsumo fu | Met | `calculate_fu()` returns 20 fu for Pinfu tsumo and 30 fu for closed Pinfu ron. |
-| Nagashi Mangan | Partial | One path scores Nagashi Mangan as mangan-like payments; `handle_ryuukyoku()` still applies a simplified +3000/-1000 transfer. |
+| Nagashi Mangan | Met | Exhaustive-draw paths score Nagashi Mangan with mangan payments. |
 | Renchan and round progression | Partial | Dealer win renchan exists, but exhaustive-draw dealer tenpai continuation is not implemented in `end_round()`. |
 | Game-end conditions | Partial | Tobi, west round extension, and Agari Yame exist; end-round flow needs integration coverage. |
 | Chombo | Missing | Config exists, but no complete violation detection and penalty flow was found. |
@@ -93,9 +93,8 @@ This audit compares the current codebase against the rule requirements in this d
 ### Nagashi Mangan Settlement
 
 - Requirement: Nagashi Mangan is scored as mangan.
-- Code: `end_round()` uses dealer/non-dealer mangan-like payments, but `handle_ryuukyoku()` applies a simplified +3000/-1000 transfer.
-- Impact: behavior depends on which ryuukyoku path is used.
-- Suggested fix: use one Nagashi Mangan settlement path and score it as mangan.
+- Status: fixed.
+- Code: both exhaustive-draw paths use the same Nagashi Mangan payment helper.
 
 ### Renchan on Exhaustive Draw
 

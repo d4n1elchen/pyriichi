@@ -1231,23 +1231,7 @@ class RuleEngine:
                         nagashi_mangan_players.append(i)
 
                 if nagashi_mangan_players:
-                    # Apply nagashi_mangan score changes.
-                    for winner in nagashi_mangan_players:
-                        is_dealer = winner == self._game_state.dealer
-                        payment = 4000 if is_dealer else 2000
-
-                        # All players except the winner pay.
-                        for i in range(self._num_players):
-                            if i == winner:
-                                continue
-
-                            # Dealer pays more when the winner is not dealer.
-                            pay_amount = payment
-                            if not is_dealer and i == self._game_state.dealer:
-                                pay_amount = 4000
-
-                            self._game_state.update_score(i, -pay_amount)
-                            self._game_state.update_score(winner, pay_amount)
+                    self._apply_nagashi_mangan_scores(nagashi_mangan_players)
                 else:
                     # Calculate noten_bappu only when there is no nagashi_mangan.
                     self._calculate_noten_bappu()
@@ -1288,6 +1272,22 @@ class RuleEngine:
             self._discard_history.pop()
         # Mark this player's discard as called, which affects nagashi_mangan.
         self._has_called_discard[discarder] = True
+
+    def _apply_nagashi_mangan_scores(self, winners: List[int]) -> None:
+        for winner in winners:
+            is_dealer = winner == self._game_state.dealer
+            payment = 4000 if is_dealer else 2000
+
+            for i in range(self._num_players):
+                if i == winner:
+                    continue
+
+                pay_amount = payment
+                if not is_dealer and i == self._game_state.dealer:
+                    pay_amount = 4000
+
+                self._game_state.update_score(i, -pay_amount)
+                self._game_state.update_score(winner, pay_amount)
 
     def _draw_rinshan_tile(
         self, player: int, result: ActionResult, *, kan_type: MeldType
@@ -1841,11 +1841,8 @@ class RuleEngine:
             for i in range(self._num_players):
                 if self._check_nagashi_mangan(i):
                     result.nagashi_mangan_players.append(i)
-                    # nagashi_mangan: 3000 points.
-                    self._game_state.update_score(i, 3000)
-                    for j in range(self._num_players):
-                        if j != i:
-                            self._game_state.update_score(j, -1000)
+            if result.nagashi_mangan_players:
+                self._apply_nagashi_mangan_scores(result.nagashi_mangan_players)
 
         # Handle kyuushu_kyuuhai on the first turn.
         # Check whether kyuushu_kyuuhai can abort on the first turn.

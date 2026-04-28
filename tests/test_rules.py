@@ -2481,6 +2481,30 @@ class TestRyuukyoku:
         self.engine._has_called_discard[player] = True
         assert self.engine._check_nagashi_mangan(player) is False
 
+    def test_handle_ryuukyoku_scores_nagashi_mangan_as_mangan(self):
+        """Test handle_ryuukyoku scores nagashi_mangan as mangan."""
+        self._init_game()
+        player = 1
+        self.engine._game_state.set_dealer(0)
+        self.engine._tile_set._tiles = []
+        self.engine._hands[player]._discards = [
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.PINZU, 9),
+        ]
+        self.engine._has_called_discard[player] = False
+        initial_scores = self.engine._game_state.scores
+
+        result = self.engine.handle_ryuukyoku()
+
+        score_deltas = [
+            score - initial_scores[i]
+            for i, score in enumerate(self.engine._game_state.scores)
+        ]
+        assert result.nagashi_mangan_players == [player]
+        assert score_deltas == [-4000, 8000, -2000, -2000]
+
     def test_check_sancha_ron(self):
         """Test sancha_ron (Three ron) check"""
         self._init_game()
