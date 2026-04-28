@@ -2279,6 +2279,36 @@ class TestWinningAndScoring:
         assert self.engine._game_state.scores[2] == initial_scores[2] + 2000
         assert self.engine._game_state.scores[0] == initial_scores[0] - 4000
 
+    def test_double_ron_uses_score_result_settlement(self):
+        """Test double_ron uses score_result settlement."""
+        self._init_game()
+        self.engine._game_state.ruleset.head_bump_only = False
+        self.engine._game_state.ruleset.allow_double_ron = True
+        self.engine._game_state._honba = 1
+        self.engine._game_state.add_riichi_stick()
+
+        discard_tile = Tile(Suit.PINZU, 4)
+        hand_tiles = parse_tiles("234567m23456p88s")
+        self.engine._hands[1] = Hand(hand_tiles)
+        self.engine._hands[2] = Hand(hand_tiles)
+        self.engine._current_player = 0
+        self.engine._is_first_turn_after_deal = False
+        self.engine._tile_set._dora_indicators = []
+
+        initial_scores = self.engine._game_state.scores.copy()
+        self.engine._hands[0]._tiles.append(discard_tile)
+        self.engine._waiting_for_actions = {0: self.engine._calculate_turn_actions(0)}
+        self.engine.execute_action(0, GameAction.DISCARD, discard_tile)
+        self.engine.execute_action(1, GameAction.RON, tile=discard_tile)
+        result = self.engine.execute_action(2, GameAction.RON, tile=discard_tile)
+
+        assert result.success
+        assert sorted(result.winners) == [1, 2]
+        assert self.engine._game_state.riichi_sticks == 0
+        assert self.engine._game_state.scores[1] == initial_scores[1] + 3300
+        assert self.engine._game_state.scores[2] == initial_scores[2] + 2300
+        assert self.engine._game_state.scores[0] == initial_scores[0] - 4600
+
     def test_double_ron_dealer_renchan(self):
         """Test double_ron: dealer win leads to renchan"""
         self._init_game()

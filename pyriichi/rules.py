@@ -657,7 +657,7 @@ class RuleEngine:
         return result
 
     def _handle_ron_multiple(self, winners: List[int]) -> ActionResult:
-        """handle multiple ron"""
+        """Handle multiple ron."""
         result = ActionResult()
         result.winners = winners
         result.win_results = {}
@@ -667,48 +667,19 @@ class RuleEngine:
             raise ValueError("無捨牌")
 
         for player in winners:
-            win_res = self.check_win(
-                player, tile, is_rinshan=False
-            )  # ron is not rinshan
+            win_res = self.check_win(player, tile, is_rinshan=False)
             if win_res:
                 result.win_results[player] = win_res
 
-        # handle score settlement (simplified here, end directly)
-        # Actually should call _process_win_scoring etc.
-        # To maintain compatibility, do we call _handle_ron for first player then supplement?
-        # No, set state directly
-        self._phase = GamePhase.WINNING  # or ENDED
-        # Need full settlement logic here, temporarily reuse part of _handle_ron logic
-        # But _handle_ron only handles single person.
-        # We assume demo_ui will handle result.win_results
-
-        # Update scores
-        # Note: In multiple winners, kyoutaku sticks (riichi_stick) distribution depends on rules (usually head_bump or split)
-        # Simplified here: Each winner calculates score, deducted from discarder.
-
-        loser = self._last_discarded_player
-
-        for player in winners:
+        for index, player in enumerate(winners):
             win_res = result.win_results[player]
-            points = win_res.points
-            # Simple deduction
-            self._game_state.update_score(loser, -points)
-            self._game_state.update_score(player, points)
+            score_result = win_res.score_result
+            if index > 0 and score_result.riichi_sticks_bonus > 0:
+                score_result.total_points -= score_result.riichi_sticks_bonus
+                score_result.riichi_sticks_bonus = 0
+            self.apply_win_score(win_res)
 
-        # handle riichi_stick ownership (give to first winner)
-        if self._game_state.riichi_sticks > 0:
-            first_winner = winners[0]  # In order? check_multiple_ron returns order?
-            # Assume check_multiple_ron is in counter-clockwise order
-            self._game_state.update_score(
-                first_winner, self._game_state.riichi_sticks * 1000
-            )
-            self._game_state.clear_riichi_sticks()
-
-        # honba (Counter Sticks) - Usually added to each winner? Or only first?
-        # Standard rule: honba only for head_bump. In double_ron, usually added to all? Or only first?
-        # tenhou: double_ron both get honba.
-        # Not handling complex honba logic here, assume calculated in check_win (check_win includes honba? Usually yes)
-
+        self._phase = GamePhase.WINNING
         return result
 
     def _handle_draw(
