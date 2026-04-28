@@ -89,7 +89,7 @@ class RyuukyokuResult:
 
     ryuukyoku: bool
     ryuukyoku_type: Optional[RyuukyokuType] = None
-    flow_mangan_players: List[int] = field(default_factory=list)
+    nagashi_mangan_players: List[int] = field(default_factory=list)
     kyuushu_kyuuhai_player: Optional[int] = None
 
 
@@ -1222,14 +1222,14 @@ class RuleEngine:
             # On exhaustive_draw, check nagashi_mangan and noten_bappu.
             if self._tile_set and self._tile_set.is_exhausted():
                 # Check nagashi_mangan.
-                flow_mangan_players = []
+                nagashi_mangan_players = []
                 for i in range(self._num_players):
                     if self._check_nagashi_mangan(i):
-                        flow_mangan_players.append(i)
+                        nagashi_mangan_players.append(i)
 
-                if flow_mangan_players:
+                if nagashi_mangan_players:
                     # Apply nagashi_mangan score changes.
-                    for winner in flow_mangan_players:
+                    for winner in nagashi_mangan_players:
                         is_dealer = winner == self._game_state.dealer
                         payment = 4000 if is_dealer else 2000
 
@@ -1837,8 +1837,8 @@ class RuleEngine:
         # Check nagashi_mangan.
         if ryuukyoku_type == RyuukyokuType.EXHAUSTIVE_DRAW:
             for i in range(self._num_players):
-                if self.check_flow_mangan(i):
-                    result.flow_mangan_players.append(i)
+                if self._check_nagashi_mangan(i):
+                    result.nagashi_mangan_players.append(i)
                     # nagashi_mangan: 3000 points.
                     self._game_state.update_score(i, 3000)
                     for j in range(self._num_players):

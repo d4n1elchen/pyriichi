@@ -71,7 +71,7 @@ class GameState:
         return self._round_number
 
     @property
-    def player_winds(self) -> List[Wind]:
+    def seat_winds(self) -> List[Wind]:
         winds = [Wind.EAST, Wind.SOUTH, Wind.WEST, Wind.NORTH]
         return [
             winds[(i - self._dealer) % self._num_players]

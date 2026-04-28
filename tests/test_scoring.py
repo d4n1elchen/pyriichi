@@ -897,8 +897,8 @@ class TestScoreCalculator:
             if machi == Machi.SHABO:
                 pass
 
-    def test_fu_pair_player_wind(self):
-        """Test fu pair player wind."""
+    def test_fu_pair_seat_wind(self):
+        """Test fu pair seat_wind."""
         self.game_state.set_dealer(0)
         tiles = parse_tiles("123m456m78m123p11z")
         hand = Hand(tiles)
@@ -918,8 +918,8 @@ class TestScoreCalculator:
             )
             assert fu >= 30
 
-    def test_fu_pair_player_wind_south(self):
-        """Test fu pair player wind south."""
+    def test_fu_pair_seat_wind_south(self):
+        """Test fu pair seat_wind south."""
         self.game_state.set_dealer(0)
         tiles = parse_tiles("12345678m123p22z")
         hand = Hand(tiles)

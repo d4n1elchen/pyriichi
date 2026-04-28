@@ -194,15 +194,15 @@ class TestYakuChecker:
             assert result.yaku == Yaku.JUNCHAN
             assert result.han == 3
 
-    def test_honchan(self):
-        """Test honchan."""
+    def test_chanta(self):
+        """Test chanta."""
         tiles = parse_tiles("123m789m123p111z2z")
         hand = Hand(tiles)
         winning_tile = Tile(Suit.HONORS, 2)
         combinations = hand.get_winning_combinations(winning_tile)
 
         if combinations:
-            result = self.checker.check_honchan(
+            result = self.checker.check_chanta(
                 hand, list(combinations[0]), self.game_state
             )
             assert result is not None
@@ -774,8 +774,8 @@ class TestYakuChecker:
                 assert result.han == 2
                 assert not result.is_yakuman
 
-    def test_haitei_raoyue_direct(self):
-        """Test haitei raoyue direct."""
+    def test_haitei_direct(self):
+        """Test haitei direct."""
         tiles = parse_tiles("123m456m345p678p4s")
         hand = Hand(tiles)
 
@@ -787,8 +787,8 @@ class TestYakuChecker:
         assert result.han == 1
         assert not result.is_yakuman
 
-    def test_houtei_raoyui_direct(self):
-        """Test houtei raoyui direct."""
+    def test_houtei_direct(self):
+        """Test houtei direct."""
         tiles = parse_tiles("123m456m345p678p4s")
         hand = Hand(tiles)
 
@@ -800,8 +800,8 @@ class TestYakuChecker:
         assert result.han == 1
         assert not result.is_yakuman
 
-    def test_rinshan_kaihou_direct(self):
-        """Test rinshan kaihou direct."""
+    def test_rinshan_direct(self):
+        """Test rinshan direct."""
         tiles = parse_tiles("123m456m345p678p4s")
         hand = Hand(tiles)
 
@@ -944,7 +944,7 @@ class TestYakuChecker:
 
 
 class TestPinfuSeatWind:
-    def test_pinfu_with_self_wind_pair(self):
+    def test_pinfu_with_seat_wind_pair(self):
 
         tiles = parse_tiles("123m456p789s234p11z")
         hand = Hand(tiles)

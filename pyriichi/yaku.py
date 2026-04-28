@@ -375,7 +375,7 @@ class YakuChecker:
         # Advanced yaku (3 han or more)
         if result := self.check_junchan(hand, winning_combination, game_state):
             results.append(result)
-        if result := self.check_honchan(hand, winning_combination, game_state):
+        if result := self.check_chanta(hand, winning_combination, game_state):
             results.append(result)
         if result := self.check_ryanpeikou(hand, winning_combination):
             results.append(result)
@@ -626,8 +626,8 @@ class YakuChecker:
 
             # Check if it is seat_wind
             if game_state:
-                player_wind = game_state.player_winds[player_position]
-                if player_wind.tile == pair_tile:
+                seat_wind = game_state.seat_winds[player_position]
+                if seat_wind.tile == pair_tile:
                     return None  # seat_wind pair, cannot be pinfu
 
         # Check machi (ryanmen / Two-sided wait) - depending on rules.
@@ -761,9 +761,9 @@ class YakuChecker:
             4: (Wind.NORTH, Yaku.ROUND_WIND_NORTH, Yaku.SEAT_WIND_NORTH),
         }
         round_wind = game_state.round_wind
-        player_wind = (
-            game_state.player_winds[player_position]
-            if 0 <= player_position < len(game_state.player_winds)
+        seat_wind = (
+            game_state.seat_winds[player_position]
+            if 0 <= player_position < len(game_state.seat_winds)
             else None
         )
 
@@ -788,7 +788,7 @@ class YakuChecker:
                 target_wind, round_yaku, seat_yaku = wind_rank_mapping[rank]
                 if round_wind == target_wind:
                     results.append(YakuResult(round_yaku, 1, False))
-                if player_wind == target_wind:
+                if seat_wind == target_wind:
                     results.append(YakuResult(seat_yaku, 1, False))
 
         return results
@@ -1046,7 +1046,7 @@ class YakuChecker:
 
         return None
 
-    def check_honchan(
+    def check_chanta(
         self,
         hand: Hand,
         winning_combination: List,

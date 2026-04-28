@@ -352,10 +352,10 @@ class ScoreCalculator:
                 if round_wind_tile == pair_tile:
                     fu += 2
 
-                player_winds = game_state.player_winds
-                if player_position < len(player_winds):
-                    player_wind_tile = player_winds[player_position].tile
-                    if player_wind_tile == pair_tile:
+                seat_winds = game_state.seat_winds
+                if player_position < len(seat_winds):
+                    seat_wind_tile = seat_winds[player_position].tile
+                    if seat_wind_tile == pair_tile:
                         fu += 2
 
         machi = self._determine_machi(winning_tile, winning_combination)
