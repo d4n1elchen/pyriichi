@@ -1,122 +1,49 @@
 # Implementation Audit
 
-This audit compares the current codebase against the rule requirements in this directory. Status values:
+This audit compares the current codebase against the rule requirements in this directory.
+Fixed findings are intentionally removed from this document so it stays focused on unresolved work.
 
-- **Met**: the requirement appears implemented in code.
+Status values:
+
 - **Partial**: the code has support, but behavior is incomplete, simplified, or has a known edge-case issue.
 - **Missing**: no implementation was found.
 - **Mismatch**: implementation contradicts the requirement.
 
 ## Summary
 
-| Area | Status | Notes |
-|------|--------|-------|
-| Tile set and compact notation | Met | `Tile`, `TileSet`, `parse_tiles`, and `format_tiles` cover the standard tile set and Red Dora notation. |
-| Initial deal | Met | `TileSet.deal()` is dealer-aware, and `RuleEngine.deal()` passes `GameState.dealer`. |
-| Hand operations | Met | Draw, discard, chi, pon, kan, and closed kan exist. |
-| Winning-hand detection | Met | Standard, Chiitoitsu, and Kokushi Musou are accepted by `Hand` and `RuleEngine.check_win()`. |
-| Tenpai and machi listing | Met | Implemented, including decomposition paths where four identical concealed tiles can be used as a triplet plus a leftover tile. |
-| Action priority | Met | `_resolve_decisions()` prioritizes ron, then pon/kan, then chi. |
-| Multiple ron rules | Partial | Head Bump, Double Ron, Triple Ron, and Sancha Ron are represented, but multiple-ron score settlement is simplified. |
-| Furiten | Met | Genbutsu, temp furiten, and permanent riichi furiten are implemented. |
-| Riichi action rules | Partial | Closed hand and tenpai-after-discard checks exist; 1000-point payment exists; remaining-wall requirement is not implemented. |
-| Ippatsu | Partial | Ippatsu tracking exists, but first-turn and interruption behavior needs broader verification. |
-| Kan and rinshan flow | Partial | Kan, closed kan, rinshan draw, Chankan, and Suukan Sanra exist; dora indicator timing is simplified through indicator count. |
-| Abortive draws | Partial | Suufon Renda, Kyuushu Kyuuhai, Suucha Riichi, Suukan Sanra, and Sancha Ron exist; dealer-continuation behavior is incomplete. |
-| Yaku coverage | Partial | Most listed yaku exist, but several standard rule details do not match requirements. |
-| Open-hand reductions | Met | Chanta, Junchan, Sanshoku Doujun, Ittsu, Honitsu, and Chinitsu apply open-hand han reductions. |
-| Yaku combination filtering | Met | Pinfu combines with Iipeikou and Ryanpeikou, yakuman results exclude non-yakuman yaku, and Chiitoitsu includes compatible yaku. |
-| Scoring calculations | Partial | Fu, han, limits, payment rounding, honba, kyoutaku, Kiriage Mangan, Noten Bappu, and Pao have support, with important bugs noted below. |
-| Payment context | Met | `ScoreCalculator.calculate()` receives payment context before calculating payment branches. |
-| Pinfu tsumo fu | Met | `calculate_fu()` returns 20 fu for Pinfu tsumo and 30 fu for closed Pinfu ron. |
-| Nagashi Mangan | Met | Exhaustive-draw paths score Nagashi Mangan with mangan payments. |
-| Renchan and round progression | Met | Dealer win and exhaustive-draw dealer tenpai renchan are implemented in `end_round()`. |
-| Game-end conditions | Partial | Tobi, west round extension, and Agari Yame exist; end-round flow needs integration coverage. |
-| Chombo | Missing | Config exists, but no complete violation detection and penalty flow was found. |
+| Area | Status | Suggested fix |
+|------|--------|---------------|
+| Chombo | Missing | Add an explicit chombo result and mangan-level penalty flow for false win and invalid riichi when enabled by `RulesetConfig`. |
+| Dora indicator count | Mismatch | Count the initial dora indicator plus one additional indicator per kan when scoring dora and ura dora. |
+| Abortive draw settlement | Partial | Apply a consistent round-settlement path for abortive draws, including dealer continuation and honba handling. |
+| Open Tanyao configuration | Partial | Add a ruleset option for Open Tanyao and reject open Tanyao when the option is disabled. |
 
 ## Detailed Findings
 
-### Initial Dealer Deal
-
-- Requirement: the current dealer receives 14 tiles.
-- Status: fixed.
-- Code: `TileSet.deal()` accepts a dealer index and gives that player the extra tile. `RuleEngine.deal()` passes `GameState.dealer`.
-
-### Kokushi Through Rule Engine
-
-- Requirement: Kokushi Musou is a supported winning shape.
-- Status: fixed.
-- Code: `Hand.is_winning_hand()` supports Kokushi, and `RuleEngine.check_win()` now lets special hands without standard decompositions continue to `YakuChecker`.
-
-### Four Identical Concealed Tiles
-
-- Requirement: standard winning-hand detection should find legal decompositions.
-- Status: fixed.
-- Code: concealed hand decomposition now removes three identical tiles as a triplet and leaves any fourth copy available for other meld paths.
-
-### Open-Hand Han Reductions
-
-- Requirement: Sanshoku Doujun and Ittsu are 2 han closed and 1 han open; Honitsu is 3/2; Chinitsu is 6/5.
-- Status: fixed.
-- Code: `check_sanshoku_doujun()`, `check_ittsu()`, `check_honitsu()`, and `check_chinitsu()` now use `hand.is_concealed` to apply open-hand han reductions.
-
-### Pinfu and Sequence Yaku
-
-- Requirement: Pinfu can combine with Iipeikou and Ryanpeikou.
-- Status: fixed.
-- Code: `_filter_conflicting_yaku()` no longer removes Pinfu when Iipeikou or Ryanpeikou exists.
-
-### Yakuman and Non-Yakuman Yaku
-
-- Requirement: yakuman do not score with non-yakuman yaku.
-- Status: fixed.
-- Code: `YakuChecker.check_all()` returns only yakuman results once any yakuman is present.
-
-### Chiitoitsu Combination Handling
-
-- Requirement: Chiitoitsu can combine with compatible composition yaku.
-- Status: fixed.
-- Code: the Chiitoitsu branch now includes compatible yaku such as Tanyao, Honitsu, Chinitsu, Honroutou, Menzen Tsumo, riichi-family yaku, and last-tile context yaku.
-
-### Payment Context
-
-- Requirement: payment calculation must use the actual winner and payer.
-- Status: fixed.
-- Code: `RuleEngine.check_win()` passes `payment_to` and `payment_from` into `ScoreCalculator.calculate()` before payment calculation runs.
-
-### Pinfu Tsumo Fu
-
-- Requirement: Pinfu tsumo is 20 fu.
-- Status: fixed.
-- Code: `ScoreCalculator.calculate_fu()` returns 20 fu for Pinfu tsumo and 30 fu for closed Pinfu ron.
-
-### Nagashi Mangan Settlement
-
-- Requirement: Nagashi Mangan is scored as mangan.
-- Status: fixed.
-- Code: both exhaustive-draw paths use the same Nagashi Mangan payment helper.
-
-### Renchan on Exhaustive Draw
-
-- Requirement: Exhaustive Draw causes renchan when the dealer is tenpai; otherwise the dealer rotates.
-- Status: fixed.
-- Code: `end_round()` checks dealer tenpai on Exhaustive Draw and only advances the dealer and round when the dealer is not tenpai.
-
-### Riichi Furiten
-
-- Requirement: passing ron after riichi creates permanent furiten.
-- Status: fixed.
-- Code: passing a ron opportunity after riichi now sets both temp furiten and permanent riichi furiten.
-
-### Pao Tracking
-
-- Requirement: Pao responsibility is triggered when the final qualifying call confirms Daisangen or Daisuushi.
-- Status: fixed.
-- Code: pon and open kan handling record the responsible player when the final qualifying call confirms Daisangen or Daisuushi.
-
 ### Chombo
 
-- Requirement: false win, invalid riichi, and penalties are handled.
-- Code: `RulesetConfig` has `chombo_penalty_enabled`, but no complete chombo flow was found.
-- Impact: violations are mostly rejected as invalid actions rather than handled as chombo penalties.
-- Suggested fix: add explicit violation detection and penalty settlement.
+- Requirement: false win, invalid riichi, and penalties are handled when the ruleset enables chombo penalties.
+- Code: `RulesetConfig` has `chombo_penalty_enabled`, but invalid wins and invalid riichi are mostly rejected as invalid actions.
+- Impact: callers cannot distinguish ordinary invalid actions from chombo, and score penalties are not applied.
+- Suggested fix: add an explicit chombo result, apply mangan-level penalty payments, and end the hand in ryuukyoku/chombo state.
+
+### Dora Indicator Count
+
+- Requirement: the first dora indicator is always active, and each kan reveals one additional dora indicator.
+- Code: `_count_dora()` passes `_kan_count` into `get_dora_indicators()` and `get_ura_dora_indicators()`, so zero kan means zero visible indicators and one kan means only the initial indicator.
+- Impact: hands can be under-scored by missing initial dora and kan dora.
+- Suggested fix: use `1 + _kan_count` for dora and ura-dora indicator count, capped by the available indicators.
+
+### Abortive Draw Settlement
+
+- Requirement: abortive draws end the hand and update round state according to the active continuation rule.
+- Code: `handle_ryuukyoku()` reports abortive draw types but does not share the same dealer/honba progression path as `end_round()`.
+- Impact: direct abortive-draw handling can leave dealer, honba, and round number stale.
+- Suggested fix: add a shared ryuukyoku settlement helper and call it from abortive-draw handlers.
+
+### Open Tanyao Configuration
+
+- Requirement: Open Tanyao is ruleset-dependent.
+- Code: `check_tanyao()` always allows open hands and `RulesetConfig` has no Open Tanyao option.
+- Impact: rulesets that disable Open Tanyao cannot be represented.
+- Suggested fix: add `open_tanyao_enabled` to `RulesetConfig` and apply it in Tanyao checking.
