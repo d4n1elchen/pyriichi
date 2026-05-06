@@ -25,7 +25,7 @@ Status values:
 | Riichi action rules | Met | Closed hand, tenpai-after-discard, Riichi Stick payment, and remaining-wall requirement are implemented. |
 | Ippatsu | Met | Ippatsu is tracked after riichi and interrupted by calls or kan according to ruleset configuration. |
 | Kan and rinshan flow | Met | Kan, closed kan, rinshan draw, Chankan, Suukan Sanra, and kan dora indicator counts are implemented. |
-| Abortive draws | Partial | Suufon Renda, Kyuushu Kyuuhai, Suucha Riichi, Suukan Sanra, and Sancha Ron exist; shared settlement is still incomplete. |
+| Abortive draws | Met | Suufon Renda, Kyuushu Kyuuhai, Suucha Riichi, Suukan Sanra, and Sancha Ron exist, with shared ryuukyoku settlement for dealer continuation and honba handling. |
 | Yaku coverage | Met | Listed standard yaku exist, including ruleset-configurable Open Tanyao. |
 | Open-hand reductions | Met | Chanta, Junchan, Sanshoku Doujun, Ittsu, Honitsu, and Chinitsu apply open-hand han reductions. |
 | Yaku combination filtering | Met | Pinfu combines with Iipeikou and Ryanpeikou, yakuman results exclude non-yakuman yaku, and Chiitoitsu includes compatible yaku. |
@@ -36,13 +36,8 @@ Status values:
 | Renchan and round progression | Met | Dealer win and exhaustive-draw dealer tenpai renchan are implemented in `end_round()`. |
 | Game-end conditions | Met | Tobi, west round extension, and Agari Yame are implemented. |
 | Chombo | Met | False win and invalid riichi produce explicit Chombo results and mangan-level penalties when enabled by `RulesetConfig`. |
-| Abortive draw settlement | Partial | Apply a consistent round-settlement path for abortive draws, including dealer continuation and honba handling. |
+| Abortive draw settlement | Met | Abortive draws now use shared ryuukyoku settlement, with configurable dealer continuation and honba incrementing. |
 
 ## Detailed Findings
 
-### Abortive Draw Settlement
-
-- Requirement: abortive draws end the hand and update round state according to the active continuation rule.
-- Code: `handle_ryuukyoku()` reports abortive draw types but does not share the same dealer/honba progression path as `end_round()`.
-- Impact: direct abortive-draw handling can leave dealer, honba, and round number stale.
-- Suggested fix: add a shared ryuukyoku settlement helper and call it from abortive-draw handlers.
+No unresolved findings remain in this audit.

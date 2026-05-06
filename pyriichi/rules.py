@@ -1154,8 +1154,10 @@ class RuleEngine:
                 ryuukyoku=True, ryuukyoku_type=RyuukyokuType.SANCHA_RON
             )
             result.success = True
-            result.phase = GamePhase.ENDED
-            self._phase = GamePhase.ENDED
+            self._settle_ryuukyoku_round(
+                self._game_state.ruleset.abortive_draw_dealer_continues
+            )
+            result.phase = self._phase
             return result
 
         # Verify that this player is allowed to declare ron.
@@ -1230,32 +1232,9 @@ class RuleEngine:
             # On exhaustive_draw, check nagashi_mangan and noten_bappu.
             dealer_continues = False
             if self._tile_set and self._tile_set.is_exhausted():
-                # Check nagashi_mangan.
-                nagashi_mangan_players = []
-                for i in range(self._num_players):
-                    if self._check_nagashi_mangan(i):
-                        nagashi_mangan_players.append(i)
+                _, dealer_continues = self._apply_exhaustive_draw_scores()
 
-                if nagashi_mangan_players:
-                    self._apply_nagashi_mangan_scores(nagashi_mangan_players)
-                else:
-                    # Calculate noten_bappu only when there is no nagashi_mangan.
-                    self._calculate_noten_bappu()
-
-                dealer = self._game_state.dealer
-                dealer_continues = self._hands[dealer].is_tenpai()
-
-            # Check tobi.
-            if self._check_tobi():
-                self._phase = GamePhase.ENDED
-                return
-
-            self._game_state.next_dealer(dealer_continues)
-
-            if not dealer_continues:
-                has_next = self._game_state.next_round()
-                if not has_next:
-                    self._phase = GamePhase.ENDED
+            self._settle_ryuukyoku_round(dealer_continues)
 
     def _handle_declare_kyuushu_kyuuhai(
         self, player: int, tile: Optional[Tile] = None, **kwargs
@@ -1272,8 +1251,41 @@ class RuleEngine:
             ryuukyoku_type=RyuukyokuType.KYUUSHU_KYUUHAI,
             kyuushu_kyuuhai_player=player,
         )
-        self._phase = GamePhase.RYUUKYOKU
+        self._settle_ryuukyoku_round(
+            self._game_state.ruleset.abortive_draw_dealer_continues
+        )
+        result.phase = self._phase
         return result
+
+    def _apply_exhaustive_draw_scores(self) -> Tuple[List[int], bool]:
+        nagashi_mangan_players = []
+        for i in range(self._num_players):
+            if self._check_nagashi_mangan(i):
+                nagashi_mangan_players.append(i)
+
+        if nagashi_mangan_players:
+            self._apply_nagashi_mangan_scores(nagashi_mangan_players)
+        else:
+            self._calculate_noten_bappu()
+
+        dealer = self._game_state.dealer
+        return nagashi_mangan_players, self._hands[dealer].is_tenpai()
+
+    def _settle_ryuukyoku_round(self, dealer_continues: bool) -> None:
+        if self._check_tobi():
+            self._phase = GamePhase.ENDED
+            return
+
+        if dealer_continues:
+            self._game_state.add_honba()
+            self._phase = GamePhase.RYUUKYOKU
+            return
+
+        next_dealer = (self._game_state.dealer + 1) % self._num_players
+        self._game_state.set_dealer(next_dealer)
+        self._game_state.add_honba()
+        has_next = self._game_state.next_round()
+        self._phase = GamePhase.RYUUKYOKU if has_next else GamePhase.ENDED
 
     def _remove_last_discard(self, discarder: int, tile: Tile) -> None:
         self._hands[discarder].remove_last_discard(tile)
@@ -1909,41 +1921,47 @@ class RuleEngine:
             RyuukyokuResult: Result containing type and nagashi_mangan players.
         """
         ryuukyoku_type = self.check_ryuukyoku()
+        kyuushu_kyuuhai_player = None
+        if not ryuukyoku_type and self._is_first_turn_after_deal:
+            for i in range(self._num_players):
+                if self._check_kyuushu_kyuuhai(i):
+                    ryuukyoku_type = RyuukyokuType.KYUUSHU_KYUUHAI
+                    kyuushu_kyuuhai_player = i
+                    break
+
         if not ryuukyoku_type:
             return RyuukyokuResult(ryuukyoku=False)
 
         result = RyuukyokuResult(
             ryuukyoku=True,
             ryuukyoku_type=ryuukyoku_type,
+            kyuushu_kyuuhai_player=kyuushu_kyuuhai_player,
         )
+        dealer_continues = self._game_state.ruleset.abortive_draw_dealer_continues
 
-        # Check nagashi_mangan.
         if ryuukyoku_type == RyuukyokuType.EXHAUSTIVE_DRAW:
-            for i in range(self._num_players):
-                if self._check_nagashi_mangan(i):
-                    result.nagashi_mangan_players.append(i)
-            if result.nagashi_mangan_players:
-                self._apply_nagashi_mangan_scores(result.nagashi_mangan_players)
+            nagashi_mangan_players, dealer_continues = (
+                self._apply_exhaustive_draw_scores()
+            )
+            result.nagashi_mangan_players = nagashi_mangan_players
 
-        # Handle kyuushu_kyuuhai on the first turn.
-        # Check whether kyuushu_kyuuhai can abort on the first turn.
-        if self._is_first_turn_after_deal:
+        if kyuushu_kyuuhai_player is None and self._is_first_turn_after_deal:
             for i in range(self._num_players):
                 if self._check_kyuushu_kyuuhai(i):
                     result.ryuukyoku_type = RyuukyokuType.KYUUSHU_KYUUHAI
                     result.kyuushu_kyuuhai_player = i
-                    # Dealer repeats on kyuushu_kyuuhai.
+                    dealer_continues = (
+                        self._game_state.ruleset.abortive_draw_dealer_continues
+                    )
                     break
 
-        # Handle all-riichi ryuukyoku.
         if ryuukyoku_type == RyuukyokuType.SUUCHA_RIICHI:
-            # On all-riichi ryuukyoku, dealer pays 300 points to each non-dealer.
             dealer = self._game_state.dealer
             for i in range(self._num_players):
                 if i != dealer:
                     self._game_state.transfer_points(dealer, i, 300)
 
-        self._phase = GamePhase.RYUUKYOKU
+        self._settle_ryuukyoku_round(dealer_continues)
         return result
 
     def apply_win_score(self, win_result: WinResult) -> None:

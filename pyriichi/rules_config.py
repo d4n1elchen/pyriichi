@@ -37,6 +37,9 @@ class RulesetConfig:
         open_tanyao_enabled (bool): Whether Open Tanyao is enabled.
             - True: Open hands may score Tanyao.
             - False: Tanyao requires a closed hand.
+        abortive_draw_dealer_continues (bool): Whether abortive draws keep the current dealer.
+            - True: Abortive draws keep the dealer and increment honba.
+            - False: Abortive draws rotate the dealer and increment honba.
         chanta_enabled (bool): Whether chanta is enabled.
             - True: Enabled (Standard competitive rule).
             - False: Disabled.
@@ -93,6 +96,9 @@ class RulesetConfig:
     # Open Tanyao rule
     open_tanyao_enabled: bool = True
 
+    # Abortive Draw rule
+    abortive_draw_dealer_continues: bool = True
+
     # chanta Rules
     chanta_enabled: bool = True
 
@@ -145,6 +151,7 @@ class RulesetConfig:
             pinfu_require_ryanmen=True,
             ippatsu_interrupt_on_meld_or_kan=True,
             open_tanyao_enabled=True,
+            abortive_draw_dealer_continues=True,
             chanta_enabled=True,
             chanta_open_han=1,
             chanta_closed_han=2,

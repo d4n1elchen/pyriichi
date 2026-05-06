@@ -750,7 +750,7 @@ class TestRuleEngine:
         assert self.engine._game_state.dealer == 1
         assert self.engine._game_state.round_wind == Wind.EAST
         assert self.engine._game_state.round_number == 2
-        assert self.engine._game_state.honba == 0
+        assert self.engine._game_state.honba == 1
 
     def test_tobi_ron(self):
         """Test tobi (Bankruptcy): ron causes score < 0"""
@@ -2653,6 +2653,30 @@ class TestRyuukyoku:
         assert result.ryuukyoku.ryuukyoku is True
         assert result.ryuukyoku.ryuukyoku_type == RyuukyokuType.KYUUSHU_KYUUHAI
         assert result.ryuukyoku.kyuushu_kyuuhai_player == player
+        assert self.engine._game_state.dealer == player
+        assert self.engine._game_state.round_number == 1
+        assert self.engine._game_state.honba == 1
+
+    def test_abortive_draw_can_rotate_dealer(self):
+        """Test abortive draw dealer rotation configuration."""
+        self._init_game()
+        self.engine._game_state.ruleset.abortive_draw_dealer_continues = False
+        player = self.engine.get_current_player()
+
+        tiles = parse_tiles("19m19p19s1234567z1m")
+        self.engine._hands[player] = Hand(tiles)
+        self.engine._is_first_turn_after_deal = True
+        self.engine._waiting_for_actions[player] = self.engine._calculate_turn_actions(
+            player
+        )
+
+        result = self.engine.execute_action(player, GameAction.DECLARE_KYUUSHU_KYUUHAI)
+
+        assert result.ryuukyoku is not None
+        assert result.ryuukyoku.ryuukyoku_type == RyuukyokuType.KYUUSHU_KYUUHAI
+        assert self.engine._game_state.dealer == 1
+        assert self.engine._game_state.round_number == 2
+        assert self.engine._game_state.honba == 1
 
     def test_handle_draw_suucha_riichi(self):
         """Test suucha_riichi (Four riichi) ryuukyoku handling"""
@@ -2665,6 +2689,24 @@ class TestRyuukyoku:
         # Check ryuukyoku
         ryuukyoku_type = self.engine.check_ryuukyoku()
         assert ryuukyoku_type == RyuukyokuType.SUUCHA_RIICHI
+
+    def test_handle_ryuukyoku_suufon_renda_settles_round_state(self):
+        """Test suufon_renda updates round state."""
+        self._init_game()
+        self.engine._game_state.set_dealer(0)
+        self.engine._game_state._honba = 2
+        self.engine._is_first_turn_after_deal = False
+        wind_tile = Tile(Suit.HONORS, 1)
+        for player in range(4):
+            self.engine._discard_history.append((player, wind_tile))
+
+        result = self.engine.handle_ryuukyoku()
+
+        assert result.ryuukyoku is True
+        assert result.ryuukyoku_type == RyuukyokuType.SUUFON_RENDA
+        assert self.engine._game_state.dealer == 0
+        assert self.engine._game_state.round_number == 1
+        assert self.engine._game_state.honba == 3
 
     def test_check_nagashi_mangan(self):
         """Test nagashi_mangan check"""
