@@ -35,19 +35,12 @@ Status values:
 | Nagashi Mangan | Met | Exhaustive-draw paths score Nagashi Mangan with mangan payments. |
 | Renchan and round progression | Met | Dealer win and exhaustive-draw dealer tenpai renchan are implemented in `end_round()`. |
 | Game-end conditions | Met | Tobi, west round extension, and Agari Yame are implemented. |
-| Chombo | Missing | Add an explicit chombo result and mangan-level penalty flow for false win and invalid riichi when enabled by `RulesetConfig`. |
+| Chombo | Met | False win and invalid riichi produce explicit Chombo results and mangan-level penalties when enabled by `RulesetConfig`. |
 | Dora indicator count | Mismatch | Count the initial dora indicator plus one additional indicator per kan when scoring dora and ura dora. |
 | Abortive draw settlement | Partial | Apply a consistent round-settlement path for abortive draws, including dealer continuation and honba handling. |
 | Open Tanyao configuration | Partial | Add a ruleset option for Open Tanyao and reject open Tanyao when the option is disabled. |
 
 ## Detailed Findings
-
-### Chombo
-
-- Requirement: false win, invalid riichi, and penalties are handled when the ruleset enables chombo penalties.
-- Code: `RulesetConfig` has `chombo_penalty_enabled`, but invalid wins and invalid riichi are mostly rejected as invalid actions.
-- Impact: callers cannot distinguish ordinary invalid actions from chombo, and score penalties are not applied.
-- Suggested fix: add an explicit chombo result, apply mangan-level penalty payments, and end the hand in ryuukyoku/chombo state.
 
 ### Dora Indicator Count
 

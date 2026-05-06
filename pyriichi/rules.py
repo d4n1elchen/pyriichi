@@ -115,6 +115,8 @@ class ActionResult:
     called_action: Optional[GameAction] = None
     called_tile: Optional[Tile] = None
     waiting_for: Dict[int, List[GameAction]] = field(default_factory=dict)
+    chombo: Optional[bool] = None
+    chombo_player: Optional[int] = None
 
 
 class RuleEngine:
@@ -935,6 +937,8 @@ class RuleEngine:
         hand._tile_counts_cache = None
 
         if not is_tenpai:
+            if self._game_state.ruleset.chombo_penalty_enabled:
+                return self._handle_chombo(player)
             raise ValueError("立直打牌後必須聽牌")
 
         # Execute the discard.
@@ -1093,6 +1097,8 @@ class RuleEngine:
         win_result = self.check_win(player, tile, is_rinshan=is_rinshan)
 
         if win_result is None:
+            if self._game_state.ruleset.chombo_penalty_enabled:
+                return self._handle_chombo(player)
             raise ValueError(f"玩家 {player} 無法用 {tile} 自摸和牌")
 
         # Apply score changes.
@@ -1139,6 +1145,10 @@ class RuleEngine:
 
         # Check whether sancha_ron aborts the round.
         if len(potential_winners) == 0:
+            if self.check_win(player, winning_tile, is_chankan=False) is None:
+                if self._game_state.ruleset.chombo_penalty_enabled:
+                    return self._handle_chombo(player)
+                raise ValueError(f"玩家 {player} 不能榮和（配置限制或振聽）")
             # An empty list means sancha_ron triggered an abortive draw.
             result.ryuukyoku = RyuukyokuResult(
                 ryuukyoku=True, ryuukyoku_type=RyuukyokuType.SANCHA_RON
@@ -1150,6 +1160,9 @@ class RuleEngine:
 
         # Verify that this player is allowed to declare ron.
         if player not in potential_winners:
+            if self.check_win(player, winning_tile, is_chankan=False) is None:
+                if self._game_state.ruleset.chombo_penalty_enabled:
+                    return self._handle_chombo(player)
             raise ValueError(f"玩家 {player} 不能榮和（配置限制或振聽）")
 
         # Process all winners.
@@ -1284,6 +1297,31 @@ class RuleEngine:
 
                 self._game_state.update_score(i, -pay_amount)
                 self._game_state.update_score(winner, pay_amount)
+
+    def _handle_chombo(self, player: int) -> ActionResult:
+        self._apply_chombo_penalty(player)
+        self._phase = GamePhase.RYUUKYOKU
+        return ActionResult(
+            success=True,
+            phase=GamePhase.RYUUKYOKU,
+            chombo=True,
+            chombo_player=player,
+        )
+
+    def _apply_chombo_penalty(self, player: int) -> None:
+        dealer = self._game_state.dealer
+        for i in range(self._num_players):
+            if i == player:
+                continue
+
+            if player == dealer:
+                payment = 4000
+            elif i == dealer:
+                payment = 4000
+            else:
+                payment = 2000
+
+            self._game_state.transfer_points(player, i, payment)
 
     def _update_pao_responsibility(
         self, player: int, responsible_player: int, called_meld: Meld

@@ -1455,6 +1455,23 @@ class TestActionExecution:
         assert current_player in self.engine._riichi_ippatsu
         assert self.engine._riichi_ippatsu[current_player]
 
+    def test_invalid_riichi_applies_chombo(self):
+        """Test invalid riichi applies chombo."""
+        self._init_game()
+        player = self.engine.get_current_player()
+        hand = Hand(parse_tiles("124578m1245p78s1z"))
+        tile = Tile(Suit.HONORS, 1)
+        hand.add_tile(tile)
+        self.engine._hands[player] = hand
+        initial_scores = self.engine._game_state.scores.copy()
+
+        result = self.engine._handle_riichi(player, tile=tile)
+
+        assert result.chombo is True
+        assert result.chombo_player == player
+        assert self.engine.get_phase() == GamePhase.RYUUKYOKU
+        assert self.engine._game_state.scores[player] == initial_scores[player] - 12000
+
     def test_riichi_requires_remaining_wall_tiles(self):
         """Test riichi requires enough remaining live wall tiles."""
         self._init_game()
@@ -1817,6 +1834,43 @@ class TestWinningAndScoring:
         assert result.win is True
         assert result.chankan is True
         assert result.score_result.payment_from == 1
+
+    def test_false_tsumo_applies_chombo(self):
+        """Test false tsumo applies chombo."""
+        self._init_game()
+        player = 1
+        self.engine._game_state.set_dealer(0)
+        self.engine._hands[player] = Hand(parse_tiles("124578m1245p78s1z"))
+        tile = Tile(Suit.HONORS, 1)
+        self.engine._hands[player].add_tile(tile)
+        initial_scores = self.engine._game_state.scores.copy()
+
+        result = self.engine._handle_tsumo(player, tile=tile)
+
+        assert result.chombo is True
+        assert result.chombo_player == player
+        assert self.engine.get_phase() == GamePhase.RYUUKYOKU
+        assert self.engine._game_state.scores[player] == initial_scores[player] - 8000
+        assert self.engine._game_state.scores[0] == initial_scores[0] + 4000
+
+    def test_false_ron_applies_chombo(self):
+        """Test false ron applies chombo."""
+        self._init_game()
+        player = 1
+        self.engine._game_state.set_dealer(0)
+        winning_tile = Tile(Suit.PINZU, 4)
+        self.engine._hands[player] = Hand(parse_tiles("124578m1245p78s1z"))
+        self.engine._last_discarded_tile = winning_tile
+        self.engine._last_discarded_player = 0
+        initial_scores = self.engine._game_state.scores.copy()
+
+        result = self.engine._handle_ron(player)
+
+        assert result.chombo is True
+        assert result.chombo_player == player
+        assert self.engine.get_phase() == GamePhase.RYUUKYOKU
+        assert self.engine._game_state.scores[player] == initial_scores[player] - 8000
+        assert self.engine._game_state.scores[0] == initial_scores[0] + 4000
 
     def test_check_win_rinshan(self):
         """Test rinshan win check"""
