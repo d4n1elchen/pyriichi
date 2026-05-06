@@ -2,11 +2,41 @@
 
 This document tracks unresolved review findings that should be addressed in future fixes.
 
+## P1: Rule-engine action tests use random responder hands
+
+- Location: `tests/test_rules.py`
+- Impact: Call-action tests configure only the actor and caller while leaving other players' dealt hands random. If another player also has a pending response, `execute_action()` returns an intermediate response-collection result instead of the final chi/pon/kan result, causing nondeterministic failures.
+- Suggested fix: Make responder hands deterministic in call-action tests, or add a helper that resolves lower-priority pending responders with `PASS` before asserting the final call result.
+
+## P1: `tests/test_rules.py` is an oversized integration harness
+
+- Location: `tests/test_rules.py`
+- Impact: The file contains 126 tests and hundreds of direct private-state mutations, so small internal changes can break unrelated tests and obscure whether a failure is in rules, scoring, hand logic, wall setup, or action resolution.
+- Suggested fix: Split the file into focused modules such as action execution, action availability, furiten, ryuukyoku, multi-ron, scoring-in-engine, and game-end tests. Move shared setup into `tests/helpers.py`.
+
 ## P2: Riichi noten fixture may now be tenpai
 
 - Location: `tests/test_rules.py`
 - Impact: `test_riichi_requires_discard_and_tenpai` expects one fixture to be noten, but current hand-search behavior appears to find a legal tenpai shape after the discard.
 - Suggested fix: Replace the fixture with a clearly noten hand before changing riichi logic.
+
+## P2: Unit tests often exercise multiple modules at once
+
+- Location: `tests/test_scoring.py`, `tests/test_yaku.py`, and `tests/test_rules.py`
+- Impact: Many nominal unit tests instantiate multiple major subsystems, such as `Hand`, `YakuChecker`, `ScoreCalculator`, `TileSet`, and `RuleEngine`. This makes failures harder to localize and encourages broad fixture setup for narrow behavior.
+- Suggested fix: Keep direct subsystem tests narrow, and move cross-module behavior into integration or engine-level test files with explicit naming.
+
+## P2: Rule tests duplicate setup helpers
+
+- Location: `tests/test_rules.py`
+- Impact: Multiple classes define their own `setup_method()` and `_init_game()` methods, increasing drift and making changes to game setup tedious.
+- Suggested fix: Extract shared helpers for engine initialization, deterministic dora setup, hand replacement, response resolution, and wall exhaustion.
+
+## P3: Some assertions are smoke checks rather than rule checks
+
+- Location: `tests/`
+- Impact: Assertions such as `result is not None`, `dora_count >= 0`, or score deltas only checking direction can pass while important rule details are wrong.
+- Suggested fix: Tighten assertions when touching each test area, especially for scoring and action-resolution behavior.
 
 ## P2: Integration test is random and flaky
 
