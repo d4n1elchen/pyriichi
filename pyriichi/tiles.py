@@ -277,9 +277,9 @@ class TileSet:
 
         self._rinshan_tiles = self._wall[:4]
 
-        self._dora_indicators = self._wall[4:8]
+        self._dora_indicators = self._wall[4:9]
 
-        self._ura_dora_indicators = self._wall[8:12]
+        self._ura_dora_indicators = self._wall[9:14]
 
     def deal(self, num_players: int = 4, dealer: int = 0) -> List[List[Tile]]:
         """

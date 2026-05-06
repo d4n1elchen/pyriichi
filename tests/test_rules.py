@@ -1987,6 +1987,31 @@ class TestWinningAndScoring:
         dora_count = self.engine._count_dora(0, Tile(Suit.PINZU, 5))
         assert dora_count >= 1  # At least one red_dora
 
+    def test_count_dora_uses_initial_and_kan_indicators(self):
+        """Test dora count uses initial and kan indicators."""
+        self._init_game()
+        self.engine._hands[0] = Hand(parse_tiles("5m5p123456789s1z"))
+        self.engine._tile_set._dora_indicators = [
+            Tile(Suit.MANZU, 4),
+            Tile(Suit.PINZU, 4),
+        ]
+
+        self.engine._kan_count = 0
+        assert self.engine._count_dora(0) == 1
+
+        self.engine._kan_count = 1
+        assert self.engine._count_dora(0) == 2
+
+    def test_count_ura_dora_uses_initial_indicator(self):
+        """Test ura_dora count uses the initial indicator."""
+        self._init_game()
+        self.engine._hands[0] = Hand(parse_tiles("5m123456789s123p"))
+        self.engine._hands[0].set_riichi(True)
+        self.engine._tile_set._dora_indicators = [Tile(Suit.PINZU, 8)]
+        self.engine._tile_set._ura_dora_indicators = [Tile(Suit.MANZU, 4)]
+
+        assert self.engine._count_dora(0) == 1
+
     def test_pao_daisangen_tsumo(self):
         """Test pao: daisangen tsumo, pao player pays all"""
         self._init_game()

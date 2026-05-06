@@ -208,10 +208,12 @@ class TestTileSet:
         indicators = tile_set.get_dora_indicators()
         assert indicators is not None
         assert len(indicators) == 1
+        assert len(tile_set.get_dora_indicators(5)) == 5
 
         ura_indicators = tile_set.get_ura_dora_indicators()
         assert ura_indicators is not None
         assert len(ura_indicators) == 1
+        assert len(tile_set.get_ura_dora_indicators(5)) == 5
 
     def test_tileset_get_dora(self):
         """Test tileset get dora."""

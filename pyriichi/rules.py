@@ -1778,22 +1778,22 @@ class RuleEngine:
         # Collect all tiles, including the winning tile when provided.
         all_tiles = hand.tiles + [winning_tile] if winning_tile else hand.tiles
 
+        indicator_count = 1 + self._kan_count
+
         # Dora.
-        if dora_indicators := self._tile_set.get_dora_indicators(self._kan_count):
+        if dora_indicators := self._tile_set.get_dora_indicators(indicator_count):
             for dora_indicator in dora_indicators:
                 dora_tile = self._tile_set.get_dora(dora_indicator)
-                if dora_tile in all_tiles:
-                    dora_count += 1
+                dora_count += sum(tile == dora_tile for tile in all_tiles)
 
         # Ura_dora when in riichi.
         if hand.is_riichi:
             if ura_indicators := self._tile_set.get_ura_dora_indicators(
-                self._kan_count
+                indicator_count
             ):
                 for ura_indicator in ura_indicators:
                     ura_dora_tile = self._tile_set.get_dora(ura_indicator)
-                    if ura_dora_tile in all_tiles:
-                        dora_count += 1
+                    dora_count += sum(tile == ura_dora_tile for tile in all_tiles)
 
         # red_dora.
         for tile in all_tiles:

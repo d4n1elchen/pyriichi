@@ -24,30 +24,22 @@ Status values:
 | Furiten | Met | Genbutsu, temp furiten, and permanent riichi furiten are implemented. |
 | Riichi action rules | Met | Closed hand, tenpai-after-discard, Riichi Stick payment, and remaining-wall requirement are implemented. |
 | Ippatsu | Met | Ippatsu is tracked after riichi and interrupted by calls or kan according to ruleset configuration. |
-| Kan and rinshan flow | Partial | Kan, closed kan, rinshan draw, Chankan, and Suukan Sanra exist; dora indicator count is still incorrect during scoring. |
+| Kan and rinshan flow | Met | Kan, closed kan, rinshan draw, Chankan, Suukan Sanra, and kan dora indicator counts are implemented. |
 | Abortive draws | Partial | Suufon Renda, Kyuushu Kyuuhai, Suucha Riichi, Suukan Sanra, and Sancha Ron exist; shared settlement is still incomplete. |
 | Yaku coverage | Partial | Most listed yaku exist; Open Tanyao cannot yet be configured. |
 | Open-hand reductions | Met | Chanta, Junchan, Sanshoku Doujun, Ittsu, Honitsu, and Chinitsu apply open-hand han reductions. |
 | Yaku combination filtering | Met | Pinfu combines with Iipeikou and Ryanpeikou, yakuman results exclude non-yakuman yaku, and Chiitoitsu includes compatible yaku. |
-| Scoring calculations | Partial | Fu, han, limits, payment rounding, honba, kyoutaku, Kiriage Mangan, Noten Bappu, and Pao have support; dora indicator count remains wrong. |
+| Scoring calculations | Met | Fu, han, limits, payment rounding, honba, kyoutaku, Kiriage Mangan, Noten Bappu, Pao, and dora counting are implemented. |
 | Payment context | Met | `ScoreCalculator.calculate()` receives payment context before calculating payment branches. |
 | Pinfu tsumo fu | Met | `calculate_fu()` returns 20 fu for Pinfu tsumo and 30 fu for closed Pinfu ron. |
 | Nagashi Mangan | Met | Exhaustive-draw paths score Nagashi Mangan with mangan payments. |
 | Renchan and round progression | Met | Dealer win and exhaustive-draw dealer tenpai renchan are implemented in `end_round()`. |
 | Game-end conditions | Met | Tobi, west round extension, and Agari Yame are implemented. |
 | Chombo | Met | False win and invalid riichi produce explicit Chombo results and mangan-level penalties when enabled by `RulesetConfig`. |
-| Dora indicator count | Mismatch | Count the initial dora indicator plus one additional indicator per kan when scoring dora and ura dora. |
 | Abortive draw settlement | Partial | Apply a consistent round-settlement path for abortive draws, including dealer continuation and honba handling. |
 | Open Tanyao configuration | Partial | Add a ruleset option for Open Tanyao and reject open Tanyao when the option is disabled. |
 
 ## Detailed Findings
-
-### Dora Indicator Count
-
-- Requirement: the first dora indicator is always active, and each kan reveals one additional dora indicator.
-- Code: `_count_dora()` passes `_kan_count` into `get_dora_indicators()` and `get_ura_dora_indicators()`, so zero kan means zero visible indicators and one kan means only the initial indicator.
-- Impact: hands can be under-scored by missing initial dora and kan dora.
-- Suggested fix: use `1 + _kan_count` for dora and ura-dora indicator count, capped by the available indicators.
 
 ### Abortive Draw Settlement
 
