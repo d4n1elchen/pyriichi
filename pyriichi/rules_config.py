@@ -34,6 +34,9 @@ class RulesetConfig:
         ippatsu_interrupt_on_meld_or_kan (bool): Whether ippatsu is interrupted by Meld/kan.
             - True: Meld or kan interrupts ippatsu (Standard competitive rule).
             - False: Do not check interruption condition.
+        open_tanyao_enabled (bool): Whether Open Tanyao is enabled.
+            - True: Open hands may score Tanyao.
+            - False: Tanyao requires a closed hand.
         chanta_enabled (bool): Whether chanta is enabled.
             - True: Enabled (Standard competitive rule).
             - False: Disabled.
@@ -87,6 +90,9 @@ class RulesetConfig:
     # ippatsu Rule
     ippatsu_interrupt_on_meld_or_kan: bool = True
 
+    # Open Tanyao rule
+    open_tanyao_enabled: bool = True
+
     # chanta Rules
     chanta_enabled: bool = True
 
@@ -138,6 +144,7 @@ class RulesetConfig:
             renhou_policy=RenhouPolicy.TWO_HAN,
             pinfu_require_ryanmen=True,
             ippatsu_interrupt_on_meld_or_kan=True,
+            open_tanyao_enabled=True,
             chanta_enabled=True,
             chanta_open_han=1,
             chanta_closed_han=2,

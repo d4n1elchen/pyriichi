@@ -333,7 +333,7 @@ class YakuChecker:
             results.append(result)
         if result := self.check_chankan(hand, is_chankan):
             results.append(result)
-        if result := self.check_tanyao(hand, winning_combination):
+        if result := self.check_tanyao(hand, winning_combination, game_state):
             results.append(result)
         if result := self.check_pinfu(
             hand, winning_combination, game_state, winning_tile, player_position
@@ -533,7 +533,10 @@ class YakuChecker:
         return YakuResult(Yaku.MENZEN_TSUMO, 1, False) if is_tsumo else None
 
     def check_tanyao(
-        self, hand: Hand, winning_combination: List[Combination]
+        self,
+        hand: Hand,
+        winning_combination: List[Combination],
+        game_state: Optional[GameState] = None,
     ) -> Optional[YakuResult]:
         """
         Check tanyao (All Simples).
@@ -548,6 +551,13 @@ class YakuChecker:
             Optional[YakuResult]: yaku result, or None if not matching.
         """
         if not winning_combination:
+            return None
+
+        if (
+            not hand.is_concealed
+            and game_state is not None
+            and not game_state.ruleset.open_tanyao_enabled
+        ):
             return None
 
         for combination in winning_combination:

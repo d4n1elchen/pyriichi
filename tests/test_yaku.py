@@ -55,6 +55,47 @@ class TestYakuChecker:
             assert result.yaku == Yaku.TANYAO
             assert result.han == 1
 
+    def test_open_tanyao_can_be_disabled(self):
+        """Test Open Tanyao can be disabled."""
+        hand = self._open_hand()
+        winning_combination = [
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 2),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 3),
+            make_combination(CombinationType.SEQUENCE, Suit.SOUZU, 4),
+            make_combination(CombinationType.TRIPLET, Suit.MANZU, 5),
+            make_combination(CombinationType.PAIR, Suit.PINZU, 8),
+        ]
+        self.game_state.ruleset.open_tanyao_enabled = False
+
+        result = self.checker.check_tanyao(
+            hand,
+            winning_combination,
+            self.game_state,
+        )
+
+        assert result is None
+
+    def test_open_tanyao_can_be_enabled(self):
+        """Test Open Tanyao can be enabled."""
+        hand = self._open_hand()
+        winning_combination = [
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 2),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 3),
+            make_combination(CombinationType.SEQUENCE, Suit.SOUZU, 4),
+            make_combination(CombinationType.TRIPLET, Suit.MANZU, 5),
+            make_combination(CombinationType.PAIR, Suit.PINZU, 8),
+        ]
+        self.game_state.ruleset.open_tanyao_enabled = True
+
+        result = self.checker.check_tanyao(
+            hand,
+            winning_combination,
+            self.game_state,
+        )
+
+        assert result is not None
+        assert result.yaku == Yaku.TANYAO
+
     def test_toitoi(self):
         """Test toitoi."""
         tiles = parse_tiles("111m222m333m444p5p")

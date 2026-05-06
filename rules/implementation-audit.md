@@ -26,7 +26,7 @@ Status values:
 | Ippatsu | Met | Ippatsu is tracked after riichi and interrupted by calls or kan according to ruleset configuration. |
 | Kan and rinshan flow | Met | Kan, closed kan, rinshan draw, Chankan, Suukan Sanra, and kan dora indicator counts are implemented. |
 | Abortive draws | Partial | Suufon Renda, Kyuushu Kyuuhai, Suucha Riichi, Suukan Sanra, and Sancha Ron exist; shared settlement is still incomplete. |
-| Yaku coverage | Partial | Most listed yaku exist; Open Tanyao cannot yet be configured. |
+| Yaku coverage | Met | Listed standard yaku exist, including ruleset-configurable Open Tanyao. |
 | Open-hand reductions | Met | Chanta, Junchan, Sanshoku Doujun, Ittsu, Honitsu, and Chinitsu apply open-hand han reductions. |
 | Yaku combination filtering | Met | Pinfu combines with Iipeikou and Ryanpeikou, yakuman results exclude non-yakuman yaku, and Chiitoitsu includes compatible yaku. |
 | Scoring calculations | Met | Fu, han, limits, payment rounding, honba, kyoutaku, Kiriage Mangan, Noten Bappu, Pao, and dora counting are implemented. |
@@ -37,7 +37,6 @@ Status values:
 | Game-end conditions | Met | Tobi, west round extension, and Agari Yame are implemented. |
 | Chombo | Met | False win and invalid riichi produce explicit Chombo results and mangan-level penalties when enabled by `RulesetConfig`. |
 | Abortive draw settlement | Partial | Apply a consistent round-settlement path for abortive draws, including dealer continuation and honba handling. |
-| Open Tanyao configuration | Partial | Add a ruleset option for Open Tanyao and reject open Tanyao when the option is disabled. |
 
 ## Detailed Findings
 
@@ -47,10 +46,3 @@ Status values:
 - Code: `handle_ryuukyoku()` reports abortive draw types but does not share the same dealer/honba progression path as `end_round()`.
 - Impact: direct abortive-draw handling can leave dealer, honba, and round number stale.
 - Suggested fix: add a shared ryuukyoku settlement helper and call it from abortive-draw handlers.
-
-### Open Tanyao Configuration
-
-- Requirement: Open Tanyao is ruleset-dependent.
-- Code: `check_tanyao()` always allows open hands and `RulesetConfig` has no Open Tanyao option.
-- Impact: rulesets that disable Open Tanyao cannot be represented.
-- Suggested fix: add `open_tanyao_enabled` to `RulesetConfig` and apply it in Tanyao checking.
