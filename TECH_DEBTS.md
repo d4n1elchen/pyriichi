@@ -2,12 +2,6 @@
 
 This document tracks unresolved review findings that should be addressed in future fixes.
 
-## P1: Rule-engine action tests use random responder hands
-
-- Location: `tests/test_rules.py`
-- Impact: Call-action tests configure only the actor and caller while leaving other players' dealt hands random. If another player also has a pending response, `execute_action()` returns an intermediate response-collection result instead of the final chi/pon/kan result, causing nondeterministic failures.
-- Suggested fix: Make responder hands deterministic in call-action tests, or add a helper that resolves lower-priority pending responders with `PASS` before asserting the final call result.
-
 ## P1: `tests/test_rules.py` is an oversized integration harness
 
 - Location: `tests/test_rules.py`

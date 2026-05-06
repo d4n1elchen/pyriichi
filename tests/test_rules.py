@@ -23,6 +23,10 @@ def _set_non_matching_scoring_dora(engine: RuleEngine) -> None:
     engine._tile_set._ura_dora_indicators = [Tile(Suit.HONORS, 2)]
 
 
+def _no_response_hand() -> Hand:
+    return Hand(parse_tiles("23456789p23456s"))
+
+
 class TestRuleEngine:
     """Rule Engine Tests"""
 
@@ -1274,6 +1278,8 @@ class TestActionExecution:
         # Fill remaining tiles
         for i in range(10):
             hand1.add_tile(Tile(Suit.PINZU, i % 9 + 1))
+        self.engine._hands[2] = _no_response_hand()
+        self.engine._hands[3] = _no_response_hand()
 
         # Player 0 turn
         p0 = 0
@@ -1318,6 +1324,8 @@ class TestActionExecution:
         self.engine._hands[0] = Hand(parse_tiles("1356789m1234p123s"))
         # 33m 567p 89p 456s 789s
         self.engine._hands[1] = Hand(parse_tiles("33m56789p456789s"))
+        self.engine._hands[2] = _no_response_hand()
+        self.engine._hands[3] = _no_response_hand()
 
         self.engine._current_player = 0
         discard_before = len(self.engine.get_discards(0))
@@ -2414,6 +2422,7 @@ class TestWinningAndScoring:
         hand_str = "233445678m2345p"
         self.engine._hands[0] = Hand(parse_tiles(hand_str))
         self.engine._hands[2] = Hand(parse_tiles(hand_str))
+        self.engine._hands[3] = _no_response_hand()
 
         # Player 1 discards 5p
         self.engine._current_player = 1
