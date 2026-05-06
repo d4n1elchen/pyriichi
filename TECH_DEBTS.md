@@ -8,12 +8,6 @@ This document tracks unresolved review findings that should be addressed in futu
 - Impact: The file contains 126 tests and hundreds of direct private-state mutations, so small internal changes can break unrelated tests and obscure whether a failure is in rules, scoring, hand logic, wall setup, or action resolution.
 - Suggested fix: Split the file into focused modules such as action execution, action availability, furiten, ryuukyoku, multi-ron, scoring-in-engine, and game-end tests. Move shared setup into `tests/helpers.py`.
 
-## P2: Riichi noten fixture may now be tenpai
-
-- Location: `tests/test_rules.py`
-- Impact: `test_riichi_requires_discard_and_tenpai` expects one fixture to be noten, but current hand-search behavior appears to find a legal tenpai shape after the discard.
-- Suggested fix: Replace the fixture with a clearly noten hand before changing riichi logic.
-
 ## P2: Unit tests often exercise multiple modules at once
 
 - Location: `tests/test_scoring.py`, `tests/test_yaku.py`, and `tests/test_rules.py`

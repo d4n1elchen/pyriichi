@@ -992,6 +992,7 @@ class TestRuleEngine:
         hand._tiles = parse_tiles("11123m456p789s12z")
         drawn_tile = Tile(Suit.HONORS, 3)
         hand.add_tile(drawn_tile)
+        self.engine._game_state.ruleset.chombo_penalty_enabled = False
 
         # Try riichi and discard 3z (Still noten)
         with pytest.raises(ValueError, match="立直打牌後必須聽牌"):
