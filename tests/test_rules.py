@@ -17,6 +17,12 @@ from pyriichi.utils import parse_tiles
 from pyriichi.yaku import Yaku
 
 
+def _set_non_matching_scoring_dora(engine: RuleEngine) -> None:
+    assert engine._tile_set is not None
+    engine._tile_set._dora_indicators = [Tile(Suit.HONORS, 1)]
+    engine._tile_set._ura_dora_indicators = [Tile(Suit.HONORS, 2)]
+
+
 class TestRuleEngine:
     """Rule Engine Tests"""
 
@@ -109,7 +115,7 @@ class TestRuleEngine:
         self.engine._last_discarded_tile = winning_tile
         self.engine._last_discarded_player = 0
         self.engine._is_first_turn_after_deal = False
-        self.engine._tile_set._dora_indicators = []
+        _set_non_matching_scoring_dora(self.engine)
 
         result = self.engine.check_win(1, winning_tile)
 
@@ -1961,6 +1967,7 @@ class TestWinningAndScoring:
     def test_count_dora_zero(self):
         """Test zero dora count"""
         self._init_game()
+        _set_non_matching_scoring_dora(self.engine)
         self.engine._hands[0] = Hand(parse_tiles("1111234567999m"))
         dora_count = self.engine._count_dora(0, Tile(Suit.MANZU, 1))
         assert dora_count == 0
@@ -2330,6 +2337,7 @@ class TestWinningAndScoring:
         self.engine._hands[2] = Hand(hand_tiles)
 
         self.engine._current_player = 0
+        _set_non_matching_scoring_dora(self.engine)
 
         # Disable renhou by simulating that it's not the first turn
         # This ensures we test standard yaku (tanyao + pinfu) scoring
@@ -2372,7 +2380,7 @@ class TestWinningAndScoring:
         self.engine._hands[2] = Hand(hand_tiles)
         self.engine._current_player = 0
         self.engine._is_first_turn_after_deal = False
-        self.engine._tile_set._dora_indicators = []
+        _set_non_matching_scoring_dora(self.engine)
 
         initial_scores = self.engine._game_state.scores.copy()
         self.engine._hands[0]._tiles.append(discard_tile)
