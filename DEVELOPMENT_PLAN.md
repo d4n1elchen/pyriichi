@@ -7,7 +7,7 @@
 #### 1.1 Project Initialization
 - [x] Create the project directory structure.
 - [x] Create `requirements.txt`.
-- [x] Create `setup.py`.
+- [x] Create `pyproject.toml`.
 - [x] Configure the development environment.
 - [x] Initialize the Git repository.
 
@@ -248,16 +248,16 @@
 - [x] Dora han counting (`_count_dora`).
 
 **Deliverables**:
-- [x] `rules.py` - rule engine, 84% coverage.
-- [x] `game_state.py` - game-state management, 100% coverage.
-- [x] `test_rules.py` - unit tests, 65 test cases.
+- [x] `rules.py` - rule engine covered by focused tests.
+- [x] `game_state.py` - game-state management covered by focused tests.
+- [x] `test_rules.py` - expanded rule-engine unit tests.
 
 ---
 
 ### Phase 7: Testing and Optimization (✅ Mostly Completed)
 
 #### 7.1 Test Improvements
-- [x] Unit test foundation, all 215 test cases passing.
+- [x] Unit test foundation expanded.
   - [x] `test_hand.py`, multiple tests.
   - [x] `test_yaku.py`, multiple tests.
   - [x] `test_scoring.py`, multiple tests.
@@ -266,8 +266,8 @@
   - [x] `test_tiles.py`, multiple tests.
   - [x] `test_utils.py`, multiple tests.
   - [x] `test_integration.py`, integration tests.
-- [x] Unit test coverage check - completed, current coverage 86%; see `COVERAGE_REPORT.md`.
-- [x] `rules.py` coverage improvement - completed, from 68% to 84%, above the 80% target.
+- [x] Unit test coverage workflow exists through pytest-cov.
+- [x] `rules.py` coverage improvement work completed; regenerate current coverage after the full suite is restored.
 - [x] Integration tests - completed; `test_integration.py` includes full game flow, special rules, ryuukyoku scenarios, and related tests.
 - [x] Edge-case tests - completed for winning hands, tenpai, ryuukyoku, special rules, and related cases.
 - [x] Performance tests - completed through the `benchmark_performance.py` benchmark script.
@@ -284,7 +284,7 @@
 - [x] Code style checks passed through the linter.
 
 #### 7.3 Documentation Improvements
-- [x] API documentation: `API_DESIGN.md`, `API_SUMMARY.md`.
+- [x] API quick reference: `API_SUMMARY.md`.
 - [x] Usage examples: `examples/basic_usage.py`, `README.md`.
 - [x] Development documentation: `DEVELOPMENT_PLAN.md`, `REQUIREMENTS.md`, and `rules/`.
 - [x] String notation explanation: detailed explanation in `README.md`.
@@ -292,10 +292,9 @@
 - [ ] Detailed API reference documentation - pending, optional.
 
 **Deliverables**:
-- [x] Complete test suite, 215 test cases including unit and integration tests.
+- [x] Unit and integration test suite.
 - [x] Clear code structure.
-- [x] Complete documentation: README, API design, development plan, and related docs.
-- [x] Test coverage report: `COVERAGE_REPORT.md`.
+- [x] Current documentation: README, API summary, development plan, glossary, project requirements, and rule requirements.
 
 ---
 
@@ -401,14 +400,14 @@ This project follows a strict test-driven development approach, using the red-gr
 
 #### Test Coverage Requirements
 
-- **Overall target**: >= 85%, current 87% ✅.
+- **Overall target**: >= 85%.
 - **Core module targets**: >= 90%.
-  - `tiles.py`: >= 90%, current 89%.
-  - `hand.py`: >= 90%, current 92% ✅.
-  - `yaku.py`: >= 85%, current 84%.
-  - `scoring.py`: >= 90%, current 90% ✅.
-  - `rules.py`: >= 85%, current 85% ✅.
-  - `game_state.py`: >= 95%, current 95% ✅.
+  - `tiles.py`: >= 90%.
+  - `hand.py`: >= 90%.
+  - `yaku.py`: >= 85%.
+  - `scoring.py`: >= 90%.
+  - `rules.py`: >= 85%.
+  - `game_state.py`: >= 95%.
 - **Minimum requirement**: all new code >= 80%.
 
 #### Test Tools
@@ -522,9 +521,9 @@ For new feature development, such as adding a new yaku:
 2. ✅ Correctly detect at least 20 yaku; current count is 45+, far beyond the target.
 3. ✅ Correctly calculate score: fu, han, and points.
 4. ✅ Complete one full round flow; the basic flow is implemented, including special rules.
-5. ✅ Unit test coverage > 80%; 215 test cases and 86% coverage, above the target.
+5. ✅ Unit test coverage target is > 80%; regenerate coverage after the full suite is restored.
 6. ✅ Code follows PEP 8; linter checks pass.
-7. ✅ Complete usage documentation: README, API design, development plan, and related docs.
+7. ✅ Complete usage documentation: README, API summary, glossary, development plan, and related docs.
 
 ## Recent Updates, 2025-11-21
 
@@ -561,8 +560,8 @@ For new feature development, such as adding a new yaku:
   - Multi-module integration tests for hand, yaku, and score calculation.
   - Realistic scenario tests for multi-round game flow.
   - Error-handling tests.
-- ✅ **Test count increased**: from 215 test cases to 232 test cases.
-- ✅ **Coverage maintained**: overall coverage is 87%, and all core modules exceed 80% coverage.
+- ✅ **Test count increased**: the current suite collects 328 tests.
+- ✅ **Coverage workflow maintained**: coverage should be regenerated after the full suite is restored.
 
 ### Documentation Improvements, 2025-11-21
 - ✅ **Terminology standardization**:
@@ -610,9 +609,9 @@ For new feature development, such as adding a new yaku:
 - Scoring system: fu, han, and points - fully implemented.
 - Rule engine: game flow, ryuukyoku, dora, and special rules - core features implemented, including Ippatsu, Haitei, Houtei, Suufon Renda, Suukan Sanra, and related rules.
 - Game state management: rounds, winds, and points - fully implemented.
-- Project initialization: `setup.py` and Git repository - fully implemented.
+- Project initialization: `pyproject.toml` and Git repository - fully implemented.
 
-### 🟡 Pending Rules and Features
+### 🟡 Rule Feature Summary
 
 #### Yaku System, High Priority
 - [x] **Double Riichi**: declare riichi on the first uninterrupted turn, 2 han - added to the `Yaku` enum and `YakuChecker`.
@@ -636,19 +635,13 @@ For new feature development, such as adding a new yaku:
 - [x] Haitei and Houtei - completed.
 
 #### Special Rules, High Priority
-- [ ] **Furiten rules**: not fully implemented.
-  - [ ] Genbutsu furiten: a player cannot ron on a tile they previously discarded.
-  - [ ] Temp Furiten: after passing on a win while tenpai, the player cannot ron during the same turn cycle.
-  - [ ] Riichi furiten: after declaring riichi and passing on a win, the player is permanently furiten and can only win by tsumo.
-  - Furiten detection logic must be implemented in `RuleEngine`.
-- [ ] **Pao rule**: responsibility payment when Daisangen or Daisuushi is confirmed.
-  - Meld source tracking is required.
-  - Score distribution logic must be modified.
+- [x] **Furiten rules**: Genbutsu, Temp Furiten, and Riichi Furiten are implemented in `RuleEngine`.
+- [x] **Pao rule**: responsibility payment for Daisangen and Daisuushi is implemented.
 - [x] Kan dora timing rule - implemented: closed kan reveals immediately; open kan and added kan reveal after the discard.
-- [ ] **Same-discard rule, Head Bump**: handling for multiple ron.
+- [x] **Same-discard rule, Head Bump**: handling for multiple ron.
   - `rules/game-flow.md` documents this as "only the winner closest to the discarder in turn order wins."
   - Optional rules: Double Ron and Triple Ron allow multiple winners.
-  - Multiple-win handling must be implemented in `RuleEngine`.
+  - Multiple-win handling is implemented in `RuleEngine`.
 
 #### Yaku Combination Rules, Medium Priority
 - [x] Basic conflict detection for Chiitoitsu, Kokushi Musou, and Yakuman - completed.
@@ -680,40 +673,35 @@ For new feature development, such as adding a new yaku:
 - [x] Honba and kyoutaku handling: honba +300 points and kyoutaku distribution - completed.
 - [x] **Noten Bappu**: point transfer at ryuukyoku.
   - Total 3000 points are distributed between tenpai and noten players.
-  - Point transfer logic must be implemented in ryuukyoku handling.
-- [ ] **Kiriage Mangan**: 30 fu 4 han or 60 fu 3 han count as mangan, optional rule.
-  - Add a rule configuration option in `ScoreCalculator`.
+  - Point transfer logic is implemented in ryuukyoku handling.
+- [x] **Kiriage Mangan**: 30 fu 4 han or 60 fu 3 han count as mangan when enabled by ruleset configuration.
 
 #### Game-End Conditions, Medium Priority
 - [x] **Tobi**: game ends when a player's score is below 0.
-  - Detection logic must be added to `GameState` or `RuleEngine`.
+  - Detection logic is implemented in `RuleEngine`.
 - [x] **West round extension**: when nobody reaches the target score after South 4, extend to the west round.
-  - `GameState` must be extended to support the west round.
+  - `GameState` supports west round extension.
 - [x] **Agari Yame**: last-round dealer may choose to end the game after winning while in first place.
-  - This logic must be added to game-end detection.
+  - This logic is implemented in game-end detection.
 
 #### Chombo Handling, Low Priority
 - [x] **False win**: declaring a win while not tenpai, declaring ron while furiten, and similar cases.
-  - Violation detection must be implemented.
+  - Violation detection is implemented.
 - [x] **Invalid riichi**: declaring riichi while not tenpai, discovered at ryuukyoku.
-  - Riichi players must be checked for real tenpai at ryuukyoku.
+  - Invalid declarations produce explicit chombo results when enabled.
 - [x] **Penalty**: pay mangan-level points or forbid winning.
 
 #### Project Configuration, Low Priority
-- [x] `setup.py`, for packaging and release - completed.
+- [x] `pyproject.toml`, for packaging and release - completed.
 - [x] Git repository initialization - completed.
 - [ ] CI/CD configuration, optional - pending.
 
 ### 📊 Test Statistics
-- Total test cases: 232, all passing.
-- Test pass rate: 100%.
-- Test files: 8, including `test_hand`, `test_yaku`, `test_scoring`, `test_rules`, `test_game_state`, `test_tiles`, `test_utils`, `test_integration`.
+- Current collected test cases: 328.
+- Known failures remain in `tests/test_rules.py`; focused regression tests should be run for each fix until the full suite is restored.
+- Test files include `test_hand`, `test_yaku`, `test_scoring`, `test_rules`, `test_game_state`, `test_tiles`, `test_utils`, `test_integration`, and `test_player`.
 - Core modules: 8, including `tiles`, `hand`, `game_state`, `yaku`, `scoring`, `rules`, `utils`, `__init__`.
-- **Test coverage: 87%**, above the 80% target.
-- **`rules.py` coverage: 85%**, above the 80% target.
-- **Perfect coverage modules, 100%**: `utils.py`, `rules_config.py`, `__init__.py`.
-- **Excellent coverage modules, >= 90%**: `game_state.py` at 95%, `hand.py` at 92%, `scoring.py` at 90%.
-- **Good coverage modules, >= 80%**: `tiles.py` at 89%, `rules.py` at 85%, `yaku.py` at 84%, `enum_utils.py` at 83%.
+- Coverage should be regenerated with pytest-cov when the full suite is green.
 
 ### 🔍 Checklist, No Missing Items
 - ✅ Tile system: fully implemented, including dora system.
@@ -727,24 +715,17 @@ For new feature development, such as adding a new yaku:
   - ✅ Supports standard string format, such as `1m`, `2p`, `3s`, `1z`.
   - ✅ Supports standard Red Dora format: `r5m`, `r5p`, `r5s`.
   - ✅ Input and output formats are unified and support round-trip conversion.
-- ✅ Test coverage: 232 test cases, including unit and integration tests, covering all core features, special rules, and conflict detection; coverage is 87%.
-- ✅ Documentation: README, API design, development plan, project requirements, and rule requirements are complete.
+- ✅ Test suite: 328 collected tests, including unit and integration tests, covering core features, special rules, and conflict detection.
+- ✅ Documentation: README, API summary, glossary, development plan, project requirements, and rule requirements are maintained.
   - ✅ README includes a complete string-notation explanation.
   - ✅ Example code shows complete flows for winning-hand detection, yaku checking, and score calculation.
   - ✅ All examples use correct type conversion, such as `list(combinations[0])`.
   - ✅ `rules/` records standard Japanese riichi mahjong rules.
   - ✅ Japanese terms are standardized, using katakana for actions and kanji for yaku names.
 
-### ⚠️ Unimplemented Rules, Recorded in `rules/implementation-audit.md`
-- ❌ Furiten: complete furiten rules, including Genbutsu, Temp Furiten, and Riichi furiten.
-- ❌ Pao: responsibility payment for Daisangen and Daisuushi.
-- ❌ Same-discard rule, Head Bump: multiple-ron handling.
-- ❌ Noten Bappu: point transfer at ryuukyoku.
-- ❌ Kiriage Mangan: optional mangan calculation rule.
-- ❌ Tobi: bankruptcy end condition.
-- ❌ West round extension: extend into the west round.
-- ❌ Agari Yame: dealer chooses to end the game.
-- ❌ Chombo handling: violation detection and penalties.
+### Current Rule Audit
+
+Current rule implementation status is tracked in `rules/implementation-audit.md`. That audit keeps met items in the summary and lists unresolved findings separately.
 
 ---
 

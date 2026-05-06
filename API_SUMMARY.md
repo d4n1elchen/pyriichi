@@ -246,4 +246,4 @@ while engine.get_phase() == GamePhase.PLAYING:
 
 ## Detailed Documentation
 
-For complete API documentation, see `API_DESIGN.md`.
+For rule requirements, see `rules/README.md`. For canonical terminology, see `GLOSSARY.md`.
