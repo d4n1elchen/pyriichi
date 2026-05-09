@@ -152,6 +152,17 @@ class TestCompleteGameFlow:
         engine.start_round()
         engine.deal()
 
+        def pass_interrupts():
+            while True:
+                pass_players = [
+                    player
+                    for player, actions in list(engine.waiting_for_actions.items())
+                    if GameAction.PASS in actions
+                ]
+                if not pass_players:
+                    return
+                engine.execute_action(pass_players[0], GameAction.PASS)
+
         current_player = engine.get_current_player()
 
         hand = engine.get_hand(current_player)
@@ -159,17 +170,20 @@ class TestCompleteGameFlow:
             engine.execute_action(
                 current_player, GameAction.DISCARD, tile=hand.tiles[0]
             )
+            pass_interrupts()
             current_player = engine.get_current_player()
 
         if GameAction.DRAW in engine.get_available_actions(current_player):
             engine.execute_action(current_player, GameAction.DRAW)
+            current_player = engine.get_current_player()
         hand = engine.get_hand(current_player)
 
-        if hand.tiles:
+        if GameAction.DISCARD in engine.get_available_actions(current_player):
             discard_tile = hand.tiles[0]
             engine.execute_action(current_player, GameAction.DISCARD, tile=discard_tile)
+            pass_interrupts()
 
-            assert engine.get_phase() == GamePhase.PLAYING
+        assert engine.get_phase() == GamePhase.PLAYING
 
 
 class TestSpecialRulesFlow:

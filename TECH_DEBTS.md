@@ -14,12 +14,6 @@ This document tracks unresolved review findings that should be addressed in futu
 - Impact: Assertions such as `result is not None`, `dora_count >= 0`, or score deltas only checking direction can pass while important rule details are wrong.
 - Suggested fix: Tighten assertions when touching each test area, especially for scoring and action-resolution behavior.
 
-## P2: Integration test is random and flaky
-
-- Location: `tests/test_integration.py`
-- Impact: `test_game_flow_with_meld` uses a shuffled live round, discards, then assumes the same `current_player` can discard again. If the first discard creates interrupt actions, the player has no available discard action and the test fails nondeterministically.
-- Suggested fix: Make the test deterministic by constructing hands/wall state directly, or update the flow to resolve or pass interrupts before expecting the next discard.
-
 ## Test runner command clarity
 
 - Location: project documentation and developer setup.
