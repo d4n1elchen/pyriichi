@@ -15,28 +15,15 @@ from pyriichi.rules import (
 from pyriichi.tiles import Suit, Tile, TileSet
 from pyriichi.utils import parse_tiles
 from pyriichi.yaku import Yaku
+from tests.helpers import (
+    RuleEngineTestMixin,
+    no_response_hand,
+    set_non_matching_scoring_dora,
+)
 
 
-def _set_non_matching_scoring_dora(engine: RuleEngine) -> None:
-    assert engine._tile_set is not None
-    engine._tile_set._dora_indicators = [Tile(Suit.HONORS, 1)]
-    engine._tile_set._ura_dora_indicators = [Tile(Suit.HONORS, 2)]
-
-
-def _no_response_hand() -> Hand:
-    return Hand(parse_tiles("23456789p23456s"))
-
-
-class TestRuleEngine:
+class TestRuleEngine(RuleEngineTestMixin):
     """Rule Engine Tests"""
-
-    def setup_method(self):
-        """Setup test environment"""
-        self.engine = RuleEngine(num_players=4)
-
-    def _has_action(self, player: int, action: GameAction) -> bool:
-        """Helper method: Check if player has action available"""
-        return action in self.engine.get_available_actions(player)
 
     def test_start_game(self):
         """Test start game"""
@@ -119,7 +106,7 @@ class TestRuleEngine:
         self.engine._last_discarded_tile = winning_tile
         self.engine._last_discarded_player = 0
         self.engine._is_first_turn_after_deal = False
-        _set_non_matching_scoring_dora(self.engine)
+        set_non_matching_scoring_dora(self.engine)
 
         result = self.engine.check_win(1, winning_tile)
 
@@ -854,11 +841,6 @@ class TestRuleEngine:
         # Assuming not last round
         assert self.engine.get_phase() != GamePhase.ENDED
 
-    def _init_game(self):
-        self.engine.start_game()
-        self.engine.start_round()
-        self.engine.deal()
-
     def test_draw_with_kan(self):
         """Test Draw with kan (hand size limit should increase)"""
         self._init_game()
@@ -1154,18 +1136,7 @@ class TestClosedKanSelection:
         assert melds[1].tiles[0] == tile_to_kan_1
 
 
-class TestActionAvailability:
-    def setup_method(self):
-        self.engine = RuleEngine(num_players=4)
-
-    def _has_action(self, player: int, action: GameAction) -> bool:
-        return action in self.engine.get_available_actions(player)
-
-    def _init_game(self):
-        self.engine.start_game()
-        self.engine.start_round()
-        self.engine.deal()
-
+class TestActionAvailability(RuleEngineTestMixin):
     def test_get_available_actions_default_empty(self):
         """Test no available actions in non-PLAYING phase"""
         self._init_game()
@@ -1251,18 +1222,7 @@ class TestActionAvailability:
         assert GameAction.DRAW not in self.engine.get_available_actions(non_current)
 
 
-class TestActionExecution:
-    def setup_method(self):
-        self.engine = RuleEngine(num_players=4)
-
-    def _has_action(self, player: int, action: GameAction) -> bool:
-        return action in self.engine.get_available_actions(player)
-
-    def _init_game(self):
-        self.engine.start_game()
-        self.engine.start_round()
-        self.engine.deal()
-
+class TestActionExecution(RuleEngineTestMixin):
     def test_open_kan_logic(self):
         """Test open_kan logic: Automatically infer tile and remove from discards"""
         self.engine.start_game()
@@ -1279,8 +1239,8 @@ class TestActionExecution:
         # Fill remaining tiles
         for i in range(10):
             hand1.add_tile(Tile(Suit.PINZU, i % 9 + 1))
-        self.engine._hands[2] = _no_response_hand()
-        self.engine._hands[3] = _no_response_hand()
+        self.engine._hands[2] = no_response_hand()
+        self.engine._hands[3] = no_response_hand()
 
         # Player 0 turn
         p0 = 0
@@ -1325,8 +1285,8 @@ class TestActionExecution:
         self.engine._hands[0] = Hand(parse_tiles("1356789m1234p123s"))
         # 33m 567p 89p 456s 789s
         self.engine._hands[1] = Hand(parse_tiles("33m56789p456789s"))
-        self.engine._hands[2] = _no_response_hand()
-        self.engine._hands[3] = _no_response_hand()
+        self.engine._hands[2] = no_response_hand()
+        self.engine._hands[3] = no_response_hand()
 
         self.engine._current_player = 0
         discard_before = len(self.engine.get_discards(0))
@@ -1816,18 +1776,7 @@ class TestActionExecution:
         self.engine._tile_set._tiles = [Tile(Suit.MANZU, 1)]
 
 
-class TestWinningAndScoring:
-    def setup_method(self):
-        self.engine = RuleEngine(num_players=4)
-
-    def _has_action(self, player: int, action: GameAction) -> bool:
-        return action in self.engine.get_available_actions(player)
-
-    def _init_game(self):
-        self.engine.start_game()
-        self.engine.start_round()
-        self.engine.deal()
-
+class TestWinningAndScoring(RuleEngineTestMixin):
     def test_check_chankan(self):
         """Test chankan check"""
         self._init_game()
@@ -1976,7 +1925,7 @@ class TestWinningAndScoring:
     def test_count_dora_zero(self):
         """Test zero dora count"""
         self._init_game()
-        _set_non_matching_scoring_dora(self.engine)
+        set_non_matching_scoring_dora(self.engine)
         self.engine._hands[0] = Hand(parse_tiles("1111234567999m"))
         dora_count = self.engine._count_dora(0, Tile(Suit.MANZU, 1))
         assert dora_count == 0
@@ -2346,7 +2295,7 @@ class TestWinningAndScoring:
         self.engine._hands[2] = Hand(hand_tiles)
 
         self.engine._current_player = 0
-        _set_non_matching_scoring_dora(self.engine)
+        set_non_matching_scoring_dora(self.engine)
 
         # Disable renhou by simulating that it's not the first turn
         # This ensures we test standard yaku (tanyao + pinfu) scoring
@@ -2389,7 +2338,7 @@ class TestWinningAndScoring:
         self.engine._hands[2] = Hand(hand_tiles)
         self.engine._current_player = 0
         self.engine._is_first_turn_after_deal = False
-        _set_non_matching_scoring_dora(self.engine)
+        set_non_matching_scoring_dora(self.engine)
 
         initial_scores = self.engine._game_state.scores.copy()
         self.engine._hands[0]._tiles.append(discard_tile)
@@ -2423,7 +2372,7 @@ class TestWinningAndScoring:
         hand_str = "233445678m2345p"
         self.engine._hands[0] = Hand(parse_tiles(hand_str))
         self.engine._hands[2] = Hand(parse_tiles(hand_str))
-        self.engine._hands[3] = _no_response_hand()
+        self.engine._hands[3] = no_response_hand()
 
         # Player 1 discards 5p
         self.engine._current_player = 1
@@ -2553,18 +2502,7 @@ class TestWinningAndScoring:
         assert winners == [2, 3]
 
 
-class TestRyuukyoku:
-    def setup_method(self):
-        self.engine = RuleEngine(num_players=4)
-
-    def _has_action(self, player: int, action: GameAction) -> bool:
-        return action in self.engine.get_available_actions(player)
-
-    def _init_game(self):
-        self.engine.start_game()
-        self.engine.start_round()
-        self.engine.deal()
-
+class TestRyuukyoku(RuleEngineTestMixin):
     def test_check_draw(self):
         """Test ryuukyoku check"""
         self._init_game()

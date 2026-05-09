@@ -14,12 +14,6 @@ This document tracks unresolved review findings that should be addressed in futu
 - Impact: Many nominal unit tests instantiate multiple major subsystems, such as `Hand`, `YakuChecker`, `ScoreCalculator`, `TileSet`, and `RuleEngine`. This makes failures harder to localize and encourages broad fixture setup for narrow behavior.
 - Suggested fix: Keep direct subsystem tests narrow, and move cross-module behavior into integration or engine-level test files with explicit naming.
 
-## P2: Rule tests duplicate setup helpers
-
-- Location: `tests/test_rules.py`
-- Impact: Multiple classes define their own `setup_method()` and `_init_game()` methods, increasing drift and making changes to game setup tedious.
-- Suggested fix: Extract shared helpers for engine initialization, deterministic dora setup, hand replacement, response resolution, and wall exhaustion.
-
 ## P3: Some assertions are smoke checks rather than rule checks
 
 - Location: `tests/`
