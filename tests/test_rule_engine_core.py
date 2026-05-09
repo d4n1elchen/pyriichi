@@ -1,17 +1,12 @@
-"""
-Unit tests for RuleEngine
-"""
+"""Core RuleEngine tests."""
 
 import pytest
 
-from pyriichi.game_state import Wind
-from pyriichi.hand import Hand, Meld, MeldType
+from pyriichi.hand import Hand
 from pyriichi.rules import (
-    GameAction,
     GamePhase,
-    RuleEngine,
 )
-from pyriichi.tiles import Suit, Tile, TileSet
+from pyriichi.tiles import Suit, Tile
 from pyriichi.utils import parse_tiles
 from pyriichi.yaku import Yaku
 from tests.helpers import (
@@ -113,7 +108,6 @@ class TestRuleEngine(RuleEngineTestMixin):
         assert result.score_result.payment_from == 0
         assert result.score_result.total_points == 5200
 
-
     def test_hand_total_tile_count_includes_melds(self):
         """Total tile count should include melded tiles."""
         # 11m 123m 456p 77s 8s 99s
@@ -170,9 +164,3 @@ class TestRuleEngine(RuleEngineTestMixin):
         # Error message might be "Tile set not initialized" or similar, loose check here
         with pytest.raises(ValueError):
             self.engine._handle_draw(0)
-
-
-
-
-
-

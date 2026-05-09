@@ -250,7 +250,7 @@
 **Deliverables**:
 - [x] `rules.py` - rule engine covered by focused tests.
 - [x] `game_state.py` - game-state management covered by focused tests.
-- [x] `test_rules.py` - expanded rule-engine unit tests.
+- [x] `test_rule_*.py` - expanded rule-engine unit tests.
 
 ---
 
@@ -261,7 +261,7 @@
   - [x] `test_hand.py`, multiple tests.
   - [x] `test_yaku.py`, multiple tests.
   - [x] `test_scoring.py`, multiple tests.
-  - [x] `test_rules.py`, multiple tests.
+  - [x] `test_rule_*.py`, multiple tests.
   - [x] `test_game_state.py`, multiple tests.
   - [x] `test_tiles.py`, multiple tests.
   - [x] `test_utils.py`, multiple tests.
@@ -698,8 +698,8 @@ For new feature development, such as adding a new yaku:
 
 ### 📊 Test Statistics
 - Current collected test cases: 328.
-- Known failures remain in `tests/test_rules.py`; focused regression tests should be run for each fix until the full suite is restored.
-- Test files include `test_hand`, `test_yaku`, `test_scoring`, `test_rules`, `test_game_state`, `test_tiles`, `test_utils`, `test_integration`, and `test_player`.
+- Known failures remain in the rule and integration tests; focused regression tests should be run for each fix until the full suite is restored.
+- Test files include `test_hand`, `test_yaku`, `test_scoring`, `test_rule_*`, `test_game_state`, `test_tiles`, `test_utils`, `test_integration`, and `test_player`.
 - Core modules: 8, including `tiles`, `hand`, `game_state`, `yaku`, `scoring`, `rules`, `utils`, `__init__`.
 - Coverage should be regenerated with pytest-cov when the full suite is green.
 

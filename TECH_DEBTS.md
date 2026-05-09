@@ -2,15 +2,9 @@
 
 This document tracks unresolved review findings that should be addressed in future fixes.
 
-## P1: `tests/test_rules.py` is an oversized integration harness
-
-- Location: `tests/test_rules.py`
-- Impact: The file contains 126 tests and hundreds of direct private-state mutations, so small internal changes can break unrelated tests and obscure whether a failure is in rules, scoring, hand logic, wall setup, or action resolution.
-- Suggested fix: Split the file into focused modules such as action execution, action availability, furiten, ryuukyoku, multi-ron, scoring-in-engine, and game-end tests. Move shared setup into `tests/helpers.py`.
-
 ## P2: Unit tests often exercise multiple modules at once
 
-- Location: `tests/test_scoring.py`, `tests/test_yaku.py`, and `tests/test_rules.py`
+- Location: `tests/test_scoring.py`, `tests/test_yaku.py`, and `tests/test_rule_*.py`
 - Impact: Many nominal unit tests instantiate multiple major subsystems, such as `Hand`, `YakuChecker`, `ScoreCalculator`, `TileSet`, and `RuleEngine`. This makes failures harder to localize and encourages broad fixture setup for narrow behavior.
 - Suggested fix: Keep direct subsystem tests narrow, and move cross-module behavior into integration or engine-level test files with explicit naming.
 
@@ -22,7 +16,7 @@ This document tracks unresolved review findings that should be addressed in futu
 
 ## P2: Integration test is random and flaky
 
-- Location: `tests/test_integration.py:184-197`
+- Location: `tests/test_integration.py`
 - Impact: `test_game_flow_with_meld` uses a shuffled live round, discards, then assumes the same `current_player` can discard again. If the first discard creates interrupt actions, the player has no available discard action and the test fails nondeterministically.
 - Suggested fix: Make the test deterministic by constructing hands/wall state directly, or update the flow to resolve or pass interrupts before expecting the next discard.
 
