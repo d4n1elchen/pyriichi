@@ -16,6 +16,8 @@ class TestWinningAndScoring(RuleEngineTestMixin):
     def test_check_chankan(self):
         """Test chankan check"""
         self._init_game()
+        self.engine._is_first_turn_after_deal = False
+        set_non_matching_scoring_dora(self.engine)
 
         # Set Player 0 can chankan (machi 6p, tanyao)
         # hand: 234m 567m 234p 66p 78p (machi 6p/9p)
@@ -33,6 +35,8 @@ class TestWinningAndScoring(RuleEngineTestMixin):
         assert result is not None
         assert result.win is True
         assert result.chankan is True
+        assert {y.yaku for y in result.yaku} == {Yaku.CHANKAN, Yaku.TANYAO}
+        assert result.score_result.total_points == 3900
         assert result.score_result.payment_from == 1
 
     def test_false_tsumo_applies_chombo(self):
@@ -75,6 +79,8 @@ class TestWinningAndScoring(RuleEngineTestMixin):
     def test_check_win_rinshan(self):
         """Test rinshan win check"""
         self._init_game()
+        self.engine._is_first_turn_after_deal = False
+        set_non_matching_scoring_dora(self.engine)
         # Set a hand that can win on rinshan
         # Create a winning hand
         # hand: 123m 456m 789m 123p 4p (rinshan tile 4p)
@@ -85,12 +91,20 @@ class TestWinningAndScoring(RuleEngineTestMixin):
         rinshan_tile = Tile(Suit.PINZU, 4)
         result = self.engine.check_win(0, rinshan_tile, is_rinshan=True)
         assert result is not None
-        assert result.win
-        assert result.rinshan
+        assert result.win is True
+        assert result.rinshan is True
+        assert {y.yaku for y in result.yaku} == {
+            Yaku.MENZEN_TSUMO,
+            Yaku.RINSHAN,
+            Yaku.ITTSU,
+        }
+        assert result.score_result.total_points == 11700
 
     def test_check_win_tsumo_sets_is_tsumo(self):
         """Test Tumo sets score_result.is_tsumo to True"""
         self._init_game()
+        self.engine._is_first_turn_after_deal = False
+        set_non_matching_scoring_dora(self.engine)
         player = self.engine.get_current_player()
         winning_tile = Tile(Suit.PINZU, 4)
         # Concealed hand: 123m 456m 789m 123p + 4p
@@ -99,6 +113,8 @@ class TestWinningAndScoring(RuleEngineTestMixin):
         self.engine._last_drawn_tile = (player, winning_tile)
         result = self.engine.check_win(player, winning_tile)
         assert result is not None
+        assert {y.yaku for y in result.yaku} == {Yaku.MENZEN_TSUMO, Yaku.ITTSU}
+        assert result.score_result.total_points == 6000
         assert result.score_result.is_tsumo is True
         assert result.score_result.payment_from == 0
 
@@ -108,6 +124,8 @@ class TestWinningAndScoring(RuleEngineTestMixin):
         discarder = 0
         winner = (discarder + 1) % self.engine.get_num_players()
         winning_tile = Tile(Suit.PINZU, 4)
+        self.engine._is_first_turn_after_deal = False
+        set_non_matching_scoring_dora(self.engine)
         self.engine._hands[winner] = Hand(parse_tiles("123456789m1234p"))
         self.engine._last_discarded_tile = winning_tile
         self.engine._last_discarded_player = discarder
@@ -116,7 +134,8 @@ class TestWinningAndScoring(RuleEngineTestMixin):
         self.engine._last_drawn_tile = None
         result = self.engine.check_win(winner, winning_tile)
         assert result is not None
-        assert result.score_result is not None
+        assert {y.yaku for y in result.yaku} == {Yaku.ITTSU}
+        assert result.score_result.total_points == 2600
         assert result.score_result.is_tsumo is False
         assert result.score_result.payment_from == discarder
 
