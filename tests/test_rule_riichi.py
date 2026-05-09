@@ -1,0 +1,251 @@
+"""Riichi rule tests for RuleEngine."""
+
+import pytest
+
+from pyriichi.hand import Hand
+from pyriichi.rules import GameAction
+from pyriichi.tiles import Suit, Tile
+from pyriichi.utils import parse_tiles
+from tests.helpers import RuleEngineTestMixin
+
+
+class TestRiichi(RuleEngineTestMixin):
+    def test_riichi_availability_14_tiles(self):
+        """Test riichi availability with 14 tiles (after draw) and tenpai after discard"""
+        self.engine.start_game()
+        self.engine.start_round()
+        self.engine.deal()
+
+        player_idx = self.engine.get_current_player()
+        hand = self.engine.get_hand(player_idx)
+
+        # Clear hand
+        hand._tiles = []
+
+        # Construct hand: 11 123 123 123 566 (manzu)
+        # After discarding 5m, remains 11 123 123 123 66 -> tenpai (machi on 6m)
+        tiles = []
+        tiles.extend([Tile(Suit.MANZU, 1) for _ in range(2)])
+        tiles.extend([Tile(Suit.MANZU, 2) for _ in range(3)])
+        tiles.extend([Tile(Suit.MANZU, 3) for _ in range(3)])
+        tiles.extend([Tile(Suit.MANZU, 4) for _ in range(3)])
+        tiles.append(Tile(Suit.MANZU, 5))
+        tiles.append(Tile(Suit.MANZU, 6))
+        tiles.append(Tile(Suit.MANZU, 6))
+
+        for t in tiles:
+            hand.add_tile(t)
+
+        # Force recalculate actions (bypass cache)
+        actions = self.engine._calculate_turn_actions(player_idx)
+
+        assert GameAction.DECLARE_RIICHI in actions
+
+    def test_interrupt_riichi_ippatsu_on_chi(self):
+        """Test chi interrupts ippatsu"""
+        self._init_game()
+        self.engine._riichi_ippatsu = {0: True}
+        self.engine._riichi_ippatsu_discard = {0: 0}
+
+        chi_tile = Tile(Suit.MANZU, 4)
+        self.engine._hands[0] = Hand(parse_tiles("11223344556677m"))
+        self.engine._hands[1] = Hand(parse_tiles("23456789m12345p"))
+        self.engine._current_player = 0
+
+        self.engine.execute_action(0, GameAction.DISCARD, tile=chi_tile)
+        sequences = self.engine.get_available_chi_sequences(1)
+        assert sequences
+        target_sequence = next(
+            (seq for seq in sequences if sorted(tile.rank for tile in seq) == [2, 3]),
+            None,
+        )
+        assert target_sequence is not None
+        self.engine.execute_action(1, GameAction.CHI, sequence=target_sequence)
+
+        # handle other waiting players (e.g. PON)
+        waiting_players = list(self.engine.waiting_for_actions.keys())
+        for pid in waiting_players:
+            if pid != 1:
+                self.engine.execute_action(pid, GameAction.PASS)
+
+        assert self.engine._riichi_ippatsu[0] is False
+
+    def test_interrupt_riichi_ippatsu_on_pon(self):
+        """Test pon interrupts ippatsu"""
+        self._init_game()
+        self.engine._riichi_ippatsu = {0: True}
+        self.engine._riichi_ippatsu_discard = {0: 0}
+
+        pon_tile = Tile(Suit.PINZU, 7)
+        self.engine._hands[0] = Hand(parse_tiles("7p1112233445566m"))
+        self.engine._hands[2] = Hand(parse_tiles("77p11223344556p"))
+        self.engine._current_player = 0
+
+        self.engine.execute_action(0, GameAction.DISCARD, tile=pon_tile)
+        assert GameAction.PON in self.engine.get_available_actions(2)
+        self.engine.execute_action(2, GameAction.PON)
+
+        # If other players are waiting (e.g. P1 can chi?), need to let them PASS
+        waiting_players = list(self.engine.waiting_for_actions.keys())
+        for pid in waiting_players:
+            if GameAction.PASS in self.engine.get_available_actions(pid):
+                self.engine.execute_action(pid, GameAction.PASS)
+
+        assert self.engine._riichi_ippatsu[0] is False
+
+    def test_interrupt_riichi_ippatsu_on_kan(self):
+        """Test open_kan interrupts ippatsu"""
+        self._init_game()
+        self.engine._riichi_ippatsu = {0: True}
+        self.engine._riichi_ippatsu_discard = {0: 0}
+
+        kan_tile = Tile(Suit.SOUZU, 9)
+        self.engine._hands[0] = Hand(parse_tiles("9s1122334455667m"))
+        self.engine._hands[1] = Hand(parse_tiles("999s1122334455s"))
+        self.engine._current_player = 0
+
+        self.engine.execute_action(0, GameAction.DISCARD, tile=kan_tile)
+        assert GameAction.KAN in self.engine.get_available_actions(1)
+        self.engine.execute_action(1, GameAction.KAN, tile=kan_tile)
+
+        # handle other waiting players
+        waiting_players = list(self.engine.waiting_for_actions.keys())
+        for pid in waiting_players:
+            if pid != 1:
+                self.engine.execute_action(pid, GameAction.PASS)
+
+        assert self.engine._riichi_ippatsu[0] is False
+
+    def test_interrupt_riichi_ippatsu_on_declare_ankan(self):
+        """Test declare_ankan interrupts ippatsu"""
+        self._init_game()
+        self.engine._riichi_ippatsu = {0: True, 1: True}
+        self.engine._riichi_ippatsu_discard = {0: 0, 1: 0}
+
+        self.engine._hands[3] = Hand(parse_tiles("111123456789m1p"))
+
+        # Force update actions
+        self.engine._waiting_for_actions = {}
+        self.engine._waiting_for_actions[3] = self.engine._calculate_turn_actions(3)
+        self.engine._current_player = 3
+
+        assert GameAction.DECLARE_ANKAN in self.engine.get_available_actions(3)
+        result = self.engine.execute_action(3, GameAction.DECLARE_ANKAN)
+
+        assert result.closed_kan is True or result.kan is True
+        assert all(flag is False for flag in self.engine._riichi_ippatsu.values())
+
+    def test_cannot_chi_pon_kan_in_riichi(self):
+        """Test cannot chi/pon/kan in riichi"""
+        self._init_game()
+
+        # Set Player 0 riichi
+        hand = self.engine.get_hand(0)
+        hand._is_riichi = True
+
+        # Set kamicha discard
+        self.engine._last_discarded_player = 3
+        self.engine._last_discarded_tile = Tile(Suit.PINZU, 3)
+
+        # Set hand to allow chi/pon/kan
+        # 12p (chi 3p), 33p (pon 3p), 333p (kan 3p)
+        hand._tiles = parse_tiles("12333p456s789m11z")
+
+        # Check chi
+        # 12p + 3p -> chi
+        assert hand.can_chi(self.engine._last_discarded_tile, from_player=0)
+        assert not self.engine._can_chi(0)  # Should be False due to riichi
+
+        # Check pon
+        # 33p + 3p -> pon
+        assert hand.can_pon(self.engine._last_discarded_tile)
+        assert not self.engine._can_pon(0)  # Should be False due to riichi
+
+        # Check kan (Open)
+        # 333p + 3p -> kan
+        assert hand.can_kan(self.engine._last_discarded_tile)
+        assert not self.engine._can_kan(0)  # Should be False due to riichi
+
+    def test_must_discard_drawn_tile_in_riichi(self):
+        """Test must discard drawn tile in riichi"""
+        self._init_game()
+        hand = self.engine.get_hand(0)
+        hand._is_riichi = True
+
+        # Set hand
+        hand._tiles = parse_tiles("123m456p789s1122z")
+
+        # Draw tile
+        drawn_tile = Tile(Suit.HONORS, 3)  # 3z (West)
+        hand.add_tile(drawn_tile)
+
+        # Try to discard a tile that was not just drawn (1m)
+        with pytest.raises(ValueError, match="立直後只能打出剛摸到的牌"):
+            self.engine._handle_discard(0, Tile(Suit.MANZU, 1))
+
+        # Try to discard the drawn tile (3z)
+        # Should succeed
+        self.engine._handle_discard(0, drawn_tile)
+
+    def test_closed_kan_allowed_if_wait_unchanged(self):
+        """Test declare_ankan allowed if machi is unchanged after riichi"""
+        self._init_game()
+        hand = self.engine.get_hand(0)
+        hand._is_riichi = True
+
+        # tenpai: 111m (Triplet) + 456m + 789p + 23s (machi 1s, 4s) + 77z (Pair)
+        # Here 111m can only be interpreted as a triplet, not a pair (because 1m is not connected to 456m)
+        hand._tiles = parse_tiles("111456m789p23s77z")
+        drawn_tile = Tile(Suit.MANZU, 1)
+        hand.add_tile(drawn_tile)
+
+        # Should allow declare_ankan
+        assert self.engine._can_declare_ankan(0)
+
+    def test_closed_kan_forbidden_if_wait_changed(self):
+        """Test declare_ankan forbidden if machi is changed after riichi"""
+        self._init_game()
+        hand = self.engine.get_hand(0)
+        hand._is_riichi = True
+
+        # tenpai: 3334m (machi 2m, 3m, 4m, 5m) -> closed_kan 3m -> 4m (tanki 4m)
+        hand._tiles = parse_tiles("3334m456p789s11z")
+        drawn_tile = Tile(Suit.MANZU, 3)
+        hand.add_tile(drawn_tile)
+
+        # Should NOT allow declare_ankan
+        assert not self.engine._can_declare_ankan(0)
+
+    def test_riichi_requires_discard_and_tenpai(self):
+        """Test riichi requires both discard and tenpai"""
+        self._init_game()
+        hand = self.engine.get_hand(0)
+
+        # Set tenpai hand: 11123m (machi 1m, 4m) + 456p + 789s + 11z
+        # Draw 2p (Not tenpai)
+        hand._tiles = parse_tiles("11123m456p789s11z")
+        drawn_tile = Tile(Suit.PINZU, 2)
+        hand.add_tile(drawn_tile)
+
+        # Try riichi without discarding
+        with pytest.raises(ValueError, match="立直必須同時打出一張牌"):
+            self.engine._handle_riichi(0, tile=None)
+
+        # Try riichi and discard 2p (tenpai)
+        # Should succeed
+        result = self.engine._handle_riichi(0, tile=drawn_tile)
+        assert result.riichi
+        assert hand.is_riichi
+        assert self.engine._last_discarded_tile == drawn_tile
+
+        # Set noten hand
+        # 11123m 456p 789s 12z (noten) + draw 3z
+        hand._is_riichi = False
+        hand._tiles = parse_tiles("11123m456p789s12z")
+        drawn_tile = Tile(Suit.HONORS, 3)
+        hand.add_tile(drawn_tile)
+        self.engine._game_state.ruleset.chombo_penalty_enabled = False
+
+        # Try riichi and discard 3z (Still noten)
+        with pytest.raises(ValueError, match="立直打牌後必須聽牌"):
+            self.engine._handle_riichi(0, tile=drawn_tile)
