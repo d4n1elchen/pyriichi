@@ -633,6 +633,7 @@ class TestWinningAndScoring(RuleEngineTestMixin):
         self.engine._game_state.ruleset.head_bump_only = False
         self.engine._game_state.ruleset.allow_double_ron = True
         self.engine._game_state.ruleset.allow_triple_ron = True
+        self.engine._is_first_turn_after_deal = False
 
         # Player 0 discards 5p, Player 1, 2, 3 all ron with tanyao
         discard_tile = Tile(Suit.PINZU, 5)
@@ -642,6 +643,7 @@ class TestWinningAndScoring(RuleEngineTestMixin):
         self.engine._hands[1] = Hand(parse_tiles(hand_str))
         self.engine._hands[2] = Hand(parse_tiles(hand_str))
         self.engine._hands[3] = Hand(parse_tiles(hand_str))
+        set_non_matching_scoring_dora(self.engine)
 
         initial_scores = self.engine._game_state.scores.copy()
 
@@ -661,24 +663,10 @@ class TestWinningAndScoring(RuleEngineTestMixin):
 
         assert result.success
         assert sorted(result.winners) == [1, 2, 3]
-
-        # Players 1, 2, 3 each get 1000.
-
-        # Note: calculate_score might give more with dora/ura_dora.
-        # Let's just verify scores changed in the right direction.
-
-        score_diff_0 = self.engine._game_state.scores[0] - initial_scores[0]
-        score_diff_1 = self.engine._game_state.scores[1] - initial_scores[1]
-        score_diff_2 = self.engine._game_state.scores[2] - initial_scores[2]
-        score_diff_3 = self.engine._game_state.scores[3] - initial_scores[3]
-
-        assert score_diff_0 < 0
-        assert score_diff_1 > 0
-        assert score_diff_2 > 0
-        assert score_diff_3 > 0
-
-        # Verify total balance is zero (assuming no riichi_stick)
-        assert score_diff_0 + score_diff_1 + score_diff_2 + score_diff_3 == 0
+        assert self.engine._game_state.scores[0] == initial_scores[0] - 3900
+        assert self.engine._game_state.scores[1] == initial_scores[1] + 1300
+        assert self.engine._game_state.scores[2] == initial_scores[2] + 1300
+        assert self.engine._game_state.scores[3] == initial_scores[3] + 1300
 
     def test_double_ron_with_furiten(self):
         """Test double_ron with furiten: One player furiten, only other player wins"""
