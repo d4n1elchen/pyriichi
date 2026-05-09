@@ -171,13 +171,16 @@ class TestWinningAndScoring(RuleEngineTestMixin):
         self._init_game()
         test_hand = Hand(parse_tiles("1111234567999m"))
         self.engine._hands[0] = test_hand
+        self.engine._tile_set._dora_indicators = [Tile(Suit.MANZU, 9)]
+        self.engine._tile_set._ura_dora_indicators = [Tile(Suit.PINZU, 9)]
         dora_count = self.engine._count_dora(0, Tile(Suit.MANZU, 1))
-        assert dora_count >= 0
+        assert dora_count == 5
 
         # Test ura_dora when riichi
         test_hand.set_riichi(True)
+        self.engine._tile_set._ura_dora_indicators = [Tile(Suit.MANZU, 9)]
         dora_count = self.engine._count_dora(0, Tile(Suit.MANZU, 1))
-        assert dora_count >= 0
+        assert dora_count == 10
 
         # Test red_dora
         # hand: r5p
@@ -185,8 +188,9 @@ class TestWinningAndScoring(RuleEngineTestMixin):
 
         test_hand = Hand(red_dora_tiles)
         self.engine._hands[0] = test_hand
+        set_non_matching_scoring_dora(self.engine)
         dora_count = self.engine._count_dora(0, Tile(Suit.PINZU, 5))
-        assert dora_count >= 1  # At least one red_dora
+        assert dora_count == 1
 
     def test_count_dora_uses_initial_and_kan_indicators(self):
         """Test dora count uses initial and kan indicators."""
