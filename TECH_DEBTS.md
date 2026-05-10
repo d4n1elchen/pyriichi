@@ -12,4 +12,4 @@ This document tracks unresolved review findings that should be addressed in futu
 
 - Location: `tests/test_rule_winning_scoring.py`
 - Impact: Some tests assert `dora_count >= 0`, only check score-change direction, or depend on broad `result is not None` checks before the actual rule assertion. These can pass while the exact han, fu, winner list, or payment distribution is wrong.
-- Suggested fix: Replace smoke checks with exact expected dora counts, winner lists, score deltas, and yaku/score fields. Start with `test_count_dora_one` and `test_triple_ron_enabled_all_win`.
+- Suggested fix: Replace remaining smoke checks with exact expected winner lists, score deltas, and yaku/score fields. Continue with the remaining broad `result is not None` assertions in this file.
