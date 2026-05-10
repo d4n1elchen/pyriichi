@@ -8,7 +8,38 @@ from tests.helpers import RuleEngineTestMixin
 
 
 def _score_deltas(initial_scores, current_scores):
-    return [current - initial for current, initial in zip(current_scores, initial_scores)]
+    return [
+        current - initial for current, initial in zip(current_scores, initial_scores)
+    ]
+
+
+def _honor_pon(rank):
+    tile = Tile(Suit.HONORS, rank)
+    return Meld(MeldType.PON_MELD, [tile] * 3, called_tile=tile)
+
+
+def _set_daisangen_pao_hand(engine, player, hand_str, pao_player):
+    engine._hands[player] = Hand(parse_tiles(hand_str))
+    engine._hands[player]._melds = [_honor_pon(5), _honor_pon(6), _honor_pon(7)]
+    engine._pao_daisangen[player] = pao_player
+
+
+def _prepare_final_honor_call(
+    engine, player, responsible_player, called_tile, hand_str, meld_ranks
+):
+    hand = Hand(parse_tiles(hand_str))
+    hand._melds = [_honor_pon(rank) for rank in meld_ranks]
+    engine._hands[player] = hand
+    engine._hands[responsible_player]._discards = [called_tile]
+    engine._last_discarded_tile = called_tile
+    engine._last_discarded_player = responsible_player
+
+
+def _settle_win(engine, player, winning_tile):
+    result = engine.check_win(player, winning_tile)
+    engine.apply_win_score(result)
+    engine.end_round([player])
+    return result
 
 
 class TestRulePao(RuleEngineTestMixin):
@@ -16,14 +47,8 @@ class TestRulePao(RuleEngineTestMixin):
         """Test pao: daisangen tsumo, pao player pays all."""
         self._init_game()
 
-        self.engine._hands[0] = Hand(parse_tiles("11199m"))
-        meld_haku = Meld(MeldType.PON_MELD, [Tile(Suit.HONORS, 5)] * 3, 1)
-        meld_hatsu = Meld(MeldType.PON_MELD, [Tile(Suit.HONORS, 6)] * 3, 2)
-        meld_chun = Meld(MeldType.PON_MELD, [Tile(Suit.HONORS, 7)] * 3, 3)
-        self.engine._hands[0]._melds = [meld_haku, meld_hatsu, meld_chun]
-        self.engine._pao_daisangen[0] = 3
-
         winning_tile = Tile(Suit.MANZU, 1)
+        _set_daisangen_pao_hand(self.engine, 0, "11199m", pao_player=3)
         self.engine._current_player = 0
         self.engine._last_drawn_tile = (0, winning_tile)
         initial_scores = self.engine._game_state.scores.copy()
@@ -48,23 +73,14 @@ class TestRulePao(RuleEngineTestMixin):
         player = 0
         responsible_player = 3
         called_tile = Tile(Suit.HONORS, 7)
-        hand = Hand(parse_tiles("77z123m456p789s1m"))
-        hand._melds = [
-            Meld(
-                MeldType.PON_MELD,
-                [Tile(Suit.HONORS, 5)] * 3,
-                called_tile=Tile(Suit.HONORS, 5),
-            ),
-            Meld(
-                MeldType.PON_MELD,
-                [Tile(Suit.HONORS, 6)] * 3,
-                called_tile=Tile(Suit.HONORS, 6),
-            ),
-        ]
-        self.engine._hands[player] = hand
-        self.engine._hands[responsible_player]._discards = [called_tile]
-        self.engine._last_discarded_tile = called_tile
-        self.engine._last_discarded_player = responsible_player
+        _prepare_final_honor_call(
+            self.engine,
+            player,
+            responsible_player,
+            called_tile,
+            "77z123m456p789s1m",
+            [5, 6],
+        )
 
         self.engine._handle_pon(player)
 
@@ -76,28 +92,14 @@ class TestRulePao(RuleEngineTestMixin):
         player = 0
         responsible_player = 2
         called_tile = Tile(Suit.HONORS, 4)
-        hand = Hand(parse_tiles("44z123m456p789s1m"))
-        hand._melds = [
-            Meld(
-                MeldType.PON_MELD,
-                [Tile(Suit.HONORS, 1)] * 3,
-                called_tile=Tile(Suit.HONORS, 1),
-            ),
-            Meld(
-                MeldType.PON_MELD,
-                [Tile(Suit.HONORS, 2)] * 3,
-                called_tile=Tile(Suit.HONORS, 2),
-            ),
-            Meld(
-                MeldType.PON_MELD,
-                [Tile(Suit.HONORS, 3)] * 3,
-                called_tile=Tile(Suit.HONORS, 3),
-            ),
-        ]
-        self.engine._hands[player] = hand
-        self.engine._hands[responsible_player]._discards = [called_tile]
-        self.engine._last_discarded_tile = called_tile
-        self.engine._last_discarded_player = responsible_player
+        _prepare_final_honor_call(
+            self.engine,
+            player,
+            responsible_player,
+            called_tile,
+            "44z123m456p789s1m",
+            [1, 2, 3],
+        )
 
         self.engine._handle_pon(player)
 
@@ -107,22 +109,14 @@ class TestRulePao(RuleEngineTestMixin):
         """Test pao: daisangen ron pao player."""
         self._init_game()
 
-        self.engine._hands[0] = Hand(parse_tiles("1199m"))
-        meld_haku = Meld(MeldType.PON_MELD, [Tile(Suit.HONORS, 5)] * 3, 1)
-        meld_hatsu = Meld(MeldType.PON_MELD, [Tile(Suit.HONORS, 6)] * 3, 2)
-        meld_chun = Meld(MeldType.PON_MELD, [Tile(Suit.HONORS, 7)] * 3, 3)
-        self.engine._hands[0]._melds = [meld_haku, meld_hatsu, meld_chun]
-        self.engine._pao_daisangen[0] = 3
-
         winning_tile = Tile(Suit.MANZU, 1)
+        _set_daisangen_pao_hand(self.engine, 0, "1199m", pao_player=3)
         self.engine._last_discarded_tile = winning_tile
         self.engine._last_discarded_player = 3
         self.engine._current_player = 0
         initial_scores = self.engine._game_state.scores.copy()
 
-        result = self.engine.check_win(0, winning_tile)
-        self.engine.apply_win_score(result)
-        self.engine.end_round([0])
+        _settle_win(self.engine, 0, winning_tile)
 
         score_deltas = _score_deltas(initial_scores, self.engine._game_state.scores)
         assert score_deltas[0] > 0
@@ -134,22 +128,14 @@ class TestRulePao(RuleEngineTestMixin):
         """Test pao: daisangen ron other."""
         self._init_game()
 
-        self.engine._hands[0] = Hand(parse_tiles("1199m"))
-        meld_haku = Meld(MeldType.PON_MELD, [Tile(Suit.HONORS, 5)] * 3, 1)
-        meld_hatsu = Meld(MeldType.PON_MELD, [Tile(Suit.HONORS, 6)] * 3, 2)
-        meld_chun = Meld(MeldType.PON_MELD, [Tile(Suit.HONORS, 7)] * 3, 3)
-        self.engine._hands[0]._melds = [meld_haku, meld_hatsu, meld_chun]
-        self.engine._pao_daisangen[0] = 3
-
         winning_tile = Tile(Suit.MANZU, 1)
+        _set_daisangen_pao_hand(self.engine, 0, "1199m", pao_player=3)
         self.engine._last_discarded_tile = winning_tile
         self.engine._last_discarded_player = 1
         self.engine._current_player = 0
         initial_scores = self.engine._game_state.scores.copy()
 
-        result = self.engine.check_win(0, winning_tile)
-        self.engine.apply_win_score(result)
-        self.engine.end_round([0])
+        _settle_win(self.engine, 0, winning_tile)
 
         score_deltas = _score_deltas(initial_scores, self.engine._game_state.scores)
         assert score_deltas[0] > 0
