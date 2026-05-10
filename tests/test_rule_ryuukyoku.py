@@ -38,6 +38,66 @@ def _score_deltas(initial_scores, current_scores):
     return [score - initial_scores[i] for i, score in enumerate(current_scores)]
 
 
+def _yaochuu_discards():
+    return [
+        Tile(Suit.MANZU, 1),
+        Tile(Suit.MANZU, 9),
+        Tile(Suit.PINZU, 1),
+        Tile(Suit.PINZU, 9),
+        Tile(Suit.SOUZU, 1),
+        Tile(Suit.SOUZU, 9),
+        Tile(Suit.HONORS, 1),
+        Tile(Suit.HONORS, 2),
+        Tile(Suit.HONORS, 3),
+        Tile(Suit.HONORS, 4),
+        Tile(Suit.HONORS, 5),
+        Tile(Suit.HONORS, 6),
+        Tile(Suit.HONORS, 7),
+    ]
+
+
+def _set_nagashi_mangan_candidate(engine, player, discards=None, called=False):
+    engine._hands[player]._discards = (
+        list(discards) if discards is not None else _yaochuu_discards()
+    )
+    engine._has_called_discard[player] = called
+
+
+def _prepare_fourth_kan_chankan(engine):
+    engine._kan_count = 3
+    engine._current_player = 0
+    kan_tile = Tile(Suit.SOUZU, 4)
+
+    hand = Hand(parse_tiles("444s234567m1234p"))
+    hand.pon(kan_tile)
+    hand.add_tile(kan_tile)
+    engine._hands[0] = hand
+    engine._last_discarded_tile = None
+    engine._last_discarded_player = None
+
+    engine._hands[1] = Hand(parse_tiles("23s234567m789p44p"))
+    engine._waiting_for_actions[0] = engine._calculate_turn_actions(0)
+
+
+def _prepare_fourth_kan_ron(engine):
+    winning_tile = Tile(Suit.PINZU, 1)
+    engine._kan_count = 4
+    engine._hands[1] = Hand(parse_tiles("234567m789p234s1p"))
+    engine._last_discarded_tile = winning_tile
+    engine._last_discarded_player = 0
+    engine._check_interrupts(winning_tile, 0)
+    return winning_tile
+
+
+def _prepare_fourth_kan_rinshan(engine, player):
+    engine._kan_count = 3
+    engine._hands[player] = Hand(parse_tiles("1111m234567m1234p"))
+    rinshan_tile = Tile(Suit.PINZU, 4)
+    assert engine._tile_set is not None
+    engine._tile_set._rinshan_tiles[0] = rinshan_tile
+    engine._waiting_for_actions[player] = engine._calculate_turn_actions(player)
+
+
 class TestRyuukyoku(RuleEngineTestMixin):
     def test_check_draw(self):
         """Test ryuukyoku check"""
@@ -227,34 +287,13 @@ class TestRyuukyoku(RuleEngineTestMixin):
         self._init_game()
         player = 0
 
-        # 1. Normal nagashi_mangan: All discards are terminals/honors, and not called
-        yaochuu_tiles = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 9),
-            Tile(Suit.SOUZU, 1),
-            Tile(Suit.SOUZU, 9),
-            Tile(Suit.HONORS, 1),
-            Tile(Suit.HONORS, 2),
-            Tile(Suit.HONORS, 3),
-            Tile(Suit.HONORS, 4),
-            Tile(Suit.HONORS, 5),
-            Tile(Suit.HONORS, 6),
-            Tile(Suit.HONORS, 7),
-        ]
-
-        self.engine._hands[player]._discards = yaochuu_tiles
-        self.engine._has_called_discard[player] = False
+        _set_nagashi_mangan_candidate(self.engine, player)
         assert self.engine._check_nagashi_mangan(player) is True
 
-        # 2. Failure case: Non-terminal/honor tile
         self.engine._hands[player]._discards.append(Tile(Suit.MANZU, 5))
         assert self.engine._check_nagashi_mangan(player) is False
 
-        # 3. Failure case: Discard called
-        self.engine._hands[player]._discards = yaochuu_tiles  # Reset to yaochuu tiles.
-        self.engine._has_called_discard[player] = True
+        _set_nagashi_mangan_candidate(self.engine, player, called=True)
         assert self.engine._check_nagashi_mangan(player) is False
 
     def test_handle_ryuukyoku_scores_nagashi_mangan_as_mangan(self):
@@ -263,13 +302,16 @@ class TestRyuukyoku(RuleEngineTestMixin):
         player = 1
         self.engine._game_state.set_dealer(0)
         self.engine._tile_set._tiles = []
-        self.engine._hands[player]._discards = [
-            Tile(Suit.MANZU, 1),
-            Tile(Suit.MANZU, 9),
-            Tile(Suit.PINZU, 1),
-            Tile(Suit.PINZU, 9),
-        ]
-        self.engine._has_called_discard[player] = False
+        _set_nagashi_mangan_candidate(
+            self.engine,
+            player,
+            [
+                Tile(Suit.MANZU, 1),
+                Tile(Suit.MANZU, 9),
+                Tile(Suit.PINZU, 1),
+                Tile(Suit.PINZU, 9),
+            ],
+        )
         initial_scores = self.engine._game_state.scores
 
         result = self.engine.handle_ryuukyoku()
@@ -312,26 +354,7 @@ class TestRyuukyoku(RuleEngineTestMixin):
     def test_fourth_kan_chankan_does_not_trigger_suukan_sanra(self):
         """Test chankan on fourth kan does not trigger suukan_sanra."""
         self._init_game()
-
-        self.engine._kan_count = 3
-        self.engine._current_player = 0
-        kan_tile = Tile(Suit.SOUZU, 4)
-
-        # 444s 234m 567m 123p 4p
-        hand0_tiles = parse_tiles("444s234567m1234p")
-        hand0 = Hand(hand0_tiles)
-        hand0.pon(kan_tile)
-        hand0.add_tile(kan_tile)
-        self.engine._hands[0] = hand0
-        self.engine._last_discarded_tile = None
-        self.engine._last_discarded_player = None
-
-        # hand: 23s 234m 567m 789p 44p (machi 4s)
-        winning_tiles = parse_tiles("23s234567m789p44p")
-        self.engine._hands[1] = Hand(winning_tiles)
-
-        # Force update actions for player 0
-        self.engine._waiting_for_actions[0] = self.engine._calculate_turn_actions(0)
+        _prepare_fourth_kan_chankan(self.engine)
 
         result = self.engine.execute_action(0, GameAction.DECLARE_ANKAN)
         assert result.chankan is True
@@ -341,18 +364,7 @@ class TestRyuukyoku(RuleEngineTestMixin):
     def test_fourth_kan_ron_does_not_trigger_suukan_sanra(self):
         """Test ron after fourth kan does not trigger suukan_sanra."""
         self._init_game()
-
-        self.engine._kan_count = 4
-        winning_tile = Tile(Suit.PINZU, 1)
-
-        # hand: 234m 567m 789p 234s 1p
-        ron_ready = parse_tiles("234567m789p234s1p")
-        self.engine._hands[1] = Hand(ron_ready)
-        self.engine._last_discarded_tile = winning_tile
-        self.engine._last_discarded_player = 0
-
-        # Force update interrupts
-        self.engine._check_interrupts(winning_tile, 0)
+        winning_tile = _prepare_fourth_kan_ron(self.engine)
 
         win_result = self.engine.check_win(1, winning_tile)
         assert win_result is not None
@@ -362,34 +374,13 @@ class TestRyuukyoku(RuleEngineTestMixin):
         """Test rinshan after fourth kan does not trigger suukan_sanra."""
         self._init_game()
 
-        self.engine._kan_count = 3
         player = self.engine.get_current_player()
+        _prepare_fourth_kan_rinshan(self.engine, player)
 
-        # Set rinshan
-        # 1. Set hand to kan (Need 4 identical tiles)
-
-        # 1111m 234m 567m 123p 4p
-        hand_tiles = parse_tiles("1111m234567m1234p")
-        self.engine._hands[player] = Hand(hand_tiles)
-
-        # 2. Set rinshan tile to winning tile (4p) - machi 1p/4p
-        rinshan_tile = Tile(Suit.PINZU, 4)
-        assert self.engine._tile_set is not None
-        self.engine._tile_set._rinshan_tiles[0] = rinshan_tile
-
-        # Force update actions
-        self.engine._waiting_for_actions[player] = self.engine._calculate_turn_actions(
-            player
-        )
-
-        # 3. Execute declare_ankan
         result = self.engine.execute_action(player, GameAction.DECLARE_ANKAN)
 
-        # 4. Verify rinshan
         assert result.rinshan_win is not None
         assert result.rinshan_win.win is True
-
-        # 5. Verify suukan_sanra not triggered
         assert self.engine.check_ryuukyoku() is None
 
     def test_triple_ron_disabled_ryuukyoku(self):
