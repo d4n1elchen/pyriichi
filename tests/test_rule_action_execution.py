@@ -3,7 +3,7 @@
 import pytest
 
 from pyriichi.hand import Hand
-from pyriichi.rules import GameAction
+from pyriichi.rules import ActionResult, GameAction
 from pyriichi.tiles import Suit, Tile
 from pyriichi.utils import parse_tiles
 from tests.helpers import RuleEngineTestMixin, no_response_hand
@@ -54,8 +54,8 @@ class TestActionExecution(RuleEngineTestMixin):
         self.engine._hands[0] = Hand(parse_tiles("4789m12345p12345s"))
         # 23m 56m 678p 9p 678s 9s 5s
         self.engine._hands[1] = Hand(parse_tiles("2356m6789p56789s"))
-        # 11m 11p 112345678s
-        self.engine._hands[2] = Hand(parse_tiles("11m11p12345678s"))
+        self.engine._hands[2] = no_response_hand()
+        self.engine._hands[3] = no_response_hand()
 
         self.engine._current_player = 0
         self.engine.execute_action(0, GameAction.DISCARD, tile=tile_to_discard)
@@ -136,57 +136,11 @@ class TestActionExecution(RuleEngineTestMixin):
         assert len(self.engine._discard_history) > 0
 
     def test_execute_action_discard_history_limit(self):
-        """Test discard history keeps only last 4"""
+        """Test discard history keeps only last 4."""
         self._init_game()
-        # dealer has 14 tiles at start, discard one first
-        current_player = self.engine.get_current_player()
-        hand = self.engine.get_hand(current_player)
-        assert self._has_action(current_player, GameAction.DISCARD)
-        self.engine.execute_action(
-            current_player, GameAction.DISCARD, tile=hand.tiles[0]
-        )
-        for _ in range(10):
-            current_player = self.engine.get_current_player()
-        for _ in range(10):
-            current_player = self.engine.get_current_player()
-            # DRAW is automatic, so check DISCARD directly
-            hand = self.engine.get_hand(current_player)
-            # Ensure there are tiles to discard
-            if not hand.tiles:
-                self.engine._handle_draw(current_player)
+        discards = [Tile(Suit.MANZU, rank) for rank in range(1, 6)]
 
-            # If just drawn, hand count should be 14. After discard 13.
-            # Next player will automatically draw.
+        for tile in discards:
+            self.engine._apply_discard_effects(0, tile, ActionResult())
 
-            # Here we force discard
-            if self._has_action(current_player, GameAction.DISCARD):
-                self.engine.execute_action(
-                    current_player, GameAction.DISCARD, tile=hand.tiles[0]
-                )
-            else:
-                # If cannot discard (e.g. no tiles), manually draw one
-                # Ensure hand is not full
-                if hand.total_tile_count() < 14:
-                    self.engine._handle_draw(current_player)
-
-                if self._has_action(current_player, GameAction.DISCARD):
-                    self.engine.execute_action(
-                        current_player, GameAction.DISCARD, tile=hand.tiles[0]
-                    )
-
-        assert len(self.engine._discard_history) <= 4
-
-    def test_execute_action_discard_is_last_tile(self):
-        """Test check for discarding the last tile"""
-        self._init_game()
-        current_player = self.engine.get_current_player()
-        hand = self.engine.get_hand(current_player)
-        assert hand.tiles
-        assert hand.total_tile_count() == 14
-        self.engine.execute_action(
-            current_player, GameAction.DISCARD, tile=hand.tiles[0]
-        )
-
-        # Simulate wall has only one tile left
-        assert self.engine._tile_set is not None
-        self.engine._tile_set._tiles = [Tile(Suit.MANZU, 1)]
+        assert self.engine._discard_history == [(0, tile) for tile in discards[-4:]]
