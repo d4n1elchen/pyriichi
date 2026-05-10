@@ -2,6 +2,24 @@
 
 This document tracks unresolved review findings that should be addressed in future fixes.
 
+## P1: Suucha Riichi has an undocumented 300-point transfer
+
+- Location: `pyriichi/rules.py`
+- Impact: `handle_ryuukyoku()` transfers 300 points from the dealer to each non-dealer for `suucha_riichi`, but the canonical rule docs do not mention this and it is not standard default riichi behavior. This can silently create incorrect settlement for a documented standard ruleset.
+- Suggested fix: Remove the transfer from default behavior, or add an explicit ruleset flag and document it as a local variant if it is intentionally supported.
+
+## P2: Rule coverage gaps remain after the health audit
+
+- Location: `tests/test_yaku.py`, `tests/test_rule_riichi.py`, `tests/test_rule_action_execution.py`, `tests/test_rule_pao.py`, `tests/test_rule_round_settlement.py`, and `tests/test_scoring.py`
+- Impact: The suite covers most rules, but several documented rules are either untested or only weakly tested: round_wind and seat_wind Yakuhai, open Chanta/Junchan han reductions, disabled or alternate ruleset flags, direct response-priority conflicts, riichi stick payment, kyoutaku carry, Daisuushi pao settlement, and tobi through normal win settlement.
+- Suggested fix: Add focused tests for each missing rule branch before refactoring the related implementation. Replace broad smoke assertions with exact expected yaku, fu, han, payment, or state changes.
+
+## P2: Rule docs have stale or underspecified edge cases
+
+- Location: `rules/`, `README.md`, and `DEVELOPMENT_PLAN.md`
+- Impact: `DEVELOPMENT_PLAN.md` claims Four Returns is implemented even though it is not in the canonical yaku list or `Yaku` enum. It also describes Nagashi Mangan differently from the canonical rule docs. The rule docs also omit current details for Kyuushu Kyuuhai restrictions, higher-scoring decomposition selection, closed-kan tile selection, pao trigger conditions, and ruleset flag mappings.
+- Suggested fix: Align stale non-canonical docs with `rules/`, add a ruleset-variant table, and document implemented edge behavior that should be kept.
+
 ## P2: Win-context and furiten tests duplicate hand-built win contexts
 
 - Location: `tests/test_rule_win_context.py` and `tests/test_rule_furiten.py`

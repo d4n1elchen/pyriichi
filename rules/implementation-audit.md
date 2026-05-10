@@ -1,43 +1,90 @@
-# Implementation Audit
+# Implementation and Test Coverage Audit
 
-This audit compares the current codebase against the rule requirements in this directory.
-Met items are kept in the summary for context. Detailed findings are limited to unresolved work.
+This audit compares the current codebase against the rule requirements in this directory and the current test suite. It keeps met areas in the summary for context, then calls out documentation mismatches, implemented-but-underdocumented behavior, and test coverage gaps.
 
-Status values:
+Last audit run: 2026-05-10.
 
-- **Met**: the requirement appears implemented in code.
-- **Partial**: the code has support, but behavior is incomplete, simplified, or has a known edge-case issue.
-- **Missing**: no implementation was found.
-- **Mismatch**: implementation contradicts the requirement.
+Verification command:
 
-## Summary
+```bash
+.venv/bin/python -m pytest --cov=pyriichi --cov-report=term-missing
+```
 
-| Area | Status | Notes |
-|------|--------|-------|
-| Tile set and compact notation | Met | `Tile`, `TileSet`, `parse_tiles`, and `format_tiles` cover the standard tile set and Red Dora notation. |
-| Initial deal | Met | `TileSet.deal()` is dealer-aware, and `RuleEngine.deal()` passes `GameState.dealer`. |
-| Hand operations | Met | Draw, discard, chi, pon, kan, and closed kan exist. |
-| Winning-hand detection | Met | Standard, Chiitoitsu, and Kokushi Musou are accepted by `Hand` and `RuleEngine.check_win()`. |
-| Tenpai and machi listing | Met | Includes decomposition paths where four identical concealed tiles can be used as a triplet plus a leftover tile. |
-| Action priority | Met | `_resolve_decisions()` prioritizes ron, then pon/kan, then chi. |
-| Multiple ron rules | Met | Head Bump, Double Ron, Triple Ron, and Sancha Ron are represented, and multiple-ron scoring uses `ScoreResult` settlement. |
-| Furiten | Met | Genbutsu, temp furiten, and permanent riichi furiten are implemented. |
-| Riichi action rules | Met | Closed hand, tenpai-after-discard, Riichi Stick payment, and remaining-wall requirement are implemented. |
-| Ippatsu | Met | Ippatsu is tracked after riichi and interrupted by calls or kan according to ruleset configuration. |
-| Kan and rinshan flow | Met | Kan, closed kan, rinshan draw, Chankan, Suukan Sanra, and kan dora indicator counts are implemented. |
-| Abortive draws | Met | Suufon Renda, Kyuushu Kyuuhai, Suucha Riichi, Suukan Sanra, and Sancha Ron exist, with shared ryuukyoku settlement for dealer continuation and honba handling. |
-| Yaku coverage | Met | Listed standard yaku exist, including ruleset-configurable Open Tanyao. |
-| Open-hand reductions | Met | Chanta, Junchan, Sanshoku Doujun, Ittsu, Honitsu, and Chinitsu apply open-hand han reductions. |
-| Yaku combination filtering | Met | Pinfu combines with Iipeikou and Ryanpeikou, yakuman results exclude non-yakuman yaku, and Chiitoitsu includes compatible yaku. |
-| Scoring calculations | Met | Fu, han, limits, payment rounding, honba, kyoutaku, Kiriage Mangan, Noten Bappu, Pao, and dora counting are implemented. |
-| Payment context | Met | `ScoreCalculator.calculate()` receives payment context before calculating payment branches. |
-| Pinfu tsumo fu | Met | `calculate_fu()` returns 20 fu for Pinfu tsumo and 30 fu for closed Pinfu ron. |
-| Nagashi Mangan | Met | Exhaustive-draw paths score Nagashi Mangan with mangan payments. |
-| Renchan and round progression | Met | Dealer win and exhaustive-draw dealer tenpai renchan are implemented in `end_round()`. |
-| Game-end conditions | Met | Tobi, west round extension, and Agari Yame are implemented. |
-| Chombo | Met | False win and invalid riichi produce explicit Chombo results and mangan-level penalties when enabled by `RulesetConfig`. |
-| Abortive draw settlement | Met | Abortive draws now use shared ryuukyoku settlement, with configurable dealer continuation and honba incrementing. |
+Result: 327 tests passed. Total source line coverage is 88%.
 
-## Detailed Findings
+## Coverage Summary
 
-No unresolved findings remain in this audit.
+| Area | Implementation | Test Coverage | Notes |
+|------|----------------|---------------|-------|
+| Tile set and notation | Met | Met | Standard 136-tile set, Red Dora notation, sorting, tile set draw/deal, rinshan draw, dora indicator wrapping, and compact parsing are covered. |
+| Initial deal and round setup | Met | Met | Dealer-aware deal sizes and basic phase transitions are covered. |
+| Hand operations | Met | Met | Draw, discard, chi, pon, open kan, closed kan, open-kan upgrade, and meld validation are covered. |
+| Winning-hand detection | Met | Met | Standard hands, open meld hands, kan hands, Chiitoitsu, Kokushi Musou, thirteen-sided Kokushi, tenpai, and machi listing are covered. |
+| Action availability and priority | Met | Partial | Basic availability and call execution are covered. Direct conflict-resolution tests for ron over calls and pon/kan over chi are thin. |
+| Multiple ron rules | Met | Met | Head Bump, Double Ron, Triple Ron, Sancha Ron, furiten filtering, and multi-ron settlement are covered. |
+| Riichi action rules | Met | Partial | Closed-hand/tenpai requirements, declaration discard, remaining-wall rule, post-riichi discard lock, closed-kan wait preservation, and ippatsu interruption are covered. Riichi stick payment and kyoutaku increment need a direct assertion. |
+| Ippatsu | Met | Partial | Interruption by chi, pon, kan, and closed kan is covered. The disabled interruption ruleset variant is not covered. |
+| Furiten | Met | Met | Genbutsu, temp furiten, riichi furiten, furiten tsumo, and multi-machi furiten are covered. |
+| Kan and rinshan flow | Met | Partial | Open kan, closed kan, rinshan, chankan, fourth-kan ryuukyoku, and fourth-kan win exceptions are covered. The tests still depend on dense private setup. |
+| Abortive and exhaustive draws | Met | Met | Suufon Renda, Kyuushu Kyuuhai, Suucha Riichi, Suukan Sanra, Sancha Ron, Exhaustive Draw, dealer continuation variants, and Nagashi Mangan are covered. |
+| Yaku coverage | Met | Partial | Most listed yaku and yakuman have direct tests. Gaps remain for round_wind/seat_wind Yakuhai yaku, open Chanta/Junchan han, and several ruleset-dependent variants. |
+| Yaku combination filtering | Met | Partial | Major exclusions and allowed combinations are covered, but some tests use conditional assertions that can pass without verifying the yaku if decomposition fails. |
+| Fu and limit scoring | Met | Partial | Set fu, pair fu, wait fu, Chiitoitsu, Pinfu tsumo/ron, limits, payment rounding, Kiriage Mangan, and basic payments are covered. Some tests still assert broad smoke values rather than exact rule-table results. |
+| Dora and Ura Dora | Met | Partial | Visible dora, kan dora count, Ura Dora after riichi, and Red Dora are covered. Normal dora, Ura Dora, and Red Dora should be split into separate focused tests. |
+| Noten Bappu | Met | Met | One, two, three, all, and no tenpai payment splits are covered. |
+| Honba and Kyoutaku | Met | Partial | Honba and riichi-stick settlement are covered through scoring and double-ron scenarios. Kyoutaku carry across ryuukyoku into a later single win needs direct coverage. |
+| Pao | Met | Partial | Daisangen tracking and payment are covered. Daisuushi tracking is covered, but Daisuushi pao settlement is not. |
+| Round progression and game end | Met | Partial | Dealer win renchan, exhaustive-draw renchan/rotation, tobi, west extension, and Agari Yame are covered. Tobi tests mostly mutate scores directly rather than reaching bankruptcy through normal win settlement. |
+| Chombo | Met | Met | False ron, false tsumo, and invalid riichi chombo paths are covered. |
+| Ruleset configuration | Met | Partial | Some flags are covered directly, but `pinfu_require_ryanmen=False`, `ippatsu_interrupt_on_meld_or_kan=False`, Renhou OFF/YAKUMAN, disabled double-yakuman variants, and disabled Chanta need tests. |
+
+## Source Coverage Notes
+
+The coverage run gives useful implementation-level signal, but it does not prove rule-level correctness by itself.
+
+| Source File | Coverage | Notes |
+|-------------|----------|-------|
+| `pyriichi/rules.py` | 87% | Main remaining misses are edge branches in action validation, chombo and ryuukyoku variants, pao branches, and some ruleset alternatives. |
+| `pyriichi/yaku.py` | 89% | Misses line up with failed-yaku branches and optional ruleset paths. |
+| `pyriichi/scoring.py` | 92% | Mostly covered, with a few payment and fu edge branches still missed. |
+| `pyriichi/hand.py` | 93% | Strong coverage; remaining misses are mostly defensive and invalid-operation branches. |
+| `pyriichi/player.py` | 65% | Player strategy is much less covered than the rules engine. This is separate from rules correctness but worth tracking if player behavior matters. |
+
+## Implemented but Missing or Underspecified in Rule Docs
+
+| Behavior | Implementation Evidence | Rule Docs Status | Recommendation |
+|----------|-------------------------|------------------|----------------|
+| Suucha Riichi applies a 300-point transfer from dealer to each non-dealer before settlement. | `RuleEngine.handle_ryuukyoku()` special-cases `RyuukyokuType.SUUCHA_RIICHI`. | Not documented in `rules/game-flow.md`, `rules/scoring.md`, or `rules/round-state.md`. | Do not keep as default standard behavior unless this is intended as a local rule. Standard four-riichi abortive draw should not have this 300-point dealer payment. Prefer removing it or adding a ruleset flag and documenting it as a local variant. |
+| Kyuushu Kyuuhai requires the declaring player's first turn, no player melds including closed kan, no prior discard by the declaring player, and at least nine unique yaochuu. | `_check_kyuushu_kyuuhai()` in `RuleEngine`. | `rules/game-flow.md` lists only first turn, nine unique yaochuu, and no calls. | Keep. These are useful precision guards and should be documented in `rules/game-flow.md`. |
+| Engine chooses the highest-scoring winning interpretation for ambiguous hands. | `tests/test_rule_scoring_selection.py` covers an ambiguous hand selecting the higher-scoring result. | Not explicitly documented in `rules/scoring.md` or `rules/tile-and-hand.md`. | Keep. This is expected scoring behavior when a hand has multiple decompositions; document it in scoring rules. |
+| Closed-kan action can choose which quad to declare when multiple quads are present. | `tests/test_rule_kan.py::TestClosedKanSelection`. | `rules/tile-and-hand.md` says closed kan exists, but does not specify multiple-quad selection. | Keep. It is important API/UI behavior; document that explicit tile selection is supported when multiple closed kans are legal. |
+| Discard history keeps only the last four entries. | `_discard_history` is capped in discard handling and tested in `tests/test_rule_action_execution.py`. | Not in rule docs. | Keep as an internal implementation detail for Suufon Renda detection. It does not need rule documentation unless public debugging/state APIs expose it. |
+| `ScoreResult.total_points` may hold unrounded base points before `calculate_payments()`. | Kiriage Mangan tests construct `ScoreResult` directly and observe `1920` when Kiriage Mangan is disabled. | Rule docs describe final payment rounding, not internal `ScoreResult` lifecycle. | Keep internally, but clarify API docs or consider renaming if `ScoreResult` is treated as public API. |
+
+## Stale or Conflicting Documentation
+
+| Item | Location | Issue | Recommendation |
+|------|----------|-------|----------------|
+| Four Returns | `README.md` and `DEVELOPMENT_PLAN.md` | README says Four Returns is disabled; DEVELOPMENT_PLAN says Four Returns is implemented. It is not listed in canonical `rules/yaku.md`, and no `Yaku` enum entry exists. | Treat this as stale non-canonical documentation. Remove the implemented claim from DEVELOPMENT_PLAN and keep Four Returns out of the canonical rule list unless a real local-yakuman feature is added. |
+| Nagashi Mangan condition | `rules/game-flow.md` and `DEVELOPMENT_PLAN.md` | Canonical rules say every discard is yaochuu and none are called. DEVELOPMENT_PLAN says it requires tenpai and all winning tiles to be terminals/honors. | Keep the canonical rule-doc version and update/remove the stale DEVELOPMENT_PLAN claim. |
+| Ruleset-dependent behavior | `rules/*.md` | Several rules are marked ruleset-dependent without listing current default, supported alternatives, and config flag names. | Add a ruleset-variant table that maps docs to `RulesetConfig` fields. |
+| Pao trigger details | `rules/scoring.md` | Payment split is documented, but final-call responsibility assignment is not. | Document Daisangen and Daisuushi responsibility trigger conditions. |
+
+## Test Coverage Gaps to Add
+
+Priority order for new tests:
+
+1. Yakuhai round_wind and seat_wind yaku, not just dragon Yakuhai.
+2. Open Chanta and open Junchan han reductions.
+3. Ruleset variants: `pinfu_require_ryanmen=False`, `ippatsu_interrupt_on_meld_or_kan=False`, Renhou OFF/YAKUMAN, disabled Suuankou Tanki/Pure Chuuren double yakuman, and `chanta_enabled=False`.
+4. Direct response-priority conflict tests: ron beats pon/chi; pon/kan beats chi.
+5. Riichi declaration payment: player pays 1000 and kyoutaku increments.
+6. Kyoutaku carry after ryuukyoku and award on a later single win.
+7. Daisuushi pao settlement, not only responsibility tracking.
+8. Tobi through normal win settlement, not only direct score mutation.
+9. Exact scoring table assertions where tests currently use broad `> 0`, `>= 30`, or similar smoke assertions.
+10. Replace conditional yaku assertions such as `if combinations:` with explicit setup assertions so decomposition regressions fail loudly.
+
+## Current Health Assessment
+
+The rules engine has broad implementation and test coverage for modern riichi mahjong. The biggest remaining risks are not whole missing rule categories; they are optional ruleset branches, exact settlement paths, and documentation drift around edge rules. The test suite is strong enough to protect the core engine, but several tests still verify outcomes indirectly through large private fixtures or broad smoke assertions.
