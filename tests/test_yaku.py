@@ -181,6 +181,44 @@ class TestYakuChecker:
             )
             assert has_haku_hatsu_chun
 
+    def test_yakuhai_round_wind(self):
+        """Test round_wind yakuhai."""
+        hand = Hand([])
+        self.game_state.set_round(Wind.SOUTH, 1)
+        self.game_state.set_dealer(0)
+        winning_combination = [
+            make_combination(CombinationType.TRIPLET, Suit.HONORS, 2),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 2),
+            make_combination(CombinationType.SEQUENCE, Suit.SOUZU, 3),
+            make_combination(CombinationType.PAIR, Suit.HONORS, 5),
+        ]
+
+        results = self.checker.check_yakuhai(
+            hand, winning_combination, self.game_state, player_position=0
+        )
+
+        assert {r.yaku for r in results} == {Yaku.ROUND_WIND_SOUTH}
+
+    def test_yakuhai_seat_wind(self):
+        """Test seat_wind yakuhai."""
+        hand = Hand([])
+        self.game_state.set_round(Wind.EAST, 1)
+        self.game_state.set_dealer(0)
+        winning_combination = [
+            make_combination(CombinationType.TRIPLET, Suit.HONORS, 3),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 2),
+            make_combination(CombinationType.SEQUENCE, Suit.SOUZU, 3),
+            make_combination(CombinationType.PAIR, Suit.HONORS, 5),
+        ]
+
+        results = self.checker.check_yakuhai(
+            hand, winning_combination, self.game_state, player_position=2
+        )
+
+        assert {r.yaku for r in results} == {Yaku.SEAT_WIND_WEST}
+
     def test_sanshoku_doujun(self):
         """Test sanshoku doujun."""
         tiles = parse_tiles("123m123p123s456p1z")
