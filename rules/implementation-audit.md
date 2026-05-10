@@ -10,7 +10,7 @@ Verification command:
 .venv/bin/python -m pytest --cov=pyriichi --cov-report=term-missing
 ```
 
-Latest full-suite result: 330 tests passed. The latest coverage audit measured total source line coverage at 88%.
+Latest full-suite result: 332 tests passed. The latest coverage audit measured total source line coverage at 88%.
 
 ## Coverage Summary
 
@@ -27,7 +27,7 @@ Latest full-suite result: 330 tests passed. The latest coverage audit measured t
 | Furiten | Met | Met | Genbutsu, temp furiten, riichi furiten, furiten tsumo, and multi-machi furiten are covered. |
 | Kan and rinshan flow | Met | Partial | Open kan, closed kan, rinshan, chankan, fourth-kan ryuukyoku, and fourth-kan win exceptions are covered. The tests still depend on dense private setup. |
 | Abortive and exhaustive draws | Met | Met | Suufon Renda, Kyuushu Kyuuhai, Suucha Riichi, Suukan Sanra, Sancha Ron, Exhaustive Draw, dealer continuation variants, and Nagashi Mangan are covered. |
-| Yaku coverage | Met | Partial | Most listed yaku and yakuman have direct tests. Gaps remain for open Chanta/Junchan han and several ruleset-dependent variants. |
+| Yaku coverage | Met | Partial | Most listed yaku and yakuman have direct tests. Gaps remain for several ruleset-dependent variants. |
 | Yaku combination filtering | Met | Partial | Major exclusions and allowed combinations are covered, but some tests use conditional assertions that can pass without verifying the yaku if decomposition fails. |
 | Fu and limit scoring | Met | Partial | Set fu, pair fu, wait fu, Chiitoitsu, Pinfu tsumo/ron, limits, payment rounding, Kiriage Mangan, and basic payments are covered. Some tests still assert broad smoke values rather than exact rule-table results. |
 | Dora and Ura Dora | Met | Partial | Visible dora, kan dora count, Ura Dora after riichi, and Red Dora are covered. Normal dora, Ura Dora, and Red Dora should be split into separate focused tests. |
@@ -74,15 +74,14 @@ The coverage run gives useful implementation-level signal, but it does not prove
 
 Priority order for new tests:
 
-1. Open Chanta and open Junchan han reductions.
-2. Ruleset variants: `pinfu_require_ryanmen=False`, `ippatsu_interrupt_on_meld_or_kan=False`, Renhou OFF/YAKUMAN, disabled Suuankou Tanki/Pure Chuuren double yakuman, and `chanta_enabled=False`.
-3. Direct response-priority conflict tests: ron beats pon/chi; pon/kan beats chi.
-4. Riichi declaration payment: player pays 1000 and kyoutaku increments.
-5. Kyoutaku carry after ryuukyoku and award on a later single win.
-6. Daisuushi pao settlement, not only responsibility tracking.
-7. Tobi through normal win settlement, not only direct score mutation.
-8. Exact scoring table assertions where tests currently use broad `> 0`, `>= 30`, or similar smoke assertions.
-9. Replace conditional yaku assertions such as `if combinations:` with explicit setup assertions so decomposition regressions fail loudly.
+1. Ruleset variants: `pinfu_require_ryanmen=False`, `ippatsu_interrupt_on_meld_or_kan=False`, Renhou OFF/YAKUMAN, disabled Suuankou Tanki/Pure Chuuren double yakuman, and `chanta_enabled=False`.
+2. Direct response-priority conflict tests: ron beats pon/chi; pon/kan beats chi.
+3. Riichi declaration payment: player pays 1000 and kyoutaku increments.
+4. Kyoutaku carry after ryuukyoku and award on a later single win.
+5. Daisuushi pao settlement, not only responsibility tracking.
+6. Tobi through normal win settlement, not only direct score mutation.
+7. Exact scoring table assertions where tests currently use broad `> 0`, `>= 30`, or similar smoke assertions.
+8. Replace conditional yaku assertions such as `if combinations:` with explicit setup assertions so decomposition regressions fail loudly.
 
 ## Current Health Assessment
 
