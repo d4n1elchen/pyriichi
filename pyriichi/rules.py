@@ -1955,12 +1955,6 @@ class RuleEngine:
                     )
                     break
 
-        if ryuukyoku_type == RyuukyokuType.SUUCHA_RIICHI:
-            dealer = self._game_state.dealer
-            for i in range(self._num_players):
-                if i != dealer:
-                    self._game_state.transfer_points(dealer, i, 300)
-
         self._settle_ryuukyoku_round(dealer_continues)
         return result
 

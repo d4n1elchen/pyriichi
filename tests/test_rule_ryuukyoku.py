@@ -257,13 +257,25 @@ class TestRyuukyoku(RuleEngineTestMixin):
         """Test suucha_riichi (Four riichi) ryuukyoku handling"""
         self._init_game()
 
-        # Set all players riichi
         for i in range(4):
             self.engine._hands[i].set_riichi(True)
 
-        # Check ryuukyoku
         ryuukyoku_type = self.engine.check_ryuukyoku()
         assert ryuukyoku_type == RyuukyokuType.SUUCHA_RIICHI
+
+    def test_suucha_riichi_does_not_transfer_points(self):
+        """Test suucha_riichi abortive draw has no immediate payment."""
+        self._init_game()
+        initial_scores = self.engine._game_state.scores.copy()
+
+        for i in range(4):
+            self.engine._hands[i].set_riichi(True)
+
+        result = self.engine.handle_ryuukyoku()
+
+        assert result.ryuukyoku is True
+        assert result.ryuukyoku_type == RyuukyokuType.SUUCHA_RIICHI
+        assert self.engine._game_state.scores == initial_scores
 
     def test_handle_ryuukyoku_suufon_renda_settles_round_state(self):
         """Test suufon_renda updates round state."""
