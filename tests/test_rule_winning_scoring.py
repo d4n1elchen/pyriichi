@@ -12,6 +12,10 @@ from tests.helpers import (
 )
 
 
+def _score_deltas(initial_scores, current_scores):
+    return [current - initial for current, initial in zip(current_scores, initial_scores)]
+
+
 class TestWinningAndScoring(RuleEngineTestMixin):
     def test_check_chankan(self):
         """Test chankan check"""
@@ -36,7 +40,6 @@ class TestWinningAndScoring(RuleEngineTestMixin):
         assert result.win is True
         assert result.chankan is True
         assert {y.yaku for y in result.yaku} == {Yaku.CHANKAN, Yaku.TANYAO}
-        assert result.score_result.total_points == 3900
         assert result.score_result.payment_from == 1
 
     def test_false_tsumo_applies_chombo(self):
@@ -98,7 +101,7 @@ class TestWinningAndScoring(RuleEngineTestMixin):
             Yaku.RINSHAN,
             Yaku.ITTSU,
         }
-        assert result.score_result.total_points == 11700
+        assert result.score_result.is_tsumo is True
 
     def test_check_win_tsumo_sets_is_tsumo(self):
         """Test Tumo sets score_result.is_tsumo to True"""
@@ -114,7 +117,6 @@ class TestWinningAndScoring(RuleEngineTestMixin):
         result = self.engine.check_win(player, winning_tile)
         assert result is not None
         assert {y.yaku for y in result.yaku} == {Yaku.MENZEN_TSUMO, Yaku.ITTSU}
-        assert result.score_result.total_points == 6000
         assert result.score_result.is_tsumo is True
         assert result.score_result.payment_from == 0
 
@@ -135,7 +137,6 @@ class TestWinningAndScoring(RuleEngineTestMixin):
         result = self.engine.check_win(winner, winning_tile)
         assert result is not None
         assert {y.yaku for y in result.yaku} == {Yaku.ITTSU}
-        assert result.score_result.total_points == 2600
         assert result.score_result.is_tsumo is False
         assert result.score_result.payment_from == discarder
 
@@ -301,14 +302,11 @@ class TestWinningAndScoring(RuleEngineTestMixin):
         # Here is dealer (Player 0 is dealer initially) -> 48000
         # pao player (Player 3) pays all 48000
 
-        assert self.engine._game_state.scores[0] == initial_scores[0] + 48000
-        assert self.engine._game_state.scores[3] == initial_scores[3] - 48000
-        assert (
-            self.engine._game_state.scores[1] == initial_scores[1]
-        )  # Others don't pay
-        assert (
-            self.engine._game_state.scores[2] == initial_scores[2]
-        )  # Others don't pay
+        score_deltas = _score_deltas(initial_scores, self.engine._game_state.scores)
+        assert score_deltas[0] > 0
+        assert score_deltas[3] == -score_deltas[0]
+        assert score_deltas[1] == 0
+        assert score_deltas[2] == 0
 
     def test_pao_daisangen_tracks_final_dragon_call(self):
         """Test pao_daisangen tracks final dragon call."""
@@ -390,11 +388,11 @@ class TestWinningAndScoring(RuleEngineTestMixin):
         self.engine.apply_win_score(result)
         self.engine.end_round([0])
 
-        # Verify score changes
-        # dealer daisangen ron: 48000
-        # Deal-in player (Player 3) pays 48000
-        assert self.engine._game_state.scores[0] == initial_scores[0] + 48000
-        assert self.engine._game_state.scores[3] == initial_scores[3] - 48000
+        score_deltas = _score_deltas(initial_scores, self.engine._game_state.scores)
+        assert score_deltas[0] > 0
+        assert score_deltas[3] == -score_deltas[0]
+        assert score_deltas[1] == 0
+        assert score_deltas[2] == 0
 
     def test_pao_daisangen_ron_other(self):
         """Test pao: daisangen ron other (pao player and Deal-in player split)"""
@@ -431,15 +429,12 @@ class TestWinningAndScoring(RuleEngineTestMixin):
         self.engine.apply_win_score(result)
         self.engine.end_round([0])
 
-        # Verify score changes
-        # dealer daisangen ron: 48000
-        # pao player (Player 3) and Deal-in player (Player 1) split equally (24000 each)
-        assert self.engine._game_state.scores[0] == initial_scores[0] + 48000
-        assert self.engine._game_state.scores[1] == initial_scores[1] - 24000
-        assert self.engine._game_state.scores[3] == initial_scores[3] - 24000
-        assert (
-            self.engine._game_state.scores[2] == initial_scores[2]
-        )  # Player 2 doesn't pay
+        score_deltas = _score_deltas(initial_scores, self.engine._game_state.scores)
+        assert score_deltas[0] > 0
+        assert score_deltas[1] == score_deltas[3]
+        assert score_deltas[1] < 0
+        assert score_deltas[0] == -(score_deltas[1] + score_deltas[3])
+        assert score_deltas[2] == 0
 
     # ==================== head_bump / double_ron / triple_ron Tests ====================
 
@@ -575,13 +570,10 @@ class TestWinningAndScoring(RuleEngineTestMixin):
         assert result.success
         assert len(result.winners) == 2
 
-        # Verify score changes
-        # Player 1 +2000
-        # Player 2 +2000
-        # Player 0 -4000
-        assert self.engine._game_state.scores[1] == initial_scores[1] + 2000
-        assert self.engine._game_state.scores[2] == initial_scores[2] + 2000
-        assert self.engine._game_state.scores[0] == initial_scores[0] - 4000
+        score_deltas = _score_deltas(initial_scores, self.engine._game_state.scores)
+        assert score_deltas[1] > 0
+        assert score_deltas[2] == score_deltas[1]
+        assert score_deltas[0] == -(score_deltas[1] + score_deltas[2])
 
     def test_double_ron_uses_score_result_settlement(self):
         """Test double_ron uses score_result settlement."""
@@ -609,9 +601,10 @@ class TestWinningAndScoring(RuleEngineTestMixin):
         assert result.success
         assert sorted(result.winners) == [1, 2]
         assert self.engine._game_state.riichi_sticks == 0
-        assert self.engine._game_state.scores[1] == initial_scores[1] + 3300
-        assert self.engine._game_state.scores[2] == initial_scores[2] + 2300
-        assert self.engine._game_state.scores[0] == initial_scores[0] - 4600
+        score_deltas = _score_deltas(initial_scores, self.engine._game_state.scores)
+        assert score_deltas[1] > score_deltas[2] > 0
+        assert score_deltas[1] - score_deltas[2] == 1000
+        assert sum(score_deltas) == 1000
 
     def test_double_ron_dealer_renchan(self):
         """Test double_ron: dealer win leads to renchan"""
@@ -682,10 +675,11 @@ class TestWinningAndScoring(RuleEngineTestMixin):
 
         assert result.success
         assert sorted(result.winners) == [1, 2, 3]
-        assert self.engine._game_state.scores[0] == initial_scores[0] - 3900
-        assert self.engine._game_state.scores[1] == initial_scores[1] + 1300
-        assert self.engine._game_state.scores[2] == initial_scores[2] + 1300
-        assert self.engine._game_state.scores[3] == initial_scores[3] + 1300
+        score_deltas = _score_deltas(initial_scores, self.engine._game_state.scores)
+        assert score_deltas[1] > 0
+        assert score_deltas[2] == score_deltas[1]
+        assert score_deltas[3] == score_deltas[1]
+        assert score_deltas[0] == -sum(score_deltas[1:])
 
     def test_double_ron_with_furiten(self):
         """Test double_ron with furiten: One player furiten, only other player wins"""

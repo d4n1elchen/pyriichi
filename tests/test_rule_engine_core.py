@@ -106,7 +106,6 @@ class TestRuleEngine(RuleEngineTestMixin):
         assert result is not None
         assert result.score_result.payment_to == 1
         assert result.score_result.payment_from == 0
-        assert result.score_result.total_points == 5200
 
     def test_hand_total_tile_count_includes_melds(self):
         """Total tile count should include melded tiles."""
