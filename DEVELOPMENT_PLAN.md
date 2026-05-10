@@ -417,16 +417,16 @@ This project follows a strict test-driven development approach, using the red-gr
 - **Run commands**:
   ```bash
   # Run all tests
-  pytest
+  .venv/bin/python -m pytest
 
   # Run a specific test file
-  pytest tests/test_yaku.py
+  .venv/bin/python -m pytest tests/test_yaku.py
 
   # Run tests and show coverage
-  pytest --cov=pyriichi --cov-report=html
+  .venv/bin/python -m pytest --cov=pyriichi --cov-report=html
 
   # Run tests with detailed output
-  pytest -v
+  .venv/bin/python -m pytest -v
   ```
 
 #### Development Workflow Example
@@ -449,7 +449,7 @@ For new feature development, such as adding a new yaku:
 
 2. **Run the test and confirm it fails**
    ```bash
-   pytest tests/test_yaku.py::test_check_new_yaku
+   .venv/bin/python -m pytest tests/test_yaku.py::test_check_new_yaku
    # A failure should be visible.
    ```
 
@@ -459,19 +459,19 @@ For new feature development, such as adding a new yaku:
 
 4. **Run the test and confirm it passes**
    ```bash
-   pytest tests/test_yaku.py::test_check_new_yaku
+   .venv/bin/python -m pytest tests/test_yaku.py::test_check_new_yaku
    # The test should pass.
    ```
 
 5. **Run all tests**
    ```bash
-   pytest
+   .venv/bin/python -m pytest
    # Ensure existing behavior is not broken.
    ```
 
 6. **Check coverage**
    ```bash
-   pytest --cov=pyriichi
+   .venv/bin/python -m pytest --cov=pyriichi
    # Ensure coverage satisfies the target.
    ```
 

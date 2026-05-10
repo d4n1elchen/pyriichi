@@ -543,6 +543,10 @@ See the `examples/` directory for more complete examples:
   - Includes pytest>=7.0.0, pytest-cov>=4.0.0, black>=23.0.0, flake8>=6.0.0, and mypy>=1.0.0.
 - Install only test tools: `pip install ".[test]"`.
   - Includes pytest>=7.0.0 and pytest-cov>=4.0.0.
+- Run tests with the virtual environment's Python:
+  ```bash
+  .venv/bin/python -m pytest
+  ```
 
 ## Contributing
 
