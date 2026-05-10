@@ -3,7 +3,7 @@
 import pytest
 
 from pyriichi.hand import Hand
-from pyriichi.rules import GameAction, GamePhase, RyuukyokuType
+from pyriichi.rules import GameAction
 from pyriichi.tiles import Suit, Tile
 from pyriichi.utils import parse_tiles
 from tests.helpers import RuleEngineTestMixin, no_response_hand
@@ -91,23 +91,6 @@ class TestActionExecution(RuleEngineTestMixin):
         actions_after_chi = self.engine.get_available_actions(1)
         assert GameAction.DRAW not in actions_after_chi
 
-    def test_execute_action_draw_no_tile_set(self):
-        """Test Draw when tile set is not initialized"""
-        self._init_game()
-        hand = self.engine.get_hand(0)
-        self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
-        current_player = self.engine.get_current_player()
-
-        self.engine._tile_set = None
-
-        # Ensure hand is not full
-        hand = self.engine.get_hand(current_player)
-        if hand.total_tile_count() >= 14:
-            hand.tiles.pop()
-
-        with pytest.raises(ValueError, match="牌組未初始化"):
-            self.engine._handle_draw(current_player)
-
     def test_execute_action_discard_no_tile(self):
         """Test Discard without specifying tile"""
         self._init_game()
@@ -139,25 +122,6 @@ class TestActionExecution(RuleEngineTestMixin):
         result = self.engine.execute_action(
             current_player, GameAction.DISCARD, tile=hand.tiles[0]
         )
-        assert result.is_last_tile is True
-
-    def test_execute_action_draw_last_tile(self):
-        """Test draw last tile (haitei)"""
-        self._init_game()
-        current_player = self.engine.get_current_player()
-
-        # Ensure hand has one less tile to allow draw
-        hand = self.engine.get_hand(current_player)
-        hand._tiles.pop()
-
-        assert self.engine._tile_set is not None
-        self.engine._tile_set._tiles = [Tile(Suit.MANZU, 1)]
-
-        assert self.engine._tile_set is not None
-        self.engine._tile_set._tiles = [Tile(Suit.MANZU, 1)]
-
-        # Directly call internal _handle_draw to test logic, as DRAW action is removed
-        result = self.engine._handle_draw(current_player)
         assert result.is_last_tile is True
 
     def test_execute_action_discard_history(self):
@@ -211,38 +175,6 @@ class TestActionExecution(RuleEngineTestMixin):
                     )
 
         assert len(self.engine._discard_history) <= 4
-
-    def test_execute_action_draw_no_tile_drawn(self):
-        """Test Draw when no tiles left"""
-        self._init_game()
-        current_player = self.engine.get_current_player()
-
-        # Exhaust wall to trigger draw() returning None
-        assert self.engine._tile_set is not None
-        hand = self.engine.get_hand(current_player)
-        assert hand.tiles is not None
-        self.engine.execute_action(
-            current_player, GameAction.DISCARD, tile=hand.tiles[0]
-        )
-        while self.engine._tile_set._tiles:
-            self.engine._tile_set.draw()
-        current_player = self.engine.get_current_player()
-        while self.engine._tile_set._tiles:
-            self.engine._tile_set.draw()
-        current_player = self.engine.get_current_player()
-
-        # Ensure hand is not full (less than 14)
-        hand = self.engine.get_hand(current_player)
-        while hand.total_tile_count() >= 14:
-            hand._tiles.pop()
-
-        # Directly call _handle_draw
-        result = self.engine._handle_draw(current_player)
-        assert result.ryuukyoku is not None
-        assert result.ryuukyoku.ryuukyoku is True
-        assert result.ryuukyoku.ryuukyoku_type == RyuukyokuType.EXHAUSTIVE_DRAW
-        # _handle_draw sets phase
-        assert self.engine._phase == GamePhase.RYUUKYOKU
 
     def test_execute_action_discard_is_last_tile(self):
         """Test check for discarding the last tile"""

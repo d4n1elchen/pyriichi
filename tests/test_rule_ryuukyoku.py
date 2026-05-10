@@ -1,5 +1,7 @@
 """Ryuukyoku tests for RuleEngine."""
 
+import pytest
+
 from pyriichi.hand import Hand
 from pyriichi.rules import GameAction, GamePhase, RyuukyokuType
 from pyriichi.tiles import Suit, Tile
@@ -91,6 +93,63 @@ class TestRyuukyoku(RuleEngineTestMixin):
         ryuukyoku_type = self.engine.check_ryuukyoku()
         assert ryuukyoku_type is not None
         assert ryuukyoku_type == RyuukyokuType.EXHAUSTIVE_DRAW
+
+    def test_execute_action_draw_no_tile_set(self):
+        """Test draw when tile set is not initialized."""
+        self._init_game()
+        hand = self.engine.get_hand(0)
+        self.engine.execute_action(0, GameAction.DISCARD, tile=hand.tiles[0])
+        current_player = self.engine.get_current_player()
+
+        self.engine._tile_set = None
+
+        hand = self.engine.get_hand(current_player)
+        if hand.total_tile_count() >= 14:
+            hand.tiles.pop()
+
+        with pytest.raises(ValueError, match="牌組未初始化"):
+            self.engine._handle_draw(current_player)
+
+    def test_execute_action_draw_last_tile(self):
+        """Test draw last tile."""
+        self._init_game()
+        current_player = self.engine.get_current_player()
+
+        hand = self.engine.get_hand(current_player)
+        hand._tiles.pop()
+
+        assert self.engine._tile_set is not None
+        self.engine._tile_set._tiles = [Tile(Suit.MANZU, 1)]
+
+        result = self.engine._handle_draw(current_player)
+
+        assert result.is_last_tile is True
+
+    def test_execute_action_draw_no_tile_drawn(self):
+        """Test draw when no tiles left."""
+        self._init_game()
+        current_player = self.engine.get_current_player()
+
+        assert self.engine._tile_set is not None
+        hand = self.engine.get_hand(current_player)
+        assert hand.tiles is not None
+        self.engine.execute_action(
+            current_player, GameAction.DISCARD, tile=hand.tiles[0]
+        )
+        while self.engine._tile_set._tiles:
+            self.engine._tile_set.draw()
+        current_player = self.engine.get_current_player()
+
+        hand = self.engine.get_hand(current_player)
+        while hand.total_tile_count() >= 14:
+            hand._tiles.pop()
+
+        result = self.engine._handle_draw(current_player)
+
+        assert result.ryuukyoku is not None
+        assert result.ryuukyoku.ryuukyoku is True
+        assert result.ryuukyoku.ryuukyoku_type == RyuukyokuType.EXHAUSTIVE_DRAW
+        assert self.engine._phase == GamePhase.RYUUKYOKU
 
     def test_declare_kyuushu_kyuuhai(self):
         """Test kyuushu_kyuuhai handling."""
