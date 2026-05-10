@@ -2,11 +2,40 @@
 
 import pytest
 
+from pyriichi.game_state import Wind
 from pyriichi.hand import Hand
 from pyriichi.rules import GameAction, GamePhase, RyuukyokuType
 from pyriichi.tiles import Suit, Tile
 from pyriichi.utils import parse_tiles
 from tests.helpers import RuleEngineTestMixin
+
+
+def _set_same_discard_history(engine, tile):
+    for player in range(4):
+        engine._discard_history.append((player, tile))
+
+
+def _exhaust_wall(engine):
+    assert engine._tile_set is not None
+    while engine._tile_set._tiles:
+        engine._tile_set.draw()
+
+
+def _set_ron_ready_players(engine, players, discard_tile, hand_str):
+    engine._last_discarded_tile = discard_tile
+    engine._last_discarded_player = 0
+    for player in players:
+        engine._hands[player] = Hand(parse_tiles(hand_str))
+
+
+def _prepare_kyuushu_kyuuhai(engine, player):
+    engine._hands[player] = Hand(parse_tiles("19m19p19s1234567z1m"))
+    engine._is_first_turn_after_deal = True
+    engine._waiting_for_actions[player] = engine._calculate_turn_actions(player)
+
+
+def _score_deltas(initial_scores, current_scores):
+    return [score - initial_scores[i] for i, score in enumerate(current_scores)]
 
 
 class TestRyuukyoku(RuleEngineTestMixin):
@@ -30,11 +59,7 @@ class TestRyuukyoku(RuleEngineTestMixin):
         # Set discard history to four identical wind tiles
         wind_tile = Tile(Suit.HONORS, 1)  # East
 
-        # Add four identical wind tiles to discard history
-        self.engine._discard_history.append((0, wind_tile))
-        self.engine._discard_history.append((1, wind_tile))
-        self.engine._discard_history.append((2, wind_tile))
-        self.engine._discard_history.append((3, wind_tile))
+        _set_same_discard_history(self.engine, wind_tile)
 
         # Check suufon_renda
         ryuukyoku_type = self.engine.check_ryuukyoku()
@@ -48,21 +73,10 @@ class TestRyuukyoku(RuleEngineTestMixin):
         # Set triple_ron to allow ryuukyoku
         self.engine._game_state.ruleset.allow_triple_ron = False
 
-        # Set last discard
         winning_tile = Tile(Suit.PINZU, 4)
-        self.engine._last_discarded_tile = winning_tile
-        self.engine._last_discarded_player = 0
-
-        # Set three players can win
-        # 123m 456m 789m 123p 4p (machi 4p)
-        tenpai_hand = Hand(parse_tiles("123456789m1234p"))
-        self.engine._hands[1] = tenpai_hand
-        self.engine._hands[2] = tenpai_hand
-        self.engine._hands[3] = tenpai_hand
-
-        self.engine._hands[1] = tenpai_hand
-        self.engine._hands[2] = tenpai_hand
-        self.engine._hands[3] = tenpai_hand
+        _set_ron_ready_players(
+            self.engine, [1, 2, 3], winning_tile, "123456789m1234p"
+        )
 
         # Check ryuukyoku
         ryuukyoku_type = self.engine.check_ryuukyoku()
@@ -82,12 +96,7 @@ class TestRyuukyoku(RuleEngineTestMixin):
     def test_check_draw_exhausted(self):
         """Test exhaustive_draw ryuukyoku check"""
         self._init_game()
-        # Simulate wall exhausted
-        assert self.engine._tile_set is not None
-
-        # Exhaust wall
-        while self.engine._tile_set._tiles:
-            self.engine._tile_set.draw()
+        _exhaust_wall(self.engine)
 
         # Check exhaustive_draw ryuukyoku
         ryuukyoku_type = self.engine.check_ryuukyoku()
@@ -136,8 +145,7 @@ class TestRyuukyoku(RuleEngineTestMixin):
         self.engine.execute_action(
             current_player, GameAction.DISCARD, tile=hand.tiles[0]
         )
-        while self.engine._tile_set._tiles:
-            self.engine._tile_set.draw()
+        _exhaust_wall(self.engine)
         current_player = self.engine.get_current_player()
 
         hand = self.engine.get_hand(current_player)
@@ -156,15 +164,7 @@ class TestRyuukyoku(RuleEngineTestMixin):
         self._init_game()
         player = self.engine.get_current_player()
 
-        # Set kyuushu_kyuuhai
-        tiles = parse_tiles("19m19p19s1234567z1m")
-        self.engine._hands[player] = Hand(tiles)
-        self.engine._is_first_turn_after_deal = True
-
-        # Force update actions
-        self.engine._waiting_for_actions[player] = self.engine._calculate_turn_actions(
-            player
-        )
+        _prepare_kyuushu_kyuuhai(self.engine, player)
 
         # Execute action
         result = self.engine.execute_action(player, GameAction.DECLARE_KYUUSHU_KYUUHAI)
@@ -183,12 +183,7 @@ class TestRyuukyoku(RuleEngineTestMixin):
         self.engine._game_state.ruleset.abortive_draw_dealer_continues = False
         player = self.engine.get_current_player()
 
-        tiles = parse_tiles("19m19p19s1234567z1m")
-        self.engine._hands[player] = Hand(tiles)
-        self.engine._is_first_turn_after_deal = True
-        self.engine._waiting_for_actions[player] = self.engine._calculate_turn_actions(
-            player
-        )
+        _prepare_kyuushu_kyuuhai(self.engine, player)
 
         result = self.engine.execute_action(player, GameAction.DECLARE_KYUUSHU_KYUUHAI)
 
@@ -217,8 +212,7 @@ class TestRyuukyoku(RuleEngineTestMixin):
         self.engine._game_state._honba = 2
         self.engine._is_first_turn_after_deal = False
         wind_tile = Tile(Suit.HONORS, 1)
-        for player in range(4):
-            self.engine._discard_history.append((player, wind_tile))
+        _set_same_discard_history(self.engine, wind_tile)
 
         result = self.engine.handle_ryuukyoku()
 
@@ -280,10 +274,7 @@ class TestRyuukyoku(RuleEngineTestMixin):
 
         result = self.engine.handle_ryuukyoku()
 
-        score_deltas = [
-            score - initial_scores[i]
-            for i, score in enumerate(self.engine._game_state.scores)
-        ]
+        score_deltas = _score_deltas(initial_scores, self.engine._game_state.scores)
         assert result.nagashi_mangan_players == [player]
         assert score_deltas == [-4000, 8000, -2000, -2000]
 
@@ -291,16 +282,10 @@ class TestRyuukyoku(RuleEngineTestMixin):
         """Test sancha_ron (Three ron) check"""
         self._init_game()
 
-        # Set last discard
         winning_tile = Tile(Suit.PINZU, 4)
-        self.engine._last_discarded_tile = winning_tile
-        self.engine._last_discarded_player = 0
-
-        # Set three players can win
-        # 123m 456m 789m 123p 4p (machi 4p)
-        self.engine._hands[1] = Hand(parse_tiles("123456789m1234p"))
-        self.engine._hands[2] = Hand(parse_tiles("123456789m1234p"))
-        self.engine._hands[3] = Hand(parse_tiles("123456789m1234p"))
+        _set_ron_ready_players(
+            self.engine, [1, 2, 3], winning_tile, "123456789m1234p"
+        )
 
         # Check sancha_ron
         result = self.engine._check_sancha_ron()
@@ -309,9 +294,6 @@ class TestRyuukyoku(RuleEngineTestMixin):
     def test_end_round_draw(self):
         """Test end round (ryuukyoku)"""
         self._init_game()
-
-        # Set to South 4
-        from pyriichi.game_state import Wind
 
         self.engine._game_state.set_round(Wind.SOUTH, 4)
         self.engine._game_state._dealer = 3  # Player 3 is dealer
@@ -417,15 +399,10 @@ class TestRyuukyoku(RuleEngineTestMixin):
         # Disable triple_ron (default)
         assert not self.engine._game_state.ruleset.allow_triple_ron
 
-        # Player 0 discards 1m, Player 1, 2, 3 can all ron
         discard_tile = Tile(Suit.MANZU, 1)
-
-        self.engine._hands[1] = Hand(parse_tiles("23456789m123p44p"))
-        self.engine._hands[2] = Hand(parse_tiles("23456789m123p44p"))
-        self.engine._hands[3] = Hand(parse_tiles("23456789m123p44p"))
-
-        self.engine._last_discarded_tile = discard_tile
-        self.engine._last_discarded_player = 0
+        _set_ron_ready_players(
+            self.engine, [1, 2, 3], discard_tile, "23456789m123p44p"
+        )
 
         # Test check_multiple_ron
         winners = self.engine.check_multiple_ron(discard_tile, 0)

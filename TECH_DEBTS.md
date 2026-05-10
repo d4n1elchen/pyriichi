@@ -2,11 +2,11 @@
 
 This document tracks unresolved review findings that should be addressed in future fixes.
 
-## P2: Ryuukyoku tests still mix engine behavior with subsystem setup
+## P2: Ryuukyoku edge tests still mix engine behavior with subsystem setup
 
 - Location: `tests/test_rule_ryuukyoku.py`
-- Impact: The ryuukyoku tests are split by topic, but several tests still set up `Hand`, `TileSet`, score state, and private `RuleEngine` fields in the same assertion path. Failures in these tests can still come from hand parsing, action resolution, scoring, or yaku detection rather than the draw rule being tested.
-- Suggested fix: When touching each area, extract focused helpers and keep the rule tests centered on engine state transitions and settlement side effects.
+- Impact: Common ryuukyoku setup now has helpers, but fourth-kan and nagashi_mangan tests still set up `Hand`, `TileSet`, score state, and private `RuleEngine` fields in the same assertion path.
+- Suggested fix: Add focused helpers for fourth-kan and nagashi_mangan scenarios so each test states only the draw rule variant it is checking.
 
 ## P2: Multi-ron and pao tests still use heavy private setup
 
