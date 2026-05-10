@@ -3,7 +3,7 @@
 import pytest
 
 from pyriichi.hand import Hand
-from pyriichi.rules import GameAction
+from pyriichi.rules import GameAction, GamePhase
 from pyriichi.tiles import Suit, Tile
 from pyriichi.utils import parse_tiles
 from tests.helpers import RuleEngineTestMixin
@@ -40,6 +40,60 @@ class TestRiichi(RuleEngineTestMixin):
         actions = self.engine._calculate_turn_actions(player_idx)
 
         assert GameAction.DECLARE_RIICHI in actions
+
+    def test_execute_action_riichi(self):
+        """Test execute riichi action."""
+        self._init_game()
+        current_player = self.engine.get_current_player()
+        tiles = parse_tiles("123456789m1234p")
+        hand = Hand(tiles)
+        hand.add_tile(Tile(Suit.SOUZU, 9))
+        self.engine._hands[current_player] = hand
+
+        self.engine._waiting_for_actions[current_player] = (
+            self.engine._calculate_turn_actions(current_player)
+        )
+
+        assert self._has_action(current_player, GameAction.DECLARE_RIICHI)
+
+        result = self.engine.execute_action(
+            current_player, GameAction.DECLARE_RIICHI, tile=Tile(Suit.SOUZU, 9)
+        )
+        assert result.riichi is True
+        assert self.engine.get_hand(current_player).is_riichi
+        assert current_player in self.engine._riichi_ippatsu
+        assert self.engine._riichi_ippatsu[current_player]
+
+    def test_invalid_riichi_applies_chombo(self):
+        """Test invalid riichi applies chombo."""
+        self._init_game()
+        player = self.engine.get_current_player()
+        hand = Hand(parse_tiles("124578m1245p78s1z"))
+        tile = Tile(Suit.HONORS, 1)
+        hand.add_tile(tile)
+        self.engine._hands[player] = hand
+        initial_scores = self.engine._game_state.scores.copy()
+
+        result = self.engine._handle_riichi(player, tile=tile)
+
+        assert result.chombo is True
+        assert result.chombo_player == player
+        assert self.engine.get_phase() == GamePhase.RYUUKYOKU
+        assert self.engine._game_state.scores[player] == initial_scores[player] - 12000
+
+    def test_riichi_requires_remaining_wall_tiles(self):
+        """Test riichi requires enough remaining live wall tiles."""
+        self._init_game()
+        current_player = self.engine.get_current_player()
+        tiles = parse_tiles("123456789m1234p")
+        hand = Hand(tiles)
+        hand.add_tile(Tile(Suit.SOUZU, 9))
+        self.engine._hands[current_player] = hand
+        self.engine._tile_set._tiles = [Tile(Suit.MANZU, 1)] * 3
+
+        assert not self.engine._can_riichi(current_player)
+        with pytest.raises(ValueError, match="立直時牌山剩餘張數不足"):
+            self.engine._handle_riichi(current_player, tile=Tile(Suit.SOUZU, 9))
 
     def test_interrupt_riichi_ippatsu_on_chi(self):
         """Test chi interrupts ippatsu"""
