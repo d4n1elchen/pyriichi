@@ -36,6 +36,6 @@
 ## Game-End Conditions
 
 - Normal end: complete the scheduled rounds, such as ending after South 4.
-- Tobi: any player's score drops below 0, or at/below 0 under optional rules.
+- Tobi: any player's score drops below 0.
 - West round extension: if nobody reaches the target score, usually 30000, after South 4, extend into the west round.
 - Agari Yame: when the last-round dealer wins while in first place, they may choose to end the game.

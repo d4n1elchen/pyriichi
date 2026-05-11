@@ -43,8 +43,7 @@
 
 ## Kan and Dora Timing
 
-- Closed kan reveals a kan dora indicator immediately.
-- Daiminkan and added kan reveal the kan dora indicator after the discard, or after Rinshan when applicable.
+- Each declared kan increases the visible dora indicator count for subsequent scoring.
 - A kan draw uses a rinshan tile from the dead wall.
 - Chankan may apply to added kan.
 - Suukan Sanra is checked after the fourth kan unless a valid win on the fourth kan prevents the abortive draw.
@@ -62,5 +61,5 @@
 ## Chombo Handling
 
 - False win: declaring a win while not tenpai, declaring ron while furiten, and similar violations.
-- Invalid riichi: declaring riichi while not tenpai, discovered at ryuukyoku.
+- Invalid riichi: declaring riichi while not tenpai; the engine handles this immediately.
 - Penalty behavior is ruleset-dependent; common handling is a mangan-level penalty or only rejecting the illegal action.

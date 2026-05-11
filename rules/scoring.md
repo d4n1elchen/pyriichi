@@ -27,7 +27,7 @@
 - Dragon pair: 2 fu.
 - round_wind pair: 2 fu.
 - seat_wind pair: 2 fu.
-- Double wind pair behavior is ruleset-dependent: some rules award 2 fu, while others award 4 fu when round_wind and seat_wind are the same.
+- Double wind pair: when round_wind and seat_wind are the same, both pair values are awarded.
 
 ## Wait Fu
 
@@ -83,7 +83,7 @@
 ## Special Scores
 
 - Nagashi Mangan is scored as mangan.
-- Pao applies responsibility payment for Daisangen and Daisuushi when the ruleset supports it.
+- Pao applies responsibility payment for Daisangen and Daisuushi.
 - Daisangen pao responsibility is assigned to the player who allows the winner's third dragon triplet or kan.
 - Daisuushi pao responsibility is assigned to the player who allows the winner's fourth wind triplet or kan.
 - Pao tsumo: the responsible player pays all.

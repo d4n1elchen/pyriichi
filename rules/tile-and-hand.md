@@ -9,7 +9,7 @@
 - Honors:
   - Winds: east, south, west, north, four copies each, 16 tiles total.
   - Dragons: haku, hatsu, chun, four copies each, 12 tiles total.
-- Red Dora are represented as red fives when enabled by the tile set.
+- The standard tile set includes one red five in each number suit.
 
 ## Tile Representation
 

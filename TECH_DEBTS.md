@@ -8,14 +8,7 @@ Last updated: 2026-05-11.
 
 ### Implementation Gaps
 
-| Priority | Item | Status |
-|----------|------|--------|
-| P2 | Kan Dora delayed reveal timing for daiminkan and added kan is not distinctly modeled. | Open |
-| P2 | Double wind pair behavior is documented as ruleset-dependent but has no config. | Open |
-| P2 | Red Dora are documented as enabled/disabled behavior but are always included in the standard tile set. | Open |
-| P2 | Pao is documented as ruleset-supported behavior but has no config. | Open |
-| P3 | Optional at/below-zero Tobi is documented but has no config or implementation. | Open |
-| P3 | Invalid riichi timing differs between docs and implementation. | Open |
+No unresolved implementation gaps are currently tracked.
 
 ### Test Gaps
 
