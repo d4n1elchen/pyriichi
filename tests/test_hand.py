@@ -76,6 +76,7 @@ class TestHand:
         hand = Hand(tiles)
 
         hand.kan(None)
+        assert hand.is_concealed
 
         winning_tile = Tile(Suit.SOUZU, 8)
 
@@ -243,6 +244,8 @@ class TestHand:
         melds = hand.can_kan()
         assert len(melds) > 0
         assert any(meld.type == MeldType.OPEN_KAN for meld in melds)
+        hand.kan(Tile(Suit.PINZU, 1))
+        assert not hand.is_concealed
 
     def test_meld_invalid_chi(self):
         """Test meld invalid chi."""

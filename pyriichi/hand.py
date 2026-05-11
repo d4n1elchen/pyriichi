@@ -454,7 +454,7 @@ class Hand:
     @property
     def is_concealed(self) -> bool:
         """Is menzen (Concealed, no open melds)"""
-        return len(self._melds) == 0
+        return all(meld.is_concealed() for meld in self._melds)
 
     @property
     def is_riichi(self) -> bool:
