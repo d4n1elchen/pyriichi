@@ -10,7 +10,7 @@ Verification command:
 .venv/bin/python -m pytest --cov=pyriichi --cov-report=term-missing
 ```
 
-Latest full-suite result: 342 tests passed. The latest coverage audit measured total source line coverage at 88%.
+Latest full-suite result: 334 tests passed. The latest coverage audit measured total source line coverage at 88%.
 
 ## Coverage Summary
 
@@ -25,12 +25,12 @@ Latest full-suite result: 342 tests passed. The latest coverage audit measured t
 | Riichi action rules | Met | Met | Closed-hand/tenpai requirements, declaration payment, kyoutaku increment, declaration discard, remaining-wall rule, post-riichi discard lock, closed-kan wait preservation, and ippatsu interruption are covered. |
 | Ippatsu | Met | Met | Interruption by chi, pon, kan, and closed kan is covered, including the disabled interruption ruleset variant. |
 | Furiten | Met | Met | Genbutsu, temp furiten, riichi furiten, furiten tsumo, and multi-machi furiten are covered. |
-| Kan and rinshan flow | Met | Partial | Open kan, closed kan, rinshan, chankan, fourth-kan ryuukyoku, and fourth-kan win exceptions are covered. The tests still depend on dense private setup. |
+| Kan and rinshan flow | Met | Met | Open kan, closed kan, rinshan, chankan, fourth-kan ryuukyoku, and fourth-kan win exceptions are covered with focused helpers. |
 | Abortive and exhaustive draws | Met | Met | Suufon Renda, Kyuushu Kyuuhai, Suucha Riichi, Suukan Sanra, Sancha Ron, Exhaustive Draw, dealer continuation variants, and Nagashi Mangan are covered. |
 | Yaku coverage | Met | Met | Listed yaku and yakuman have direct tests, including the currently supported yaku ruleset variants. |
 | Yaku combination filtering | Met | Partial | Major exclusions and allowed combinations are covered, but some tests use conditional assertions that can pass without verifying the yaku if decomposition fails. |
 | Fu and limit scoring | Met | Partial | Set fu, pair fu, wait fu, Chiitoitsu, Pinfu tsumo/ron, limits, payment rounding, Kiriage Mangan, and basic payments are covered. Some tests still assert broad smoke values rather than exact rule-table results. |
-| Dora and Ura Dora | Met | Partial | Visible dora, kan dora count, Ura Dora after riichi, and Red Dora are covered. Normal dora, Ura Dora, and Red Dora should be split into separate focused tests. |
+| Dora and Ura Dora | Met | Met | Visible dora, kan dora count, Ura Dora after riichi, and Red Dora are covered in focused tests. |
 | Noten Bappu | Met | Met | One, two, three, all, and no tenpai payment splits are covered. |
 | Honba and Kyoutaku | Met | Met | Honba, riichi-stick settlement, double-ron split behavior, and kyoutaku carry into a later single win are covered. |
 | Pao | Met | Met | Daisangen and Daisuushi tracking and pao settlement are covered. |
@@ -63,10 +63,8 @@ No stale or conflicting rule documentation is currently known from this audit.
 
 ## Test Coverage Gaps to Add
 
-The focused rule-coverage gaps from this audit have been closed. Remaining
-test work is mostly fixture cleanup and replacing broad smoke assertions with
-more precise expectations as the related test files are refactored.
+The focused rule-coverage and test-structure gaps from this audit have been closed. Future work can still tighten broad yaku and scoring smoke assertions as the suite evolves.
 
 ## Current Health Assessment
 
-The rules engine has broad implementation and test coverage for modern riichi mahjong. The biggest remaining risks are not whole missing rule categories; they are optional ruleset branches, exact settlement paths, and fixture-heavy tests that still verify some outcomes indirectly through large private setup or broad smoke assertions.
+The rules engine has broad implementation and test coverage for modern riichi mahjong. The biggest remaining risks are not whole missing rule categories; they are optional ruleset branches and a few broad yaku or scoring smoke assertions that can be tightened when those areas are next touched.

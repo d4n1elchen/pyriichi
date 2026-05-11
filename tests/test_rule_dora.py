@@ -6,6 +6,11 @@ from pyriichi.utils import parse_tiles
 from tests.helpers import RuleEngineTestMixin, set_non_matching_scoring_dora
 
 
+def _set_dora_indicators(engine, dora_indicators, ura_dora_indicators=None):
+    engine._tile_set._dora_indicators = dora_indicators
+    engine._tile_set._ura_dora_indicators = ura_dora_indicators or []
+
+
 class TestRuleDora(RuleEngineTestMixin):
     def test_count_dora_zero(self):
         """Test zero dora count."""
@@ -17,28 +22,40 @@ class TestRuleDora(RuleEngineTestMixin):
 
         assert dora_count == 0
 
-    def test_count_dora_one(self):
-        """Test dora count."""
+    def test_count_dora_one_indicator(self):
+        """Test dora count from one indicator."""
         self._init_game()
-        test_hand = Hand(parse_tiles("1111234567999m"))
-        self.engine._hands[0] = test_hand
-        self.engine._tile_set._dora_indicators = [Tile(Suit.MANZU, 9)]
-        self.engine._tile_set._ura_dora_indicators = [Tile(Suit.PINZU, 9)]
+        self.engine._hands[0] = Hand(parse_tiles("1111234567999m"))
+        _set_dora_indicators(self.engine, [Tile(Suit.MANZU, 9)])
 
         dora_count = self.engine._count_dora(0, Tile(Suit.MANZU, 1))
 
         assert dora_count == 5
 
+    def test_count_ura_dora_after_riichi(self):
+        """Test ura_dora count after riichi."""
+        self._init_game()
+        test_hand = Hand(parse_tiles("1111234567999m"))
         test_hand.set_riichi(True)
-        self.engine._tile_set._ura_dora_indicators = [Tile(Suit.MANZU, 9)]
+        self.engine._hands[0] = test_hand
+        _set_dora_indicators(
+            self.engine,
+            [Tile(Suit.MANZU, 9)],
+            [Tile(Suit.MANZU, 9)],
+        )
+
         dora_count = self.engine._count_dora(0, Tile(Suit.MANZU, 1))
+
         assert dora_count == 10
 
-        red_dora_tiles = parse_tiles("r5p")
-        test_hand = Hand(red_dora_tiles)
-        self.engine._hands[0] = test_hand
+    def test_count_red_dora(self):
+        """Test red_dora count."""
+        self._init_game()
+        self.engine._hands[0] = Hand(parse_tiles("r5p"))
         set_non_matching_scoring_dora(self.engine)
+
         dora_count = self.engine._count_dora(0, Tile(Suit.PINZU, 5))
+
         assert dora_count == 1
 
     def test_count_dora_uses_initial_and_kan_indicators(self):
