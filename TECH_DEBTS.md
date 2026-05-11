@@ -10,7 +10,6 @@ Last updated: 2026-05-11.
 
 | Priority | Item | Status |
 |----------|------|--------|
-| P1 | Junchan rejects valid triplet/kan shapes. | Open |
 | P2 | Kan Dora delayed reveal timing for daiminkan and added kan is not distinctly modeled. | Open |
 | P2 | Double wind pair behavior is documented as ruleset-dependent but has no config. | Open |
 | P2 | Red Dora are documented as enabled/disabled behavior but are always included in the standard tile set. | Open |

@@ -533,6 +533,42 @@ class TestYakuChecker:
         assert result.yaku == Yaku.JUNCHAN
         assert result.han == 2
 
+    def test_junchan_allows_terminal_triplets(self):
+        """Test junchan allows terminal triplets."""
+        hand = Hand([])
+        winning_combination = [
+            make_combination(CombinationType.TRIPLET, Suit.MANZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.SOUZU, 7),
+            make_combination(CombinationType.TRIPLET, Suit.MANZU, 9),
+            make_combination(CombinationType.PAIR, Suit.PINZU, 9),
+        ]
+
+        result = self.checker.check_junchan(
+            hand, winning_combination, self.game_state
+        )
+
+        assert result is not None
+        assert result.yaku == Yaku.JUNCHAN
+        assert result.han == 3
+
+    def test_junchan_rejects_non_terminal_pair(self):
+        """Test junchan rejects a non-terminal pair."""
+        hand = Hand([])
+        winning_combination = [
+            make_combination(CombinationType.TRIPLET, Suit.MANZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.SOUZU, 7),
+            make_combination(CombinationType.TRIPLET, Suit.MANZU, 9),
+            make_combination(CombinationType.PAIR, Suit.PINZU, 5),
+        ]
+
+        result = self.checker.check_junchan(
+            hand, winning_combination, self.game_state
+        )
+
+        assert result is None
+
     def test_chanta(self):
         """Test chanta."""
         tiles = parse_tiles("123m789m123p111z2z")

@@ -1072,8 +1072,7 @@ class YakuChecker:
         """
         Check junchan (Pure Terminal Chow).
 
-        junchan: Composed entirely of sequences, and each sequence contains 1 or 9.
-        No honors, pairs can be any number tile (but actually usually 1 or 9).
+        junchan: Every combination contains a terminal and no honors.
         han value depends on menzen/Meld state (Standard competitive rules).
 
         Args:
@@ -1092,35 +1091,26 @@ class YakuChecker:
             if tile.is_honor:
                 return None
 
-        groups = self._group_combinations(winning_combination)
-        sequences = groups[CombinationType.SEQUENCE]
-        triplets = groups[CombinationType.TRIPLET] + groups[CombinationType.KAN]
-
-        # Must be 4 sequences and each sequence contains 1 or 9
-        if triplets:
-            return None
-
-        if len(sequences) == 4:
-            for combination in sequences:
-                tiles = sorted(combination.tiles)
-                start_rank = tiles[0].rank
-                if start_rank not in [1, 7]:
+        for combination in winning_combination:
+            tiles = sorted(combination.tiles)
+            if combination.type == CombinationType.SEQUENCE:
+                if tiles[0].rank not in [1, 7]:
                     return None
+            elif not tiles[0].is_terminal:
+                return None
 
-            # Determine han based on rules
-            ruleset = game_state.ruleset if game_state else None
-            if ruleset:
-                han = (
-                    ruleset.junchan_closed_han
-                    if hand.is_concealed
-                    else ruleset.junchan_open_han
-                )
-            else:
-                # Default: menzen 3 han, Meld 2 han
-                han = 3 if hand.is_concealed else 2
-            return YakuResult(Yaku.JUNCHAN, han, False)
-
-        return None
+        # Determine han based on rules
+        ruleset = game_state.ruleset if game_state else None
+        if ruleset:
+            han = (
+                ruleset.junchan_closed_han
+                if hand.is_concealed
+                else ruleset.junchan_open_han
+            )
+        else:
+            # Default: menzen 3 han, Meld 2 han
+            han = 3 if hand.is_concealed else 2
+        return YakuResult(Yaku.JUNCHAN, han, False)
 
     def check_chanta(
         self,
