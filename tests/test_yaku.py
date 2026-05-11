@@ -618,6 +618,28 @@ class TestYakuChecker:
         assert any(result.yaku == Yaku.DAISANGEN for result in results)
         assert all(result.is_yakuman for result in results)
 
+    def test_first_turn_yakuman_can_combine_with_other_yakuman(self):
+        """Test first-turn yakuman can combine with another yakuman."""
+        tiles = parse_tiles("111m2m555z666z777z")
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.MANZU, 2)
+        combinations = hand.get_winning_combinations(winning_tile)
+
+        assert combinations
+        results = self.checker.check_all(
+            hand,
+            winning_tile,
+            list(combinations[0]),
+            self.game_state,
+            is_tsumo=True,
+            is_first_turn=True,
+            player_position=0,
+        )
+
+        assert {Yaku.TENHOU, Yaku.DAISANGEN}.issubset(
+            {result.yaku for result in results}
+        )
+
     def test_suuankou(self):
         """Test suuankou."""
         tiles = parse_tiles("111m222m333m444m5m")

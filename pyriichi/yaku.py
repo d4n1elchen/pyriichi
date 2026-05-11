@@ -254,27 +254,35 @@ class YakuChecker:
         Returns:
             List[YakuResult]: List of all matching yaku results.
         """
-        # tenhou, chihou, renhou check first as yakuman
+        first_turn_results = []
         if result := self.check_tenhou(
             hand, is_tsumo, is_first_turn, player_position, game_state
         ):
-            return [result]
+            first_turn_results.append(result)
         if result := self.check_chihou(
             hand, is_tsumo, is_first_turn, player_position, game_state
         ):
-            return [result]
+            first_turn_results.append(result)
         if result := self.check_renhou(
             hand, is_tsumo, is_first_turn, player_position, game_state
         ):
-            return [result]
+            first_turn_results.append(result)
+        first_turn_yakuman = [
+            result for result in first_turn_results if result.is_yakuman
+        ]
+        first_turn_non_yakuman = [
+            result for result in first_turn_results if not result.is_yakuman
+        ]
 
         # kokushi_musou check first as yakuman
         if result := self.check_kokushi_musou(hand, winning_tile, game_state):
+            if first_turn_yakuman:
+                return first_turn_yakuman + [result]
             return [result]
 
         # chiitoitsu check
         if result := self.check_chiitoitsu(hand, winning_tile):
-            results = [result]
+            results = first_turn_non_yakuman + [result]
             results.extend(
                 self._check_chiitoitsu_compatible_yaku(
                     hand,
@@ -291,7 +299,7 @@ class YakuChecker:
 
         # Other yakuman checks (Check first as yakuman overrides other yaku)
         # Note: Some yakuman can coexist (e.g. suuankou + tsuuiisou)
-        yakuman_results = []
+        yakuman_results = first_turn_yakuman.copy()
         if result := self.check_daisangen(hand, winning_combination):
             yakuman_results.append(result)
         if result := self.check_suukantsu(hand, winning_combination):
@@ -318,7 +326,7 @@ class YakuChecker:
         if yakuman_results:
             return yakuman_results
 
-        results = []
+        results = first_turn_non_yakuman.copy()
 
         # Basic yaku
         is_double_riichi = is_first_turn and hand.is_concealed
