@@ -10,7 +10,7 @@ Verification command:
 .venv/bin/python -m pytest --cov=pyriichi --cov-report=term-missing
 ```
 
-Latest full-suite result: 340 tests passed. The latest coverage audit measured total source line coverage at 88%.
+Latest full-suite result: 341 tests passed. The latest coverage audit measured total source line coverage at 88%.
 
 ## Coverage Summary
 
@@ -22,7 +22,7 @@ Latest full-suite result: 340 tests passed. The latest coverage audit measured t
 | Winning-hand detection | Met | Met | Standard hands, open meld hands, kan hands, Chiitoitsu, Kokushi Musou, thirteen-sided Kokushi, tenpai, and machi listing are covered. |
 | Action availability and priority | Met | Met | Basic availability, call execution, ron-over-call priority, and pon-over-chi priority are covered. |
 | Multiple ron rules | Met | Met | Head Bump, Double Ron, Triple Ron, Sancha Ron, furiten filtering, and multi-ron settlement are covered. |
-| Riichi action rules | Met | Partial | Closed-hand/tenpai requirements, declaration discard, remaining-wall rule, post-riichi discard lock, closed-kan wait preservation, and ippatsu interruption are covered. Riichi stick payment and kyoutaku increment need a direct assertion. |
+| Riichi action rules | Met | Met | Closed-hand/tenpai requirements, declaration payment, kyoutaku increment, declaration discard, remaining-wall rule, post-riichi discard lock, closed-kan wait preservation, and ippatsu interruption are covered. |
 | Ippatsu | Met | Met | Interruption by chi, pon, kan, and closed kan is covered, including the disabled interruption ruleset variant. |
 | Furiten | Met | Met | Genbutsu, temp furiten, riichi furiten, furiten tsumo, and multi-machi furiten are covered. |
 | Kan and rinshan flow | Met | Partial | Open kan, closed kan, rinshan, chankan, fourth-kan ryuukyoku, and fourth-kan win exceptions are covered. The tests still depend on dense private setup. |
@@ -32,7 +32,7 @@ Latest full-suite result: 340 tests passed. The latest coverage audit measured t
 | Fu and limit scoring | Met | Partial | Set fu, pair fu, wait fu, Chiitoitsu, Pinfu tsumo/ron, limits, payment rounding, Kiriage Mangan, and basic payments are covered. Some tests still assert broad smoke values rather than exact rule-table results. |
 | Dora and Ura Dora | Met | Partial | Visible dora, kan dora count, Ura Dora after riichi, and Red Dora are covered. Normal dora, Ura Dora, and Red Dora should be split into separate focused tests. |
 | Noten Bappu | Met | Met | One, two, three, all, and no tenpai payment splits are covered. |
-| Honba and Kyoutaku | Met | Partial | Honba and riichi-stick settlement are covered through scoring and double-ron scenarios. Kyoutaku carry across ryuukyoku into a later single win needs direct coverage. |
+| Honba and Kyoutaku | Met | Met | Honba, riichi-stick settlement, double-ron split behavior, and kyoutaku carry into a later single win are covered. |
 | Pao | Met | Partial | Daisangen tracking and payment are covered. Daisuushi tracking is covered, but Daisuushi pao settlement is not. |
 | Round progression and game end | Met | Partial | Dealer win renchan, exhaustive-draw renchan/rotation, tobi, west extension, and Agari Yame are covered. Tobi tests mostly mutate scores directly rather than reaching bankruptcy through normal win settlement. |
 | Chombo | Met | Met | False ron, false tsumo, and invalid riichi chombo paths are covered. |
@@ -74,12 +74,10 @@ The coverage run gives useful implementation-level signal, but it does not prove
 
 Priority order for new tests:
 
-1. Riichi declaration payment: player pays 1000 and kyoutaku increments.
-2. Kyoutaku carry after ryuukyoku and award on a later single win.
-3. Daisuushi pao settlement, not only responsibility tracking.
-4. Tobi through normal win settlement, not only direct score mutation.
-5. Exact scoring table assertions where tests currently use broad `> 0`, `>= 30`, or similar smoke assertions.
-6. Replace conditional yaku assertions such as `if combinations:` with explicit setup assertions so decomposition regressions fail loudly.
+1. Daisuushi pao settlement, not only responsibility tracking.
+2. Tobi through normal win settlement, not only direct score mutation.
+3. Exact scoring table assertions where tests currently use broad `> 0`, `>= 30`, or similar smoke assertions.
+4. Replace conditional yaku assertions such as `if combinations:` with explicit setup assertions so decomposition regressions fail loudly.
 
 ## Current Health Assessment
 

@@ -191,6 +191,29 @@ class TestMultipleRon(RuleEngineTestMixin):
         assert score_deltas[1] - score_deltas[2] == 1000
         assert sum(score_deltas) == 1000
 
+    def test_single_ron_awards_carried_kyoutaku(self):
+        """Test single ron awards carried kyoutaku."""
+        self._init_game()
+        self.engine._game_state.add_riichi_stick()
+
+        discard_tile = Tile(Suit.PINZU, 4)
+        initial_scores = self.engine._game_state.scores.copy()
+        self.engine._is_first_turn_after_deal = False
+        _set_ron_ready_hands(self.engine, [1], "234567m23456p88s")
+        set_non_matching_scoring_dora(self.engine)
+        _discard_tile_for_ron(self.engine, 0, discard_tile)
+
+        result = self.engine.execute_action(1, GameAction.RON, tile=discard_tile)
+
+        assert result.success
+        assert result.winners == [1]
+        assert self.engine._game_state.riichi_sticks == 0
+        score_deltas = _score_deltas(initial_scores, self.engine._game_state.scores)
+        assert score_deltas[1] > 1000
+        assert score_deltas[0] == -(score_deltas[1] - 1000)
+        assert score_deltas[2] == 0
+        assert score_deltas[3] == 0
+
     def test_double_ron_dealer_renchan(self):
         """Test double_ron: dealer win leads to renchan."""
         self._init_game()

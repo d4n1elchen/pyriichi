@@ -45,6 +45,7 @@ class TestRiichi(RuleEngineTestMixin):
         """Test execute riichi action."""
         self._init_game()
         current_player = self.engine.get_current_player()
+        initial_score = self.engine._game_state.scores[current_player]
         tiles = parse_tiles("123456789m1234p")
         hand = Hand(tiles)
         hand.add_tile(Tile(Suit.SOUZU, 9))
@@ -63,6 +64,8 @@ class TestRiichi(RuleEngineTestMixin):
         assert self.engine.get_hand(current_player).is_riichi
         assert current_player in self.engine._riichi_ippatsu
         assert self.engine._riichi_ippatsu[current_player]
+        assert self.engine._game_state.scores[current_player] == initial_score - 1000
+        assert self.engine._game_state.riichi_sticks == 1
 
     def test_invalid_riichi_applies_chombo(self):
         """Test invalid riichi applies chombo."""

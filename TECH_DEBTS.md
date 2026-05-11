@@ -5,7 +5,7 @@ This document tracks unresolved review findings that should be addressed in futu
 ## P2: Rule coverage gaps remain after the health audit
 
 - Location: `tests/test_yaku.py`, `tests/test_rule_riichi.py`, `tests/test_rule_action_execution.py`, `tests/test_rule_pao.py`, `tests/test_rule_round_settlement.py`, and `tests/test_scoring.py`
-- Impact: The suite covers most rules, but several documented rules are either untested or only weakly tested: riichi stick payment, kyoutaku carry, Daisuushi pao settlement, and tobi through normal win settlement.
+- Impact: The suite covers most rules, but several documented rules are either untested or only weakly tested: Daisuushi pao settlement and tobi through normal win settlement.
 - Suggested fix: Add focused tests for each missing rule branch before refactoring the related implementation. Replace broad smoke assertions with exact expected yaku, fu, han, payment, or state changes.
 
 ## P2: Rule docs have stale or underspecified edge cases
