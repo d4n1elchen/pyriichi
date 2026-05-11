@@ -2,12 +2,6 @@
 
 This document tracks unresolved review findings that should be addressed in future fixes.
 
-## P2: Round-settlement tests mix settlement rules with manual score simulation
-
-- Location: `tests/test_rule_round_settlement.py`
-- Impact: The noten_bappu and exhaustive_draw tests repeat tenpai/noten hand setup and wall exhaustion inline. The tobi tests also mutate scores directly to simulate ron or tsumo payment, so they do not verify the win-settlement path that would normally create those score changes.
-- Suggested fix: Extract helpers for tenpai/noten player sets, exhaustive_draw setup, and score deltas. Then decide whether tobi tests should remain direct `end_round` state tests or be moved to a win-settlement scenario that reaches bankruptcy through normal scoring.
-
 ## P2: Riichi interrupt tests are heavy action-flow fixtures
 
 - Location: `tests/test_rule_riichi.py`
