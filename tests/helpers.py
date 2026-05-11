@@ -24,6 +24,50 @@ def set_non_matching_scoring_dora(engine: RuleEngine) -> None:
     engine._tile_set._ura_dora_indicators = [Tile(Suit.HONORS, 2)]
 
 
+def set_ron_context(
+    engine: RuleEngine,
+    winner: int,
+    discarder: int,
+    hand_str: str,
+    winning_tile: Tile,
+) -> Hand:
+    hand = Hand(parse_tiles(hand_str))
+    engine._hands[winner] = hand
+    engine._last_discarded_tile = winning_tile
+    engine._last_discarded_player = discarder
+    engine._current_player = winner
+    engine._last_drawn_tile = None
+    engine._is_first_turn_after_deal = False
+    return hand
+
+
+def set_tsumo_context(
+    engine: RuleEngine,
+    player: int,
+    hand_str: str,
+    winning_tile: Tile,
+) -> Hand:
+    hand = Hand(parse_tiles(hand_str))
+    engine._hands[player] = hand
+    engine._current_player = player
+    engine._last_drawn_tile = (player, winning_tile)
+    engine._last_discarded_tile = None
+    engine._is_first_turn_after_deal = False
+    return hand
+
+
+def set_chankan_context(
+    engine: RuleEngine,
+    winner: int,
+    kan_player: int,
+    hand_str: str,
+    kan_tile: Tile,
+) -> Hand:
+    hand = set_ron_context(engine, winner, kan_player, hand_str, kan_tile)
+    engine._pending_kan_tile = (kan_player, kan_tile)
+    return hand
+
+
 class RuleEngineTestMixin:
     engine: RuleEngine
 

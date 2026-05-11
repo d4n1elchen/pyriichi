@@ -7,7 +7,10 @@ from pyriichi.utils import parse_tiles
 from pyriichi.yaku import Yaku
 from tests.helpers import (
     RuleEngineTestMixin,
+    set_chankan_context,
     set_non_matching_scoring_dora,
+    set_ron_context,
+    set_tsumo_context,
 )
 
 
@@ -15,20 +18,9 @@ class TestWinContext(RuleEngineTestMixin):
     def test_check_chankan(self):
         """Test chankan check"""
         self._init_game()
-        self.engine._is_first_turn_after_deal = False
         set_non_matching_scoring_dora(self.engine)
-
-        # Set Player 0 can chankan (machi 6p, tanyao)
-        # hand: 234m 567m 234p 66p 78p (machi 6p/9p)
-        test_tiles = parse_tiles("234567m2346678p")
-        self.engine._hands[0] = Hand(test_tiles)
-
-        # Check chankan
         kan_tile = Tile(Suit.PINZU, 6)
-
-        # check_win needs pending_kan_tile to set payer
-        # Assume Player 1 open_kan 6p
-        self.engine._pending_kan_tile = (1, kan_tile)
+        set_chankan_context(self.engine, 0, 1, "234567m2346678p", kan_tile)
 
         result = self.engine.check_win(0, kan_tile, is_chankan=True)
         assert result is not None
@@ -77,16 +69,10 @@ class TestWinContext(RuleEngineTestMixin):
     def test_check_win_rinshan(self):
         """Test rinshan win check"""
         self._init_game()
-        self.engine._is_first_turn_after_deal = False
         set_non_matching_scoring_dora(self.engine)
-        # Set a hand that can win on rinshan
-        # Create a winning hand
-        # hand: 123m 456m 789m 123p 4p (rinshan tile 4p)
-        self.engine._hands[0] = Hand(parse_tiles("123456789m12344p"))
-        self.engine._current_player = 0
-
-        # Check rinshan win
         rinshan_tile = Tile(Suit.PINZU, 4)
+        set_tsumo_context(self.engine, 0, "123456789m12344p", rinshan_tile)
+
         result = self.engine.check_win(0, rinshan_tile, is_rinshan=True)
         assert result is not None
         assert result.win is True
@@ -101,14 +87,11 @@ class TestWinContext(RuleEngineTestMixin):
     def test_check_win_tsumo_sets_is_tsumo(self):
         """Test Tumo sets score_result.is_tsumo to True"""
         self._init_game()
-        self.engine._is_first_turn_after_deal = False
         set_non_matching_scoring_dora(self.engine)
         player = self.engine.get_current_player()
         winning_tile = Tile(Suit.PINZU, 4)
-        # Concealed hand: 123m 456m 789m 123p + 4p
-        self.engine._hands[player] = Hand(parse_tiles("123456789m12344p"))
-        # Simulate just drawn winning tile
-        self.engine._last_drawn_tile = (player, winning_tile)
+        set_tsumo_context(self.engine, player, "123456789m12344p", winning_tile)
+
         result = self.engine.check_win(player, winning_tile)
         assert result is not None
         assert {y.yaku for y in result.yaku} == {Yaku.MENZEN_TSUMO, Yaku.ITTSU}
@@ -121,14 +104,9 @@ class TestWinContext(RuleEngineTestMixin):
         discarder = 0
         winner = (discarder + 1) % self.engine.get_num_players()
         winning_tile = Tile(Suit.PINZU, 4)
-        self.engine._is_first_turn_after_deal = False
         set_non_matching_scoring_dora(self.engine)
-        self.engine._hands[winner] = Hand(parse_tiles("123456789m1234p"))
-        self.engine._last_discarded_tile = winning_tile
-        self.engine._last_discarded_player = discarder
-        # Simulate turn passed to next player (actually ron state)
-        self.engine._current_player = winner
-        self.engine._last_drawn_tile = None
+        set_ron_context(self.engine, winner, discarder, "123456789m1234p", winning_tile)
+
         result = self.engine.check_win(winner, winning_tile)
         assert result is not None
         assert {y.yaku for y in result.yaku} == {Yaku.ITTSU}
@@ -158,16 +136,10 @@ class TestWinContext(RuleEngineTestMixin):
         hand = Hand(tiles)
         # Set hand to not concealed
         hand._melds.append(Meld(MeldType.PON_MELD, parse_tiles("1s1s1s")))
-        # Set last discard to 3p, test ron
         winning_tile = Tile(Suit.PINZU, 3)
-        self.engine._last_discarded_tile = winning_tile
-        self.engine._last_discarded_player = 1
-
-        self.engine._last_discarded_player = 1
-
-        # Set hand to player 0
         self.engine._hands[0] = hand
-        self.engine._current_player = 2
+        set_ron_context(self.engine, 0, 1, "234567789m24p22s", winning_tile)
+        self.engine._hands[0] = hand
 
         # Check win (Not concealed and no other yaku, should return None)
         result = self.engine.check_win(0, winning_tile)

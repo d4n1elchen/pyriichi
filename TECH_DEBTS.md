@@ -2,12 +2,6 @@
 
 This document tracks unresolved review findings that should be addressed in future fixes.
 
-## P2: Win-context and furiten tests duplicate hand-built win contexts
-
-- Location: `tests/test_rule_win_context.py` and `tests/test_rule_furiten.py`
-- Impact: These tests repeatedly prepare the same ron, tsumo, chankan, and furiten states by mutating `_hands`, `_last_drawn_tile`, `_last_discarded_tile`, `_last_discarded_player`, `_current_player`, and furiten flags inline. That makes the tests longer than the behavior being asserted and makes failures hard to attribute to the rule under test.
-- Suggested fix: Add focused scenario helpers for prepared ron, prepared tsumo, chankan, riichi furiten, temp_furiten, and discard furiten states. Keep each test body centered on the one rule outcome it is asserting.
-
 ## P2: Round-settlement tests mix settlement rules with manual score simulation
 
 - Location: `tests/test_rule_round_settlement.py`
