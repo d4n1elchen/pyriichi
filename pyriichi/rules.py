@@ -178,6 +178,7 @@ class RuleEngine:
         self._incoming_actions: Dict[int, Tuple[GameAction, Optional[Tile], Dict]] = {}
         self._riichi_ippatsu: Dict[int, bool] = {}
         self._riichi_ippatsu_discard: Dict[int, int] = {}
+        self._pending_riichi_discards: set[int] = set()
 
     def _handle_pass(
         self, player: int, tile: Optional[Tile] = None, **kwargs
@@ -207,6 +208,7 @@ class RuleEngine:
 
         self._riichi_ippatsu = {}
         self._riichi_ippatsu_discard = {}
+        self._pending_riichi_discards = set()
         self._is_first_round = True
         self._discard_history = []
         self._kan_count = 0
@@ -641,8 +643,10 @@ class RuleEngine:
             player = pon_kan_players[0]
             action, tile, kwargs = actions[player]
             if action == GameAction.PON:
+                self._clear_pending_riichi_discard()
                 return self._handle_pon(player, tile, **kwargs)
             else:
+                self._clear_pending_riichi_discard()
                 return self._handle_kan(player, tile, **kwargs)  # This is open_kan
 
         # 3. Check chi
@@ -650,11 +654,13 @@ class RuleEngine:
         if chi_players:
             player = chi_players[0]
             action, tile, kwargs = actions[player]
+            self._clear_pending_riichi_discard()
             return self._handle_chi(player, tile, **kwargs)
 
         # 4. All PASS
         # Advance turn
         result = ActionResult()
+        self._clear_pending_riichi_discard()
         self._advance_turn(result)
         return result
 
@@ -667,6 +673,8 @@ class RuleEngine:
         tile = self._last_discarded_tile
         if tile is None:
             raise ValueError("無捨牌")
+        if self._last_discarded_player is not None:
+            self._revert_pending_riichi_discard(self._last_discarded_player)
 
         for player in winners:
             win_res = self.check_win(player, tile, is_rinshan=False)
@@ -951,6 +959,10 @@ class RuleEngine:
         self._game_state.update_score(player, -1000)
         self._riichi_ippatsu[player] = True
         self._riichi_ippatsu_discard[player] = 0
+        if any(
+            GameAction.RON in actions for actions in discard_result.waiting_for.values()
+        ):
+            self._pending_riichi_discards.add(player)
 
         # Merge the results.
         discard_result.riichi = True
@@ -1139,6 +1151,7 @@ class RuleEngine:
 
         winning_tile = self._last_discarded_tile
         discarder = self._last_discarded_player
+        self._revert_pending_riichi_discard(discarder)
 
         # Check for multiple ron.
         potential_winners = self.check_multiple_ron(winning_tile, discarder)
@@ -1182,6 +1195,23 @@ class RuleEngine:
         self._phase = GamePhase.WINNING
 
         return result
+
+    def _clear_pending_riichi_discard(self) -> None:
+        """Clear pending riichi declaration markers after the discard survives ron."""
+        self._pending_riichi_discards.clear()
+
+    def _revert_pending_riichi_discard(self, player: int) -> None:
+        """Undo riichi when the declaration discard is won by ron."""
+        if player not in self._pending_riichi_discards:
+            return
+
+        self._pending_riichi_discards.remove(player)
+        self._hands[player].set_riichi(False)
+        self._riichi_ippatsu.pop(player, None)
+        self._riichi_ippatsu_discard.pop(player, None)
+        if self._game_state.riichi_sticks > 0:
+            self._game_state._riichi_sticks -= 1
+            self._game_state.update_score(player, 1000)
 
     def end_round(self, winners: Optional[List[int]] = None) -> None:
         """

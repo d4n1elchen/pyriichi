@@ -6,7 +6,11 @@ from pyriichi.hand import Hand
 from pyriichi.rules import GameAction, GamePhase
 from pyriichi.tiles import Suit, Tile
 from pyriichi.utils import parse_tiles
-from tests.helpers import RuleEngineTestMixin
+from tests.helpers import (
+    RuleEngineTestMixin,
+    no_response_hand,
+    set_non_matching_scoring_dora,
+)
 
 
 def _set_ippatsu(engine, players):
@@ -98,6 +102,36 @@ class TestRiichi(RuleEngineTestMixin):
         assert self.engine._riichi_ippatsu[current_player]
         assert self.engine._game_state.scores[current_player] == initial_score - 1000
         assert self.engine._game_state.riichi_sticks == 1
+
+    def test_riichi_declaration_discard_ron_reverts_riichi_stick(self):
+        """Test ron on a riichi declaration discard reverts the declaration."""
+        self._init_game()
+        set_non_matching_scoring_dora(self.engine)
+        discard_tile = Tile(Suit.SOUZU, 9)
+        self.engine._current_player = 0
+        self.engine._hands[0] = Hand(parse_tiles("123456789m1234p9s"))
+        self.engine._hands[1] = Hand(parse_tiles("123m123p123s78s55p"))
+        self.engine._hands[1].set_riichi(True)
+        self.engine._hands[2] = no_response_hand()
+        self.engine._hands[3] = no_response_hand()
+
+        result = self.engine._handle_riichi(0, tile=discard_tile)
+
+        assert result.riichi is True
+        assert self.engine.get_hand(0).is_riichi
+        assert self.engine._game_state.riichi_sticks == 1
+        assert 0 in self.engine._pending_riichi_discards
+        assert GameAction.RON in self.engine.get_available_actions(1)
+
+        _pass_waiting_players(self.engine, except_player=1)
+        ron_result = self.engine.execute_action(1, GameAction.RON)
+
+        assert 1 in ron_result.win_results
+        assert not self.engine.get_hand(0).is_riichi
+        assert 0 not in self.engine._riichi_ippatsu
+        assert 0 not in self.engine._pending_riichi_discards
+        assert self.engine._game_state.riichi_sticks == 0
+        assert ron_result.win_results[1].score_result.riichi_sticks_bonus == 0
 
     def test_invalid_riichi_applies_chombo(self):
         """Test invalid riichi applies chombo."""
