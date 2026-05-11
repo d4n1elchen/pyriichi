@@ -13,6 +13,7 @@ This file maps documented optional behavior to `RulesetConfig` fields. Defaults 
 | Chanta han | `chanta_open_han`, `chanta_closed_han` | `1`, `2` | Custom open and closed han values. |
 | Junchan han | `junchan_open_han`, `junchan_closed_han` | `2`, `3` | Custom open and closed han values. |
 | Suuankou Tanki value | `suuankou_tanki_double` | `True` | `False` scores it as single yakuman. |
+| Kokushi Musou Juusanmen value | `kokushi_musou_juusanmen_double` | `True` | `False` scores it as single yakuman. |
 | Pure Chuuren Poutou value | `pure_chuuren_poutou_double` | `True` | `False` scores it as single yakuman. |
 | Kiriage Mangan | `kiriage_mangan` | `False` | `True` treats 30 fu 4 han and 60 fu 3 han as mangan. |
 | Tobi | `tobi_enabled` | `True` | `False` disables bankruptcy game end. |

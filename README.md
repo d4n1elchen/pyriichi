@@ -378,6 +378,7 @@ custom_ruleset = RulesetConfig(
     junchan_closed_han=3,  # Junchan closed: 3 han.
     junchan_open_han=2,  # Junchan open: 2 han.
     suuankou_tanki_double=False,  # Suuankou Tanki is single yakuman.
+    kokushi_musou_juusanmen_double=False,  # Kokushi Musou Juusanmen is single yakuman.
     pure_chuuren_poutou_double=False,  # Pure Chuuren Poutou is single yakuman.
 )
 game_state_custom = GameState(num_players=4, ruleset=custom_ruleset)
@@ -393,6 +394,7 @@ print(f"Pinfu requires ryanmen: {game_state.ruleset.pinfu_require_ryanmen}")  # 
 - Chanta: closed 2 han, open 1 han.
 - Junchan: closed 3 han, open 2 han.
 - Suuankou Tanki is double yakuman, 26 han.
+- Kokushi Musou Juusanmen is double yakuman, 26 han.
 - Four Returns is not part of the canonical ruleset.
 
 ### Complete Game Example

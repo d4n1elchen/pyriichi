@@ -50,6 +50,9 @@ class RulesetConfig:
         suuankou_tanki_double (bool): Whether suuankou tanki is Double yakuman.
             - True: Double yakuman (26 han, Standard competitive rule).
             - False: Single yakuman (13 han).
+        kokushi_musou_juusanmen_double (bool): Whether kokushi_musou_juusanmen is Double yakuman.
+            - True: Double yakuman (26 han, Standard competitive rule).
+            - False: Single yakuman (13 han).
         pure_chuuren_poutou_double (bool): Whether pure_chuuren_poutou is Double yakuman.
             - True: Double yakuman (26 han, Standard competitive rule).
             - False: Single yakuman (13 han).
@@ -110,6 +113,9 @@ class RulesetConfig:
     # suuankou tanki Rule
     suuankou_tanki_double: bool = True
 
+    # kokushi_musou_juusanmen rule
+    kokushi_musou_juusanmen_double: bool = True
+
     # chuuren_poutou rule
     pure_chuuren_poutou_double: bool = True
 
@@ -158,6 +164,7 @@ class RulesetConfig:
             junchan_open_han=2,
             junchan_closed_han=3,
             suuankou_tanki_double=True,
+            kokushi_musou_juusanmen_double=True,
             pure_chuuren_poutou_double=True,
             kiriage_mangan=False,
             tobi_enabled=True,

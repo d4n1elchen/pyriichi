@@ -1365,6 +1365,61 @@ class TestYakuChecker:
         assert result.han == 26
         assert result.is_yakuman
 
+    def test_kokushi_musou_juusanmen_direct_ignores_tile_order(self):
+        """Test kokushi musou juusanmen does not depend on tile order."""
+        tiles = [
+            Tile(Suit.HONORS, 4),
+            Tile(Suit.PINZU, 9),
+            Tile(Suit.MANZU, 1),
+            Tile(Suit.HONORS, 1),
+            Tile(Suit.SOUZU, 9),
+            Tile(Suit.HONORS, 7),
+            Tile(Suit.PINZU, 1),
+            Tile(Suit.HONORS, 3),
+            Tile(Suit.MANZU, 9),
+            Tile(Suit.HONORS, 6),
+            Tile(Suit.SOUZU, 1),
+            Tile(Suit.HONORS, 2),
+            Tile(Suit.HONORS, 5),
+        ]
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.HONORS, 7)
+
+        result = self.checker.check_kokushi_musou(
+            hand, winning_tile, self.game_state
+        )
+        assert result is not None
+        assert result.yaku == Yaku.KOKUSHI_MUSOU_JUUSANMEN
+        assert result.han == 26
+
+    def test_kokushi_musou_juusanmen_tsumo_form(self):
+        """Test kokushi musou juusanmen from a completed tsumo hand."""
+        tiles = parse_tiles("19m19p19s1z2z3z4z5z6z77z")
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.HONORS, 7)
+
+        result = self.checker.check_kokushi_musou(
+            hand, winning_tile, self.game_state
+        )
+        assert result is not None
+        assert result.yaku == Yaku.KOKUSHI_MUSOU_JUUSANMEN
+        assert result.han == 26
+
+    def test_kokushi_musou_juusanmen_double_can_be_disabled(self):
+        """Test kokushi_musou_juusanmen can be configured as single yakuman."""
+        self.game_state.ruleset.kokushi_musou_juusanmen_double = False
+        tiles = parse_tiles("19m19p19s1z2z3z4z5z6z7z")
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.HONORS, 7)
+
+        result = self.checker.check_kokushi_musou(
+            hand, winning_tile, self.game_state
+        )
+        assert result is not None
+        assert result.yaku == Yaku.KOKUSHI_MUSOU
+        assert result.han == 13
+        assert result.is_yakuman
+
     def test_pure_chuuren_poutou_direct(self):
         """Test pure chuuren poutou direct."""
         tiles = parse_tiles("111m234m567m8m999m")

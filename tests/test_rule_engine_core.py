@@ -73,7 +73,10 @@ class TestRuleEngine(RuleEngineTestMixin):
 
         assert result is not None
         assert result.win
-        assert any(yaku.yaku == Yaku.KOKUSHI_MUSOU for yaku in result.yaku)
+        assert any(
+            yaku.yaku in {Yaku.KOKUSHI_MUSOU, Yaku.KOKUSHI_MUSOU_JUUSANMEN}
+            for yaku in result.yaku
+        )
 
     def test_check_win_allows_kokushi_musou_tsumo(self):
         """Test check_win allows kokushi_musou tsumo."""
@@ -87,7 +90,10 @@ class TestRuleEngine(RuleEngineTestMixin):
 
         assert result is not None
         assert result.win
-        assert any(yaku.yaku == Yaku.KOKUSHI_MUSOU for yaku in result.yaku)
+        assert any(
+            yaku.yaku in {Yaku.KOKUSHI_MUSOU, Yaku.KOKUSHI_MUSOU_JUUSANMEN}
+            for yaku in result.yaku
+        )
 
     def test_check_win_uses_non_dealer_payment_context(self):
         """Test check_win uses non-dealer payment context."""

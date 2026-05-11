@@ -269,7 +269,7 @@ class YakuChecker:
             return [result]
 
         # kokushi_musou check first as yakuman
-        if result := self.check_kokushi_musou(hand, winning_tile):
+        if result := self.check_kokushi_musou(hand, winning_tile, game_state):
             return [result]
 
         # chiitoitsu check
@@ -1434,7 +1434,10 @@ class YakuChecker:
         return None
 
     def check_kokushi_musou(
-        self, hand: Hand, winning_tile: Optional[Tile] = None
+        self,
+        hand: Hand,
+        winning_tile: Optional[Tile] = None,
+        game_state: Optional[GameState] = None,
     ) -> Optional[YakuResult]:
         """
         Check kokushi_musou.
@@ -1445,6 +1448,7 @@ class YakuChecker:
         Args:
             hand (Hand): hand.
             winning_tile (Optional[Tile]): Winning tile.
+            game_state (Optional[GameState]): Game state.
 
         Returns:
             Optional[YakuResult]: yaku result, or None if not matching.
@@ -1459,8 +1463,7 @@ class YakuChecker:
         if len(tiles) != 14:
             return None
 
-        # Required 13 terminals and honors
-        required_tiles = [
+        required_tiles = {
             Tile(Suit.MANZU, 1),
             Tile(Suit.MANZU, 9),
             Tile(Suit.PINZU, 1),
@@ -1474,27 +1477,50 @@ class YakuChecker:
             Tile(Suit.HONORS, 5),
             Tile(Suit.HONORS, 6),
             Tile(Suit.HONORS, 7),
-        ]
+        }
 
         # Count each tile
         counts = {}
         for tile in tiles:
             counts[tile] = counts.get(tile, 0) + 1
 
-        # Check if only one duplicate
-        pairs = 0
-        for key, count in counts.items():
-            if key not in required_tiles:
-                return None  # Non-Terminal/Honor tile
-            if count == 2:
-                if pairs != 0:
-                    return None  # More than one duplicate
-                pairs += 1
+        if set(counts) != required_tiles:
+            return None
+        duplicate_tiles = [tile for tile, count in counts.items() if count == 2]
+        if len(duplicate_tiles) != 1:
+            return None
+        if any(count not in {1, 2} for count in counts.values()):
+            return None
 
-        if hand.tiles == required_tiles:
-            return YakuResult(Yaku.KOKUSHI_MUSOU_JUUSANMEN, 26, True)
-        else:
+        if winning_tile is None:
             return YakuResult(Yaku.KOKUSHI_MUSOU, 13, True)
+
+        tiles_before_win = list(tiles)
+        try:
+            tiles_before_win.remove(winning_tile)
+        except ValueError:
+            tiles_before_win = []
+
+        is_juusanmen = (
+            len(tiles_before_win) == 13
+            and set(tiles_before_win) == required_tiles
+            and all(tiles_before_win.count(tile) == 1 for tile in required_tiles)
+        )
+        if is_juusanmen:
+            ruleset = game_state.ruleset if game_state else None
+            han = (
+                26
+                if ruleset is None or ruleset.kokushi_musou_juusanmen_double
+                else 13
+            )
+            yaku = (
+                Yaku.KOKUSHI_MUSOU_JUUSANMEN
+                if han == 26
+                else Yaku.KOKUSHI_MUSOU
+            )
+            return YakuResult(yaku, han, True)
+
+        return YakuResult(Yaku.KOKUSHI_MUSOU, 13, True)
 
     def check_shousuushi(
         self, hand: Hand, winning_combination: List
