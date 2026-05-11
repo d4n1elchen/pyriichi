@@ -1713,7 +1713,10 @@ class YakuChecker:
         if not hand.is_concealed:
             return None
 
-        all_tiles = hand.tiles + [winning_tile] if winning_tile else hand.tiles
+        if len(hand.tiles) == 14:
+            all_tiles = hand.tiles
+        else:
+            all_tiles = hand.tiles + [winning_tile] if winning_tile else hand.tiles
 
         if len(all_tiles) != 14:
             return None
@@ -1738,26 +1741,23 @@ class YakuChecker:
             if tile.suit == suit:
                 counts[tile.rank] = counts.get(tile.rank, 0) + 1
 
-        # Check 1 & 9 at least 3, others at least 1
-        for rank, count in counts.items():
-            if (rank in {1, 9} and count < 3) or (rank not in {1, 9} and count < 1):
+        required_counts = {1: 3, 9: 3, **{rank: 1 for rank in range(2, 9)}}
+        if set(counts) != set(required_counts):
+            return None
+        for rank, required_count in required_counts.items():
+            if counts[rank] < required_count:
                 return None
 
-        # Check total count is 14 (1-9 at least required count, plus extra 1)
-        total = sum(counts.values())
-        if total != 14:
-            return None
-
         # Check if pure_chuuren_poutou
-        is_pure = True
+        tiles_before_win = list(all_tiles)
+        try:
+            tiles_before_win.remove(winning_tile)
+        except ValueError:
+            tiles_before_win = []
         hand_counts: Dict[int, int] = {}
-        for tile in hand.tiles:
+        for tile in tiles_before_win:
             hand_counts[tile.rank] = hand_counts.get(tile.rank, 0) + 1
-            if (tile.rank in {1, 9} and hand_counts[tile.rank] > 3) or (
-                tile.rank not in {1, 9} and hand_counts[tile.rank] > 1
-            ):
-                is_pure = False
-                break
+        is_pure = hand_counts == required_counts
 
         if is_pure:
             ruleset = game_state.ruleset if game_state else None

@@ -1435,6 +1435,31 @@ class TestYakuChecker:
                     assert result.is_yakuman
                     break
 
+    def test_pure_chuuren_poutou_tsumo_form(self):
+        """Test pure chuuren poutou from a completed tsumo hand."""
+        hand = Hand(parse_tiles("11123455678999m"))
+        winning_tile = Tile(Suit.MANZU, 5)
+
+        result = self.checker.check_chuuren_poutou(
+            hand, winning_tile, self.game_state
+        )
+
+        assert result is not None
+        assert result.yaku == Yaku.PURE_CHUUREN_POUTOU
+        assert result.han == 26
+        assert result.is_yakuman
+
+    def test_chuuren_poutou_rejects_missing_required_rank(self):
+        """Test chuuren poutou rejects hands missing a required rank."""
+        hand = Hand(parse_tiles("11123456777999m"))
+        winning_tile = Tile(Suit.MANZU, 7)
+
+        result = self.checker.check_chuuren_poutou(
+            hand, winning_tile, self.game_state
+        )
+
+        assert result is None
+
     def test_pure_chuuren_poutou_double_can_be_disabled(self):
         """Test pure_chuuren_poutou can be configured as single yakuman."""
         hand = Hand(parse_tiles("111m234m567m8m999m"))
