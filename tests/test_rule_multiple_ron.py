@@ -52,6 +52,9 @@ def _prepare_multi_ron_scoring(engine, winners, discard_tile, hand_str, discarde
     _enable_multiple_ron(engine, triple_ron=len(winners) >= 3)
     engine._is_first_turn_after_deal = False
     _set_ron_ready_hands(engine, winners, hand_str)
+    for player in range(engine.get_num_players()):
+        if player != discarder and player not in winners:
+            engine._hands[player] = no_response_hand()
     set_non_matching_scoring_dora(engine)
     _discard_tile_for_ron(engine, discarder, discard_tile)
 
