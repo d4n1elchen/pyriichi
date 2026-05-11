@@ -189,6 +189,16 @@ class TestRiichi(RuleEngineTestMixin):
         assert result.closed_kan is True or result.kan is True
         assert all(flag is False for flag in self.engine._riichi_ippatsu.values())
 
+    def test_ippatsu_interrupt_can_be_disabled(self):
+        """Test ippatsu interruption can be disabled by ruleset."""
+        self._init_game()
+        self.engine._game_state.ruleset.ippatsu_interrupt_on_meld_or_kan = False
+        self.engine._riichi_ippatsu = {0: True}
+
+        self.engine._interrupt_ippatsu(GameAction.PON, acting_player=1)
+
+        assert self.engine._riichi_ippatsu[0] is True
+
     def test_cannot_chi_pon_kan_in_riichi(self):
         """Test cannot chi/pon/kan in riichi"""
         self._init_game()

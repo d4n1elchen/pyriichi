@@ -4,6 +4,7 @@ import pytest
 
 from pyriichi.game_state import GameState, Wind
 from pyriichi.hand import CombinationType, Hand, Meld, MeldType, make_combination
+from pyriichi.rules_config import RenhouPolicy
 from pyriichi.tiles import Suit, Tile
 from pyriichi.utils import parse_tiles
 from pyriichi.yaku import Yaku, YakuChecker, YakuResult
@@ -481,6 +482,24 @@ class TestYakuChecker:
             assert result.yaku == Yaku.CHANTA
             assert result.han == 2
 
+    def test_chanta_can_be_disabled(self):
+        """Test chanta can be disabled by ruleset."""
+        hand = Hand([])
+        self.game_state.ruleset.chanta_enabled = False
+        winning_combination = [
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 7),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 1),
+            make_combination(CombinationType.TRIPLET, Suit.HONORS, 1),
+            make_combination(CombinationType.PAIR, Suit.HONORS, 2),
+        ]
+
+        result = self.checker.check_chanta(
+            hand, winning_combination, self.game_state
+        )
+
+        assert result is None
+
     def test_open_chanta_han(self):
         """Test open chanta han."""
         hand = self._open_hand()
@@ -666,6 +685,28 @@ class TestYakuChecker:
                     )
                     if suuankou:
                         assert suuankou.han == 13
+
+    def test_suuankou_tanki_double_can_be_disabled(self):
+        """Test suuankou_tanki can be configured as single yakuman."""
+        hand = Hand([])
+        self.game_state.ruleset.suuankou_tanki_double = False
+        winning_tile = Tile(Suit.MANZU, 5)
+        winning_combination = [
+            make_combination(CombinationType.TRIPLET, Suit.MANZU, 1),
+            make_combination(CombinationType.TRIPLET, Suit.PINZU, 2),
+            make_combination(CombinationType.TRIPLET, Suit.SOUZU, 3),
+            make_combination(CombinationType.TRIPLET, Suit.HONORS, 1),
+            make_combination(CombinationType.PAIR, Suit.MANZU, 5),
+        ]
+
+        result = self.checker.check_suuankou(
+            hand, winning_combination, winning_tile, self.game_state
+        )
+
+        assert result is not None
+        assert result.yaku == Yaku.SUUANKOU
+        assert result.han == 13
+        assert result.is_yakuman
 
     def test_kokushi_musou(self):
         """Test kokushi musou."""
@@ -1045,6 +1086,43 @@ class TestYakuChecker:
                 assert result.han == 1
                 assert not result.is_yakuman
 
+    def test_pinfu_ryanmen_requirement_can_be_disabled(self):
+        """Test pinfu can ignore ryanmen when configured."""
+        hand = Hand([])
+        winning_tile = Tile(Suit.MANZU, 3)
+        winning_combination = [
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 4),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 7),
+            make_combination(CombinationType.SEQUENCE, Suit.SOUZU, 4),
+            make_combination(CombinationType.PAIR, Suit.HONORS, 2),
+        ]
+
+        self.game_state.ruleset.pinfu_require_ryanmen = True
+        assert (
+            self.checker.check_pinfu(
+                hand,
+                winning_combination,
+                self.game_state,
+                winning_tile,
+                player_position=0,
+            )
+            is None
+        )
+
+        self.game_state.ruleset.pinfu_require_ryanmen = False
+        result = self.checker.check_pinfu(
+            hand,
+            winning_combination,
+            self.game_state,
+            winning_tile,
+            player_position=0,
+        )
+
+        assert result is not None
+        assert result.yaku == Yaku.PINFU
+        assert result.han == 1
+
     def test_tenhou_direct(self):
         """Test tenhou direct."""
         tiles = parse_tiles("123m456m345p678p4s")
@@ -1107,6 +1185,34 @@ class TestYakuChecker:
                 assert result.yaku == Yaku.RENHOU
                 assert result.han == 2
                 assert not result.is_yakuman
+
+    def test_renhou_policy_variants(self):
+        """Test renhou policy variants."""
+        hand = Hand(parse_tiles("123m456m345p678p4s"))
+        self.game_state.set_dealer(0)
+
+        self.game_state.ruleset.renhou_policy = RenhouPolicy.OFF
+        result = self.checker.check_renhou(
+            hand,
+            is_tsumo=False,
+            is_first_turn=True,
+            player_position=1,
+            game_state=self.game_state,
+        )
+        assert result is None
+
+        self.game_state.ruleset.renhou_policy = RenhouPolicy.YAKUMAN
+        result = self.checker.check_renhou(
+            hand,
+            is_tsumo=False,
+            is_first_turn=True,
+            player_position=1,
+            game_state=self.game_state,
+        )
+        assert result is not None
+        assert result.yaku == Yaku.RENHOU
+        assert result.han == 13
+        assert result.is_yakuman
 
     def test_haitei_direct(self):
         """Test haitei direct."""
@@ -1189,6 +1295,21 @@ class TestYakuChecker:
                     assert result.han == 26
                     assert result.is_yakuman
                     break
+
+    def test_pure_chuuren_poutou_double_can_be_disabled(self):
+        """Test pure_chuuren_poutou can be configured as single yakuman."""
+        hand = Hand(parse_tiles("111m234m567m8m999m"))
+        winning_tile = Tile(Suit.MANZU, 5)
+        self.game_state.ruleset.pure_chuuren_poutou_double = False
+
+        result = self.checker.check_chuuren_poutou(
+            hand, winning_tile, self.game_state
+        )
+
+        assert result is not None
+        assert result.yaku == Yaku.PURE_CHUUREN_POUTOU
+        assert result.han == 13
+        assert result.is_yakuman
 
     def test_double_riichi(self):
         """Test double_riichi."""

@@ -10,7 +10,7 @@ Verification command:
 .venv/bin/python -m pytest --cov=pyriichi --cov-report=term-missing
 ```
 
-Latest full-suite result: 332 tests passed. The latest coverage audit measured total source line coverage at 88%.
+Latest full-suite result: 338 tests passed. The latest coverage audit measured total source line coverage at 88%.
 
 ## Coverage Summary
 
@@ -23,11 +23,11 @@ Latest full-suite result: 332 tests passed. The latest coverage audit measured t
 | Action availability and priority | Met | Partial | Basic availability and call execution are covered. Direct conflict-resolution tests for ron over calls and pon/kan over chi are thin. |
 | Multiple ron rules | Met | Met | Head Bump, Double Ron, Triple Ron, Sancha Ron, furiten filtering, and multi-ron settlement are covered. |
 | Riichi action rules | Met | Partial | Closed-hand/tenpai requirements, declaration discard, remaining-wall rule, post-riichi discard lock, closed-kan wait preservation, and ippatsu interruption are covered. Riichi stick payment and kyoutaku increment need a direct assertion. |
-| Ippatsu | Met | Partial | Interruption by chi, pon, kan, and closed kan is covered. The disabled interruption ruleset variant is not covered. |
+| Ippatsu | Met | Met | Interruption by chi, pon, kan, and closed kan is covered, including the disabled interruption ruleset variant. |
 | Furiten | Met | Met | Genbutsu, temp furiten, riichi furiten, furiten tsumo, and multi-machi furiten are covered. |
 | Kan and rinshan flow | Met | Partial | Open kan, closed kan, rinshan, chankan, fourth-kan ryuukyoku, and fourth-kan win exceptions are covered. The tests still depend on dense private setup. |
 | Abortive and exhaustive draws | Met | Met | Suufon Renda, Kyuushu Kyuuhai, Suucha Riichi, Suukan Sanra, Sancha Ron, Exhaustive Draw, dealer continuation variants, and Nagashi Mangan are covered. |
-| Yaku coverage | Met | Partial | Most listed yaku and yakuman have direct tests. Gaps remain for several ruleset-dependent variants. |
+| Yaku coverage | Met | Met | Listed yaku and yakuman have direct tests, including the currently supported yaku ruleset variants. |
 | Yaku combination filtering | Met | Partial | Major exclusions and allowed combinations are covered, but some tests use conditional assertions that can pass without verifying the yaku if decomposition fails. |
 | Fu and limit scoring | Met | Partial | Set fu, pair fu, wait fu, Chiitoitsu, Pinfu tsumo/ron, limits, payment rounding, Kiriage Mangan, and basic payments are covered. Some tests still assert broad smoke values rather than exact rule-table results. |
 | Dora and Ura Dora | Met | Partial | Visible dora, kan dora count, Ura Dora after riichi, and Red Dora are covered. Normal dora, Ura Dora, and Red Dora should be split into separate focused tests. |
@@ -36,7 +36,7 @@ Latest full-suite result: 332 tests passed. The latest coverage audit measured t
 | Pao | Met | Partial | Daisangen tracking and payment are covered. Daisuushi tracking is covered, but Daisuushi pao settlement is not. |
 | Round progression and game end | Met | Partial | Dealer win renchan, exhaustive-draw renchan/rotation, tobi, west extension, and Agari Yame are covered. Tobi tests mostly mutate scores directly rather than reaching bankruptcy through normal win settlement. |
 | Chombo | Met | Met | False ron, false tsumo, and invalid riichi chombo paths are covered. |
-| Ruleset configuration | Met | Partial | Some flags are covered directly, but `pinfu_require_ryanmen=False`, `ippatsu_interrupt_on_meld_or_kan=False`, Renhou OFF/YAKUMAN, disabled double-yakuman variants, and disabled Chanta need tests. |
+| Ruleset configuration | Met | Met | Pinfu ryanmen, Ippatsu interruption, Renhou policy, disabled double-yakuman variants, Chanta disabled, Open Tanyao, Kiriage Mangan, and game-end variants are covered. |
 
 ## Source Coverage Notes
 
@@ -74,14 +74,13 @@ The coverage run gives useful implementation-level signal, but it does not prove
 
 Priority order for new tests:
 
-1. Ruleset variants: `pinfu_require_ryanmen=False`, `ippatsu_interrupt_on_meld_or_kan=False`, Renhou OFF/YAKUMAN, disabled Suuankou Tanki/Pure Chuuren double yakuman, and `chanta_enabled=False`.
-2. Direct response-priority conflict tests: ron beats pon/chi; pon/kan beats chi.
-3. Riichi declaration payment: player pays 1000 and kyoutaku increments.
-4. Kyoutaku carry after ryuukyoku and award on a later single win.
-5. Daisuushi pao settlement, not only responsibility tracking.
-6. Tobi through normal win settlement, not only direct score mutation.
-7. Exact scoring table assertions where tests currently use broad `> 0`, `>= 30`, or similar smoke assertions.
-8. Replace conditional yaku assertions such as `if combinations:` with explicit setup assertions so decomposition regressions fail loudly.
+1. Direct response-priority conflict tests: ron beats pon/chi; pon/kan beats chi.
+2. Riichi declaration payment: player pays 1000 and kyoutaku increments.
+3. Kyoutaku carry after ryuukyoku and award on a later single win.
+4. Daisuushi pao settlement, not only responsibility tracking.
+5. Tobi through normal win settlement, not only direct score mutation.
+6. Exact scoring table assertions where tests currently use broad `> 0`, `>= 30`, or similar smoke assertions.
+7. Replace conditional yaku assertions such as `if combinations:` with explicit setup assertions so decomposition regressions fail loudly.
 
 ## Current Health Assessment
 
