@@ -366,7 +366,9 @@ class YakuChecker:
             results.append(result)
         if result := self.check_ittsu(hand, winning_combination):
             results.append(result)
-        if result := self.check_sanankou(hand, winning_combination):
+        if result := self.check_sanankou(
+            hand, winning_combination, winning_tile, is_tsumo
+        ):
             results.append(result)
         if result := self.check_chinitsu(hand, winning_combination):
             results.append(result)
@@ -885,7 +887,11 @@ class YakuChecker:
         return None
 
     def check_sanankou(
-        self, hand: Hand, winning_combination: List[Combination]
+        self,
+        hand: Hand,
+        winning_combination: List[Combination],
+        winning_tile: Optional[Tile] = None,
+        is_tsumo: bool = False,
     ) -> Optional[YakuResult]:
         """
         Check sanankou (Three Concealed Triplets).
@@ -895,18 +901,29 @@ class YakuChecker:
         Args:
             hand (Hand): hand.
             winning_combination (List[Combination]): Winning combination.
+            winning_tile (Optional[Tile]): Winning tile.
+            is_tsumo (bool): Whether the win is tsumo.
 
         Returns:
             Optional[YakuResult]: Yaku result, or None if it does not apply.
         """
-        if not hand.is_concealed:
-            return None
-
         if not winning_combination:
             return None
 
         groups = self._group_combinations(winning_combination)
-        triplets = len(groups[CombinationType.TRIPLET])
+        triplets = 0
+        triplet_like = groups[CombinationType.TRIPLET] + groups[CombinationType.KAN]
+        for combination in triplet_like:
+            if combination.is_open:
+                continue
+            if (
+                not is_tsumo
+                and winning_tile is not None
+                and combination.type == CombinationType.TRIPLET
+                and winning_tile in combination.tiles
+            ):
+                continue
+            triplets += 1
 
         return YakuResult(Yaku.SANANKOU, 2, False) if triplets >= 3 else None
 

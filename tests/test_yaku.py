@@ -293,6 +293,72 @@ class TestYakuChecker:
             assert result.yaku == Yaku.SANANKOU
             assert result.han == 2
 
+    def test_sanankou_can_score_with_open_non_triplet_meld(self):
+        """Test sanankou can score when only a non-triplet meld is open."""
+        hand = self._open_hand()
+        open_sequence = make_combination(CombinationType.SEQUENCE, Suit.SOUZU, 4)
+        open_sequence.set_open(True)
+        winning_combination = [
+            make_combination(CombinationType.TRIPLET, Suit.MANZU, 1),
+            make_combination(CombinationType.TRIPLET, Suit.PINZU, 2),
+            make_combination(CombinationType.TRIPLET, Suit.SOUZU, 3),
+            open_sequence,
+            make_combination(CombinationType.PAIR, Suit.HONORS, 1),
+        ]
+
+        result = self.checker.check_sanankou(
+            hand,
+            winning_combination,
+            Tile(Suit.HONORS, 1),
+            is_tsumo=False,
+        )
+
+        assert result is not None
+        assert result.yaku == Yaku.SANANKOU
+
+    def test_sanankou_rejects_ron_triplet_wait(self):
+        """Test sanankou excludes a triplet completed by ron."""
+        hand = Hand([])
+        winning_tile = Tile(Suit.SOUZU, 3)
+        winning_combination = [
+            make_combination(CombinationType.TRIPLET, Suit.MANZU, 1),
+            make_combination(CombinationType.TRIPLET, Suit.PINZU, 2),
+            make_combination(CombinationType.TRIPLET, Suit.SOUZU, 3),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 4),
+            make_combination(CombinationType.PAIR, Suit.HONORS, 1),
+        ]
+
+        result = self.checker.check_sanankou(
+            hand,
+            winning_combination,
+            winning_tile,
+            is_tsumo=False,
+        )
+
+        assert result is None
+
+    def test_sanankou_allows_tsumo_triplet_wait(self):
+        """Test sanankou includes a triplet completed by tsumo."""
+        hand = Hand([])
+        winning_tile = Tile(Suit.SOUZU, 3)
+        winning_combination = [
+            make_combination(CombinationType.TRIPLET, Suit.MANZU, 1),
+            make_combination(CombinationType.TRIPLET, Suit.PINZU, 2),
+            make_combination(CombinationType.TRIPLET, Suit.SOUZU, 3),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 4),
+            make_combination(CombinationType.PAIR, Suit.HONORS, 1),
+        ]
+
+        result = self.checker.check_sanankou(
+            hand,
+            winning_combination,
+            winning_tile,
+            is_tsumo=True,
+        )
+
+        assert result is not None
+        assert result.yaku == Yaku.SANANKOU
+
     def test_chinitsu(self):
         """Test chinitsu."""
         tiles = parse_tiles("123m456m789m123m4m")
