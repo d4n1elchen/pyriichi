@@ -237,6 +237,18 @@ class TestRyuukyoku(RuleEngineTestMixin):
         assert self.engine._game_state.round_number == 1
         assert self.engine._game_state.honba == 1
 
+    def test_kyuushu_kyuuhai_requires_first_turn_after_deal(self):
+        """Test kyuushu_kyuuhai is unavailable after the first turn."""
+        self._init_game()
+        player = self.engine.get_current_player()
+        _prepare_kyuushu_kyuuhai(self.engine, player)
+        self.engine._is_first_turn_after_deal = False
+
+        actions = self.engine._calculate_turn_actions(player)
+
+        assert not self.engine._check_kyuushu_kyuuhai(player)
+        assert GameAction.DECLARE_KYUUSHU_KYUUHAI not in actions
+
     def test_abortive_draw_can_rotate_dealer(self):
         """Test abortive draw dealer rotation configuration."""
         self._init_game()

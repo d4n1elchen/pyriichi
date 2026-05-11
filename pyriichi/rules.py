@@ -1709,6 +1709,8 @@ class RuleEngine:
             return False
 
         # It must be the player's first turn before any discard.
+        if not self._is_first_turn_after_deal:
+            return False
         if len(self._hands[player].discards) > 0:
             return False
 
