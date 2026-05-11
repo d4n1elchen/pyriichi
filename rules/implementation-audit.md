@@ -10,7 +10,7 @@ Verification command:
 .venv/bin/python -m pytest --cov=pyriichi --cov-report=term-missing
 ```
 
-Latest full-suite result: 341 tests passed. The latest coverage audit measured total source line coverage at 88%.
+Latest full-suite result: 342 tests passed. The latest coverage audit measured total source line coverage at 88%.
 
 ## Coverage Summary
 
@@ -33,7 +33,7 @@ Latest full-suite result: 341 tests passed. The latest coverage audit measured t
 | Dora and Ura Dora | Met | Partial | Visible dora, kan dora count, Ura Dora after riichi, and Red Dora are covered. Normal dora, Ura Dora, and Red Dora should be split into separate focused tests. |
 | Noten Bappu | Met | Met | One, two, three, all, and no tenpai payment splits are covered. |
 | Honba and Kyoutaku | Met | Met | Honba, riichi-stick settlement, double-ron split behavior, and kyoutaku carry into a later single win are covered. |
-| Pao | Met | Partial | Daisangen tracking and payment are covered. Daisuushi tracking is covered, but Daisuushi pao settlement is not. |
+| Pao | Met | Met | Daisangen and Daisuushi tracking and pao settlement are covered. |
 | Round progression and game end | Met | Partial | Dealer win renchan, exhaustive-draw renchan/rotation, tobi, west extension, and Agari Yame are covered. Tobi tests mostly mutate scores directly rather than reaching bankruptcy through normal win settlement. |
 | Chombo | Met | Met | False ron, false tsumo, and invalid riichi chombo paths are covered. |
 | Ruleset configuration | Met | Met | Pinfu ryanmen, Ippatsu interruption, Renhou policy, disabled double-yakuman variants, Chanta disabled, Open Tanyao, Kiriage Mangan, and game-end variants are covered. |
@@ -74,10 +74,9 @@ The coverage run gives useful implementation-level signal, but it does not prove
 
 Priority order for new tests:
 
-1. Daisuushi pao settlement, not only responsibility tracking.
-2. Tobi through normal win settlement, not only direct score mutation.
-3. Exact scoring table assertions where tests currently use broad `> 0`, `>= 30`, or similar smoke assertions.
-4. Replace conditional yaku assertions such as `if combinations:` with explicit setup assertions so decomposition regressions fail loudly.
+1. Tobi through normal win settlement, not only direct score mutation.
+2. Exact scoring table assertions where tests currently use broad `> 0`, `>= 30`, or similar smoke assertions.
+3. Replace conditional yaku assertions such as `if combinations:` with explicit setup assertions so decomposition regressions fail loudly.
 
 ## Current Health Assessment
 

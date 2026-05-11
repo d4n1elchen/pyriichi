@@ -24,6 +24,17 @@ def _set_daisangen_pao_hand(engine, player, hand_str, pao_player):
     engine._pao_daisangen[player] = pao_player
 
 
+def _set_daisuushi_pao_hand(engine, player, hand_str, pao_player):
+    engine._hands[player] = Hand(parse_tiles(hand_str))
+    engine._hands[player]._melds = [
+        _honor_pon(1),
+        _honor_pon(2),
+        _honor_pon(3),
+        _honor_pon(4),
+    ]
+    engine._pao_daisuushi[player] = pao_player
+
+
 def _prepare_final_honor_call(
     engine, player, responsible_player, called_tile, hand_str, meld_ranks
 ):
@@ -104,6 +115,30 @@ class TestRulePao(RuleEngineTestMixin):
         self.engine._handle_pon(player)
 
         assert self.engine._pao_daisuushi[player] == responsible_player
+
+    def test_pao_daisuushi_tsumo(self):
+        """Test pao: daisuushi tsumo, pao player pays all."""
+        self._init_game()
+
+        winning_tile = Tile(Suit.MANZU, 9)
+        _set_daisuushi_pao_hand(self.engine, 0, "99m", pao_player=3)
+        self.engine._current_player = 0
+        self.engine._last_drawn_tile = (0, winning_tile)
+        initial_scores = self.engine._game_state.scores.copy()
+
+        result = self.engine.check_win(0, winning_tile)
+        assert result is not None
+        assert result.win
+        assert any(y.yaku == Yaku.DAISUUSHI for y in result.yaku)
+
+        self.engine.apply_win_score(result)
+        self.engine.end_round([0])
+
+        score_deltas = _score_deltas(initial_scores, self.engine._game_state.scores)
+        assert score_deltas[0] > 0
+        assert score_deltas[3] == -score_deltas[0]
+        assert score_deltas[1] == 0
+        assert score_deltas[2] == 0
 
     def test_pao_daisangen_ron_pao_player(self):
         """Test pao: daisangen ron pao player."""
