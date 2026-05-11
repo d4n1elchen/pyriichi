@@ -297,7 +297,7 @@ class YakuChecker:
         if result := self.check_suukantsu(hand, winning_combination):
             yakuman_results.append(result)
         if result := self.check_suuankou(
-            hand, winning_combination, winning_tile, game_state
+            hand, winning_combination, winning_tile, game_state, is_tsumo
         ):
             yakuman_results.append(result)
 
@@ -1384,6 +1384,7 @@ class YakuChecker:
         winning_combination: List,
         winning_tile: Optional[Tile] = None,
         game_state: Optional[GameState] = None,
+        is_tsumo: bool = False,
     ) -> Optional[YakuResult]:
         """
         Check suuankou (Four Concealed Triplets).
@@ -1396,6 +1397,7 @@ class YakuChecker:
             winning_combination (List): Winning combinations.
             winning_tile (Optional[Tile]): Winning tile.
             game_state (Optional[GameState]): Game state.
+            is_tsumo (bool): Whether the win is tsumo.
 
         Returns:
             Optional[YakuResult]: yaku result, or None if not matching.
@@ -1422,6 +1424,8 @@ class YakuChecker:
 
         # Four Concealed Triplets
         if triplets == 4:
+            if not is_tsumo and not is_tanki:
+                return None
             ruleset = game_state.ruleset if game_state else None
             if ruleset and ruleset.suuankou_tanki_double and is_tanki:
                 return YakuResult(Yaku.SUUANKOU_TANKI, 26, True)

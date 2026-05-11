@@ -686,6 +686,90 @@ class TestYakuChecker:
                     if suuankou:
                         assert suuankou.han == 13
 
+    def test_suuankou_tsumo_on_triplet_wait(self):
+        """Test suuankou is awarded for tsumo on a triplet wait."""
+        tiles = parse_tiles("111m222m333m44m55p")
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.MANZU, 4)
+        combinations = hand.get_winning_combinations(winning_tile)
+        triplet_combination = next(
+            combination
+            for combination in combinations
+            if sum(
+                item.type in {CombinationType.TRIPLET, CombinationType.KAN}
+                for item in combination
+            )
+            == 4
+        )
+
+        assert combinations
+        results = self.checker.check_all(
+            hand,
+            winning_tile,
+            list(triplet_combination),
+            self.game_state,
+            is_tsumo=True,
+        )
+
+        assert any(result.yaku == Yaku.SUUANKOU for result in results)
+
+    def test_suuankou_not_awarded_on_ron_triplet_wait(self):
+        """Test suuankou is not awarded for ron on a triplet wait."""
+        tiles = parse_tiles("111m222m333m44m55p")
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.MANZU, 4)
+        combinations = hand.get_winning_combinations(winning_tile)
+        triplet_combination = next(
+            combination
+            for combination in combinations
+            if sum(
+                item.type in {CombinationType.TRIPLET, CombinationType.KAN}
+                for item in combination
+            )
+            == 4
+        )
+
+        assert combinations
+        results = self.checker.check_all(
+            hand,
+            winning_tile,
+            list(triplet_combination),
+            self.game_state,
+            is_tsumo=False,
+        )
+
+        assert all(
+            result.yaku not in {Yaku.SUUANKOU, Yaku.SUUANKOU_TANKI}
+            for result in results
+        )
+
+    def test_suuankou_tanki_ron(self):
+        """Test suuankou tanki is awarded for ron on a pair wait."""
+        tiles = parse_tiles("111m222m333m444m5m")
+        hand = Hand(tiles)
+        winning_tile = Tile(Suit.MANZU, 5)
+        combinations = hand.get_winning_combinations(winning_tile)
+        triplet_combination = next(
+            combination
+            for combination in combinations
+            if sum(
+                item.type in {CombinationType.TRIPLET, CombinationType.KAN}
+                for item in combination
+            )
+            == 4
+        )
+
+        assert combinations
+        results = self.checker.check_all(
+            hand,
+            winning_tile,
+            list(triplet_combination),
+            self.game_state,
+            is_tsumo=False,
+        )
+
+        assert any(result.yaku == Yaku.SUUANKOU_TANKI for result in results)
+
     def test_suuankou_tanki_double_can_be_disabled(self):
         """Test suuankou_tanki can be configured as single yakuman."""
         hand = Hand([])
