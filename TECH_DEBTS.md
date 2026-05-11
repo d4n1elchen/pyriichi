@@ -2,12 +2,6 @@
 
 This document tracks unresolved review findings that should be addressed in future fixes.
 
-## P2: Kan tests still carry dense private setup and mixed concerns
-
-- Location: `tests/test_rule_kan.py`
-- Impact: Rinshan, chankan, suukan_sanra, open_kan, and closed_kan selection scenarios each build large engine states inline with `_hands`, `_tile_set`, `_waiting_for_actions`, `_kan_count`, and `_last_discarded_tile`. `TestClosedKanSelection` also constructs a one-player `RuleEngine` and edits `TileSet` internals directly, making it more of a fixture-construction test than a rule assertion.
-- Suggested fix: Add scenario helpers for open_kan, closed_kan, rinshan, chankan, and exhausted-wall kan states. Consider moving closed_kan selection into a smaller hand/engine helper test or giving it a deterministic engine fixture.
-
 ## P3: Integration tests overlap unit coverage and contain conditional smoke flows
 
 - Location: `tests/test_integration.py`
