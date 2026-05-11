@@ -2,12 +2,6 @@
 
 This document tracks unresolved review findings that should be addressed in future fixes.
 
-## P2: Riichi interrupt tests are heavy action-flow fixtures
-
-- Location: `tests/test_rule_riichi.py`
-- Impact: The ippatsu interruption tests repeat riichi state setup, manufactured discard/call hands, and manual pass loops. These tests exercise action resolution, call availability, and riichi interruption all at once, so a failure may not point to the riichi rule itself.
-- Suggested fix: Extract helpers for active ippatsu state, prepared discard calls, and draining pass actions. Keep one end-to-end action-flow test, and make the rest assert the riichi interruption behavior through narrower scenarios.
-
 ## P2: Kan tests still carry dense private setup and mixed concerns
 
 - Location: `tests/test_rule_kan.py`

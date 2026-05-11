@@ -9,6 +9,38 @@ from pyriichi.utils import parse_tiles
 from tests.helpers import RuleEngineTestMixin
 
 
+def _set_ippatsu(engine, players):
+    engine._riichi_ippatsu = {player: True for player in players}
+    engine._riichi_ippatsu_discard = {player: 0 for player in players}
+
+
+def _discard_for_call(engine, discarder, discard_tile, discarder_hand, responder_hands):
+    engine._hands[discarder] = Hand(parse_tiles(discarder_hand))
+    for player, hand_str in responder_hands.items():
+        engine._hands[player] = Hand(parse_tiles(hand_str))
+    engine._current_player = discarder
+    engine.execute_action(discarder, GameAction.DISCARD, tile=discard_tile)
+
+
+def _pass_waiting_players(engine, except_player=None):
+    for player in list(engine.waiting_for_actions.keys()):
+        if player == except_player:
+            continue
+        if GameAction.PASS in engine.get_available_actions(player):
+            engine.execute_action(player, GameAction.PASS)
+
+
+def _chi_sequence_with_ranks(engine, player, ranks):
+    return next(
+        (
+            sequence
+            for sequence in engine.get_available_chi_sequences(player)
+            if sorted(tile.rank for tile in sequence) == ranks
+        ),
+        None,
+    )
+
+
 class TestRiichi(RuleEngineTestMixin):
     def test_riichi_availability_14_tiles(self):
         """Test riichi availability with 14 tiles (after draw) and tenpai after discard"""
@@ -101,83 +133,68 @@ class TestRiichi(RuleEngineTestMixin):
     def test_interrupt_riichi_ippatsu_on_chi(self):
         """Test chi interrupts ippatsu"""
         self._init_game()
-        self.engine._riichi_ippatsu = {0: True}
-        self.engine._riichi_ippatsu_discard = {0: 0}
+        _set_ippatsu(self.engine, [0])
 
         chi_tile = Tile(Suit.MANZU, 4)
-        self.engine._hands[0] = Hand(parse_tiles("11223344556677m"))
-        self.engine._hands[1] = Hand(parse_tiles("23456789m12345p"))
-        self.engine._current_player = 0
-
-        self.engine.execute_action(0, GameAction.DISCARD, tile=chi_tile)
-        sequences = self.engine.get_available_chi_sequences(1)
-        assert sequences
-        target_sequence = next(
-            (seq for seq in sequences if sorted(tile.rank for tile in seq) == [2, 3]),
-            None,
+        _discard_for_call(
+            self.engine,
+            0,
+            chi_tile,
+            "11223344556677m",
+            {1: "23456789m12345p"},
         )
+        target_sequence = _chi_sequence_with_ranks(self.engine, 1, [2, 3])
+
         assert target_sequence is not None
         self.engine.execute_action(1, GameAction.CHI, sequence=target_sequence)
-
-        # handle other waiting players (e.g. PON)
-        waiting_players = list(self.engine.waiting_for_actions.keys())
-        for pid in waiting_players:
-            if pid != 1:
-                self.engine.execute_action(pid, GameAction.PASS)
+        _pass_waiting_players(self.engine, except_player=1)
 
         assert self.engine._riichi_ippatsu[0] is False
 
     def test_interrupt_riichi_ippatsu_on_pon(self):
         """Test pon interrupts ippatsu"""
         self._init_game()
-        self.engine._riichi_ippatsu = {0: True}
-        self.engine._riichi_ippatsu_discard = {0: 0}
+        _set_ippatsu(self.engine, [0])
 
         pon_tile = Tile(Suit.PINZU, 7)
-        self.engine._hands[0] = Hand(parse_tiles("7p1112233445566m"))
-        self.engine._hands[2] = Hand(parse_tiles("77p11223344556p"))
-        self.engine._current_player = 0
+        _discard_for_call(
+            self.engine,
+            0,
+            pon_tile,
+            "7p1112233445566m",
+            {2: "77p11223344556p"},
+        )
 
-        self.engine.execute_action(0, GameAction.DISCARD, tile=pon_tile)
         assert GameAction.PON in self.engine.get_available_actions(2)
         self.engine.execute_action(2, GameAction.PON)
-
-        # If other players are waiting (e.g. P1 can chi?), need to let them PASS
-        waiting_players = list(self.engine.waiting_for_actions.keys())
-        for pid in waiting_players:
-            if GameAction.PASS in self.engine.get_available_actions(pid):
-                self.engine.execute_action(pid, GameAction.PASS)
+        _pass_waiting_players(self.engine)
 
         assert self.engine._riichi_ippatsu[0] is False
 
     def test_interrupt_riichi_ippatsu_on_kan(self):
         """Test open_kan interrupts ippatsu"""
         self._init_game()
-        self.engine._riichi_ippatsu = {0: True}
-        self.engine._riichi_ippatsu_discard = {0: 0}
+        _set_ippatsu(self.engine, [0])
 
         kan_tile = Tile(Suit.SOUZU, 9)
-        self.engine._hands[0] = Hand(parse_tiles("9s1122334455667m"))
-        self.engine._hands[1] = Hand(parse_tiles("999s1122334455s"))
-        self.engine._current_player = 0
+        _discard_for_call(
+            self.engine,
+            0,
+            kan_tile,
+            "9s1122334455667m",
+            {1: "999s1122334455s"},
+        )
 
-        self.engine.execute_action(0, GameAction.DISCARD, tile=kan_tile)
         assert GameAction.KAN in self.engine.get_available_actions(1)
         self.engine.execute_action(1, GameAction.KAN, tile=kan_tile)
-
-        # handle other waiting players
-        waiting_players = list(self.engine.waiting_for_actions.keys())
-        for pid in waiting_players:
-            if pid != 1:
-                self.engine.execute_action(pid, GameAction.PASS)
+        _pass_waiting_players(self.engine, except_player=1)
 
         assert self.engine._riichi_ippatsu[0] is False
 
     def test_interrupt_riichi_ippatsu_on_declare_ankan(self):
         """Test declare_ankan interrupts ippatsu"""
         self._init_game()
-        self.engine._riichi_ippatsu = {0: True, 1: True}
-        self.engine._riichi_ippatsu_discard = {0: 0, 1: 0}
+        _set_ippatsu(self.engine, [0, 1])
 
         self.engine._hands[3] = Hand(parse_tiles("111123456789m1p"))
 
