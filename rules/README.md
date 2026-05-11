@@ -9,6 +9,7 @@ This directory contains the riichi-rule-specific requirements for PyRiichi. Proj
 - [Yaku Rules](yaku.md): standard yaku, yakuman, optional yaku variants, and yaku combination rules.
 - [Scoring Rules](scoring.md): fu, han, limits, payments, honba, kyoutaku, noten bappu, and pao.
 - [Round and Game State Rules](round-state.md): round winds, seat winds, renchan, game end, tobi, west round extension, and agari yame.
+- [Ruleset Variants](ruleset-variants.md): mapping from optional rule behavior to `RulesetConfig` fields.
 - [Implementation Audit](implementation-audit.md): current code status against these requirements.
 
 ## Scope

@@ -54,21 +54,12 @@ The coverage run gives useful implementation-level signal, but it does not prove
 
 | Behavior | Implementation Evidence | Rule Docs Status | Recommendation |
 |----------|-------------------------|------------------|----------------|
-| Suucha Riichi applies a 300-point transfer from dealer to each non-dealer before settlement. | `RuleEngine.handle_ryuukyoku()` special-cases `RyuukyokuType.SUUCHA_RIICHI`. | Not documented in `rules/game-flow.md`, `rules/scoring.md`, or `rules/round-state.md`. | Do not keep as default standard behavior unless this is intended as a local rule. Standard four-riichi abortive draw should not have this 300-point dealer payment. Prefer removing it or adding a ruleset flag and documenting it as a local variant. |
-| Kyuushu Kyuuhai requires the declaring player's first turn, no player melds including closed kan, no prior discard by the declaring player, and at least nine unique yaochuu. | `_check_kyuushu_kyuuhai()` in `RuleEngine`. | `rules/game-flow.md` lists only first turn, nine unique yaochuu, and no calls. | Keep. These are useful precision guards and should be documented in `rules/game-flow.md`. |
-| Engine chooses the highest-scoring winning interpretation for ambiguous hands. | `tests/test_rule_scoring_selection.py` covers an ambiguous hand selecting the higher-scoring result. | Not explicitly documented in `rules/scoring.md` or `rules/tile-and-hand.md`. | Keep. This is expected scoring behavior when a hand has multiple decompositions; document it in scoring rules. |
-| Closed-kan action can choose which quad to declare when multiple quads are present. | `tests/test_rule_kan.py::TestClosedKanSelection`. | `rules/tile-and-hand.md` says closed kan exists, but does not specify multiple-quad selection. | Keep. It is important API/UI behavior; document that explicit tile selection is supported when multiple closed kans are legal. |
 | Discard history keeps only the last four entries. | `_discard_history` is capped in discard handling and tested in `tests/test_rule_action_execution.py`. | Not in rule docs. | Keep as an internal implementation detail for Suufon Renda detection. It does not need rule documentation unless public debugging/state APIs expose it. |
 | `ScoreResult.total_points` may hold unrounded base points before `calculate_payments()`. | Kiriage Mangan tests construct `ScoreResult` directly and observe `1920` when Kiriage Mangan is disabled. | Rule docs describe final payment rounding, not internal `ScoreResult` lifecycle. | Keep internally, but clarify API docs or consider renaming if `ScoreResult` is treated as public API. |
 
 ## Stale or Conflicting Documentation
 
-| Item | Location | Issue | Recommendation |
-|------|----------|-------|----------------|
-| Four Returns | `README.md` and `DEVELOPMENT_PLAN.md` | README says Four Returns is disabled; DEVELOPMENT_PLAN says Four Returns is implemented. It is not listed in canonical `rules/yaku.md`, and no `Yaku` enum entry exists. | Treat this as stale non-canonical documentation. Remove the implemented claim from DEVELOPMENT_PLAN and keep Four Returns out of the canonical rule list unless a real local-yakuman feature is added. |
-| Nagashi Mangan condition | `rules/game-flow.md` and `DEVELOPMENT_PLAN.md` | Canonical rules say every discard is yaochuu and none are called. DEVELOPMENT_PLAN says it requires tenpai and all winning tiles to be terminals/honors. | Keep the canonical rule-doc version and update/remove the stale DEVELOPMENT_PLAN claim. |
-| Ruleset-dependent behavior | `rules/*.md` | Several rules are marked ruleset-dependent without listing current default, supported alternatives, and config flag names. | Add a ruleset-variant table that maps docs to `RulesetConfig` fields. |
-| Pao trigger details | `rules/scoring.md` | Payment split is documented, but final-call responsibility assignment is not. | Document Daisangen and Daisuushi responsibility trigger conditions. |
+No stale or conflicting rule documentation is currently known from this audit.
 
 ## Test Coverage Gaps to Add
 
@@ -78,4 +69,4 @@ more precise expectations as the related test files are refactored.
 
 ## Current Health Assessment
 
-The rules engine has broad implementation and test coverage for modern riichi mahjong. The biggest remaining risks are not whole missing rule categories; they are optional ruleset branches, exact settlement paths, and documentation drift around edge rules. The test suite is strong enough to protect the core engine, but several tests still verify outcomes indirectly through large private fixtures or broad smoke assertions.
+The rules engine has broad implementation and test coverage for modern riichi mahjong. The biggest remaining risks are not whole missing rule categories; they are optional ruleset branches, exact settlement paths, and fixture-heavy tests that still verify some outcomes indirectly through large private setup or broad smoke assertions.

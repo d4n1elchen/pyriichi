@@ -393,7 +393,7 @@ print(f"Pinfu requires ryanmen: {game_state.ruleset.pinfu_require_ryanmen}")  # 
 - Chanta: closed 2 han, open 1 han.
 - Junchan: closed 3 han, open 2 han.
 - Suuankou Tanki is double yakuman, 26 han.
-- Four Returns is disabled.
+- Four Returns is not part of the canonical ruleset.
 
 ### Complete Game Example
 

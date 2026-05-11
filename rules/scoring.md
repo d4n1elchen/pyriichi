@@ -49,6 +49,7 @@
 - Ura Dora: +1 han per tile after riichi.
 - Red Dora: +1 han per red tile.
 - Dora do not create yaku by themselves.
+- When a hand has multiple valid decompositions, score the highest-value winning interpretation.
 
 ## Limits
 
@@ -83,6 +84,8 @@
 
 - Nagashi Mangan is scored as mangan.
 - Pao applies responsibility payment for Daisangen and Daisuushi when the ruleset supports it.
+- Daisangen pao responsibility is assigned to the player who allows the winner's third dragon triplet or kan.
+- Daisuushi pao responsibility is assigned to the player who allows the winner's fourth wind triplet or kan.
 - Pao tsumo: the responsible player pays all.
 - Pao ron by responsible player: the responsible player pays all.
 - Pao ron by another player: the responsible player and discarder split the payment.

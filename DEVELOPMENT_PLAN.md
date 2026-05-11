@@ -127,7 +127,6 @@
 - [x] Chuuren Poutou and Pure Chuuren Poutou.
 - [x] Kokushi Musou and Kokushi Musou Juusanmen - completed, including thirteen-sided detection.
 - [x] Ryuuiisou, Chinroutou, and Tsuuiisou.
-- [x] Four Returns - implemented.
 
 #### 4.6 Combined Yaku Handling
 - [x] Multiple-yaku stacking logic (`check_all`).
@@ -164,7 +163,7 @@
 - Special yaku, 9: Toitoi, Sanshoku Doujun, Sanshoku Doukou, Ittsu, Sanankou, Sankantsu, Shousangen, Honroutou, Chiitoitsu.
 - Advanced yaku, 5: Chinitsu, 6 han; Honitsu, 3 han; Junchan, 3 han; Chanta, 2 han; Ryanpeikou, 3 han.
 - Yakuhai, 11: Haku, Hatsu, Chun, round_wind_east, round_wind_south, round_wind_west, round_wind_north, seat_wind_east, seat_wind_south, seat_wind_west, seat_wind_north.
-- Yakuman, 13+: Daisangen, Suuankou, Kokushi Musou, Kokushi Musou Juusanmen, Shousuushi, Daisuushi, Chinroutou, Tsuuiisou, Suukantsu, Ryuuiisou, Chuuren Poutou, Four Returns, Tenhou, Chihou, Renhou.
+- Yakuman, 13+: Daisangen, Suuankou, Kokushi Musou, Kokushi Musou Juusanmen, Shousuushi, Daisuushi, Chinroutou, Tsuuiisou, Suukantsu, Ryuuiisou, Chuuren Poutou, Tenhou, Chihou, Renhou.
 - Special win yaku, 3: Haitei, Houtei, Rinshan.
 
 ---
@@ -665,7 +664,7 @@ For new feature development, such as adding a new yaku:
 - [x] Suukan Sanra, requiring tracking the kan count - completed.
 - [x] Sancha Ron, requiring handling of multiple winners - completed.
 - [x] First-turn Kyuushu Kyuuhai detection, requiring first-turn tracking - completed.
-- [x] Nagashi Mangan detection, requiring tenpai and all winning tiles to be terminals/honors - completed.
+- [x] Nagashi Mangan detection, requiring every discard to be yaochuu and none of those discards to be called - completed.
 
 #### Scoring Improvements, Medium Priority
 - [x] Detailed wait fu calculation, requiring machi type detection: Ryanmen, Penchan, Kanchan, Tanki, Shabo - completed.

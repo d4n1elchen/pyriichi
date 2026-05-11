@@ -2,12 +2,6 @@
 
 This document tracks unresolved review findings that should be addressed in future fixes.
 
-## P2: Rule docs have stale or underspecified edge cases
-
-- Location: `rules/`, `README.md`, and `DEVELOPMENT_PLAN.md`
-- Impact: `DEVELOPMENT_PLAN.md` claims Four Returns is implemented even though it is not in the canonical yaku list or `Yaku` enum. It also describes Nagashi Mangan differently from the canonical rule docs. The rule docs also omit current details for Kyuushu Kyuuhai restrictions, higher-scoring decomposition selection, closed-kan tile selection, pao trigger conditions, and ruleset flag mappings.
-- Suggested fix: Align stale non-canonical docs with `rules/`, add a ruleset-variant table, and document implemented edge behavior that should be kept.
-
 ## P2: Win-context and furiten tests duplicate hand-built win contexts
 
 - Location: `tests/test_rule_win_context.py` and `tests/test_rule_furiten.py`

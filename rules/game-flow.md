@@ -26,7 +26,7 @@
 - Riichi requires a closed hand.
 - Riichi requires tenpai after the declaration discard.
 - The player must pay one Riichi Stick.
-- The declaration must meet the ruleset's remaining-wall requirement.
+- The declaration must meet the ruleset's remaining-wall requirement; the standard configuration requires at least four live wall tiles.
 - After riichi, the player must discard the drawn tile unless a legal closed kan is allowed.
 - After riichi, closed kan is legal only when it does not change machi tiles.
 
@@ -54,7 +54,7 @@
 - Exhaustive Draw: live wall is exhausted.
 - Nagashi Mangan: special draw score when all of a player's discards are yaochuu and none are called.
 - Suufon Renda: all first discards are the same wind.
-- Kyuushu Kyuuhai: a player has at least nine unique yaochuu tiles on their first turn and no calls have occurred.
+- Kyuushu Kyuuhai: a player has at least nine unique yaochuu tiles on their first turn, the declaring player has not discarded, and no player has called any meld including closed kan.
 - Suucha Riichi: all four players declare riichi.
 - Suukan Sanra: four kans are declared without a qualifying win.
 - Sancha Ron: three players ron the same discard when Triple Ron is disabled.

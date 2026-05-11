@@ -45,7 +45,7 @@
 - Chi: claim a sequence from kamicha.
 - Pon: claim a triplet.
 - Kan: claim or declare a kan.
-- Declare closed kan.
+- Declare closed kan. When multiple closed kans are legal, the declaring action may specify which tile to use.
 - Tenpai detection.
 - Machi tile listing.
 - Winning-hand detection.
