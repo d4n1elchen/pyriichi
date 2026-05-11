@@ -6,10 +6,56 @@ from pyriichi.hand import Hand
 from pyriichi.rules import ActionResult, GameAction
 from pyriichi.tiles import Suit, Tile
 from pyriichi.utils import parse_tiles
-from tests.helpers import RuleEngineTestMixin, no_response_hand
+from tests.helpers import RuleEngineTestMixin, no_response_hand, set_non_matching_scoring_dora
 
 
 class TestActionExecution(RuleEngineTestMixin):
+    def test_response_priority_ron_beats_pon(self):
+        """Test response priority: ron beats pon."""
+        self._init_game()
+        set_non_matching_scoring_dora(self.engine)
+        discard_tile = Tile(Suit.PINZU, 4)
+
+        self.engine._is_first_turn_after_deal = False
+        self.engine._hands[1] = Hand(parse_tiles("123456789m1234p"))
+        self.engine._hands[2] = Hand(parse_tiles("44p123456789m12s"))
+        self.engine._last_discarded_tile = discard_tile
+        self.engine._last_discarded_player = 0
+        self.engine._incoming_actions = {
+            1: (GameAction.RON, discard_tile, {}),
+            2: (GameAction.PON, discard_tile, {}),
+        }
+
+        result = self.engine._resolve_decisions()
+
+        assert result.success
+        assert result.winners == [1]
+        assert result.called_action is None
+        assert len(self.engine.get_hand(2).melds) == 0
+
+    def test_response_priority_pon_beats_chi(self):
+        """Test response priority: pon beats chi."""
+        self._init_game()
+        discard_tile = Tile(Suit.MANZU, 4)
+
+        self.engine._hands[0]._discards.append(discard_tile)
+        self.engine._hands[1] = Hand(parse_tiles("23m56789p456789s"))
+        self.engine._hands[2] = Hand(parse_tiles("44m56789p456789s"))
+        self.engine._last_discarded_tile = discard_tile
+        self.engine._last_discarded_player = 0
+        self.engine._incoming_actions = {
+            1: (GameAction.CHI, discard_tile, {}),
+            2: (GameAction.PON, discard_tile, {}),
+        }
+
+        result = self.engine._resolve_decisions()
+
+        assert result.called_action == GameAction.PON
+        assert result.called_tile == discard_tile
+        assert self.engine.get_current_player() == 2
+        assert len(self.engine.get_hand(2).melds) == 1
+        assert len(self.engine.get_hand(1).melds) == 0
+
     def test_pon_action_claims_last_discard(self):
         """Test pon action claims last discard and changes turn."""
         self._init_game()
