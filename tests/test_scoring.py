@@ -582,6 +582,59 @@ class TestScoreCalculator:
         )
         assert score_result.total_points == 8000
 
+    def test_score_result_double_yakuman(self):
+        """Test score result double yakuman."""
+        score_result = ScoreResult(
+            han=26,
+            fu=30,
+            base_points=0,
+            total_points=0,
+            payment_from=0,
+            payment_to=0,
+            is_yakuman=True,
+            yakuman_count=2,
+        )
+        assert score_result.total_points == 16000
+
+    def test_calculate_uses_double_yakuman_multiplier(self):
+        """Test calculate uses double yakuman yaku value."""
+        result = self.calculator.calculate(
+            hand=Hand([]),
+            winning_tile=Tile(Suit.MANZU, 1),
+            winning_combination=[],
+            yaku_results=[YakuResult(Yaku.SUUANKOU_TANKI, 26, True)],
+            dora_count=0,
+            game_state=self.game_state,
+            is_tsumo=False,
+            player_position=1,
+            payment_to=1,
+            payment_from=0,
+        )
+
+        assert result.yakuman_count == 2
+        assert result.total_points == 64000
+
+    def test_calculate_combines_single_and_double_yakuman(self):
+        """Test calculate combines yakuman multipliers."""
+        result = self.calculator.calculate(
+            hand=Hand([]),
+            winning_tile=Tile(Suit.MANZU, 1),
+            winning_combination=[],
+            yaku_results=[
+                YakuResult(Yaku.TENHOU, 13, True),
+                YakuResult(Yaku.KOKUSHI_MUSOU_JUUSANMEN, 26, True),
+            ],
+            dora_count=0,
+            game_state=self.game_state,
+            is_tsumo=True,
+            player_position=0,
+            payment_to=0,
+        )
+
+        assert result.yakuman_count == 3
+        assert result.non_dealer_payment == 48000
+        assert result.total_points == 144000
+
     def test_score_result_triple_mangan(self):
         """Test score result triple mangan."""
         score_result = ScoreResult(

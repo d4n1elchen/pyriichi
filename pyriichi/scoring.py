@@ -258,7 +258,9 @@ class ScoreCalculator:
         han = self.calculate_han(yaku_results, dora_count)
 
         is_yakuman = any(r.is_yakuman for r in yaku_results)
-        yakuman_count = sum(bool(r.is_yakuman) for r in yaku_results)
+        yakuman_count = sum(
+            max(1, result.han // 13) for result in yaku_results if result.is_yakuman
+        )
         resolved_payment_to = player_position if payment_to is None else payment_to
         resolved_payment_from = 0 if payment_from is None else payment_from
 

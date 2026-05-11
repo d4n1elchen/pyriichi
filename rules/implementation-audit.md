@@ -23,7 +23,7 @@ Audit method: manual traceability review from each rule document item to impleme
 | Abortive and exhaustive draws | Met | Met | Suufon Renda, Kyuushu Kyuuhai, Suucha Riichi, Suukan Sanra, Sancha Ron, Exhaustive Draw, dealer continuation variants, and Nagashi Mangan are covered. |
 | Yaku coverage | Partial | Partial | Listed yaku and yakuman mostly have tests. Junchan does not accept valid triplet/kan shapes, and several yaku tests use conditional assertions. |
 | Yaku combination filtering | Met | Partial | Major exclusions and allowed combinations are covered, but some tests use conditional assertions that can pass without verifying the yaku if decomposition fails. |
-| Fu and limit scoring | Partial | Partial | Set fu, pair fu, wait fu, Chiitoitsu, Pinfu tsumo/ron, limits, payment rounding, Kiriage Mangan, and basic payments are covered. Single double-yakuman yaku are scored as single yakuman, shabo is not represented as a distinct machi type, Haneman lacks a direct test, and many payment tests are broad smoke assertions. |
+| Fu and limit scoring | Met | Partial | Set fu, pair fu, wait fu, Chiitoitsu, Pinfu tsumo/ron, limits, payment rounding, Kiriage Mangan, double-yakuman multipliers, and basic payments are covered. Shabo is not represented as a distinct machi type, Haneman lacks a direct test, and many payment tests are broad smoke assertions. |
 | Dora and Ura Dora | Met | Met | Visible dora, kan dora count, Ura Dora after riichi, and Red Dora are covered in focused tests. |
 | Noten Bappu | Met | Met | One, two, three, all, and no tenpai payment splits are covered. |
 | Honba and Kyoutaku | Met | Met | Honba, riichi-stick settlement, double-ron split behavior, and kyoutaku carry into a later single win are covered. |
@@ -36,7 +36,6 @@ Audit method: manual traceability review from each rule document item to impleme
 
 | Requirement | Current State | Recommendation |
 |-------------|---------------|----------------|
-| Double yakuman scoring | `ScoreCalculator` counts each yakuman result as one yakuman, ignoring single yaku results worth 26 han. | Count yakuman multipliers from yaku result han values and add exact tests for Suuankou Tanki, Kokushi Musou Juusanmen, Pure Chuuren Poutou, and combined yakuman. |
 | Junchan shape | `check_junchan` only recognizes all-sequence shapes. | Accept triplets and kans whose tiles are terminal-only, while still rejecting honors and non-terminal sets. Add direct tests. |
 | Kan Dora timing | Kan count immediately affects dora indicator count for all kan types. | Model delayed reveal timing for daiminkan and added kan, or adjust docs if this simplified timing is intentional. |
 | Double wind pair variant | Docs call the behavior ruleset-dependent; implementation always awards both round_wind and seat_wind fu. | Add a config flag or revise docs to the implemented behavior. |
