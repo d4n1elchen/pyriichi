@@ -5,7 +5,7 @@ from pyriichi.hand import Hand
 from pyriichi.rules import GamePhase
 from pyriichi.tiles import Suit, Tile
 from pyriichi.utils import parse_tiles
-from tests.helpers import RuleEngineTestMixin
+from tests.helpers import RuleEngineTestMixin, set_non_matching_scoring_dora
 
 
 class TestRoundSettlement(RuleEngineTestMixin):
@@ -182,35 +182,25 @@ class TestRoundSettlement(RuleEngineTestMixin):
     def test_tobi_ron(self):
         """Test tobi (Bankruptcy): ron causes score < 0"""
         self._init_game()
-
-        # Enable tobi rule
         self.engine._game_state.ruleset.tobi_enabled = True
-
-        # Set Player 1 score very low (modify _scores directly)
         self.engine._game_state._scores[1] = 1000
-
-        # Player 0 tenpai, ron Player 1
-        # 123m 456m 789m 123p 4p (machi 4p)
         self.engine._hands[0] = Hand(parse_tiles("123456789m1234p"))
-
-        # Player 1 discards 4p
+        set_non_matching_scoring_dora(self.engine)
         winning_tile = Tile(Suit.PINZU, 4)
         self.engine._last_discarded_tile = winning_tile
         self.engine._last_discarded_player = 1
         self.engine._current_player = 0
+        self.engine._is_first_turn_after_deal = False
 
-        # Execute ron
-        # Simulate score update: Player 1 pays 2000 (assumed)
-        self.engine._game_state.update_score(1, -2000)
-        self.engine._game_state.update_score(0, 2000)
+        result = self.engine.check_win(0, winning_tile)
 
-        # Player 1 is now -1000
-        assert self.engine._game_state.scores[1] == -1000
+        assert result is not None
+        assert result.score_result.payment_from == 1
+        self.engine.apply_win_score(result)
+        assert self.engine._game_state.scores[1] < 0
 
-        # Call end_round (pass winner=0)
         self.engine.end_round([0])
 
-        # Verify game ended
         assert self.engine.get_phase() == GamePhase.ENDED
 
     def test_tobi_tsumo(self):

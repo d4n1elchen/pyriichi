@@ -34,7 +34,7 @@ Latest full-suite result: 342 tests passed. The latest coverage audit measured t
 | Noten Bappu | Met | Met | One, two, three, all, and no tenpai payment splits are covered. |
 | Honba and Kyoutaku | Met | Met | Honba, riichi-stick settlement, double-ron split behavior, and kyoutaku carry into a later single win are covered. |
 | Pao | Met | Met | Daisangen and Daisuushi tracking and pao settlement are covered. |
-| Round progression and game end | Met | Partial | Dealer win renchan, exhaustive-draw renchan/rotation, tobi, west extension, and Agari Yame are covered. Tobi tests mostly mutate scores directly rather than reaching bankruptcy through normal win settlement. |
+| Round progression and game end | Met | Met | Dealer win renchan, exhaustive-draw renchan/rotation, tobi through normal win settlement and ryuukyoku settlement, west extension, and Agari Yame are covered. |
 | Chombo | Met | Met | False ron, false tsumo, and invalid riichi chombo paths are covered. |
 | Ruleset configuration | Met | Met | Pinfu ryanmen, Ippatsu interruption, Renhou policy, disabled double-yakuman variants, Chanta disabled, Open Tanyao, Kiriage Mangan, and game-end variants are covered. |
 
@@ -72,11 +72,9 @@ The coverage run gives useful implementation-level signal, but it does not prove
 
 ## Test Coverage Gaps to Add
 
-Priority order for new tests:
-
-1. Tobi through normal win settlement, not only direct score mutation.
-2. Exact scoring table assertions where tests currently use broad `> 0`, `>= 30`, or similar smoke assertions.
-3. Replace conditional yaku assertions such as `if combinations:` with explicit setup assertions so decomposition regressions fail loudly.
+The focused rule-coverage gaps from this audit have been closed. Remaining
+test work is mostly fixture cleanup and replacing broad smoke assertions with
+more precise expectations as the related test files are refactored.
 
 ## Current Health Assessment
 
