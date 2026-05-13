@@ -18,7 +18,7 @@ Single mahjong tile.
 #### `TileSet`
 Tile set manager.
 - `shuffle()`: shuffle tiles.
-- `deal(num_players=4)`: deal starting hands.
+- `deal(num_players=4, dealer=0)`: deal starting hands; the dealer receives 14 tiles.
 - `draw()`: draw a tile.
 - `draw_rinshan()`: draw a rinshan tile.
 - `get_dora_indicators(count=None)`: get dora indicators.
@@ -62,7 +62,7 @@ Game state manager.
 - `scores`: player score list.
 - `set_round(wind, number)`: set the round.
 - `set_dealer(dealer)`: set the dealer.
-- `next_round(dealer_won=False)`: advance to the next round.
+- `next_round()`: advance to the next round.
 - `update_score(player, points)`: update a player's score.
 
 ### 4. Rule Engine
@@ -88,12 +88,23 @@ Action execution result.
 - `success`: whether the action succeeded.
 - `phase`: current game phase.
 - `drawn_tile`: drawn tile, for draw actions.
+- `is_last_tile`: whether the action reached the last live wall tile.
 - `discarded`: whether a discard was executed.
+- `riichi`: whether riichi was declared.
+- `kan`: whether kan was declared.
+- `closed_kan`: whether closed kan was declared.
+- `chankan`: whether chankan context was created.
+- `rinshan_tile`: rinshan tile drawn after kan.
+- `rinshan_win`: win result from rinshan, when present.
+- `meld`: meld created by chi, pon, or kan.
+- `called_action`: call action that was executed.
+- `called_tile`: tile claimed by a call.
 - `winners`: winning player list.
 - `win_results`: detailed win results.
 - `ryuukyoku`: ryuukyoku result, when the round ended in a draw.
 - `waiting_for`: players waiting for responses and their actions, `Dict[int, List[GameAction]]`.
-- `message`: optional result message.
+- `chombo`: whether the action produced a chombo result.
+- `chombo_player`: player responsible for chombo, when present.
 
 #### `GameAction` Enum
 Game action types.
@@ -105,7 +116,6 @@ Game action types.
 - `DECLARE_ANKAN`: declare closed kan.
 - `DECLARE_RIICHI`: declare riichi.
 - `DECLARE_KYUUSHU_KYUUHAI`: declare Kyuushu Kyuuhai.
-- `WIN`: win.
 - `TSUMO`: tsumo.
 - `RON`: ron.
 - `PASS`: pass on a call or ron opportunity.
@@ -116,19 +126,29 @@ Game phases.
 - `DEALING`: dealing.
 - `PLAYING`: playing.
 - `WINNING`: winning.
-- `DRAW`: drawn round.
+- `RYUUKYOKU`: drawn round.
 - `ENDED`: ended.
+
+#### `RyuukyokuType` Enum
+Draw result types.
+- `EXHAUSTIVE_DRAW`: live wall exhausted.
+- `KYUUSHU_KYUUHAI`: Kyuushu Kyuuhai.
+- `SUUFON_RENDA`: Suufon Renda.
+- `SUUCHA_RIICHI`: Suucha Riichi.
+- `SUUKAN_SANRA`: Suukan Sanra.
+- `SANCHA_RON`: Sancha Ron.
 
 ### 5. Yaku Detection
 
 #### `YakuChecker`
 Yaku detector.
-- `check_all(hand, winning_tile, winning_combination, game_state, is_tsumo=False, is_ippatsu=False, is_first_turn=False, is_last_tile=False, player_position=0, is_rinshan=False)`: check all yaku.
+- `check_all(hand, winning_tile, winning_combination, game_state, is_tsumo=False, is_ippatsu=False, is_first_turn=False, is_last_tile=False, player_position=0, is_rinshan=False, is_chankan=False)`: check all yaku.
 - `check_riichi(hand, game_state, is_ippatsu=False)`: check Riichi and Ippatsu.
-- `check_tanyao(hand, winning_combination)`: check Tanyao.
-- `check_pinfu(hand, winning_combination)`: check Pinfu.
+- `check_tanyao(hand, winning_combination, game_state=None)`: check Tanyao.
+- `check_pinfu(hand, winning_combination, game_state=None, winning_tile=None, player_position=0)`: check Pinfu.
 - `check_chiitoitsu(hand)`: check Chiitoitsu.
-- `check_chanta(hand, winning_combination)`: check Chanta.
+- `check_chanta(hand, winning_combination, game_state=None)`: check Chanta.
+- `check_junchan(hand, winning_combination, game_state=None)`: check Junchan.
 - Other yaku check methods.
 
 #### `YakuResult`
@@ -141,7 +161,7 @@ Yaku detection result.
 
 #### `ScoreCalculator`
 Score calculator.
-- `calculate(hand, winning_tile, winning_combination, yaku_results, dora_count, game_state, is_tsumo, player_position=0)`: calculate score.
+- `calculate(hand, winning_tile, winning_combination, yaku_results, dora_count, game_state, is_tsumo, player_position=0, pao_player=None, payment_to=None, payment_from=None)`: calculate score.
 - `calculate_fu(hand, winning_tile, winning_combination, yaku_results, game_state, is_tsumo, player_position=0)`: calculate fu.
 - `calculate_han(yaku_results, dora_count)`: calculate han.
 
@@ -183,9 +203,12 @@ Defensive AI.
 
 #### `PublicInfo`
 Public game information.
+- `turn_number`: current turn number.
+- `dora_indicators`: visible dora indicators.
 - `discards`: discards for each player.
 - `melds`: melds for each player.
 - `riichi_players`: list of players who declared riichi.
+- `scores`: current player scores.
 
 ## Utility Functions
 
@@ -211,7 +234,7 @@ if is_winning_hand(tiles, winning_tile):
 ## Usage Example
 
 ```python
-from pyriichi.rules import RuleEngine, GameAction, GamePhase
+from pyriichi.rules import RuleEngine, GamePhase
 from pyriichi.player import RandomPlayer
 
 # Initialize the game and players.
@@ -224,7 +247,10 @@ engine.deal()
 
 # Main game loop.
 while engine.get_phase() == GamePhase.PLAYING:
-    current_player_idx = engine.get_current_player()
+    if not engine.waiting_for_actions:
+        break
+
+    current_player_idx = next(iter(engine.waiting_for_actions))
     player = players[current_player_idx]
 
     # Get available actions.
@@ -241,7 +267,9 @@ while engine.get_phase() == GamePhase.PLAYING:
     )
 
     # Execute the action.
-    engine.execute_action(current_player_idx, action, tile)
+    result = engine.execute_action(current_player_idx, action, tile)
+    if result.winners or result.ryuukyoku:
+        break
 ```
 
 ## Detailed Documentation

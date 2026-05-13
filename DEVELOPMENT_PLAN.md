@@ -144,7 +144,7 @@
 - ✅ Chinitsu and Honitsu mutual exclusion is implemented.
 - ✅ Junchan and Chanta mutual exclusion is implemented.
 - ✅ Pinfu and Toitoi conflict detection is implemented.
-- ✅ Pinfu and Iipeikou/Ryanpeikou conflict detection is implemented.
+- ✅ Pinfu remains combinable with Iipeikou and Ryanpeikou when the hand otherwise qualifies.
 
 **Implemented Conflict Tests**:
 - [x] Pinfu and Yakuhai conflict detection.
@@ -156,7 +156,7 @@
 
 **Deliverables**:
 - [x] `yaku.py` - yaku detection system.
-- [x] `test_yaku.py` - unit tests, 29 test cases covering 45+ yaku and conflict detection.
+- [x] `test_yaku.py` - unit tests covering 45+ yaku, yaku filtering, and ruleset variants.
 
 **Completed Yaku List, 45+ Total**:
 - Basic yaku, 6: Riichi, Tanyao, Pinfu, Iipeikou, Ippatsu, Menzen Tsumo.
@@ -175,7 +175,7 @@
 - [x] Winning-method fu calculation: closed ron +10, closed tsumo +2, open tsumo +2.
 - [x] Set fu calculation for triplets and kans.
 - [x] Pair fu calculation for yakuhai pairs, +2.
-- [ ] Wait fu calculation - framework implemented; machi type detection needs improvement.
+- [x] Wait fu calculation, including ryanmen, penchan, kanchan, tanki, and shabo detection.
 - [x] Fu rounding logic, rounded up to 10.
 - [x] Pinfu special handling, fixed 20/22 fu.
 
@@ -202,17 +202,17 @@
 
 **Deliverables**:
 - [x] `scoring.py` - scoring system.
-- [x] `test_scoring.py` - unit tests, 6 test cases.
+- [x] `test_scoring.py` - unit tests covering fu, han, limit hands, payments, pao, and yakuman multipliers.
 
 ---
 
-### Phase 6: Game Rule Engine (✅ Mostly Completed, Core Features Implemented)
+### Phase 6: Game Rule Engine (✅ Completed, Core Features Implemented)
 
 #### 6.1 Basic Game Flow
 - [x] Game initialization (`start_game`).
 - [x] Deal flow (`deal`).
 - [x] Turn management: draw and discard.
-- [x] Call handling framework: chi, pon, and kan. Hand layer implemented; rule engine layer needs improvement.
+- [x] Call handling for chi, pon, open kan, closed kan, call priority, and post-call discard flow.
 - [x] Win flow (`check_win`).
 - [x] Ryuukyoku flow (`check_ryuukyoku`, `handle_ryuukyoku`).
 
@@ -253,7 +253,7 @@
 
 ---
 
-### Phase 7: Testing and Optimization (✅ Mostly Completed)
+### Phase 7: Testing and Optimization (✅ Completed for Current Scope)
 
 #### 7.1 Test Improvements
 - [x] Unit test foundation expanded.
@@ -266,10 +266,10 @@
   - [x] `test_utils.py`, multiple tests.
   - [x] `test_integration.py`, integration tests.
 - [x] Unit test coverage workflow exists through pytest-cov.
-- [x] `rules.py` coverage improvement work completed; regenerate current coverage after the full suite is restored.
+- [x] `rules.py` coverage improvement work completed.
 - [x] Integration tests - completed; `test_integration.py` includes full game flow, special rules, ryuukyoku scenarios, and related tests.
 - [x] Edge-case tests - completed for winning hands, tenpai, ryuukyoku, special rules, and related cases.
-- [x] Performance tests - completed through the `benchmark_performance.py` benchmark script.
+- [ ] Dedicated performance benchmark script - optional, pending.
 
 #### 7.2 Code Optimization
 - [x] Code structure optimization through modular design.
@@ -395,7 +395,7 @@ This project follows a strict test-driven development approach, using the red-gr
 5. **Performance benchmarks**, low priority.
    - Critical algorithms need performance tests.
    - Establish baselines to prevent regressions.
-   - Location: `benchmark_performance.py`.
+   - A dedicated benchmark script is optional and not currently part of the source tree.
 
 #### Test Coverage Requirements
 
@@ -545,10 +545,9 @@ For new feature development, such as adding a new yaku:
   - Smart candidate selection checks only tiles related to the hand: same, adjacent, or sequence-related tiles.
   - Reduces checks from 34 tile types to an average of 10-20 candidate tile types.
   - Average standard tenpai detection time is about 1.3 ms.
-- ✅ **Performance testing tool**:
-  - Created the `benchmark_performance.py` benchmark script.
-  - Includes benchmarks for winning-hand detection, tenpai detection, machi tile listing, and related operations.
-  - Can be used to continuously monitor performance changes.
+- ⏳ **Performance testing tool**:
+  - A dedicated benchmark script is optional and pending.
+  - Current performance claims should be refreshed before publishing release documentation.
 
 ### Test Improvements
 - ✅ **Integration tests completed**: added `test_integration.py`, including full game flow, special rules, ryuukyoku scenarios, and related tests.
@@ -559,8 +558,8 @@ For new feature development, such as adding a new yaku:
   - Multi-module integration tests for hand, yaku, and score calculation.
   - Realistic scenario tests for multi-round game flow.
   - Error-handling tests.
-- ✅ **Test count increased**: the current suite collects 328 tests.
-- ✅ **Coverage workflow maintained**: coverage should be regenerated after the full suite is restored.
+- ✅ **Test count increased**: the current suite collects 364 tests.
+- ✅ **Coverage workflow maintained**: coverage can be regenerated with pytest-cov when needed.
 
 ### Documentation Improvements, 2025-11-21
 - ✅ **Terminology standardization**:
@@ -650,7 +649,7 @@ For new feature development, such as adding a new yaku:
 - [x] Iipeikou and Ryanpeikou mutual exclusion - completed.
 - [x] Chinitsu and Honitsu mutual exclusion - completed.
 - [x] Junchan and Chanta mutual exclusion - completed.
-- [x] Complete yaku combination-rule tests - completed.
+- [x] Complete yaku combination-rule tests - completed, including Pinfu with Iipeikou/Ryanpeikou as valid combinations.
 
 #### Special Rules, Medium Priority
 - [x] Ippatsu rule, requiring turn-count tracking after riichi - completed.
@@ -696,11 +695,11 @@ For new feature development, such as adding a new yaku:
 - [ ] CI/CD configuration, optional - pending.
 
 ### 📊 Test Statistics
-- Current collected test cases: 328.
-- Known failures remain in the rule and integration tests; focused regression tests should be run for each fix until the full suite is restored.
+- Current collected test cases: 364.
+- The full test suite passed in the latest documented run.
 - Test files include `test_hand`, `test_yaku`, `test_scoring`, `test_rule_*`, `test_game_state`, `test_tiles`, `test_utils`, `test_integration`, and `test_player`.
 - Core modules: 8, including `tiles`, `hand`, `game_state`, `yaku`, `scoring`, `rules`, `utils`, `__init__`.
-- Coverage should be regenerated with pytest-cov when the full suite is green.
+- Coverage can be regenerated with pytest-cov when needed.
 
 ### 🔍 Checklist, No Missing Items
 - ✅ Tile system: fully implemented, including dora system.
@@ -714,7 +713,7 @@ For new feature development, such as adding a new yaku:
   - ✅ Supports standard string format, such as `1m`, `2p`, `3s`, `1z`.
   - ✅ Supports standard Red Dora format: `r5m`, `r5p`, `r5s`.
   - ✅ Input and output formats are unified and support round-trip conversion.
-- ✅ Test suite: 328 collected tests, including unit and integration tests, covering core features, special rules, and conflict detection.
+- ✅ Test suite: 364 collected tests, including unit and integration tests, covering core features, special rules, and conflict detection.
 - ✅ Documentation: README, API summary, glossary, development plan, project requirements, and rule requirements are maintained.
   - ✅ README includes a complete string-notation explanation.
   - ✅ Example code shows complete flows for winning-hand detection, yaku checking, and score calculation.

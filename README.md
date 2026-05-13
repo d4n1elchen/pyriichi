@@ -45,7 +45,7 @@ pip install -e .
 ### Basic Usage
 
 ```python
-from pyriichi.rules import RuleEngine, GameAction, GamePhase
+from pyriichi.rules import RuleEngine, GamePhase
 from pyriichi.player import RandomPlayer
 
 # Initialize the game and players.
@@ -58,22 +58,15 @@ engine.deal()
 
 print(f"Game started. Current phase: {engine.get_phase()}")
 
-# Main game loop.
+# The engine exposes the current legal actions through waiting_for_actions.
+# After deal, the dealer is waiting to discard or declare another legal action.
 while engine.get_phase() == GamePhase.PLAYING:
-    current_player_idx = engine.get_current_player()
-    player = players[current_player_idx]
-
-    # Get available actions.
-    actions = engine.get_available_actions(current_player_idx)
-    if not actions:
+    if not engine.waiting_for_actions:
         break
 
-    # Check whether there are pending interrupt actions such as calls or ron.
-    if engine.waiting_for_actions:
-        for pid, p_actions in engine.waiting_for_actions.items():
-            # Handle interrupt logic here.
-            pass
-        continue
+    current_player_idx = next(iter(engine.waiting_for_actions))
+    player = players[current_player_idx]
+    actions = engine.get_available_actions(current_player_idx)
 
     # Let the AI decide an action.
     action, tile = player.decide_action(
@@ -90,7 +83,11 @@ while engine.get_phase() == GamePhase.PLAYING:
 
     # Check the result.
     if result.winners:
-        print("Win!")
+        print(f"Win! Winners: {result.winners}")
+        break
+
+    if result.ryuukyoku:
+        print(f"Ryuukyoku: {result.ryuukyoku.ryuukyoku_type.en}")
         break
 ```
 
@@ -164,23 +161,25 @@ engine.start_game()
 engine.start_round()
 engine.deal()
 
-# Draw.
+# After deal, the dealer is the current player and already has 14 tiles.
 current_player = engine.get_current_player()
-result = engine.execute_action(current_player, GameAction.DRAW)
-if result.drawn_tile is not None:
-    print(f"Drew: {result.drawn_tile}")
+print(f"Current player: {current_player}")
 
-# Discard.
+# Discard. If nobody calls the discard, the engine advances the turn and draws
+# for the next player automatically.
 hand = engine.get_hand(current_player)
 if hand.tiles:
     discard_tile = hand.tiles[0]
-    engine.execute_action(current_player, GameAction.DISCARD, tile=discard_tile)
+    result = engine.execute_action(current_player, GameAction.DISCARD, tile=discard_tile)
+    if result.drawn_tile is not None:
+        print(f"Next player drew: {result.drawn_tile}")
 
-# Check win.
-winning_result = engine.check_win(current_player, winning_tile)
-if winning_result:
-    print(f"Win! Han: {winning_result.han}, fu: {winning_result.fu}")
-    print(f"Score: {winning_result.points}")
+# Check the current player's legal actions, including tsumo if available.
+next_player = engine.get_current_player()
+actions = engine.get_available_actions(next_player)
+if GameAction.TSUMO in actions:
+    result = engine.execute_action(next_player, GameAction.TSUMO)
+    print(f"Win! Winners: {result.winners}")
 ```
 
 ### Hand Operations
@@ -400,52 +399,50 @@ print(f"Pinfu requires ryanmen: {game_state.ruleset.pinfu_require_ryanmen}")  # 
 ### Complete Game Example
 
 ```python
-from pyriichi import RuleEngine, GameAction, GamePhase
+from pyriichi import RuleEngine, GamePhase
+from pyriichi.player import SimplePlayer
 
 # Initialize the game.
 engine = RuleEngine(num_players=4)
+players = [SimplePlayer(f"Player {i}") for i in range(4)]
 engine.start_game()
 engine.start_round()
 engine.deal()
 
-# Main game loop.
-max_turns = 100  # Prevent infinite loops.
-turn_count = 0
+# Main game loop. The engine draws automatically after a discard that is not
+# interrupted, then places the next player in waiting_for_actions.
+max_steps = 100
 
-while engine.get_phase() == GamePhase.PLAYING and turn_count < max_turns:
-    turn_count += 1
-    current_player = engine.get_current_player()
-
-    # Draw.
-    result = engine.execute_action(current_player, GameAction.DRAW)
-    if result.draw:
-        # Ryuukyoku.
-        print("Ryuukyoku")
+for _ in range(max_steps):
+    if engine.get_phase() != GamePhase.PLAYING:
         break
 
-    hand = engine.get_hand(current_player)
-    drawn_tile = result.drawn_tile
+    if not engine.waiting_for_actions:
+        break
 
-    # Check win by tsumo.
-    if drawn_tile:
-        win_result = engine.check_win(current_player, drawn_tile)
-        if win_result:
-            print(f"Player {current_player} wins by tsumo!")
-            print(f"Han: {win_result.han}, fu: {win_result.fu}")
-            print(f"Score: {win_result.points}")
-            break
+    player_index = next(iter(engine.waiting_for_actions))
+    actions = engine.get_available_actions(player_index)
+    action, tile = players[player_index].decide_action(
+        engine.game_state,
+        player_index,
+        engine.get_hand(player_index),
+        actions,
+    )
 
-    # Check whether riichi can be declared.
-    if GameAction.DECLARE_RIICHI in engine.get_available_actions(current_player):
-        # Add player riichi decision logic here.
-        # For example: if hand.is_tenpai() and player_decision():
-        pass
+    result = engine.execute_action(player_index, action, tile)
 
-    # Discard, using a simple strategy: discard the first tile.
-    if hand.tiles:
-        discard_tile = hand.tiles[0]
-        engine.execute_action(current_player, GameAction.DISCARD, tile=discard_tile)
-        print(f"Player {current_player} discards: {discard_tile}")
+    if result.winners:
+        for winner, win_result in result.win_results.items():
+            print(
+                f"Player {winner} wins: "
+                f"{win_result.han} han, {win_result.fu} fu, "
+                f"{win_result.points} points"
+            )
+        break
+
+    if result.ryuukyoku:
+        print(f"Ryuukyoku: {result.ryuukyoku.ryuukyoku_type.en}")
+        break
 
 print("Game ended")
 ```
