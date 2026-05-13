@@ -529,6 +529,13 @@ p2 = DefensivePlayer("Defender")
 See the `examples/` directory for more complete examples:
 
 - `basic_usage.py` - Basic usage example.
+- `demo_ui.py` - Terminal game UI with language, difficulty, and ruleset configuration.
+
+Run the terminal UI from a source checkout:
+
+```bash
+python examples/demo_ui.py
+```
 
 ## System Requirements
 

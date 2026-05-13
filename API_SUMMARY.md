@@ -275,3 +275,8 @@ while engine.get_phase() == GamePhase.PLAYING:
 ## Detailed Documentation
 
 For rule requirements, see `rules/README.md`. For canonical terminology, see `GLOSSARY.md`.
+
+## Examples
+
+- `examples/basic_usage.py`: basic game-flow example.
+- `examples/demo_ui.py`: terminal game UI with language, difficulty, and ruleset configuration.
