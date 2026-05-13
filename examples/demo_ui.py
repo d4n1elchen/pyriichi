@@ -185,7 +185,10 @@ class Tui:
             pass
 
     def run(self) -> None:
-        curses.curs_set(0)
+        try:
+            curses.curs_set(0)
+        except curses.error:
+            pass
         self.stdscr.keypad(True)
         curses.use_default_colors()
         self.main_menu()
