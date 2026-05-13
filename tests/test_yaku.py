@@ -7,7 +7,7 @@ from pyriichi.hand import CombinationType, Hand, Meld, MeldType, make_combinatio
 from pyriichi.rules_config import RenhouPolicy
 from pyriichi.tiles import Suit, Tile
 from pyriichi.utils import parse_tiles
-from pyriichi.yaku import Yaku, YakuChecker, YakuResult
+from pyriichi.yaku import Machi, Yaku, YakuChecker, YakuResult
 
 
 class TestYakuChecker:
@@ -123,6 +123,23 @@ class TestYakuChecker:
             assert result.yaku == Yaku.IIPEIKOU
             assert result.han == 1
 
+    def test_iipeikou_direct_combination(self):
+        """Test iipeikou with a direct combination."""
+        hand = Hand([])
+        winning_combination = [
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 4),
+            make_combination(CombinationType.SEQUENCE, Suit.SOUZU, 7),
+            make_combination(CombinationType.PAIR, Suit.HONORS, 1),
+        ]
+
+        result = self.checker.check_iipeikou(hand, winning_combination)
+
+        assert result is not None
+        assert result.yaku == Yaku.IIPEIKOU
+        assert result.han == 1
+
     def test_pinfu_can_combine_with_iipeikou(self):
         """Test pinfu can combine with iipeikou."""
         tiles = parse_tiles("123m123m456p34s22z")
@@ -232,6 +249,23 @@ class TestYakuChecker:
             assert result is not None
             assert result.yaku == Yaku.SANSHOKU_DOUJUN
             assert result.han == 2
+
+    def test_sanshoku_doujun_direct_combination(self):
+        """Test sanshoku doujun with a direct combination."""
+        hand = Hand([])
+        winning_combination = [
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 3),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 3),
+            make_combination(CombinationType.SEQUENCE, Suit.SOUZU, 3),
+            make_combination(CombinationType.TRIPLET, Suit.HONORS, 1),
+            make_combination(CombinationType.PAIR, Suit.HONORS, 2),
+        ]
+
+        result = self.checker.check_sanshoku_doujun(hand, winning_combination)
+
+        assert result is not None
+        assert result.yaku == Yaku.SANSHOKU_DOUJUN
+        assert result.han == 2
 
     def test_open_sanshoku_doujun_han(self):
         """Test open sanshoku doujun han."""
@@ -533,6 +567,25 @@ class TestYakuChecker:
         assert result.yaku == Yaku.JUNCHAN
         assert result.han == 2
 
+    def test_junchan_custom_han_values(self):
+        """Test junchan custom han values."""
+        hand = self._open_hand()
+        self.game_state.ruleset.junchan_open_han = 4
+        winning_combination = [
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 7),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.SOUZU, 7),
+            make_combination(CombinationType.PAIR, Suit.MANZU, 1),
+        ]
+
+        result = self.checker.check_junchan(
+            hand, winning_combination, self.game_state
+        )
+
+        assert result is not None
+        assert result.han == 4
+
     def test_junchan_allows_terminal_triplets(self):
         """Test junchan allows terminal triplets."""
         hand = Hand([])
@@ -620,6 +673,25 @@ class TestYakuChecker:
         assert result is not None
         assert result.yaku == Yaku.CHANTA
         assert result.han == 1
+
+    def test_chanta_custom_han_values(self):
+        """Test chanta custom han values."""
+        hand = Hand([])
+        self.game_state.ruleset.chanta_closed_han = 5
+        winning_combination = [
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 7),
+            make_combination(CombinationType.SEQUENCE, Suit.PINZU, 1),
+            make_combination(CombinationType.TRIPLET, Suit.HONORS, 1),
+            make_combination(CombinationType.PAIR, Suit.HONORS, 2),
+        ]
+
+        result = self.checker.check_chanta(
+            hand, winning_combination, self.game_state
+        )
+
+        assert result is not None
+        assert result.han == 5
 
     def test_ryanpeikou(self):
         """Test ryanpeikou."""
@@ -1330,6 +1402,21 @@ class TestYakuChecker:
         assert result is not None
         assert result.yaku == Yaku.PINFU
         assert result.han == 1
+
+    def test_yaku_machi_shabo(self):
+        """Test yaku machi shabo."""
+        winning_tile = Tile(Suit.MANZU, 2)
+        winning_combination = [
+            make_combination(CombinationType.TRIPLET, Suit.MANZU, 2),
+            make_combination(CombinationType.TRIPLET, Suit.PINZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.SOUZU, 4),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 6),
+            make_combination(CombinationType.PAIR, Suit.HONORS, 1),
+        ]
+
+        machi = self.checker._determine_machi(winning_tile, winning_combination)
+
+        assert machi == Machi.SHABO
 
     def test_tenhou_direct(self):
         """Test tenhou direct."""

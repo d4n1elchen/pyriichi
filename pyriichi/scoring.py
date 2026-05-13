@@ -399,6 +399,12 @@ class ScoreCalculator:
             return Machi.TANKI
 
         for combination in winning_combination:
+            if combination.type != CombinationType.TRIPLET:
+                continue
+            if any(tile == winning_tile for tile in combination.tiles):
+                return Machi.SHABO
+
+        for combination in winning_combination:
             if combination.type != CombinationType.SEQUENCE:
                 continue
 

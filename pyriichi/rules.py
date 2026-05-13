@@ -508,10 +508,15 @@ class RuleEngine:
         if player == self._last_discarded_player:
             return False  # Cannot ron on own discard
 
-        winners = self.check_multiple_ron(
-            self._last_discarded_tile, self._last_discarded_player
+        return (
+            self.check_win(
+                player,
+                self._last_discarded_tile,
+                is_chankan=False,
+                is_rinshan=False,
+            )
+            is not None
         )
-        return player in winners
 
     def execute_action(
         self, player: int, action: GameAction, tile: Optional[Tile] = None, **kwargs
@@ -620,8 +625,8 @@ class RuleEngine:
             valid_ron_players = [p for p in ron_players if p in real_winners]
 
             if not valid_ron_players:
-                # Should not happen unless logic error
-                return ActionResult(success=False)
+                _, tile, kwargs = actions[ron_players[0]]
+                return self._handle_ron(ron_players[0], tile, **kwargs)
 
             # Execute ron
             # Can we call _handle_ron for the first winner and manually add others?

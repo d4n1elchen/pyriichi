@@ -649,6 +649,20 @@ class TestScoreCalculator:
         )
         assert score_result.total_points == 6000
 
+    def test_score_result_haneman(self):
+        """Test score result haneman."""
+        score_result = ScoreResult(
+            han=6,
+            fu=30,
+            base_points=0,
+            total_points=0,
+            payment_from=0,
+            payment_to=0,
+            is_yakuman=False,
+            yakuman_count=0,
+        )
+        assert score_result.total_points == 3000
+
     def test_score_result_double_mangan(self):
         """Test score result double mangan."""
         score_result = ScoreResult(
@@ -934,19 +948,16 @@ class TestScoreCalculator:
 
     def test_machi_shabo(self):
         """Test machi shabo."""
-        winning_tile = Tile(Suit.MANZU, 1)
+        winning_tile = Tile(Suit.MANZU, 2)
         combo = [
-            make_combination(CombinationType.TRIPLET, Suit.MANZU, 3),
-            make_combination(CombinationType.TRIPLET, Suit.MANZU, 5),
+            make_combination(CombinationType.TRIPLET, Suit.MANZU, 2),
             make_combination(CombinationType.TRIPLET, Suit.PINZU, 1),
-            make_combination(CombinationType.PAIR, Suit.MANZU, 1),
+            make_combination(CombinationType.SEQUENCE, Suit.SOUZU, 4),
+            make_combination(CombinationType.SEQUENCE, Suit.MANZU, 6),
+            make_combination(CombinationType.PAIR, Suit.HONORS, 1),
         ]
         machi = self.calculator._determine_machi(winning_tile, combo)
-        assert machi in {
-            Machi.TANKI,
-            Machi.RYANMEN,
-            Machi.SHABO,
-        }
+        assert machi == Machi.SHABO
 
     def test_fu_machi_shabo_no_fu(self):
         """Test fu machi shabo no fu."""

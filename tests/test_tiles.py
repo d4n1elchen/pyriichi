@@ -1,5 +1,7 @@
 """Test module."""
 
+from collections import Counter
+
 import pytest
 from pyriichi.tiles import Tile, Suit, TileSet, create_tile
 
@@ -116,6 +118,25 @@ class TestTileSet:
         """Test tileset creation."""
         tile_set = TileSet()
         assert tile_set is not None
+
+    def test_tileset_standard_composition(self):
+        """Test standard tile set composition."""
+        tile_set = TileSet()
+        tiles = tile_set._tiles
+
+        assert len(tiles) == 136
+
+        counts = Counter((tile.suit, tile.rank) for tile in tiles)
+        for suit in [Suit.MANZU, Suit.PINZU, Suit.SOUZU]:
+            for rank in range(1, 10):
+                assert counts[(suit, rank)] == 4
+            assert sum(
+                tile.suit == suit and tile.rank == 5 and tile.is_red_dora
+                for tile in tiles
+            ) == 1
+
+        for rank in range(1, 8):
+            assert counts[(Suit.HONORS, rank)] == 4
 
     def test_tileset_shuffle(self):
         """Test tileset shuffle."""

@@ -113,6 +113,35 @@ class TestRuleEngine(RuleEngineTestMixin):
         assert result.score_result.payment_to == 1
         assert result.score_result.payment_from == 0
 
+    def test_check_win_rejects_valid_shape_without_yaku(self):
+        """Test check_win rejects a valid hand shape without yaku."""
+        self._init_game()
+        winning_tile = Tile(Suit.MANZU, 3)
+        self.engine._hands[1] = Hand(parse_tiles("12m456m789p234s55p"))
+        self.engine._last_discarded_tile = winning_tile
+        self.engine._last_discarded_player = 0
+        self.engine._is_first_turn_after_deal = False
+        set_non_matching_scoring_dora(self.engine)
+
+        result = self.engine.check_win(1, winning_tile)
+
+        assert result is None
+
+    def test_check_win_rejects_dora_only_without_yaku(self):
+        """Test dora does not create yaku by itself."""
+        self._init_game()
+        winning_tile = Tile(Suit.MANZU, 3)
+        self.engine._hands[1] = Hand(parse_tiles("12m456m789p234s55p"))
+        self.engine._last_discarded_tile = winning_tile
+        self.engine._last_discarded_player = 0
+        self.engine._is_first_turn_after_deal = False
+        self.engine._tile_set._dora_indicators = [Tile(Suit.MANZU, 2)]
+        self.engine._tile_set._ura_dora_indicators = [Tile(Suit.HONORS, 1)]
+
+        result = self.engine.check_win(1, winning_tile)
+
+        assert result is None
+
     def test_hand_total_tile_count_includes_melds(self):
         """Total tile count should include melded tiles."""
         # 11m 123m 456p 77s 8s 99s

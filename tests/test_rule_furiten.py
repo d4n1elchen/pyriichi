@@ -24,6 +24,19 @@ class TestFuriten(RuleEngineTestMixin):
         result = self.engine.check_win(0, discard_tile)
         assert result is None or result.win is False
 
+    def test_furiten_ron_declaration_applies_chombo(self):
+        """Test declaring ron while furiten applies chombo."""
+        self._init_game()
+        discard_tile = Tile(Suit.PINZU, 3)
+        hand = set_ron_context(self.engine, 0, 1, "123456789m1233p", discard_tile)
+        hand._discards.append(discard_tile)
+        self.engine._waiting_for_actions = {0: [GameAction.RON, GameAction.PASS]}
+
+        result = self.engine.execute_action(0, GameAction.RON)
+
+        assert result.chombo is True
+        assert result.chombo_player == 0
+
     def test_furiten_discards_can_tsumo(self):
         """Test furiten (Discards): Can tsumo even if furiten"""
         self._init_game()

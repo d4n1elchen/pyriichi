@@ -1,7 +1,7 @@
 """Multiple ron decision tests for RuleEngine."""
 
 from pyriichi.hand import Hand
-from pyriichi.rules import GameAction
+from pyriichi.rules import GameAction, RyuukyokuType
 from pyriichi.tiles import Suit, Tile
 from pyriichi.utils import parse_tiles
 from tests.helpers import (
@@ -257,6 +257,25 @@ class TestMultipleRon(RuleEngineTestMixin):
         assert score_deltas[2] == score_deltas[1]
         assert score_deltas[3] == score_deltas[1]
         assert score_deltas[0] == -sum(score_deltas[1:])
+
+    def test_triple_ron_disabled_action_flow_ends_sancha_ron(self):
+        """Test natural triple ron action flow ends in sancha_ron."""
+        self._init_game()
+        self.engine._game_state.ruleset.allow_triple_ron = False
+
+        discard_tile = Tile(Suit.PINZU, 5)
+        _set_ron_ready_hands(self.engine, [1, 2, 3], "233445678m2345p")
+        _discard_tile_for_ron(self.engine, 0, discard_tile)
+
+        for player in [1, 2, 3]:
+            assert GameAction.RON in self.engine.get_available_actions(player)
+
+        self.engine.execute_action(1, GameAction.RON, tile=discard_tile)
+        self.engine.execute_action(2, GameAction.RON, tile=discard_tile)
+        result = self.engine.execute_action(3, GameAction.RON, tile=discard_tile)
+
+        assert result.ryuukyoku is not None
+        assert result.ryuukyoku.ryuukyoku_type == RyuukyokuType.SANCHA_RON
 
     def test_double_ron_with_furiten(self):
         """Test double_ron with furiten: One player furiten, only other player wins."""
