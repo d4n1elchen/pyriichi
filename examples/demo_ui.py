@@ -11,8 +11,7 @@ from pyriichi.hand import Hand, Meld
 from pyriichi.player import DefensivePlayer, PublicInfo, RandomPlayer, SimplePlayer
 from pyriichi.rules import ActionResult, GameAction, GamePhase, RuleEngine
 from pyriichi.rules_config import RenhouPolicy, RulesetConfig
-from pyriichi.tiles import Tile
-from pyriichi.utils import format_tiles
+from pyriichi.tiles import Suit, Tile
 
 
 TEXT = {
@@ -136,6 +135,58 @@ DIFFICULTIES = {
     "hard": DefensivePlayer,
 }
 
+KANJI_NUMERALS = {
+    1: "一",
+    2: "二",
+    3: "三",
+    4: "四",
+    5: "五",
+    6: "六",
+    7: "七",
+    8: "八",
+    9: "九",
+}
+
+KANJI_SUITS = {
+    Suit.MANZU: "萬",
+    Suit.PINZU: "筒",
+    Suit.SOUZU: "索",
+}
+
+KANJI_HONORS = {
+    1: "東",
+    2: "南",
+    3: "西",
+    4: "北",
+    5: "白",
+    6: "発",
+    7: "中",
+}
+
+BACK_TILE = "伏"
+
+ACTION_SHORTCUTS = {
+    GameAction.DISCARD: "d",
+    GameAction.TSUMO: "t",
+    GameAction.RON: "r",
+    GameAction.PASS: "p",
+    GameAction.CHI: "c",
+    GameAction.PON: "o",
+    GameAction.KAN: "k",
+    GameAction.DECLARE_ANKAN: "a",
+    GameAction.DECLARE_RIICHI: "i",
+    GameAction.DECLARE_KYUUSHU_KYUUHAI: "9",
+}
+
+COLOR_MANZU = 1
+COLOR_PINZU = 2
+COLOR_SOUZU = 3
+COLOR_HONORS = 4
+COLOR_RED_DORA = 5
+COLOR_BORDER = 6
+COLOR_DIM = 7
+COLOR_ALERT = 8
+
 
 @dataclass
 class Settings:
@@ -154,8 +205,11 @@ class Tui:
         self.settings = Settings()
         self.engine: Optional[RuleEngine] = None
         self.players = []
-        self.log: List[str] = []
+        self.status = ""
         self.running = True
+        self.has_colors = False
+        self.active_actions: List[GameAction] = []
+        self.selected_tile_index: Optional[int] = None
 
     def t(self, key: str) -> str:
         return TEXT[self.settings.language][key]
@@ -163,16 +217,27 @@ class Tui:
     def tile_text(self, tile: Optional[Tile]) -> str:
         if tile is None:
             return self.t("none")
-        if self.settings.language == "en":
-            return str(tile)
-        return tile.get_name(self.settings.language)
+        return self.tile_glyph(tile)
+
+    def tile_glyph(self, tile: Optional[Tile], hidden: bool = False) -> str:
+        if hidden or tile is None:
+            return BACK_TILE
+        if tile.suit == Suit.HONORS:
+            return KANJI_HONORS[tile.rank]
+        return f"{KANJI_NUMERALS[tile.rank]}{KANJI_SUITS[tile.suit]}"
+
+    def tile_label(self, tile: Optional[Tile], hidden: bool = False) -> str:
+        glyph = self.tile_glyph(tile, hidden)
+        if hidden:
+            return f"[{glyph}]"
+        marker = "*" if tile and tile.is_red_dora else ""
+        return f"[{glyph}{marker}]"
 
     def action_text(self, action: GameAction) -> str:
         return getattr(action, self.settings.language)
 
-    def add_log(self, message: str) -> None:
-        self.log.append(message)
-        self.log = self.log[-8:]
+    def set_status(self, message: str) -> None:
+        self.status = message
 
     def safe_addstr(self, y: int, x: int, text: str, attr: int = 0) -> None:
         height, width = self.stdscr.getmaxyx()
@@ -190,8 +255,41 @@ class Tui:
         except curses.error:
             pass
         self.stdscr.keypad(True)
-        curses.use_default_colors()
+        self.setup_colors()
         self.main_menu()
+
+    def setup_colors(self) -> None:
+        self.has_colors = curses.has_colors()
+        if not self.has_colors:
+            return
+        curses.start_color()
+        curses.use_default_colors()
+        curses.init_pair(COLOR_MANZU, curses.COLOR_RED, -1)
+        curses.init_pair(COLOR_PINZU, curses.COLOR_CYAN, -1)
+        curses.init_pair(COLOR_SOUZU, curses.COLOR_GREEN, -1)
+        curses.init_pair(COLOR_HONORS, curses.COLOR_YELLOW, -1)
+        curses.init_pair(COLOR_RED_DORA, curses.COLOR_RED, -1)
+        curses.init_pair(COLOR_BORDER, curses.COLOR_GREEN, -1)
+        curses.init_pair(COLOR_DIM, curses.COLOR_BLUE, -1)
+        curses.init_pair(COLOR_ALERT, curses.COLOR_MAGENTA, -1)
+
+    def color(self, color_pair: int, extra: int = 0) -> int:
+        if not self.has_colors:
+            return extra
+        return curses.color_pair(color_pair) | extra
+
+    def tile_attr(self, tile: Optional[Tile], hidden: bool = False) -> int:
+        if hidden or tile is None:
+            return self.color(COLOR_DIM, curses.A_BOLD)
+        if tile.is_red_dora:
+            return self.color(COLOR_RED_DORA, curses.A_BOLD)
+        if tile.suit == Suit.MANZU:
+            return self.color(COLOR_MANZU, curses.A_BOLD)
+        if tile.suit == Suit.PINZU:
+            return self.color(COLOR_PINZU, curses.A_BOLD)
+        if tile.suit == Suit.SOUZU:
+            return self.color(COLOR_SOUZU, curses.A_BOLD)
+        return self.color(COLOR_HONORS, curses.A_BOLD)
 
     def main_menu(self) -> None:
         while self.running:
@@ -218,13 +316,32 @@ class Tui:
             return None
         index = max(0, min(selected, len(options) - 1))
         while True:
-            self.stdscr.erase()
-            self.safe_addstr(0, 2, title, curses.A_BOLD)
-            self.safe_addstr(2, 2, self.t("help_menu"), curses.A_DIM)
+            overlay = (
+                self.engine is not None and self.engine.get_phase() == GamePhase.PLAYING
+            )
+            if overlay:
+                self.render()
+                height, width = self.stdscr.getmaxyx()
+                box_width = min(46, max(30, width - 8))
+                box_height = min(len(options) + 5, max(8, height - 4))
+                y = max(2, (height - box_height) // 2)
+                x = max(2, (width - box_width) // 2)
+                self.draw_box(y, x, box_height, box_width, title)
+                help_y = y + 1
+                option_y = y + 3
+                option_x = x + 3
+            else:
+                self.stdscr.erase()
+                self.safe_addstr(0, 2, title, curses.A_BOLD)
+                help_y = 2
+                option_y = 4
+                option_x = 4
+
+            self.safe_addstr(help_y, option_x, self.t("help_menu"), curses.A_DIM)
             for i, option in enumerate(options):
                 prefix = "> " if i == index else "  "
                 attr = curses.A_REVERSE if i == index else 0
-                self.safe_addstr(4 + i, 4, f"{prefix}{option}", attr)
+                self.safe_addstr(option_y + i, option_x, f"{prefix}{option}", attr)
             self.stdscr.refresh()
             key = self.stdscr.getch()
             if key in (ord("q"), 27):
@@ -355,7 +472,9 @@ class Tui:
         self.engine.game_state._ruleset = self.settings.ruleset
         ai_cls = DIFFICULTIES[self.settings.difficulty]
         self.players = [None] + [ai_cls(f"CPU {i}") for i in range(1, 4)]
-        self.log = []
+        self.status = ""
+        self.active_actions = []
+        self.selected_tile_index = None
         self.start_next_round()
 
         while self.running and self.engine.get_phase() != GamePhase.ENDED:
@@ -370,7 +489,7 @@ class Tui:
             if not self.engine.waiting_for_actions:
                 ryuukyoku = self.engine.handle_ryuukyoku()
                 if ryuukyoku.ryuukyoku:
-                    self.add_log(self.ryuukyoku_text(ryuukyoku.ryuukyoku_type))
+                    self.set_status(self.ryuukyoku_text(ryuukyoku.ryuukyoku_type))
                     continue
                 break
 
@@ -392,7 +511,7 @@ class Tui:
         self.engine.start_round()
         self.engine.deal()
         state = self.engine.game_state
-        self.add_log(
+        self.set_status(
             f"{getattr(state.round_wind, self.settings.language)} {state.round_number} - "
             f"{self.t('dealer')} P{state.dealer}"
         )
@@ -417,42 +536,117 @@ class Tui:
     def human_turn(self, player: int) -> Optional[ActionResult]:
         assert self.engine is not None
         actions = self.engine.get_available_actions(player)
-        choice = self.choose_action(actions)
-        if choice is None:
-            self.running = False
-            return None
-        action = actions[choice]
-
-        tile = None
-        kwargs = {}
-        if action in {GameAction.DISCARD, GameAction.DECLARE_RIICHI}:
-            tile = self.choose_tile(player, action)
+        if actions == [GameAction.DISCARD]:
+            tile = self.choose_tile_from_hand(player, GameAction.DISCARD, actions)
             if tile is None:
                 return None
-        elif action in {GameAction.KAN, GameAction.DECLARE_ANKAN}:
-            tile = self.choose_kan_tile(player, action)
-        elif action == GameAction.CHI:
-            sequence = self.choose_chi_sequence(player)
-            if sequence is None:
-                return None
-            kwargs["sequence"] = sequence
+            return self.execute_human_action(player, GameAction.DISCARD, tile)
 
+        selected = self.choose_turn_input(player, actions)
+        if selected is None:
+            return None
+        action, tile, kwargs = selected
+        return self.execute_human_action(player, action, tile, **kwargs)
+
+    def execute_human_action(
+        self,
+        player: int,
+        action: GameAction,
+        tile: Optional[Tile] = None,
+        **kwargs,
+    ) -> Optional[ActionResult]:
+        assert self.engine is not None
         try:
             result = self.engine.execute_action(player, action, tile, **kwargs)
-            self.add_log(
-                f"P{player}: {self.action_text(action)} {self.tile_text(tile)}"
-            )
+            self.set_status(f"P{player}: {self.action_text(action)}")
             return result
         except ValueError as exc:
-            self.add_log(f"{self.t('invalid')}: {exc}")
+            self.set_status(f"{self.t('invalid')}: {exc}")
             return None
 
-    def choose_action(self, actions: List[GameAction]) -> Optional[int]:
-        self.render()
-        labels = [self.action_text(action) for action in actions]
-        return self.choose(self.t("select_action"), labels)
+    def choose_turn_input(
+        self, player: int, actions: List[GameAction]
+    ) -> Optional[Tuple[GameAction, Optional[Tile], Dict]]:
+        assert self.engine is not None
+        self.active_actions = actions
+        self.selected_tile_index = 0 if GameAction.DISCARD in actions else None
+        self.set_status(self.t("select_action"))
 
-    def choose_tile(self, player: int, action: GameAction) -> Optional[Tile]:
+        while True:
+            self.render()
+            key = self.stdscr.getch()
+            if key in (ord("q"), 27):
+                self.running = False
+                return None
+
+            if GameAction.DISCARD in actions:
+                hand = self.engine.get_hand(player)
+                if key in (curses.KEY_LEFT, ord("h")):
+                    self.selected_tile_index = max(
+                        0, (self.selected_tile_index or 0) - 1
+                    )
+                    continue
+                if key in (curses.KEY_RIGHT, ord("l")):
+                    self.selected_tile_index = min(
+                        len(hand.tiles) - 1, (self.selected_tile_index or 0) + 1
+                    )
+                    continue
+                if key in (curses.KEY_ENTER, 10, 13):
+                    tile = hand.tiles[self.selected_tile_index or 0]
+                    self.clear_selection()
+                    return GameAction.DISCARD, tile, {}
+                if ord("1") <= key <= ord("9"):
+                    index = key - ord("1")
+                    if index < len(hand.tiles):
+                        self.selected_tile_index = index
+                        tile = hand.tiles[index]
+                        self.clear_selection()
+                        return GameAction.DISCARD, tile, {}
+
+            shortcut_action = self.action_for_key(key, actions)
+            if shortcut_action is None:
+                continue
+
+            tile = None
+            kwargs = {}
+            if shortcut_action == GameAction.DISCARD:
+                tile = self.choose_tile_from_hand(player, shortcut_action, actions)
+                if tile is None:
+                    return None
+            elif shortcut_action == GameAction.DECLARE_RIICHI:
+                tile = self.choose_tile_from_hand(player, shortcut_action, actions)
+                if tile is None:
+                    return None
+            elif shortcut_action in {GameAction.KAN, GameAction.DECLARE_ANKAN}:
+                tile = self.choose_kan_tile(player, shortcut_action)
+            elif shortcut_action == GameAction.CHI:
+                sequence = self.choose_chi_sequence(player)
+                if sequence is None:
+                    return None
+                kwargs["sequence"] = sequence
+
+            self.clear_selection()
+            return shortcut_action, tile, kwargs
+
+    def action_for_key(
+        self, key: int, actions: List[GameAction]
+    ) -> Optional[GameAction]:
+        for action in actions:
+            shortcut = ACTION_SHORTCUTS.get(action)
+            if shortcut and key == ord(shortcut):
+                return action
+        return None
+
+    def clear_selection(self) -> None:
+        self.active_actions = []
+        self.selected_tile_index = None
+
+    def choose_tile_from_hand(
+        self,
+        player: int,
+        action: GameAction,
+        actions: Optional[List[GameAction]] = None,
+    ) -> Optional[Tile]:
         assert self.engine is not None
         hand = self.engine.get_hand(player)
         candidates = (
@@ -460,12 +654,48 @@ class Tui:
         )
         if not candidates:
             candidates = hand.tiles
-        labels = [
-            f"{i + 1:02d}. {self.tile_text(tile)} ({tile})"
-            for i, tile in enumerate(candidates)
-        ]
-        choice = self.choose(self.t("select_tile"), labels)
-        return candidates[choice] if choice is not None else None
+        self.active_actions = actions or [action]
+        candidate_index = 0
+        self.selected_tile_index = self.hand_index_for_tile(hand, candidates[0])
+        self.set_status(self.t("select_tile"))
+
+        while True:
+            self.render()
+            key = self.stdscr.getch()
+            if key in (ord("q"), 27):
+                self.clear_selection()
+                return None
+            if key in (curses.KEY_LEFT, ord("h")):
+                candidate_index = max(0, candidate_index - 1)
+                self.selected_tile_index = self.hand_index_for_tile(
+                    hand, candidates[candidate_index]
+                )
+            elif key in (curses.KEY_RIGHT, ord("l")):
+                candidate_index = min(len(candidates) - 1, candidate_index + 1)
+                self.selected_tile_index = self.hand_index_for_tile(
+                    hand, candidates[candidate_index]
+                )
+            elif ord("1") <= key <= ord("9"):
+                index = key - ord("1")
+                if index < len(candidates):
+                    candidate_index = index
+                    self.selected_tile_index = self.hand_index_for_tile(
+                        hand, candidates[candidate_index]
+                    )
+                    tile = candidates[index]
+                    self.clear_selection()
+                    return tile
+            elif key in (curses.KEY_ENTER, 10, 13):
+                tile = candidates[candidate_index]
+                self.clear_selection()
+                return tile
+
+    @staticmethod
+    def hand_index_for_tile(hand: Hand, tile: Tile) -> int:
+        for index, hand_tile in enumerate(hand.tiles):
+            if hand_tile == tile:
+                return index
+        return 0
 
     def choose_kan_tile(self, player: int, action: GameAction) -> Optional[Tile]:
         assert self.engine is not None
@@ -475,7 +705,7 @@ class Tui:
         candidates = self.engine.get_hand(player).can_kan(None)
         if not candidates:
             return None
-        labels = [format_tiles(meld.tiles) for meld in candidates]
+        labels = [self.tiles_text(meld.tiles) for meld in candidates]
         choice = self.choose(self.t("select_tile"), labels)
         if choice is None:
             return None
@@ -514,7 +744,7 @@ class Tui:
                 result = self.engine.execute_action(player, action, tile)
             else:
                 raise
-        self.add_log(f"P{player}: {self.action_text(action)} {self.tile_text(tile)}")
+        self.set_status(f"P{player}: {self.action_text(action)}")
         return result
 
     def build_public_info(self) -> PublicInfo:
@@ -530,25 +760,14 @@ class Tui:
 
     def process_result(self, result: ActionResult) -> None:
         assert self.engine is not None
-        if result.drawn_tile:
-            self.add_log(
-                f"P{self.engine.get_current_player()}: "
-                f"{self.action_text(GameAction.DRAW)} {self.tile_text(result.drawn_tile)}"
-            )
-        if result.rinshan_tile:
-            self.add_log(f"Rinshan: {self.tile_text(result.rinshan_tile)}")
-        if result.meld:
-            self.add_log(
-                f"P{self.engine.get_current_player()}: {self.meld_text(result.meld)}"
-            )
         if result.chombo:
-            self.add_log(f"{self.t('chombo')}: P{result.chombo_player}")
+            self.set_status(f"{self.t('chombo')}: P{result.chombo_player}")
         if result.rinshan_win:
             result.winners = [result.rinshan_win.player]
             result.win_results[result.rinshan_win.player] = result.rinshan_win
         if result.winners:
             self.last_winners = result.winners
-            self.add_log(
+            self.set_status(
                 f"{self.t('winner')}: {', '.join(f'P{p}' for p in result.winners)}"
             )
         if result.ryuukyoku:
@@ -557,12 +776,12 @@ class Tui:
                 and result.ryuukyoku.ryuukyoku_type.value == "exhaustive_draw"
             ):
                 result.ryuukyoku = self.engine.handle_ryuukyoku()
-            self.add_log(self.ryuukyoku_text(result.ryuukyoku.ryuukyoku_type))
+            self.set_status(self.ryuukyoku_text(result.ryuukyoku.ryuukyoku_type))
         elif self.engine.get_phase() == GamePhase.PLAYING:
             ryuukyoku_type = self.engine.check_ryuukyoku()
             if ryuukyoku_type:
                 ryuukyoku = self.engine.handle_ryuukyoku()
-                self.add_log(self.ryuukyoku_text(ryuukyoku.ryuukyoku_type))
+                self.set_status(self.ryuukyoku_text(ryuukyoku.ryuukyoku_type))
 
     def ryuukyoku_text(self, ryuukyoku_type) -> str:
         if ryuukyoku_type is None:
@@ -571,15 +790,178 @@ class Tui:
             f"{self.t('ryuukyoku')}: {getattr(ryuukyoku_type, self.settings.language)}"
         )
 
+    def draw_box(
+        self, y: int, x: int, height: int, width: int, title: str = ""
+    ) -> None:
+        if height < 2 or width < 2:
+            return
+        attr = self.color(COLOR_BORDER)
+        horizontal = "─" * max(0, width - 2)
+        self.safe_addstr(y, x, f"┌{horizontal}┐", attr)
+        for row in range(1, height - 1):
+            self.safe_addstr(y + row, x, "│", attr)
+            self.safe_addstr(y + row, x + width - 1, "│", attr)
+        self.safe_addstr(y + height - 1, x, f"└{horizontal}┘", attr)
+        if title:
+            self.safe_addstr(y, x + 2, f" {title} ", attr | curses.A_BOLD)
+
+    def draw_tile_row(
+        self,
+        y: int,
+        x: int,
+        tiles: List[Tile],
+        max_width: int,
+        *,
+        hidden: bool = False,
+        indexed: bool = False,
+        selected_index: Optional[int] = None,
+    ) -> None:
+        cursor = x
+        visible_tiles = tiles
+        for index, tile in enumerate(visible_tiles):
+            label = self.tile_label(tile, hidden)
+            if indexed:
+                label = f"{index + 1:02d}{label}"
+            if cursor + len(label) + 1 >= x + max_width:
+                remaining = len(visible_tiles) - index
+                if remaining > 0:
+                    self.safe_addstr(y, cursor, f"+{remaining}")
+                return
+            attr = self.tile_attr(tile, hidden)
+            if selected_index == index:
+                attr |= curses.A_REVERSE
+            self.safe_addstr(y, cursor, label, attr)
+            cursor += len(label) + 1
+
+    def draw_discard_grid(
+        self, y: int, x: int, tiles: List[Tile], width: int, rows: int
+    ) -> None:
+        per_row = max(1, width // 5)
+        for row in range(rows):
+            start = row * per_row
+            if start >= len(tiles):
+                return
+            self.draw_tile_row(y + row, x, tiles[start : start + per_row], width)
+
+    def draw_player_panel(
+        self,
+        player: int,
+        y: int,
+        x: int,
+        height: int,
+        width: int,
+        *,
+        hidden: bool,
+    ) -> None:
+        assert self.engine is not None
+        state = self.engine.game_state
+        hand = self.engine.get_hand(player)
+        wind = state.seat_winds[player]
+        dealer = "D" if state.dealer == player else " "
+        riichi = "R" if hand.is_riichi else " "
+        title = f"P{player} {getattr(wind, self.settings.language)} [{dealer}{riichi}]"
+        self.draw_box(y, x, height, width, title)
+        if hidden:
+            self.draw_tile_row(y + 1, x + 2, hand.tiles, width - 4, hidden=True)
+        else:
+            self.draw_tile_row(
+                y + 1,
+                x + 2,
+                hand.tiles,
+                width - 4,
+                indexed=True,
+                selected_index=self.selected_tile_index if player == 0 else None,
+            )
+        self.safe_addstr(y + 2, x + 2, f"{self.t('melds')}:")
+        self.safe_addstr(y + 2, x + 10, self.melds_text(hand.melds)[: width - 12])
+        self.safe_addstr(y + 3, x + 2, f"{self.t('discards')}:")
+        self.draw_discard_grid(y + 4, x + 2, hand.discards[-24:], width - 4, height - 5)
+
+    def draw_center_table(self, y: int, x: int, height: int, width: int) -> None:
+        assert self.engine is not None
+        state = self.engine.game_state
+        self.draw_box(y, x, height, width, "TABLE")
+        dora = self.tiles_text(self.engine.get_revealed_dora_indicators())
+        wall = self.engine.get_wall_remaining()
+        lines = [
+            f"{self.t('round')}: {getattr(state.round_wind, self.settings.language)} {state.round_number}",
+            f"{self.t('dealer')}: P{state.dealer}",
+            f"{self.t('honba')}: {state.honba}   {self.t('kyoutaku')}: {state.riichi_sticks}",
+            f"{self.t('wall')}: {wall}",
+            f"{self.t('dora')}: {dora}",
+            f"{self.t('difficulty')}: {self.settings.difficulty}",
+            f"{self.t('language')}: {self.settings.language}",
+        ]
+        for i, line in enumerate(lines[: height - 2]):
+            self.safe_addstr(y + 1 + i, x + 2, line)
+
+    def draw_action_panel(self, y: int, x: int, height: int, width: int) -> None:
+        self.draw_box(y, x, height, width, self.t("select_action"))
+        if not self.active_actions:
+            self.safe_addstr(y + 1, x + 2, self.status)
+            return
+
+        row = y + 1
+        if GameAction.DISCARD in self.active_actions:
+            self.safe_addstr(row, x + 2, "Enter/1-9:", curses.A_BOLD)
+            self.safe_addstr(row, x + 15, self.action_text(GameAction.DISCARD))
+            row += 1
+
+        for action in self.active_actions:
+            if action == GameAction.DISCARD:
+                continue
+            shortcut = ACTION_SHORTCUTS.get(action, "?")
+            self.safe_addstr(row, x + 2, f"{shortcut.upper()}:", curses.A_BOLD)
+            self.safe_addstr(row, x + 6, self.action_text(action))
+            row += 1
+            if row >= y + height - 1:
+                break
+
     def render(self) -> None:
         assert self.engine is not None
         self.stdscr.erase()
         height, width = self.stdscr.getmaxyx()
-        if height < 24 or width < 80:
-            self.safe_addstr(0, 0, "Terminal too small. Use at least 80x24.")
+        if height < 30 or width < 100:
+            self.render_compact()
             self.stdscr.refresh()
             return
 
+        state = self.engine.game_state
+        title = f" {self.t('title')} "
+        self.safe_addstr(0, 2, title, self.color(COLOR_BORDER, curses.A_BOLD))
+        self.safe_addstr(1, 2, self.t("help_game"), curses.A_DIM)
+        scores = "  ".join(f"P{i}: {score}" for i, score in enumerate(state.scores))
+        self.safe_addstr(1, max(2, width - len(scores) - 3), scores)
+
+        top_width = min(66, width - 36)
+        top_x = (width - top_width) // 2
+        self.draw_player_panel(2, 3, top_x, 7, top_width, hidden=True)
+
+        side_height = max(13, height - 19)
+        side_width = 29
+        self.draw_player_panel(3, 11, 2, side_height, side_width, hidden=True)
+        self.draw_player_panel(
+            1, 11, width - side_width - 2, side_height, side_width, hidden=True
+        )
+
+        center_x = side_width + 4
+        center_width = width - (side_width + 4) * 2
+        self.draw_center_table(11, center_x, side_height, center_width)
+        self.draw_action_panel(
+            11,
+            center_x + max(0, center_width - 30),
+            min(10, side_height),
+            min(30, center_width),
+        )
+
+        bottom_y = height - 8
+        if self.status:
+            self.safe_addstr(bottom_y - 1, 4, self.status, curses.A_BOLD)
+        self.draw_player_panel(0, bottom_y, 2, 7, width - 4, hidden=False)
+        self.stdscr.refresh()
+
+    def render_compact(self) -> None:
+        assert self.engine is not None
         state = self.engine.game_state
         dora = self.tiles_text(self.engine.get_revealed_dora_indicators())
         wall = self.engine.get_wall_remaining()
@@ -593,6 +975,8 @@ class Tui:
         )
         self.safe_addstr(0, 2, header, curses.A_BOLD)
         self.safe_addstr(1, 2, self.t("help_game"), curses.A_DIM)
+        if self.status:
+            self.safe_addstr(2, 2, self.status, curses.A_BOLD)
 
         scores = "  ".join(f"P{i}: {score}" for i, score in enumerate(state.scores))
         self.safe_addstr(3, 2, f"{self.t('scores')}: {scores}")
@@ -618,11 +1002,22 @@ class Tui:
 
         hand = self.engine.get_hand(0)
         base_y = 18
+        if self.active_actions:
+            actions = "  ".join(
+                f"{ACTION_SHORTCUTS.get(action, '?').upper()}:{self.action_text(action)}"
+                for action in self.active_actions
+                if action != GameAction.DISCARD
+            )
+            self.safe_addstr(base_y - 1, 2, actions)
         self.safe_addstr(base_y, 2, f"P0 {self.t('hand')}:", curses.A_BOLD)
-        tile_line = " ".join(
-            f"{i + 1}:{self.tile_text(tile)}" for i, tile in enumerate(hand.tiles)
+        self.draw_tile_row(
+            base_y + 1,
+            4,
+            hand.tiles,
+            74,
+            indexed=True,
+            selected_index=self.selected_tile_index,
         )
-        self.safe_addstr(base_y + 1, 4, tile_line)
         self.safe_addstr(
             base_y + 2, 4, f"{self.t('melds')}: {self.melds_text(hand.melds)}"
         )
@@ -632,18 +1027,10 @@ class Tui:
             f"{self.t('discards')}: {self.tiles_text(hand.discards[-24:])}",
         )
 
-        log_y = max(base_y + 5, height - 9)
-        self.safe_addstr(log_y, 2, f"{self.t('last')}:")
-        for i, line in enumerate(self.log[-7:]):
-            self.safe_addstr(log_y + 1 + i, 4, line)
-        self.stdscr.refresh()
-
     def tiles_text(self, tiles: List[Tile]) -> str:
         if not tiles:
             return self.t("none")
-        if self.settings.language == "en":
-            return format_tiles(tiles)
-        return " ".join(self.tile_text(tile) for tile in tiles)
+        return " ".join(self.tile_label(tile) for tile in tiles)
 
     def meld_text(self, meld: Meld) -> str:
         return self.tiles_text(meld.tiles)
