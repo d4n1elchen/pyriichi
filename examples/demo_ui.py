@@ -1,6 +1,7 @@
 import curses
 import os
 import sys
+import unicodedata
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
@@ -243,11 +244,36 @@ class Tui:
         height, width = self.stdscr.getmaxyx()
         if y < 0 or y >= height or x >= width:
             return
-        text = text[: max(0, width - x - 1)]
+        text = self.truncate_display(text, max(0, width - x - 1))
         try:
             self.stdscr.addstr(y, x, text, attr)
         except curses.error:
             pass
+
+    @staticmethod
+    def char_width(char: str) -> int:
+        if unicodedata.combining(char):
+            return 0
+        return 2 if unicodedata.east_asian_width(char) in {"F", "W"} else 1
+
+    @classmethod
+    def display_width(cls, text: str) -> int:
+        return sum(cls.char_width(char) for char in text)
+
+    @classmethod
+    def truncate_display(cls, text: str, max_width: int) -> str:
+        if max_width <= 0:
+            return ""
+
+        width = 0
+        chars = []
+        for char in text:
+            char_width = cls.char_width(char)
+            if width + char_width > max_width:
+                break
+            chars.append(char)
+            width += char_width
+        return "".join(chars)
 
     def run(self) -> None:
         try:
@@ -693,7 +719,14 @@ class Tui:
     @staticmethod
     def hand_index_for_tile(hand: Hand, tile: Tile) -> int:
         for index, hand_tile in enumerate(hand.tiles):
-            if hand_tile == tile:
+            if hand_tile is tile:
+                return index
+        for index, hand_tile in enumerate(hand.tiles):
+            if (
+                hand_tile.suit == tile.suit
+                and hand_tile.rank == tile.rank
+                and hand_tile.is_red_dora == tile.is_red_dora
+            ):
                 return index
         return 0
 
@@ -822,7 +855,8 @@ class Tui:
             label = self.tile_label(tile, hidden)
             if indexed:
                 label = f"{index + 1:02d}{label}"
-            if cursor + len(label) + 1 >= x + max_width:
+            label_width = self.display_width(label)
+            if cursor + label_width > x + max_width:
                 remaining = len(visible_tiles) - index
                 if remaining > 0:
                     self.safe_addstr(y, cursor, f"+{remaining}")
@@ -831,7 +865,7 @@ class Tui:
             if selected_index == index:
                 attr |= curses.A_REVERSE
             self.safe_addstr(y, cursor, label, attr)
-            cursor += len(label) + 1
+            cursor += label_width + 1
 
     def draw_discard_grid(
         self, y: int, x: int, tiles: List[Tile], width: int, rows: int
