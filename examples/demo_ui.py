@@ -3,7 +3,7 @@ import os
 import sys
 import unicodedata
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 # Allow running this example directly from a source checkout.
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -166,19 +166,6 @@ KANJI_HONORS = {
 
 BACK_TILE = "伏"
 
-ACTION_SHORTCUTS = {
-    GameAction.DISCARD: "d",
-    GameAction.TSUMO: "t",
-    GameAction.RON: "r",
-    GameAction.PASS: "p",
-    GameAction.CHI: "c",
-    GameAction.PON: "o",
-    GameAction.KAN: "k",
-    GameAction.DECLARE_ANKAN: "a",
-    GameAction.DECLARE_RIICHI: "i",
-    GameAction.DECLARE_KYUUSHU_KYUUHAI: "9",
-}
-
 COLOR_MANZU = 1
 COLOR_PINZU = 2
 COLOR_SOUZU = 3
@@ -211,6 +198,7 @@ class Tui:
         self.has_colors = False
         self.active_actions: List[GameAction] = []
         self.selected_tile_index: Optional[int] = None
+        self.selection_tiles: Optional[List[Tile]] = None
 
     def t(self, key: str) -> str:
         return TEXT[self.settings.language][key]
@@ -568,10 +556,24 @@ class Tui:
                 return None
             return self.execute_human_action(player, GameAction.DISCARD, tile)
 
-        selected = self.choose_turn_input(player, actions)
-        if selected is None:
+        action = self.choose_action(actions)
+        if action is None:
             return None
-        action, tile, kwargs = selected
+
+        tile = None
+        kwargs = {}
+        if action in {GameAction.DISCARD, GameAction.DECLARE_RIICHI}:
+            tile = self.choose_tile_from_hand(player, action, actions)
+            if tile is None:
+                return None
+        elif action in {GameAction.KAN, GameAction.DECLARE_ANKAN}:
+            tile = self.choose_kan_tile(player, action)
+        elif action == GameAction.CHI:
+            sequence = self.choose_chi_sequence(player)
+            if sequence is None:
+                return None
+            kwargs["sequence"] = sequence
+
         return self.execute_human_action(player, action, tile, **kwargs)
 
     def execute_human_action(
@@ -590,82 +592,51 @@ class Tui:
             self.set_status(f"{self.t('invalid')}: {exc}")
             return None
 
-    def choose_turn_input(
-        self, player: int, actions: List[GameAction]
-    ) -> Optional[Tuple[GameAction, Optional[Tile], Dict]]:
-        assert self.engine is not None
+    def choose_action(self, actions: List[GameAction]) -> Optional[GameAction]:
         self.active_actions = actions
-        self.selected_tile_index = 0 if GameAction.DISCARD in actions else None
         self.set_status(self.t("select_action"))
+        choice = self.choose(
+            self.t("select_action"), [self.action_text(action) for action in actions]
+        )
+        self.clear_selection()
+        if choice is None:
+            return None
+        return actions[choice]
 
-        while True:
-            self.render()
-            key = self.stdscr.getch()
-            if key in (ord("q"), 27):
-                self.running = False
-                return None
+    @staticmethod
+    def sorted_tiles_for_display(
+        tiles: List[Tile], incoming_tile: Optional[Tile] = None
+    ) -> List[Tile]:
+        display_tiles = list(tiles)
+        pinned_tile = None
+        if incoming_tile is not None:
+            for index, tile in enumerate(display_tiles):
+                if tile is incoming_tile:
+                    pinned_tile = display_tiles.pop(index)
+                    break
+            if pinned_tile is None:
+                for index, tile in enumerate(display_tiles):
+                    if (
+                        tile.suit == incoming_tile.suit
+                        and tile.rank == incoming_tile.rank
+                        and tile.is_red_dora == incoming_tile.is_red_dora
+                    ):
+                        pinned_tile = display_tiles.pop(index)
+                        break
 
-            if GameAction.DISCARD in actions:
-                hand = self.engine.get_hand(player)
-                if key in (curses.KEY_LEFT, ord("h")):
-                    self.selected_tile_index = max(
-                        0, (self.selected_tile_index or 0) - 1
-                    )
-                    continue
-                if key in (curses.KEY_RIGHT, ord("l")):
-                    self.selected_tile_index = min(
-                        len(hand.tiles) - 1, (self.selected_tile_index or 0) + 1
-                    )
-                    continue
-                if key in (curses.KEY_ENTER, 10, 13):
-                    tile = hand.tiles[self.selected_tile_index or 0]
-                    self.clear_selection()
-                    return GameAction.DISCARD, tile, {}
-                if ord("1") <= key <= ord("9"):
-                    index = key - ord("1")
-                    if index < len(hand.tiles):
-                        self.selected_tile_index = index
-                        tile = hand.tiles[index]
-                        self.clear_selection()
-                        return GameAction.DISCARD, tile, {}
+        display_tiles.sort()
+        if pinned_tile is not None:
+            display_tiles.append(pinned_tile)
+        return display_tiles
 
-            shortcut_action = self.action_for_key(key, actions)
-            if shortcut_action is None:
-                continue
-
-            tile = None
-            kwargs = {}
-            if shortcut_action == GameAction.DISCARD:
-                tile = self.choose_tile_from_hand(player, shortcut_action, actions)
-                if tile is None:
-                    return None
-            elif shortcut_action == GameAction.DECLARE_RIICHI:
-                tile = self.choose_tile_from_hand(player, shortcut_action, actions)
-                if tile is None:
-                    return None
-            elif shortcut_action in {GameAction.KAN, GameAction.DECLARE_ANKAN}:
-                tile = self.choose_kan_tile(player, shortcut_action)
-            elif shortcut_action == GameAction.CHI:
-                sequence = self.choose_chi_sequence(player)
-                if sequence is None:
-                    return None
-                kwargs["sequence"] = sequence
-
-            self.clear_selection()
-            return shortcut_action, tile, kwargs
-
-    def action_for_key(
-        self, key: int, actions: List[GameAction]
-    ) -> Optional[GameAction]:
-        for action in actions:
-            shortcut = ACTION_SHORTCUTS.get(action)
-            if shortcut and key == ord(shortcut):
-                return action
-        return None
+    @classmethod
+    def sorted_hand_tiles(cls, hand: Hand) -> List[Tile]:
+        return cls.sorted_tiles_for_display(hand.tiles, hand.last_drawn_tile)
 
     def clear_selection(self) -> None:
         self.active_actions = []
         self.selected_tile_index = None
+        self.selection_tiles = None
 
     def choose_tile_from_hand(
         self,
@@ -680,9 +651,11 @@ class Tui:
         )
         if not candidates:
             candidates = hand.tiles
+        candidates = self.sorted_tiles_for_display(candidates, hand.last_drawn_tile)
         self.active_actions = actions or [action]
+        self.selection_tiles = candidates
         candidate_index = 0
-        self.selected_tile_index = self.hand_index_for_tile(hand, candidates[0])
+        self.selected_tile_index = 0
         self.set_status(self.t("select_tile"))
 
         while True:
@@ -693,21 +666,15 @@ class Tui:
                 return None
             if key in (curses.KEY_LEFT, ord("h")):
                 candidate_index = max(0, candidate_index - 1)
-                self.selected_tile_index = self.hand_index_for_tile(
-                    hand, candidates[candidate_index]
-                )
+                self.selected_tile_index = candidate_index
             elif key in (curses.KEY_RIGHT, ord("l")):
                 candidate_index = min(len(candidates) - 1, candidate_index + 1)
-                self.selected_tile_index = self.hand_index_for_tile(
-                    hand, candidates[candidate_index]
-                )
+                self.selected_tile_index = candidate_index
             elif ord("1") <= key <= ord("9"):
                 index = key - ord("1")
                 if index < len(candidates):
                     candidate_index = index
-                    self.selected_tile_index = self.hand_index_for_tile(
-                        hand, candidates[candidate_index]
-                    )
+                    self.selected_tile_index = candidate_index
                     tile = candidates[index]
                     self.clear_selection()
                     return tile
@@ -715,20 +682,6 @@ class Tui:
                 tile = candidates[candidate_index]
                 self.clear_selection()
                 return tile
-
-    @staticmethod
-    def hand_index_for_tile(hand: Hand, tile: Tile) -> int:
-        for index, hand_tile in enumerate(hand.tiles):
-            if hand_tile is tile:
-                return index
-        for index, hand_tile in enumerate(hand.tiles):
-            if (
-                hand_tile.suit == tile.suit
-                and hand_tile.rank == tile.rank
-                and hand_tile.is_red_dora == tile.is_red_dora
-            ):
-                return index
-        return 0
 
     def choose_kan_tile(self, player: int, action: GameAction) -> Optional[Tile]:
         assert self.engine is not None
@@ -898,10 +851,11 @@ class Tui:
         if hidden:
             self.draw_tile_row(y + 1, x + 2, hand.tiles, width - 4, hidden=True)
         else:
+            display_tiles = self.selection_tiles or self.sorted_hand_tiles(hand)
             self.draw_tile_row(
                 y + 1,
                 x + 2,
-                hand.tiles,
+                display_tiles,
                 width - 4,
                 indexed=True,
                 selected_index=self.selected_tile_index if player == 0 else None,
@@ -928,28 +882,6 @@ class Tui:
         ]
         for i, line in enumerate(lines[: height - 2]):
             self.safe_addstr(y + 1 + i, x + 2, line)
-
-    def draw_action_panel(self, y: int, x: int, height: int, width: int) -> None:
-        self.draw_box(y, x, height, width, self.t("select_action"))
-        if not self.active_actions:
-            self.safe_addstr(y + 1, x + 2, self.status)
-            return
-
-        row = y + 1
-        if GameAction.DISCARD in self.active_actions:
-            self.safe_addstr(row, x + 2, "Enter/1-9:", curses.A_BOLD)
-            self.safe_addstr(row, x + 15, self.action_text(GameAction.DISCARD))
-            row += 1
-
-        for action in self.active_actions:
-            if action == GameAction.DISCARD:
-                continue
-            shortcut = ACTION_SHORTCUTS.get(action, "?")
-            self.safe_addstr(row, x + 2, f"{shortcut.upper()}:", curses.A_BOLD)
-            self.safe_addstr(row, x + 6, self.action_text(action))
-            row += 1
-            if row >= y + height - 1:
-                break
 
     def render(self) -> None:
         assert self.engine is not None
@@ -981,12 +913,6 @@ class Tui:
         center_x = side_width + 4
         center_width = width - (side_width + 4) * 2
         self.draw_center_table(11, center_x, side_height, center_width)
-        self.draw_action_panel(
-            11,
-            center_x + max(0, center_width - 30),
-            min(10, side_height),
-            min(30, center_width),
-        )
 
         bottom_y = height - 8
         if self.status:
@@ -1036,18 +962,12 @@ class Tui:
 
         hand = self.engine.get_hand(0)
         base_y = 18
-        if self.active_actions:
-            actions = "  ".join(
-                f"{ACTION_SHORTCUTS.get(action, '?').upper()}:{self.action_text(action)}"
-                for action in self.active_actions
-                if action != GameAction.DISCARD
-            )
-            self.safe_addstr(base_y - 1, 2, actions)
         self.safe_addstr(base_y, 2, f"P0 {self.t('hand')}:", curses.A_BOLD)
+        display_tiles = self.selection_tiles or self.sorted_hand_tiles(hand)
         self.draw_tile_row(
             base_y + 1,
             4,
-            hand.tiles,
+            display_tiles,
             74,
             indexed=True,
             selected_index=self.selected_tile_index,

@@ -189,14 +189,24 @@ class Hand:
         Returns:
             bool: Whether discard was successful.
         """
-        try:
-            self._tiles.remove(tile)
-            self._discards.append(tile)
-            self._tile_counts_cache = None
-            self._tenpai_discards = None
-            return True
-        except ValueError:
+        discard_index = None
+        for index, hand_tile in enumerate(self._tiles):
+            if hand_tile is tile:
+                discard_index = index
+                break
+        if discard_index is None:
+            for index, hand_tile in enumerate(self._tiles):
+                if hand_tile == tile:
+                    discard_index = index
+                    break
+        if discard_index is None:
             return False
+
+        discarded_tile = self._tiles.pop(discard_index)
+        self._discards.append(discarded_tile)
+        self._tile_counts_cache = None
+        self._tenpai_discards = None
+        return True
 
     def remove_last_discard(self, tile: Tile) -> None:
         """
