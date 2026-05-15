@@ -32,6 +32,7 @@ TEXT = {
         "select_action": "Select action",
         "select_tile": "Select tile",
         "select_sequence": "Select chi sequence",
+        "trigger": "Trigger",
         "round": "Round",
         "dealer": "Dealer",
         "honba": "Honba",
@@ -69,6 +70,7 @@ TEXT = {
         "select_action": "行動を選択",
         "select_tile": "牌を選択",
         "select_sequence": "チーの順子を選択",
+        "trigger": "対象牌",
         "round": "局",
         "dealer": "親",
         "honba": "本場",
@@ -106,6 +108,7 @@ TEXT = {
         "select_action": "選擇動作",
         "select_tile": "選擇牌",
         "select_sequence": "選擇吃牌順子",
+        "trigger": "觸發牌",
         "round": "局",
         "dealer": "莊家",
         "honba": "本場",
@@ -197,6 +200,8 @@ class Tui:
         self.has_colors = False
         self.active_actions: List[GameAction] = []
         self.selected_action_index: Optional[int] = None
+        self.active_sequences: List[List[Tile]] = []
+        self.selected_sequence_index: Optional[int] = None
         self.selected_tile_index: Optional[int] = None
         self.selection_tiles: Optional[List[Tile]] = None
 
@@ -505,6 +510,8 @@ class Tui:
         self.status = ""
         self.active_actions = []
         self.selected_action_index = None
+        self.active_sequences = []
+        self.selected_sequence_index = None
         self.selected_tile_index = None
         self.start_next_round()
 
@@ -671,6 +678,8 @@ class Tui:
     def clear_selection(self) -> None:
         self.active_actions = []
         self.selected_action_index = None
+        self.active_sequences = []
+        self.selected_sequence_index = None
         self.selected_tile_index = None
         self.selection_tiles = None
 
@@ -739,9 +748,29 @@ class Tui:
         sequences = self.engine.get_available_chi_sequences(player)
         if not sequences:
             return None
-        labels = [self.tiles_text(sequence) for sequence in sequences]
-        choice = self.choose(self.t("select_sequence"), labels)
-        return sequences[choice] if choice is not None else None
+        self.active_sequences = sequences
+        self.selected_sequence_index = 0
+        self.set_status(self.t("select_sequence"))
+
+        while True:
+            self.render()
+            key = self.stdscr.getch()
+            if key in (ord("q"), 27):
+                self.stop()
+                self.clear_selection()
+                return None
+            if key in (curses.KEY_LEFT, curses.KEY_UP, ord("h"), ord("k")):
+                self.selected_sequence_index = max(
+                    0, (self.selected_sequence_index or 0) - 1
+                )
+            elif key in (curses.KEY_RIGHT, curses.KEY_DOWN, ord("l"), ord("j")):
+                self.selected_sequence_index = min(
+                    len(sequences) - 1, (self.selected_sequence_index or 0) + 1
+                )
+            elif key in (curses.KEY_ENTER, 10, 13):
+                sequence = sequences[self.selected_sequence_index or 0]
+                self.clear_selection()
+                return sequence
 
     def ai_turn(self, player: int) -> Optional[ActionResult]:
         assert self.engine is not None
@@ -876,6 +905,61 @@ class Tui:
             self.safe_addstr(y, cursor, label, attr)
             cursor += label_width + 1
 
+    def draw_sequence_row(self, y: int, x: int, width: int) -> None:
+        if not self.active_sequences or self.selected_sequence_index is None:
+            return
+
+        self.safe_addstr(y, x, f"{self.t('select_sequence')}:")
+        cursor = x + self.display_width(self.t("select_sequence")) + 2
+        max_x = x + width
+        for index, sequence in enumerate(self.active_sequences):
+            label = f"[{self.tiles_text(sequence)}]"
+            label_width = self.display_width(label)
+            if cursor + label_width > max_x:
+                remaining = len(self.active_sequences) - index
+                if remaining > 0:
+                    self.safe_addstr(y, cursor, f"+{remaining}")
+                return
+            attr = curses.A_REVERSE if index == self.selected_sequence_index else 0
+            self.safe_addstr(y, cursor, label, attr)
+            cursor += label_width + 1
+
+    def action_trigger_text(self) -> Optional[str]:
+        if self.engine is None:
+            return None
+        has_interrupt_action = bool(self.active_sequences) or any(
+            action
+            in {
+                GameAction.CHI,
+                GameAction.PON,
+                GameAction.KAN,
+                GameAction.RON,
+                GameAction.PASS,
+            }
+            for action in self.active_actions
+        )
+        if has_interrupt_action:
+            tile = self.engine.get_last_discard()
+            player = self.engine.get_last_discard_player()
+        else:
+            tile = self.engine.get_hand(0).last_drawn_tile
+            player = 0
+        if tile is None:
+            return None
+        player_text = f" P{player}" if player is not None else ""
+        return f"{self.t('trigger')}: {self.tile_label(tile)}{player_text}"
+
+    def draw_trigger_row(self, y: int, x: int, width: int) -> None:
+        if not (
+            self.active_actions
+            or self.active_sequences
+            or self.selected_tile_index is not None
+        ):
+            return
+        text = self.action_trigger_text()
+        if text:
+            self.safe_addstr(y, x, text[:width], curses.A_DIM)
+
     def draw_discard_grid(
         self, y: int, x: int, tiles: List[Tile], width: int, rows: int
     ) -> None:
@@ -962,6 +1046,8 @@ class Tui:
         self.safe_addstr(y + 2, x + 10, self.melds_text(hand.melds)[: width - 12])
         if player == 0:
             self.draw_action_row(y + 3, x + 2, width - 4)
+            self.draw_sequence_row(y + 3, x + 2, width - 4)
+            self.draw_trigger_row(y + 4, x + 2, width - 4)
 
     def player_score_text(self, player: int, *, compact: bool = False) -> str:
         assert self.engine is not None
@@ -1167,11 +1253,13 @@ class Tui:
             selected_index=self.selected_tile_index,
         )
         self.draw_action_row(base_y + 2, 4, 74)
+        self.draw_sequence_row(base_y + 2, 4, 74)
+        self.draw_trigger_row(base_y + 3, 4, 74)
         self.safe_addstr(
-            base_y + 3, 4, f"{self.t('melds')}: {self.melds_text(hand.melds)}"
+            base_y + 4, 4, f"{self.t('melds')}: {self.melds_text(hand.melds)}"
         )
         self.safe_addstr(
-            base_y + 4,
+            base_y + 5,
             4,
             f"{self.t('discards')}: {self.tiles_text(hand.discards[-24:])}",
         )
