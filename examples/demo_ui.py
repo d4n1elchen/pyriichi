@@ -371,6 +371,8 @@ class Tui:
             self.stdscr.refresh()
             key = self.stdscr.getch()
             if key in (ord("q"), 27):
+                if overlay:
+                    self.stop()
                 return None
             if key in (curses.KEY_UP, ord("k")):
                 index = (index - 1) % len(options)
@@ -528,6 +530,9 @@ class Tui:
             if result is not None:
                 self.process_result(result)
 
+        if not self.running:
+            return
+
         self.render()
         self.safe_addstr(1, 2, self.t("game_over"), curses.A_BOLD)
         self.stdscr.getch()
@@ -550,6 +555,7 @@ class Tui:
         while True:
             key = self.stdscr.getch()
             if key == ord("q"):
+                self.stop()
                 return False
             if key in (curses.KEY_ENTER, 10, 13):
                 if self.engine.get_phase() == GamePhase.WINNING:
@@ -674,6 +680,7 @@ class Tui:
             self.render()
             key = self.stdscr.getch()
             if key in (ord("q"), 27):
+                self.stop()
                 self.clear_selection()
                 return None
             if key in (curses.KEY_LEFT, ord("h")):
