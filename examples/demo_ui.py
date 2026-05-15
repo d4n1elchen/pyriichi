@@ -170,7 +170,6 @@ COLOR_MANZU = 1
 COLOR_PINZU = 2
 COLOR_SOUZU = 3
 COLOR_HONORS = 4
-COLOR_RED_DORA = 5
 COLOR_BORDER = 6
 COLOR_DIM = 7
 COLOR_ALERT = 8
@@ -215,12 +214,28 @@ class Tui:
             return KANJI_HONORS[tile.rank]
         return f"{KANJI_NUMERALS[tile.rank]}{KANJI_SUITS[tile.suit]}"
 
-    def tile_label(self, tile: Optional[Tile], hidden: bool = False) -> str:
+    def tile_label(
+        self, tile: Optional[Tile], hidden: bool = False, mark_dora: bool = True
+    ) -> str:
         glyph = self.tile_glyph(tile, hidden)
         if hidden:
             return f"[{glyph}]"
-        marker = "*" if tile and tile.is_red_dora else ""
-        return f"[{glyph}{marker}]"
+        if mark_dora and self.is_dora_tile(tile):
+            return f"[[{glyph}]]"
+        return f"[{glyph}]"
+
+    def is_dora_tile(self, tile: Optional[Tile]) -> bool:
+        if tile is None:
+            return False
+        if tile.is_red_dora:
+            return True
+        if self.engine is None or self.engine._tile_set is None:
+            return False
+
+        for indicator in self.engine.get_revealed_dora_indicators():
+            if tile == self.engine._tile_set.get_dora(indicator):
+                return True
+        return False
 
     def action_text(self, action: GameAction) -> str:
         return getattr(action, self.settings.language)
@@ -282,7 +297,6 @@ class Tui:
         curses.init_pair(COLOR_PINZU, curses.COLOR_CYAN, -1)
         curses.init_pair(COLOR_SOUZU, curses.COLOR_GREEN, -1)
         curses.init_pair(COLOR_HONORS, curses.COLOR_YELLOW, -1)
-        curses.init_pair(COLOR_RED_DORA, curses.COLOR_RED, -1)
         curses.init_pair(COLOR_BORDER, curses.COLOR_GREEN, -1)
         curses.init_pair(COLOR_DIM, curses.COLOR_BLUE, -1)
         curses.init_pair(COLOR_ALERT, curses.COLOR_MAGENTA, -1)
@@ -295,8 +309,6 @@ class Tui:
     def tile_attr(self, tile: Optional[Tile], hidden: bool = False) -> int:
         if hidden or tile is None:
             return self.color(COLOR_DIM, curses.A_BOLD)
-        if tile.is_red_dora:
-            return self.color(COLOR_RED_DORA, curses.A_BOLD)
         if tile.suit == Suit.MANZU:
             return self.color(COLOR_MANZU, curses.A_BOLD)
         if tile.suit == Suit.PINZU:
@@ -869,7 +881,9 @@ class Tui:
         assert self.engine is not None
         state = self.engine.game_state
         self.draw_box(y, x, height, width, "TABLE")
-        dora = self.tiles_text(self.engine.get_revealed_dora_indicators())
+        dora = self.tiles_text(
+            self.engine.get_revealed_dora_indicators(), mark_dora=False
+        )
         wall = self.engine.get_wall_remaining()
         lines = [
             f"{self.t('round')}: {getattr(state.round_wind, self.settings.language)} {state.round_number}",
@@ -923,7 +937,9 @@ class Tui:
     def render_compact(self) -> None:
         assert self.engine is not None
         state = self.engine.game_state
-        dora = self.tiles_text(self.engine.get_revealed_dora_indicators())
+        dora = self.tiles_text(
+            self.engine.get_revealed_dora_indicators(), mark_dora=False
+        )
         wall = self.engine.get_wall_remaining()
         header = (
             f"{self.t('round')}: {getattr(state.round_wind, self.settings.language)} {state.round_number}  "
@@ -981,10 +997,10 @@ class Tui:
             f"{self.t('discards')}: {self.tiles_text(hand.discards[-24:])}",
         )
 
-    def tiles_text(self, tiles: List[Tile]) -> str:
+    def tiles_text(self, tiles: List[Tile], *, mark_dora: bool = True) -> str:
         if not tiles:
             return self.t("none")
-        return " ".join(self.tile_label(tile) for tile in tiles)
+        return " ".join(self.tile_label(tile, mark_dora=mark_dora) for tile in tiles)
 
     def meld_text(self, meld: Meld) -> str:
         return self.tiles_text(meld.tiles)
