@@ -272,6 +272,13 @@ class Tui:
             width += char_width
         return "".join(chars)
 
+    def add_centered(
+        self, y: int, x: int, width: int, text: str, attr: int = 0
+    ) -> None:
+        text_width = self.display_width(text)
+        offset = max(0, (width - text_width) // 2)
+        self.safe_addstr(y, x + offset, text, attr)
+
     def run(self) -> None:
         try:
             curses.curs_set(0)
@@ -836,12 +843,44 @@ class Tui:
     def draw_discard_grid(
         self, y: int, x: int, tiles: List[Tile], width: int, rows: int
     ) -> None:
-        per_row = max(1, width // 5)
+        per_row = max(1, width // 10)
         for row in range(rows):
             start = row * per_row
             if start >= len(tiles):
                 return
             self.draw_tile_row(y + row, x, tiles[start : start + per_row], width)
+
+    def draw_tile_column(
+        self,
+        y: int,
+        x: int,
+        tiles: List[Tile],
+        max_height: int,
+        *,
+        cell_width: int = 11,
+    ) -> None:
+        if max_height <= 0:
+            return
+        for index, tile in enumerate(tiles):
+            column = index // max_height
+            row = index % max_height
+            label = self.tile_label(tile)
+            self.safe_addstr(
+                y + row,
+                x + column * cell_width,
+                label,
+                self.tile_attr(tile),
+            )
+
+    def draw_discard_river_row(
+        self, y: int, x: int, tiles: List[Tile], width: int, rows: int = 3
+    ) -> None:
+        self.draw_discard_grid(y, x, tiles[-18:], width, rows)
+
+    def draw_discard_river_column(
+        self, y: int, x: int, tiles: List[Tile], height: int
+    ) -> None:
+        self.draw_tile_column(y, x, tiles[-18:], height)
 
     def draw_player_panel(
         self,
@@ -875,34 +914,123 @@ class Tui:
             )
         self.safe_addstr(y + 2, x + 2, f"{self.t('melds')}:")
         self.safe_addstr(y + 2, x + 10, self.melds_text(hand.melds)[: width - 12])
-        self.safe_addstr(y + 3, x + 2, f"{self.t('discards')}:")
-        self.draw_discard_grid(y + 4, x + 2, hand.discards[-24:], width - 4, height - 5)
+
+    def player_score_text(self, player: int, *, compact: bool = False) -> str:
+        assert self.engine is not None
+        state = self.engine.game_state
+        wind = getattr(state.seat_winds[player], self.settings.language)
+        dealer = "*" if state.dealer == player else " "
+        if compact:
+            wind = wind[:1]
+            return f"{dealer}{wind} P{player} {state.scores[player]}"
+        return f"{dealer}P{player} {wind} {state.scores[player]}"
 
     def draw_center_table(self, y: int, x: int, height: int, width: int) -> None:
         assert self.engine is not None
         state = self.engine.game_state
-        self.draw_box(y, x, height, width, "TABLE")
+        self.draw_box(y, x, height, width)
+        title = (
+            f"{getattr(state.round_wind, self.settings.language)} {state.round_number}"
+        )
+        counters = f"{self.t('honba')} {state.honba}   {self.t('kyoutaku')} {state.riichi_sticks}"
+        wall = f"{self.t('wall')} {self.engine.get_wall_remaining()}"
+        dealer = f"{self.t('dealer')} P{state.dealer}"
+        self.add_centered(
+            y + 1, x + 1, width - 2, self.player_score_text(2, compact=True)
+        )
+        self.safe_addstr(y + 3, x + 2, self.player_score_text(3, compact=True))
+        p1 = self.player_score_text(1, compact=True)
+        self.safe_addstr(
+            y + 3,
+            x + max(2, width - self.display_width(p1) - 2),
+            p1,
+        )
+        self.add_centered(y + 4, x + 1, width - 2, title, curses.A_BOLD)
+        self.add_centered(y + 5, x + 1, width - 2, counters)
+        self.add_centered(y + 6, x + 1, width - 2, wall)
+        self.add_centered(y + 7, x + 1, width - 2, dealer)
+        self.add_centered(
+            y + height - 2,
+            x + 1,
+            width - 2,
+            self.player_score_text(0, compact=True),
+        )
+
+    def draw_table_discards(self, center_y: int, center_x: int) -> None:
+        assert self.engine is not None
+        center_height = 9
+        center_width = 30
+        top_width = 72
+        top_x = center_x + (center_width - top_width) // 2
         dora = self.tiles_text(
             self.engine.get_revealed_dora_indicators(), mark_dora=False
         )
-        wall = self.engine.get_wall_remaining()
+
+        self.add_centered(
+            center_y - 5,
+            top_x,
+            top_width,
+            f"{self.t('discards')} P2",
+            curses.A_DIM,
+        )
+        self.draw_discard_river_row(
+            center_y - 4, top_x, self.engine.get_hand(2).discards, top_width
+        )
+        self.add_centered(center_y - 1, top_x, top_width, f"{self.t('dora')}: {dora}")
+
+        self.safe_addstr(
+            center_y, center_x - 24, f"P3 {self.t('discards')}", curses.A_DIM
+        )
+        self.draw_discard_river_column(
+            center_y + 1,
+            center_x - 24,
+            self.engine.get_hand(3).discards,
+            center_height - 2,
+        )
+        self.safe_addstr(
+            center_y,
+            center_x + center_width + 3,
+            f"P1 {self.t('discards')}",
+            curses.A_DIM,
+        )
+        self.draw_discard_river_column(
+            center_y + 1,
+            center_x + center_width + 3,
+            self.engine.get_hand(1).discards,
+            center_height - 2,
+        )
+
+        self.add_centered(
+            center_y + center_height + 1,
+            top_x,
+            top_width,
+            f"P0 {self.t('discards')}",
+            curses.A_DIM,
+        )
+        self.draw_discard_river_row(
+            center_y + center_height + 2,
+            top_x,
+            self.engine.get_hand(0).discards,
+            top_width,
+        )
+
+    def draw_status_panel(self, y: int, x: int, width: int) -> None:
+        dora = self.tiles_text(
+            self.engine.get_revealed_dora_indicators(), mark_dora=False
+        )
         lines = [
-            f"{self.t('round')}: {getattr(state.round_wind, self.settings.language)} {state.round_number}",
-            f"{self.t('dealer')}: P{state.dealer}",
-            f"{self.t('honba')}: {state.honba}   {self.t('kyoutaku')}: {state.riichi_sticks}",
-            f"{self.t('wall')}: {wall}",
             f"{self.t('dora')}: {dora}",
             f"{self.t('difficulty')}: {self.settings.difficulty}",
             f"{self.t('language')}: {self.settings.language}",
         ]
-        for i, line in enumerate(lines[: height - 2]):
-            self.safe_addstr(y + 1 + i, x + 2, line)
+        for index, line in enumerate(lines):
+            self.safe_addstr(y + index, x, line[:width], curses.A_DIM)
 
     def render(self) -> None:
         assert self.engine is not None
         self.stdscr.erase()
         height, width = self.stdscr.getmaxyx()
-        if height < 30 or width < 100:
+        if height < 34 or width < 110:
             self.render_compact()
             self.stdscr.refresh()
             return
@@ -914,20 +1042,21 @@ class Tui:
         scores = "  ".join(f"P{i}: {score}" for i, score in enumerate(state.scores))
         self.safe_addstr(1, max(2, width - len(scores) - 3), scores)
 
-        top_width = min(66, width - 36)
+        top_width = min(78, width - 36)
         top_x = (width - top_width) // 2
-        self.draw_player_panel(2, 3, top_x, 7, top_width, hidden=True)
+        self.draw_player_panel(2, 3, top_x, 4, top_width, hidden=True)
 
-        side_height = max(13, height - 19)
-        side_width = 29
-        self.draw_player_panel(3, 11, 2, side_height, side_width, hidden=True)
-        self.draw_player_panel(
-            1, 11, width - side_width - 2, side_height, side_width, hidden=True
-        )
+        side_width = 31
+        self.draw_player_panel(3, 8, 2, 4, side_width, hidden=True)
+        self.draw_player_panel(1, 8, width - side_width - 2, 4, side_width, hidden=True)
 
-        center_x = side_width + 4
-        center_width = width - (side_width + 4) * 2
-        self.draw_center_table(11, center_x, side_height, center_width)
+        center_width = 30
+        center_height = 9
+        center_x = (width - center_width) // 2
+        center_y = max(12, min((height - center_height) // 2, height - 22))
+        self.draw_table_discards(center_y, center_x)
+        self.draw_center_table(center_y, center_x, center_height, center_width)
+        self.draw_status_panel(3, 3, 32)
 
         bottom_y = height - 8
         if self.status:
