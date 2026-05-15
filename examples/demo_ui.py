@@ -879,7 +879,7 @@ class Tui:
     def draw_discard_grid(
         self, y: int, x: int, tiles: List[Tile], width: int, rows: int
     ) -> None:
-        per_row = max(1, width // 10)
+        per_row = 6
         for row in range(rows):
             start = row * per_row
             if start >= len(tiles):
@@ -916,7 +916,7 @@ class Tui:
     def draw_discard_river_column(
         self, y: int, x: int, tiles: List[Tile], height: int
     ) -> None:
-        self.draw_tile_column(y, x, tiles[-18:], height)
+        self.draw_tile_column(y, x, tiles[-18:], min(6, height))
 
     def draw_player_panel(
         self,
