@@ -884,7 +884,17 @@ class Tui:
             start = row * per_row
             if start >= len(tiles):
                 return
-            self.draw_tile_row(y + row, x, tiles[start : start + per_row], width)
+            row_tiles = tiles[start : start + per_row]
+            row_width = self.tile_row_width(row_tiles)
+            row_offset = max(0, (width - row_width) // 2)
+            row_x = x + row_offset
+            self.draw_tile_row(y + row, row_x, row_tiles, width - row_offset)
+
+    def tile_row_width(self, tiles: List[Tile]) -> int:
+        if not tiles:
+            return 0
+        labels_width = sum(self.display_width(self.tile_label(tile)) for tile in tiles)
+        return labels_width + len(tiles) - 1
 
     def draw_tile_column(
         self,
