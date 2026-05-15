@@ -220,15 +220,15 @@ class Tui:
         glyph = self.tile_glyph(tile, hidden)
         if hidden:
             return f"[{glyph}]"
-        if mark_dora and self.is_dora_tile(tile):
+        if tile and tile.is_red_dora:
+            return f"[[紅{glyph}]]"
+        if mark_dora and self.is_indicator_dora_tile(tile):
             return f"[[{glyph}]]"
         return f"[{glyph}]"
 
-    def is_dora_tile(self, tile: Optional[Tile]) -> bool:
+    def is_indicator_dora_tile(self, tile: Optional[Tile]) -> bool:
         if tile is None:
             return False
-        if tile.is_red_dora:
-            return True
         if self.engine is None or self.engine._tile_set is None:
             return False
 
