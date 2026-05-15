@@ -32,6 +32,22 @@ class TestRuleDora(RuleEngineTestMixin):
 
         assert dora_count == 5
 
+    def test_get_revealed_dora_tiles(self):
+        """Test revealed dora tiles from indicators."""
+        self._init_game()
+        _set_dora_indicators(
+            self.engine,
+            [Tile(Suit.MANZU, 4), Tile(Suit.HONORS, 6)],
+        )
+        self.engine._kan_count = 1
+
+        dora_tiles = self.engine.get_revealed_dora_tiles()
+
+        assert dora_tiles == [Tile(Suit.MANZU, 5), Tile(Suit.HONORS, 7)]
+        assert self.engine.is_revealed_dora_tile(Tile(Suit.MANZU, 5))
+        assert self.engine.is_revealed_dora_tile(Tile(Suit.HONORS, 7))
+        assert not self.engine.is_revealed_dora_tile(Tile(Suit.PINZU, 5))
+
     def test_count_ura_dora_after_riichi(self):
         """Test ura_dora count after riichi."""
         self._init_game()

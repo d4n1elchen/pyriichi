@@ -1830,10 +1830,8 @@ class RuleEngine:
         indicator_count = 1 + self._kan_count
 
         # Dora.
-        if dora_indicators := self._tile_set.get_dora_indicators(indicator_count):
-            for dora_indicator in dora_indicators:
-                dora_tile = self._tile_set.get_dora(dora_indicator)
-                dora_count += sum(tile == dora_tile for tile in all_tiles)
+        for dora_tile in self.get_revealed_dora_tiles():
+            dora_count += sum(tile == dora_tile for tile in all_tiles)
 
         # Ura_dora when in riichi.
         if hand.is_riichi:
@@ -1928,7 +1926,37 @@ class RuleEngine:
         Returns:
             List[Tile]: Revealed dora indicator tiles.
         """
-        return self._tile_set.get_dora_indicators() if self._tile_set else []
+        return (
+            self._tile_set.get_dora_indicators(1 + self._kan_count)
+            if self._tile_set
+            else []
+        )
+
+    def get_revealed_dora_tiles(self) -> List[Tile]:
+        """
+        Get currently revealed dora tiles.
+
+        Returns:
+            List[Tile]: Dora tiles corresponding to revealed dora indicators.
+        """
+        if not self._tile_set:
+            return []
+        return [
+            self._tile_set.get_dora(indicator)
+            for indicator in self.get_revealed_dora_indicators()
+        ]
+
+    def is_revealed_dora_tile(self, tile: Tile) -> bool:
+        """
+        Check whether a tile matches a currently revealed dora indicator.
+
+        Args:
+            tile (Tile): Tile to check.
+
+        Returns:
+            bool: Whether the tile is revealed dora.
+        """
+        return any(tile == dora_tile for dora_tile in self.get_revealed_dora_tiles())
 
     def get_available_chi_sequences(self, player: int) -> List[List[Tile]]:
         """

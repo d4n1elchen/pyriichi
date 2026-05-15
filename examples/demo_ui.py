@@ -222,20 +222,14 @@ class Tui:
             return f"[{glyph}]"
         if tile and tile.is_red_dora:
             return f"[[紅{glyph}]]"
-        if mark_dora and self.is_indicator_dora_tile(tile):
+        if (
+            mark_dora
+            and tile
+            and self.engine
+            and self.engine.is_revealed_dora_tile(tile)
+        ):
             return f"[[{glyph}]]"
         return f"[{glyph}]"
-
-    def is_indicator_dora_tile(self, tile: Optional[Tile]) -> bool:
-        if tile is None:
-            return False
-        if self.engine is None or self.engine._tile_set is None:
-            return False
-
-        for indicator in self.engine.get_revealed_dora_indicators():
-            if tile == self.engine._tile_set.get_dora(indicator):
-                return True
-        return False
 
     def action_text(self, action: GameAction) -> str:
         return getattr(action, self.settings.language)
