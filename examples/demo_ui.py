@@ -46,6 +46,15 @@ TEXT = {
         "last": "Log",
         "winner": "Winner",
         "ryuukyoku": "Ryuukyoku",
+        "round_result": "Round Result",
+        "total_han": "Total Han",
+        "payment": "Payment",
+        "dora_bonus": "Dora/bonus",
+        "all_pay": "all pay",
+        "dealer_pays": "dealer pays",
+        "others_pay": "others pay",
+        "pays": "pays",
+        "yakuman": "yakuman",
         "chombo": "Chombo",
         "next_round": "Press Enter for next round, or q to quit.",
         "game_over": "Game ended. Press any key.",
@@ -84,6 +93,15 @@ TEXT = {
         "last": "ログ",
         "winner": "和了",
         "ryuukyoku": "流局",
+        "round_result": "局結果",
+        "total_han": "合計翻",
+        "payment": "支払い",
+        "dora_bonus": "ドラ等",
+        "all_pay": "全員支払い",
+        "dealer_pays": "親支払い",
+        "others_pay": "子支払い",
+        "pays": "支払い",
+        "yakuman": "役満",
         "chombo": "チョンボ",
         "next_round": "Enterで次局、qで終了。",
         "game_over": "対局終了。何かキーを押してください。",
@@ -122,6 +140,15 @@ TEXT = {
         "last": "紀錄",
         "winner": "和牌",
         "ryuukyoku": "流局",
+        "round_result": "本局結果",
+        "total_han": "總翻",
+        "payment": "支付",
+        "dora_bonus": "寶牌等",
+        "all_pay": "全員支付",
+        "dealer_pays": "莊家支付",
+        "others_pay": "閒家支付",
+        "pays": "支付",
+        "yakuman": "役滿",
         "chombo": "錯和",
         "next_round": "按 Enter 進入下一局，或 q 離開。",
         "game_over": "遊戲結束。按任意鍵。",
@@ -204,6 +231,8 @@ class Tui:
         self.selected_sequence_index: Optional[int] = None
         self.selected_tile_index: Optional[int] = None
         self.selection_tiles: Optional[List[Tile]] = None
+        self.last_round_result: Optional[ActionResult] = None
+        self.last_winners: List[int] = []
 
     def t(self, key: str) -> str:
         return TEXT[self.settings.language][key]
@@ -513,6 +542,8 @@ class Tui:
         self.active_sequences = []
         self.selected_sequence_index = None
         self.selected_tile_index = None
+        self.last_round_result = None
+        self.last_winners = []
         self.start_next_round()
 
         while self.running and self.engine.get_phase() != GamePhase.ENDED:
@@ -527,6 +558,7 @@ class Tui:
             if not self.engine.waiting_for_actions:
                 ryuukyoku = self.engine.handle_ryuukyoku()
                 if ryuukyoku.ryuukyoku:
+                    self.last_round_result = ActionResult(ryuukyoku=ryuukyoku)
                     self.set_status(self.ryuukyoku_text(ryuukyoku.ryuukyoku_type))
                     continue
                 break
@@ -549,6 +581,8 @@ class Tui:
 
     def start_next_round(self) -> None:
         assert self.engine is not None
+        self.last_round_result = None
+        self.last_winners = []
         self.engine.start_round()
         self.engine.deal()
         state = self.engine.game_state
@@ -560,7 +594,7 @@ class Tui:
     def end_round_prompt(self) -> bool:
         assert self.engine is not None
         self.render()
-        self.safe_addstr(1, 2, self.t("next_round"), curses.A_BOLD)
+        self.draw_round_summary()
         self.stdscr.refresh()
         while True:
             key = self.stdscr.getch()
@@ -818,6 +852,7 @@ class Tui:
             result.winners = [result.rinshan_win.player]
             result.win_results[result.rinshan_win.player] = result.rinshan_win
         if result.winners:
+            self.last_round_result = result
             self.last_winners = result.winners
             self.set_status(
                 f"{self.t('winner')}: {', '.join(f'P{p}' for p in result.winners)}"
@@ -828,11 +863,13 @@ class Tui:
                 and result.ryuukyoku.ryuukyoku_type.value == "exhaustive_draw"
             ):
                 result.ryuukyoku = self.engine.handle_ryuukyoku()
+            self.last_round_result = result
             self.set_status(self.ryuukyoku_text(result.ryuukyoku.ryuukyoku_type))
         elif self.engine.get_phase() == GamePhase.PLAYING:
             ryuukyoku_type = self.engine.check_ryuukyoku()
             if ryuukyoku_type:
                 ryuukyoku = self.engine.handle_ryuukyoku()
+                self.last_round_result = ActionResult(ryuukyoku=ryuukyoku)
                 self.set_status(self.ryuukyoku_text(ryuukyoku.ryuukyoku_type))
 
     def ryuukyoku_text(self, ryuukyoku_type) -> str:
@@ -841,6 +878,92 @@ class Tui:
         return (
             f"{self.t('ryuukyoku')}: {getattr(ryuukyoku_type, self.settings.language)}"
         )
+
+    def round_summary_lines(self) -> List[str]:
+        assert self.engine is not None
+        result = self.last_round_result
+        if result is None:
+            return [self.status or self.t("round_result")]
+        if result.ryuukyoku:
+            return [self.t("ryuukyoku")]
+
+        lines = []
+        for winner in result.winners:
+            win_result = result.win_results.get(winner)
+            if win_result is None:
+                continue
+            lines.append(f"{self.t('winner')}: P{winner}")
+            lines.append(
+                f"{self.t('hand')}: {self.tiles_text(self.win_hand_tiles(winner, win_result))}"
+            )
+            for yaku_result in win_result.yaku:
+                lines.append(f"  {self.yaku_summary_text(yaku_result)}")
+            listed_han = sum(yaku_result.han for yaku_result in win_result.yaku)
+            bonus_han = max(0, win_result.han - listed_han)
+            if bonus_han:
+                lines.append(f"  {self.t('dora_bonus')}: {bonus_han} han")
+            lines.append(
+                f"{self.t('total_han')}: {win_result.han} han / {win_result.fu} fu"
+            )
+            lines.append(
+                f"{self.t('payment')}: {self.payment_summary_text(win_result)}"
+            )
+            lines.append("")
+        return lines[:-1] if lines and lines[-1] == "" else lines
+
+    def win_hand_tiles(self, winner: int, win_result) -> List[Tile]:
+        assert self.engine is not None
+        hand = self.engine.get_hand(winner)
+        tiles = list(hand.tiles)
+        score_result = getattr(win_result, "score_result", None)
+        is_tsumo = bool(getattr(score_result, "is_tsumo", False))
+        winning_tile = (
+            hand.last_drawn_tile if is_tsumo else self.engine.get_last_discard()
+        )
+        if winning_tile is not None and all(tile is not winning_tile for tile in tiles):
+            tiles.append(winning_tile)
+        return self.sorted_tiles_for_display(tiles, winning_tile)
+
+    def yaku_summary_text(self, yaku_result) -> str:
+        name = getattr(yaku_result.yaku, self.settings.language)
+        suffix = self.t("yakuman") if yaku_result.is_yakuman else "han"
+        return f"{name}: {yaku_result.han} {suffix}"
+
+    def payment_summary_text(self, win_result) -> str:
+        score = win_result.score_result
+        if score.is_tsumo:
+            if score.payment_to == self.engine.game_state.dealer:
+                text = f"{self.t('all_pay')} {score.non_dealer_payment}"
+            else:
+                text = (
+                    f"{self.t('dealer_pays')} {score.dealer_payment}; "
+                    f"{self.t('others_pay')} {score.non_dealer_payment}"
+                )
+        else:
+            payment = score.total_points - score.riichi_sticks_bonus
+            text = f"P{score.payment_from} {self.t('pays')} {payment}"
+
+        if score.riichi_sticks_bonus:
+            text = f"{text}; deposit +{score.riichi_sticks_bonus}"
+        if score.pao_player is not None and score.pao_payment:
+            text = f"{text}; pao P{score.pao_player} {score.pao_payment}"
+        return text
+
+    def draw_round_summary(self) -> None:
+        height, width = self.stdscr.getmaxyx()
+        lines = self.round_summary_lines()
+        content_width = max([self.display_width(line) for line in lines] + [0])
+        box_width = min(width - 4, max(42, content_width + 4))
+        box_height = min(height - 4, max(6, len(lines) + 4))
+        if box_width < 10 or box_height < 5:
+            return
+        y = max(1, (height - box_height) // 2)
+        x = max(2, (width - box_width) // 2)
+        self.draw_box(y, x, box_height, box_width, self.t("round_result"))
+        max_lines = max(0, box_height - 4)
+        for index, line in enumerate(lines[:max_lines]):
+            self.safe_addstr(y + 1 + index, x + 2, line)
+        self.safe_addstr(y + box_height - 2, x + 2, self.t("next_round"), curses.A_BOLD)
 
     def draw_box(
         self, y: int, x: int, height: int, width: int, title: str = ""
