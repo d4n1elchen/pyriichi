@@ -196,6 +196,7 @@ class Tui:
         self.running = True
         self.has_colors = False
         self.active_actions: List[GameAction] = []
+        self.selected_action_index: Optional[int] = None
         self.selected_tile_index: Optional[int] = None
         self.selection_tiles: Optional[List[Tile]] = None
 
@@ -503,6 +504,7 @@ class Tui:
         self.players = [None] + [ai_cls(f"CPU {i}") for i in range(1, 4)]
         self.status = ""
         self.active_actions = []
+        self.selected_action_index = None
         self.selected_tile_index = None
         self.start_next_round()
 
@@ -613,14 +615,28 @@ class Tui:
 
     def choose_action(self, actions: List[GameAction]) -> Optional[GameAction]:
         self.active_actions = actions
+        self.selected_action_index = 0
         self.set_status(self.t("select_action"))
-        choice = self.choose(
-            self.t("select_action"), [self.action_text(action) for action in actions]
-        )
-        self.clear_selection()
-        if choice is None:
-            return None
-        return actions[choice]
+
+        while True:
+            self.render()
+            key = self.stdscr.getch()
+            if key in (ord("q"), 27):
+                self.stop()
+                self.clear_selection()
+                return None
+            if key in (curses.KEY_LEFT, curses.KEY_UP, ord("h"), ord("k")):
+                self.selected_action_index = max(
+                    0, (self.selected_action_index or 0) - 1
+                )
+            elif key in (curses.KEY_RIGHT, curses.KEY_DOWN, ord("l"), ord("j")):
+                self.selected_action_index = min(
+                    len(actions) - 1, (self.selected_action_index or 0) + 1
+                )
+            elif key in (curses.KEY_ENTER, 10, 13):
+                action = actions[self.selected_action_index or 0]
+                self.clear_selection()
+                return action
 
     @staticmethod
     def sorted_tiles_for_display(
@@ -654,6 +670,7 @@ class Tui:
 
     def clear_selection(self) -> None:
         self.active_actions = []
+        self.selected_action_index = None
         self.selected_tile_index = None
         self.selection_tiles = None
 
@@ -840,6 +857,25 @@ class Tui:
             self.safe_addstr(y, cursor, label, attr)
             cursor += label_width + 1
 
+    def draw_action_row(self, y: int, x: int, width: int) -> None:
+        if not self.active_actions or self.selected_action_index is None:
+            return
+
+        self.safe_addstr(y, x, f"{self.t('select_action')}:")
+        cursor = x + self.display_width(self.t("select_action")) + 2
+        max_x = x + width
+        for index, action in enumerate(self.active_actions):
+            label = f"[{self.action_text(action)}]"
+            label_width = self.display_width(label)
+            if cursor + label_width > max_x:
+                remaining = len(self.active_actions) - index
+                if remaining > 0:
+                    self.safe_addstr(y, cursor, f"+{remaining}")
+                return
+            attr = curses.A_REVERSE if index == self.selected_action_index else 0
+            self.safe_addstr(y, cursor, label, attr)
+            cursor += label_width + 1
+
     def draw_discard_grid(
         self, y: int, x: int, tiles: List[Tile], width: int, rows: int
     ) -> None:
@@ -914,6 +950,8 @@ class Tui:
             )
         self.safe_addstr(y + 2, x + 2, f"{self.t('melds')}:")
         self.safe_addstr(y + 2, x + 10, self.melds_text(hand.melds)[: width - 12])
+        if player == 0:
+            self.draw_action_row(y + 3, x + 2, width - 4)
 
     def player_score_text(self, player: int, *, compact: bool = False) -> str:
         assert self.engine is not None
@@ -1118,11 +1156,12 @@ class Tui:
             indexed=True,
             selected_index=self.selected_tile_index,
         )
+        self.draw_action_row(base_y + 2, 4, 74)
         self.safe_addstr(
-            base_y + 2, 4, f"{self.t('melds')}: {self.melds_text(hand.melds)}"
+            base_y + 3, 4, f"{self.t('melds')}: {self.melds_text(hand.melds)}"
         )
         self.safe_addstr(
-            base_y + 3,
+            base_y + 4,
             4,
             f"{self.t('discards')}: {self.tiles_text(hand.discards[-24:])}",
         )
