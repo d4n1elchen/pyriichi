@@ -8,6 +8,7 @@ from enum import Enum
 from typing import List, Optional, Tuple
 
 from pyriichi.enum_utils import TranslatableEnum
+from pyriichi.errors import HandError
 from pyriichi.tiles import Suit, Tile
 
 
@@ -26,16 +27,16 @@ class Combination:
     def __init__(self, combination_type: CombinationType, tiles: List[Tile]):
         if combination_type == CombinationType.PAIR:
             if len(tiles) != 2:
-                raise ValueError("對子必須是 2 張牌")
+                raise HandError("pair_requires_two_tiles")
         elif combination_type == CombinationType.TRIPLET:
             if len(tiles) != 3:
-                raise ValueError("刻子必須是 3 張牌")
+                raise HandError("triplet_requires_three_tiles")
         elif combination_type == CombinationType.SEQUENCE:
             if len(tiles) != 3:
-                raise ValueError("順子必須是 3 張牌")
+                raise HandError("sequence_requires_three_tiles")
         elif combination_type == CombinationType.KAN:
             if len(tiles) != 4:
-                raise ValueError("槓子必須是 4 張牌")
+                raise HandError("kan_requires_four_tiles")
 
         self._type = combination_type
         self._tiles = tiles
@@ -75,9 +76,9 @@ def make_combination(combo_type: CombinationType, suit: Suit, rank: int) -> Comb
 
     if combo_type == CombinationType.SEQUENCE:
         if suit == Suit.HONORS:
-            raise ValueError("字牌不能組成順子")
+            raise HandError("honors_cannot_form_sequence")
         if not (1 <= rank <= 7):
-            raise ValueError("順子起始點數必須介於 1 到 7 之間")
+            raise HandError("sequence_start_out_of_range")
         tiles = [Tile(suit, rank + i) for i in range(3)]
     elif combo_type == CombinationType.TRIPLET:
         tiles = [Tile(suit, rank) for _ in range(3)]
@@ -86,7 +87,7 @@ def make_combination(combo_type: CombinationType, suit: Suit, rank: int) -> Comb
     elif combo_type == CombinationType.PAIR:
         tiles = [Tile(suit, rank) for _ in range(2)]
     else:
-        raise ValueError(f"不支援的組合類型：{combo_type}")
+        raise HandError("unsupported_combination_type", {"combo_type": combo_type})
 
     return Combination(combo_type, tiles)
 
@@ -118,11 +119,11 @@ class Meld:
             ValueError: If tile count is invalid.
         """
         if meld_type == MeldType.CHI_MELD and len(tiles) != 3:
-            raise ValueError("吃必須是 3 張牌")
+            raise HandError("chi_requires_three_tiles")
         if meld_type == MeldType.PON_MELD and len(tiles) != 3:
-            raise ValueError("碰必須是 3 張牌")
+            raise HandError("pon_requires_three_tiles")
         if meld_type in [MeldType.OPEN_KAN, MeldType.CLOSED_KAN] and len(tiles) != 4:
-            raise ValueError("槓必須是 4 張牌")
+            raise HandError("meld_kan_requires_four_tiles")
 
         self._type = meld_type
         self._tiles = sorted(tiles)
@@ -220,10 +221,10 @@ class Hand:
         """
 
         if not self._discards:
-            raise ValueError("沒有可移除的捨牌")
+            raise HandError("no_discard_to_remove")
         last_tile = self._discards[-1]
         if last_tile != tile:
-            raise ValueError("最後一張捨牌與指定牌不符")
+            raise HandError("last_discard_mismatch")
         self._discards.pop()
 
     def total_tile_count(self) -> int:
@@ -286,7 +287,7 @@ class Hand:
             ValueError: If chi is not possible.
         """
         if not self.can_chi(tile, 0):
-            raise ValueError("不能吃這張牌")
+            raise HandError("cannot_chi_tile")
 
         for t in sequence:
             self._tiles.remove(t)
@@ -327,7 +328,7 @@ class Hand:
             ValueError: If pon is not possible.
         """
         if not self.can_pon(tile):
-            raise ValueError("不能碰這張牌")
+            raise HandError("cannot_pon_tile")
 
         removed = 0
         tiles_to_remove = []
@@ -414,7 +415,7 @@ class Hand:
         """
         possible_kan = self.can_kan(tile)
         if not possible_kan:
-            raise ValueError("不能槓這張牌")
+            raise HandError("cannot_kan_tile")
 
         # Use the first possible kan combination
         meld = possible_kan[0]
@@ -426,7 +427,7 @@ class Hand:
             if tile is None:
                 called_tile = meld.called_tile
                 if called_tile is None or self._tiles.count(called_tile) == 0:
-                    raise ValueError("沒有可用的牌升級為加槓")
+                    raise HandError("no_tile_for_added_kan")
                 for existing_meld in self._melds:
                     if (
                         existing_meld.type == MeldType.PON_MELD

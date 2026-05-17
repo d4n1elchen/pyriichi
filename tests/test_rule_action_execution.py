@@ -150,7 +150,7 @@ class TestActionExecution(RuleEngineTestMixin):
         current_player = self.engine.get_current_player()
         hand = self.engine.get_hand(current_player)
         self.engine._tile_set = None
-        with pytest.raises(ValueError, match="牌組未初始化"):
+        with pytest.raises(ValueError, match="牌山未初始化"):
             self.engine.execute_action(
                 current_player, GameAction.DISCARD, tile=hand.tiles[0]
             )

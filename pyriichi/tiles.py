@@ -9,6 +9,7 @@ import random
 from typing import Dict, List, Optional
 
 from pyriichi.enum_utils import TranslatableEnum
+from pyriichi.errors import TileError
 
 
 class Suit(TranslatableEnum):
@@ -85,9 +86,9 @@ class Tile:
         """
         if suit == Suit.HONORS:
             if not (1 <= rank <= 7):
-                raise ValueError(f"字牌 rank 必須在 1-7 之間，得到 {rank}")
+                raise TileError("honor_rank_out_of_range", {"rank": rank})
         elif not (1 <= rank <= 9):
-            raise ValueError(f"數牌 rank 必須在 1-9 之間，得到 {rank}")
+            raise TileError("number_rank_out_of_range", {"rank": rank})
 
         self._suit = suit
         self._rank = rank
@@ -181,7 +182,7 @@ class Tile:
 
     def _format_name(self, locale: str) -> str:
         if locale not in {"zh", "ja", "en"}:
-            raise ValueError(f"Unsupported locale: {locale}")
+            raise TileError("unsupported_locale", {"locale": locale})
 
         prefix = self._RED_DORA_PREFIX_MAP[locale] if self._is_red_dora else ""
 
@@ -231,7 +232,7 @@ def create_tile(suit: str, rank: int, is_red_dora: bool = False) -> Tile:
         "z": Suit.HONORS,
     }
     if suit not in suit_map:
-        raise ValueError(f"無效的花色: {suit}")
+        raise TileError("invalid_suit", {"suit": suit})
     return Tile(suit_map[suit], rank, is_red_dora)
 
 
@@ -296,7 +297,9 @@ class TileSet:
             ValueError: If dealer is out of range.
         """
         if not (0 <= dealer < num_players):
-            raise ValueError(f"Dealer position must be between 0 and {num_players - 1}")
+            raise TileError(
+                "dealer_position_out_of_range", {"max_player": num_players - 1}
+            )
 
         hands = [[] for _ in range(num_players)]
 
@@ -358,8 +361,9 @@ class TileSet:
         if count is None:
             count = 5 - len(self._rinshan_tiles)
         if count > len(self._dora_indicators):
-            raise ValueError(
-                f"寶牌指示牌不足，需要 {count} 張，只有 {len(self._dora_indicators)} 張"
+            raise TileError(
+                "dora_indicators_insufficient",
+                {"count": count, "actual": len(self._dora_indicators)},
             )
         return self._dora_indicators[:count]
 
@@ -379,8 +383,9 @@ class TileSet:
         if count is None:
             count = 5 - len(self._rinshan_tiles)
         if count > len(self._ura_dora_indicators):
-            raise ValueError(
-                f"裡寶牌指示牌不足，需要 {count} 張，只有 {len(self._ura_dora_indicators)} 張"
+            raise TileError(
+                "ura_dora_indicators_insufficient",
+                {"count": count, "actual": len(self._ura_dora_indicators)},
             )
         return self._ura_dora_indicators[:count]
 

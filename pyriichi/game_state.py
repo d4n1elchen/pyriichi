@@ -7,6 +7,7 @@ Manages game state such as round number, wind, scores, etc.
 from typing import List, Optional
 
 from pyriichi.enum_utils import TranslatableEnum
+from pyriichi.errors import GameStateError
 from pyriichi.rules_config import RulesetConfig
 from pyriichi.tiles import Suit, Tile
 
@@ -30,7 +31,7 @@ class Wind(TranslatableEnum):
         elif self == Wind.NORTH:
             return Tile(Suit.HONORS, 4)
         else:
-            raise ValueError(f"Invalid wind: {self}")
+            raise GameStateError("invalid_wind", {"wind": self})
 
 
 class GameState:
@@ -116,7 +117,10 @@ class GameState:
             ValueError: If position is invalid.
         """
         if not (0 <= dealer < self._num_players):
-            raise ValueError(f"莊家位置必須在 0-{self._num_players - 1} 之間")
+            raise GameStateError(
+                "dealer_position_out_of_range",
+                {"max_player": self._num_players - 1},
+            )
         self._dealer = dealer
 
     def add_honba(self, count: int = 1) -> None:
@@ -156,7 +160,10 @@ class GameState:
             ValueError: If player position is invalid.
         """
         if not (0 <= player < self._num_players):
-            raise ValueError(f"玩家位置必須在 0-{self._num_players - 1} 之間")
+            raise GameStateError(
+                "player_position_out_of_range",
+                {"max_player": self._num_players - 1},
+            )
         self._scores[player] += points
 
     def transfer_points(self, from_player: int, to_player: int, points: int) -> None:

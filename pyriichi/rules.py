@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 from pyriichi.enum_utils import TranslatableEnum
+from pyriichi.errors import RuleError
 from pyriichi.game_state import GameState, Wind
 from pyriichi.hand import Hand, Meld, MeldType
 from pyriichi.scoring import ScoreCalculator, ScoreResult
@@ -243,10 +244,10 @@ class RuleEngine:
             ValueError: If not in DEALING phase or tile set is not initialized.
         """
         if self._phase != GamePhase.DEALING:
-            raise ValueError("只能在發牌階段發牌")
+            raise RuleError("deal_only_in_dealing_phase")
 
         if not self._tile_set:
-            raise ValueError("牌組未初始化")
+            raise RuleError("tile_set_not_initialized")
         dealer = self._game_state.dealer
         hands_tiles = self._tile_set.deal(
             num_players=self._num_players,
@@ -544,23 +545,28 @@ class RuleEngine:
         """
         available_actions = self.get_available_actions(player)
         if action not in available_actions:
-            raise ValueError(f"玩家 {player} 不能執行動作 {action}")
+            raise RuleError("action_not_allowed", {"player": player, "action": action})
 
         handler = self._action_handlers.get(action)
         if handler is None:
-            raise ValueError(f"動作 {action} 尚未實作")
+            raise RuleError("action_not_implemented", {"action": action})
 
         # Chombo Detection
 
         # If in waiting state, collect player response
         if self._waiting_for_actions:
             if player not in self._waiting_for_actions:
-                raise ValueError(f"玩家 {player} 當前不需要執行動作")
+                raise RuleError("player_not_waiting_for_action", {"player": player})
 
             allowed_actions = self._waiting_for_actions[player]
             if action not in allowed_actions:
-                raise ValueError(
-                    f"玩家 {player} 不能執行動作 {action}，期待: {allowed_actions}"
+                raise RuleError(
+                    "action_not_expected",
+                    {
+                        "player": player,
+                        "action": action,
+                        "allowed_actions": allowed_actions,
+                    },
                 )
 
             # Record response
@@ -610,7 +616,7 @@ class RuleEngine:
                 if handler:
                     return handler(player, tile, **kwargs)
                 else:
-                    raise ValueError(f"動作 {action} 尚未實作")
+                    raise RuleError("action_not_implemented", {"action": action})
 
         # 1. Check ron
         ron_players = [p for p, (a, _, _) in actions.items() if a == GameAction.RON]
@@ -621,7 +627,7 @@ class RuleEngine:
 
             # Use check_multiple_ron to get real winners (considering head_bump)
             if self._last_discarded_tile is None or self._last_discarded_player is None:
-                raise ValueError("無法執行榮和：無捨牌")
+                raise RuleError("cannot_ron_without_discard")
 
             real_winners = self.check_multiple_ron(
                 self._last_discarded_tile, self._last_discarded_player
@@ -683,7 +689,7 @@ class RuleEngine:
 
         tile = self._last_discarded_tile
         if tile is None:
-            raise ValueError("無捨牌")
+            raise RuleError("no_discard")
         if self._last_discarded_player is not None:
             self._revert_pending_riichi_discard(self._last_discarded_player)
 
@@ -710,7 +716,7 @@ class RuleEngine:
         # Check hand tile count
         hand = self._hands[player]
         if not self._tile_set:
-            raise ValueError("牌組未初始化")
+            raise RuleError("tile_set_not_initialized")
 
         # Calculate kan count (each kan increases hand limit by 1)
         kan_count = sum(
@@ -721,7 +727,7 @@ class RuleEngine:
         limit = 14 + kan_count
 
         if hand.total_tile_count() >= limit:
-            raise ValueError(f"手牌已達 {limit} 張，不能再摸牌")
+            raise RuleError("hand_limit_reached", {"limit": limit})
         # Draw tile
         drawn_tile = self._tile_set.draw()
         if drawn_tile:
@@ -788,16 +794,16 @@ class RuleEngine:
     ) -> ActionResult:
         result = ActionResult()
         if tile is None:
-            raise ValueError("打牌動作必須指定牌")
+            raise RuleError("discard_requires_tile")
         if not self._tile_set:
-            raise ValueError("牌組未初始化")
+            raise RuleError("tile_set_not_initialized")
 
         hand = self._hands[player]
 
         # After riichi, can only discard the drawn tile (unless declare_ankan, but declare_ankan is handled in _handle_kan)
         if hand.is_riichi:
             if hand.last_drawn_tile and tile != hand.last_drawn_tile:
-                raise ValueError("立直後只能打出剛摸到的牌")
+                raise RuleError("riichi_must_discard_drawn_tile")
 
         if hand.discard(tile):
             # Record discard and handle related effects (but do not advance turn)
@@ -853,14 +859,14 @@ class RuleEngine:
     ) -> ActionResult:
         result = ActionResult()
         if self._last_discarded_tile is None or self._last_discarded_player is None:
-            raise ValueError("沒有可碰的捨牌")
+            raise RuleError("no_pon_discard")
         if player == self._last_discarded_player:
-            raise ValueError("不能碰自己打出的牌")
+            raise RuleError("cannot_pon_own_discard")
 
         tile_to_claim = self._last_discarded_tile
         hand = self._hands[player]
         if not hand.can_pon(tile_to_claim):
-            raise ValueError("手牌無法碰這張牌")
+            raise RuleError("hand_cannot_pon_tile")
 
         discarder = self._last_discarded_player
         self._remove_last_discard(discarder, tile_to_claim)
@@ -889,21 +895,21 @@ class RuleEngine:
     ) -> ActionResult:
         result = ActionResult()
         if self._last_discarded_tile is None or self._last_discarded_player is None:
-            raise ValueError("沒有可吃的捨牌")
+            raise RuleError("no_chi_discard")
         if (player - self._last_discarded_player) % self._num_players != 1:
-            raise ValueError("只能吃上家的牌")
+            raise RuleError("can_only_chi_from_kamicha")
 
         tile_to_claim = self._last_discarded_tile
         hand = self._hands[player]
         sequences = hand.can_chi(tile_to_claim, from_player=0)
         if not sequences:
-            raise ValueError("手牌無法吃這張牌")
+            raise RuleError("hand_cannot_chi_tile")
 
         sequence = kwargs.get("sequence")
         if sequence is None:
             sequence = sequences[0]
         elif sequence not in sequences:
-            raise ValueError("提供的順子無效")
+            raise RuleError("invalid_chi_sequence")
 
         discarder = self._last_discarded_player
         self._remove_last_discard(discarder, tile_to_claim)
@@ -930,14 +936,14 @@ class RuleEngine:
         self, player: int, tile: Optional[Tile] = None, **kwargs
     ) -> ActionResult:
         if tile is None:
-            raise ValueError("立直必須同時打出一張牌")
+            raise RuleError("riichi_requires_discard")
 
         if (
             self._tile_set
             and self._tile_set.remaining
             < self._game_state.ruleset.riichi_min_remaining_tiles
         ):
-            raise ValueError("立直時牌山剩餘張數不足")
+            raise RuleError("riichi_not_enough_wall_tiles")
 
         hand = self._hands[player]
 
@@ -946,7 +952,7 @@ class RuleEngine:
         try:
             hand._tiles.remove(tile)
         except ValueError:
-            raise ValueError("手牌中沒有這張牌")
+            raise RuleError("tile_not_in_hand")
 
         hand._tile_counts_cache = None
         is_tenpai = hand.is_tenpai()
@@ -958,7 +964,7 @@ class RuleEngine:
         if not is_tenpai:
             if self._game_state.ruleset.chombo_penalty_enabled:
                 return self._handle_chombo(player)
-            raise ValueError("立直打牌後必須聽牌")
+            raise RuleError("riichi_discard_must_keep_tenpai")
 
         # Execute the discard.
         # _handle_discard handles both discard logic and follow-up flow.
@@ -997,11 +1003,11 @@ class RuleEngine:
                     if meld.type == MeldType.OPEN_KAN and meld.called_tile is not None
                 ]
                 if not add_kan_candidates:
-                    raise ValueError("明槓必須指定被槓的牌")
+                    raise RuleError("open_kan_requires_called_tile")
                 tile = add_kan_candidates[0].called_tile
                 is_add_kan = True
             else:
-                raise ValueError("明槓必須指定被槓的牌")
+                raise RuleError("open_kan_requires_called_tile")
         elif player == self._current_player:
             is_add_kan = any(
                 meld.type == MeldType.OPEN_KAN
@@ -1061,7 +1067,7 @@ class RuleEngine:
             meld for meld in hand.can_kan(None) if meld.type == MeldType.CLOSED_KAN
         ]
         if not candidates:
-            raise ValueError("手牌無法暗槓")
+            raise RuleError("hand_cannot_closed_kan")
 
         # Support multiple closed_kan choices.
         selected = None
@@ -1078,7 +1084,7 @@ class RuleEngine:
                     break
 
             if selected is None:
-                raise ValueError(f"無法暗槓指定的牌: {tile}")
+                raise RuleError("cannot_closed_kan_tile", {"tile": tile})
         else:
             # If no tile was specified and multiple choices exist, use the first one.
             selected = candidates[0]
@@ -1129,7 +1135,7 @@ class RuleEngine:
             if hand.last_drawn_tile:
                 tile = hand.last_drawn_tile
             else:
-                raise ValueError("無法確定自摸的牌")
+                raise RuleError("cannot_determine_tsumo_tile")
 
         # Check whether the player can win by tsumo.
         is_rinshan = kwargs.get("is_rinshan", False)
@@ -1138,7 +1144,7 @@ class RuleEngine:
         if win_result is None:
             if self._game_state.ruleset.chombo_penalty_enabled:
                 return self._handle_chombo(player)
-            raise ValueError(f"玩家 {player} 無法用 {tile} 自摸和牌")
+            raise RuleError("cannot_tsumo_with_tile", {"player": player, "tile": tile})
 
         # Apply score changes.
         self.apply_win_score(win_result)
@@ -1174,7 +1180,7 @@ class RuleEngine:
 
         # Get the tile won by ron, normally the last discarded.
         if self._last_discarded_tile is None or self._last_discarded_player is None:
-            raise ValueError("沒有可榮和的捨牌")
+            raise RuleError("no_ron_discard")
 
         winning_tile = self._last_discarded_tile
         discarder = self._last_discarded_player
@@ -1188,7 +1194,7 @@ class RuleEngine:
             if self.check_win(player, winning_tile, is_chankan=False) is None:
                 if self._game_state.ruleset.chombo_penalty_enabled:
                     return self._handle_chombo(player)
-                raise ValueError(f"玩家 {player} 不能榮和（配置限制或振聽）")
+                raise RuleError("cannot_ron", {"player": player})
             # An empty list means sancha_ron triggered an abortive draw.
             result.ryuukyoku = RyuukyokuResult(
                 ryuukyoku=True, ryuukyoku_type=RyuukyokuType.SANCHA_RON
@@ -1205,7 +1211,7 @@ class RuleEngine:
             if self.check_win(player, winning_tile, is_chankan=False) is None:
                 if self._game_state.ruleset.chombo_penalty_enabled:
                     return self._handle_chombo(player)
-            raise ValueError(f"玩家 {player} 不能榮和（配置限制或振聽）")
+            raise RuleError("cannot_ron", {"player": player})
 
         # Process all winners.
         winners = potential_winners
@@ -1300,7 +1306,7 @@ class RuleEngine:
         Handle a kyuushu_kyuuhai abortive draw.
         """
         if not self._check_kyuushu_kyuuhai(player):
-            raise ValueError("不滿足九種九牌流局條件")
+            raise RuleError("kyuushu_kyuuhai_not_met")
 
         result = ActionResult()
         result.ryuukyoku = RyuukyokuResult(
@@ -1885,7 +1891,10 @@ class RuleEngine:
             ValueError: If player position is invalid.
         """
         if not (0 <= player < self._num_players):
-            raise ValueError(f"玩家位置必須在 0-{self._num_players - 1} 之間")
+            raise RuleError(
+                "player_position_out_of_range",
+                {"max_player": self._num_players - 1},
+            )
         return self._hands[player]
 
     def get_game_state(self) -> GameState:
@@ -1911,7 +1920,10 @@ class RuleEngine:
             ValueError: If player position is invalid.
         """
         if not (0 <= player < self._num_players):
-            raise ValueError(f"玩家位置必須在 0-{self._num_players - 1} 之間")
+            raise RuleError(
+                "player_position_out_of_range",
+                {"max_player": self._num_players - 1},
+            )
         return self._hands[player].discards
 
     def get_last_discard(self) -> Optional[Tile]:

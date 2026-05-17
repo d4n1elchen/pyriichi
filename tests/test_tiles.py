@@ -17,18 +17,18 @@ class TestTile:
 
     def test_tile_creation_invalid_rank_honors(self):
         """Test tile creation invalid rank honors."""
-        with pytest.raises(ValueError, match="字牌 rank 必須在 1-7 之間"):
+        with pytest.raises(ValueError, match="字牌序號必須在 1-7 之間"):
             Tile(Suit.HONORS, 0)
 
-        with pytest.raises(ValueError, match="字牌 rank 必須在 1-7 之間"):
+        with pytest.raises(ValueError, match="字牌序號必須在 1-7 之間"):
             Tile(Suit.HONORS, 8)
 
     def test_tile_creation_invalid_rank_number(self):
         """Test tile creation invalid rank number."""
-        with pytest.raises(ValueError, match="數牌 rank 必須在 1-9 之間"):
+        with pytest.raises(ValueError, match="數牌序號必須在 1-9 之間"):
             Tile(Suit.MANZU, 0)
 
-        with pytest.raises(ValueError, match="數牌 rank 必須在 1-9 之間"):
+        with pytest.raises(ValueError, match="數牌序號必須在 1-9 之間"):
             Tile(Suit.MANZU, 10)
 
     def test_tile_red_dora(self):
@@ -167,7 +167,7 @@ class TestTileSet:
     def test_tileset_deal_invalid_dealer(self):
         """Test tileset deal invalid dealer."""
         tile_set = TileSet()
-        with pytest.raises(ValueError, match="Dealer position must be between 0 and 3"):
+        with pytest.raises(ValueError, match="莊家位置必須在 0-3 之間"):
             tile_set.deal(num_players=4, dealer=4)
 
     def test_tileset_draw(self):

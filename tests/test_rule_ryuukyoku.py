@@ -176,7 +176,7 @@ class TestRyuukyoku(RuleEngineTestMixin):
         if hand.total_tile_count() >= 14:
             hand.tiles.pop()
 
-        with pytest.raises(ValueError, match="牌組未初始化"):
+        with pytest.raises(ValueError, match="牌山未初始化"):
             self.engine._handle_draw(current_player)
 
     def test_execute_action_draw_last_tile(self):

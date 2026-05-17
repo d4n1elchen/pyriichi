@@ -7,6 +7,13 @@ Complete implementation of riichi mahjong rule engine.
 __version__ = "0.1.0"
 
 # Core Classes
+from pyriichi.errors import (
+    GameStateError,
+    HandError,
+    PyRiichiError,
+    RuleError,
+    TileError,
+)
 from pyriichi.game_state import GameState, Wind
 from pyriichi.hand import Hand, Meld, MeldType
 from pyriichi.rules import (
@@ -49,6 +56,11 @@ __all__ = [
     "ScoreCalculator",
     "ScoreResult",
     "RulesetConfig",
+    "PyRiichiError",
+    "HandError",
+    "TileError",
+    "GameStateError",
+    "RuleError",
     # Utility functions
     "parse_tiles",
     "format_tiles",
