@@ -1222,7 +1222,6 @@ class Tui:
                     self.display_width(self.tile_label(tile))
                     for tile in option.meld_tiles
                 )
-                + max(0, len(option.meld_tiles) - 1)
             )
         return self.display_width(f"[{self.action_text(option.action)}]")
 
@@ -1249,22 +1248,12 @@ class Tui:
             option.called_from,
             owner=0,
         )
-        called_marked = False
+        called_index = self.called_tile_slot(
+            len(display_tiles), option.called_from, owner=0
+        )
         for index, tile in enumerate(display_tiles):
-            if index:
-                self.safe_addstr(y, cursor, " ", space_attr)
-                cursor += 1
             label = self.tile_label(tile)
-            is_called_tile = tile is option.called_tile
-            if (
-                not is_called_tile
-                and not called_marked
-                and option.called_tile is not None
-                and tile == option.called_tile
-            ):
-                is_called_tile = True
-            if is_called_tile:
-                called_marked = True
+            is_called_tile = index == called_index
             attr = self.tile_attr(tile, bold=is_called_tile)
             if is_called_tile:
                 attr |= curses.A_UNDERLINE
@@ -1622,23 +1611,39 @@ class Tui:
         remaining = []
         removed_called_tile = None
         for tile in tiles:
-            if removed_called_tile is None and (
-                tile is called_tile or tile == called_tile
-            ):
+            if removed_called_tile is None and tile is called_tile:
                 removed_called_tile = tile
             else:
                 remaining.append(tile)
+        if removed_called_tile is None:
+            remaining = []
+            for tile in tiles:
+                if removed_called_tile is None and tile == called_tile:
+                    removed_called_tile = tile
+                else:
+                    remaining.append(tile)
 
         display_called_tile = removed_called_tile or called_tile
+        insert_at = self.called_tile_slot(len(tiles), called_from, owner)
+        if insert_at is not None:
+            insert_at = min(insert_at, len(remaining))
+            return remaining[:insert_at] + [display_called_tile] + remaining[insert_at:]
+        return tiles
+
+    @staticmethod
+    def called_tile_slot(
+        tile_count: int, called_from: Optional[int], owner: int
+    ) -> Optional[int]:
+        if called_from is None or tile_count <= 0:
+            return None
         source_direction = (called_from - owner) % 4
         if source_direction == 3:
-            return [display_called_tile] + remaining
+            return 0
         if source_direction == 2:
-            insert_at = (len(remaining) + 1) // 2
-            return remaining[:insert_at] + [display_called_tile] + remaining[insert_at:]
+            return tile_count // 2
         if source_direction == 1:
-            return remaining + [display_called_tile]
-        return tiles
+            return tile_count - 1
+        return None
 
     def meld_display_tiles(self, meld: Meld, owner: int = 0) -> List[Tile]:
         return self.arrange_called_tile(
@@ -1665,28 +1670,16 @@ class Tui:
                 self.safe_addstr(y, cursor, separator, curses.A_DIM)
                 cursor += self.display_width(separator)
 
-            called_tile = meld.called_tile
-            called_marked = False
-            for tile_index, tile in enumerate(self.meld_display_tiles(meld, owner)):
-                if tile_index:
-                    if cursor + 1 > max_x:
-                        return
-                    self.safe_addstr(y, cursor, " ")
-                    cursor += 1
+            display_tiles = self.meld_display_tiles(meld, owner)
+            called_index = self.called_tile_slot(
+                len(display_tiles), getattr(meld, "called_from", None), owner
+            )
+            for tile_index, tile in enumerate(display_tiles):
                 label = self.tile_label(tile)
                 label_width = self.display_width(label)
                 if cursor + label_width > max_x:
                     return
-                is_called_tile = tile is called_tile
-                if (
-                    not is_called_tile
-                    and not called_marked
-                    and called_tile is not None
-                    and tile == called_tile
-                ):
-                    is_called_tile = True
-                if is_called_tile:
-                    called_marked = True
+                is_called_tile = tile_index == called_index
                 attr = self.tile_attr(tile, bold=is_called_tile)
                 if is_called_tile:
                     attr |= curses.A_UNDERLINE
@@ -1694,7 +1687,7 @@ class Tui:
                 cursor += label_width
 
     def meld_text(self, meld: Meld) -> str:
-        return self.tiles_text(self.meld_display_tiles(meld))
+        return "".join(self.tile_label(tile) for tile in self.meld_display_tiles(meld))
 
     def melds_text(self, melds: List[Meld]) -> str:
         if not melds:
