@@ -1288,17 +1288,18 @@ class Tui:
     def show_result_action_popup(self, result: ActionResult) -> None:
         assert self.engine is not None
         if result.called_action:
+            player = self.engine.get_current_player()
             self.show_action_popup(
-                self.engine.get_current_player(),
+                player,
                 result.called_action,
                 result.called_tile,
             )
         elif result.kan:
-            self.show_action_popup(self.engine.get_current_player(), GameAction.KAN)
+            player = self.engine.get_current_player()
+            self.show_action_popup(player, GameAction.KAN)
         elif result.closed_kan:
-            self.show_action_popup(
-                self.engine.get_current_player(), GameAction.DECLARE_ANKAN
-            )
+            player = self.engine.get_current_player()
+            self.show_action_popup(player, GameAction.DECLARE_ANKAN)
         elif result.winners:
             for winner in result.winners:
                 win_result = result.win_results.get(winner)
@@ -1310,8 +1311,21 @@ class Tui:
                 )
                 self.show_action_popup(winner, action)
 
+    def action_popup_description(
+        self,
+        action: GameAction,
+        tile: Optional[Tile] = None,
+    ) -> str:
+        label = self.action_text(action)
+        if tile is not None:
+            return f"{label} {self.tile_label(tile)}"
+        return label
+
     def show_action_popup(
-        self, player: int, action: GameAction, tile: Optional[Tile] = None
+        self,
+        player: int,
+        action: GameAction,
+        tile: Optional[Tile] = None,
     ) -> None:
         assert self.engine is not None
         self.render()
@@ -1320,9 +1334,7 @@ class Tui:
         state = self.engine.game_state
         wind = getattr(state.seat_winds[player], self.settings.language)
         line = f"P{player} {wind}"
-        lines = [line]
-        if tile is not None:
-            lines.append(self.tile_label(tile))
+        lines = [line, self.action_popup_description(action, tile)]
         content_width = max(self.display_width(line) for line in lines)
         box_width = min(width - 4, max(40, content_width + 16))
         box_height = min(height - 4, max(11, len(lines) + 6))
@@ -1845,11 +1857,7 @@ class Tui:
         )
 
     def draw_status_panel(self, y: int, x: int, width: int) -> None:
-        dora = self.tiles_text(
-            self.engine.get_revealed_dora_indicators(), mark_dora=False
-        )
         lines = [
-            f"{self.t('dora')}: {dora}",
             f"{self.t('difficulty')}: {self.settings.difficulty}",
             f"{self.t('language')}: {self.settings.language}",
         ]
