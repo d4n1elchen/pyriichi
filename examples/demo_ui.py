@@ -39,11 +39,13 @@ TEXT = {
         "wall": "Wall",
         "dora": "Dora indicators",
         "scores": "Scores",
-        "hand": "Your hand",
+        "hand": "Hand",
         "melds": "Melds",
         "discards": "Discards",
         "last": "Log",
         "winner": "Winner",
+        "win_type": "Win",
+        "deal_in": "Deal-in",
         "ryuukyoku": "Ryuukyoku",
         "round_result": "Round Result",
         "total_han": "Total Han",
@@ -90,6 +92,8 @@ TEXT = {
         "discards": "河",
         "last": "ログ",
         "winner": "和了",
+        "win_type": "和了",
+        "deal_in": "放銃",
         "ryuukyoku": "流局",
         "round_result": "局結果",
         "total_han": "合計翻",
@@ -136,6 +140,8 @@ TEXT = {
         "discards": "河",
         "last": "紀錄",
         "winner": "和牌",
+        "win_type": "和牌",
+        "deal_in": "放銃",
         "ryuukyoku": "流局",
         "round_result": "本局結果",
         "total_han": "總翻",
@@ -1084,6 +1090,7 @@ class Tui:
             if win_result is None:
                 continue
             lines.append(f"{self.t('winner')}: P{winner}")
+            lines.append(self.win_source_summary_text(win_result))
             lines.append(
                 f"{self.t('hand')}: {self.tiles_text(self.win_hand_tiles(winner, win_result))}"
             )
@@ -1119,6 +1126,15 @@ class Tui:
         name = getattr(yaku_result.yaku, self.settings.language)
         suffix = self.t("yakuman") if yaku_result.is_yakuman else "han"
         return f"{name}: {yaku_result.han} {suffix}"
+
+    def win_source_summary_text(self, win_result) -> str:
+        score = win_result.score_result
+        if score.is_tsumo:
+            return f"{self.t('win_type')}: {self.action_text(GameAction.TSUMO)}"
+        return (
+            f"{self.t('win_type')}: {self.action_text(GameAction.RON)} "
+            f"({self.t('deal_in')}: P{score.payment_from})"
+        )
 
     def payment_summary_text(self, win_result) -> str:
         score = win_result.score_result
