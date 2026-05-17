@@ -32,7 +32,6 @@ TEXT = {
         "select_action": "Select action",
         "select_tile": "Select tile",
         "select_sequence": "Select chi sequence",
-        "trigger": "Trigger",
         "round": "Round",
         "dealer": "Dealer",
         "honba": "Honba",
@@ -79,7 +78,6 @@ TEXT = {
         "select_action": "行動を選択",
         "select_tile": "牌を選択",
         "select_sequence": "チーの順子を選択",
-        "trigger": "対象牌",
         "round": "局",
         "dealer": "親",
         "honba": "本場",
@@ -126,7 +124,6 @@ TEXT = {
         "select_action": "選擇動作",
         "select_tile": "選擇牌",
         "select_sequence": "選擇吃牌順子",
-        "trigger": "觸發牌",
         "round": "局",
         "dealer": "莊家",
         "honba": "本場",
@@ -229,6 +226,7 @@ class ActionOption:
     sequence: Optional[List[Tile]] = None
     meld_tiles: Optional[List[Tile]] = None
     called_tile: Optional[Tile] = None
+    called_from: Optional[int] = None
 
 
 class Tui:
@@ -751,6 +749,7 @@ class Tui:
         assert self.engine is not None
         options = []
         last_discard = self.engine.get_last_discard()
+        last_discard_player = self.engine.get_last_discard_player()
         hand = self.engine.get_hand(player)
 
         for action in actions:
@@ -766,6 +765,7 @@ class Tui:
                             sequence=sequence,
                             meld_tiles=meld_tiles,
                             called_tile=last_discard,
+                            called_from=last_discard_player,
                         )
                     )
             elif action == GameAction.PON and last_discard is not None:
@@ -776,6 +776,7 @@ class Tui:
                         tile=last_discard,
                         meld_tiles=sorted(hand_tiles + [last_discard]),
                         called_tile=last_discard,
+                        called_from=last_discard_player,
                     )
                 )
             elif action in {GameAction.KAN, GameAction.DECLARE_ANKAN}:
@@ -814,6 +815,10 @@ class Tui:
                     tile=tile,
                     meld_tiles=meld.tiles,
                     called_tile=meld.called_tile,
+                    called_from=self.engine.get_last_discard_player()
+                    if action == GameAction.KAN
+                    and player != self.engine.get_current_player()
+                    else None,
                 )
             )
         return options
@@ -1217,6 +1222,7 @@ class Tui:
                     self.display_width(self.tile_label(tile))
                     for tile in option.meld_tiles
                 )
+                + max(0, len(option.meld_tiles) - 1)
             )
         return self.display_width(f"[{self.action_text(option.action)}]")
 
@@ -1233,9 +1239,21 @@ class Tui:
         self.safe_addstr(
             y, cursor, action_label, self.action_attr(option.action, selected)
         )
-        cursor += self.display_width(action_label) + 1
+        cursor += self.display_width(action_label)
+        space_attr = self.action_attr(option.action, selected) if selected else 0
+        self.safe_addstr(y, cursor, " ", space_attr)
+        cursor += 1
+        display_tiles = self.arrange_called_tile(
+            option.meld_tiles,
+            option.called_tile,
+            option.called_from,
+            owner=0,
+        )
         called_marked = False
-        for tile in option.meld_tiles:
+        for index, tile in enumerate(display_tiles):
+            if index:
+                self.safe_addstr(y, cursor, " ", space_attr)
+                cursor += 1
             label = self.tile_label(tile)
             is_called_tile = tile is option.called_tile
             if (
@@ -1301,49 +1319,6 @@ class Tui:
             self.safe_addstr(y, cursor, label, attr)
             cursor += label_width + 1
 
-    def action_trigger_text(self) -> Optional[str]:
-        if self.engine is None:
-            return None
-        waiting_players = set(self.engine.waiting_for_actions)
-        is_self_turn = waiting_players == {0} and self.engine.get_current_player() == 0
-        has_interrupt_action = not is_self_turn and (
-            bool(self.active_options)
-            or bool(self.active_sequences)
-            or any(
-                action
-                in {
-                    GameAction.CHI,
-                    GameAction.PON,
-                    GameAction.KAN,
-                    GameAction.RON,
-                    GameAction.PASS,
-                }
-                for action in self.active_actions
-            )
-        )
-        if has_interrupt_action:
-            tile = self.engine.get_last_discard()
-            player = self.engine.get_last_discard_player()
-        else:
-            tile = self.engine.get_hand(0).last_drawn_tile
-            player = 0
-        if tile is None:
-            return None
-        player_text = f" P{player}" if player is not None else ""
-        return f"{self.t('trigger')}: {self.tile_label(tile)}{player_text}"
-
-    def draw_trigger_row(self, y: int, x: int, width: int) -> None:
-        if not (
-            self.active_actions
-            or self.active_options
-            or self.active_sequences
-            or self.selected_tile_index is not None
-        ):
-            return
-        text = self.action_trigger_text()
-        if text:
-            self.safe_addstr(y, x, text[:width], curses.A_DIM)
-
     def draw_discard_grid(
         self, y: int, x: int, tiles: List[Tile], width: int, rows: int
     ) -> None:
@@ -1400,10 +1375,9 @@ class Tui:
                 selected_index=self.selected_tile_index if player == 0 else None,
             )
         self.safe_addstr(y + 2, x + 2, f"{self.t('melds')}:")
-        self.draw_melds(y + 2, x + 10, hand.melds, width - 12)
+        self.draw_melds(y + 2, x + 10, hand.melds, width - 12, owner=player)
         if player == 0:
             self.draw_action_row(y + 3, x + 2, width - 4)
-            self.draw_trigger_row(y + 4, x + 2, width - 4)
 
     def player_score_text(self, player: int, *, compact: bool = False) -> str:
         assert self.engine is not None
@@ -1622,11 +1596,10 @@ class Tui:
             selected_index=self.selected_tile_index,
         )
         self.draw_action_row(base_y + 2, 4, 74)
-        self.draw_trigger_row(base_y + 3, 4, 74)
-        self.safe_addstr(base_y + 4, 4, f"{self.t('melds')}:")
-        self.draw_melds(base_y + 4, 12, hand.melds, 66)
+        self.safe_addstr(base_y + 3, 4, f"{self.t('melds')}:")
+        self.draw_melds(base_y + 3, 12, hand.melds, 66, owner=0)
         self.safe_addstr(
-            base_y + 5,
+            base_y + 4,
             4,
             f"{self.t('discards')}: {self.tiles_text(hand.discards[-24:])}",
         )
@@ -1636,13 +1609,16 @@ class Tui:
             return self.t("none")
         return " ".join(self.tile_label(tile, mark_dora=mark_dora) for tile in tiles)
 
-    def meld_display_tiles(self, meld: Meld) -> List[Tile]:
-        called_tile = meld.called_tile
-        called_from = getattr(meld, "called_from", None)
+    def arrange_called_tile(
+        self,
+        tiles: List[Tile],
+        called_tile: Optional[Tile],
+        called_from: Optional[int],
+        owner: int,
+    ) -> List[Tile]:
         if called_tile is None or called_from is None:
-            return meld.tiles
+            return tiles
 
-        tiles = meld.tiles
         remaining = []
         removed_called_tile = None
         for tile in tiles:
@@ -1654,16 +1630,27 @@ class Tui:
                 remaining.append(tile)
 
         display_called_tile = removed_called_tile or called_tile
-        if called_from == 3:
+        source_direction = (called_from - owner) % 4
+        if source_direction == 3:
             return [display_called_tile] + remaining
-        if called_from == 2:
-            insert_at = min(2 if len(remaining) == 3 else 1, len(remaining))
+        if source_direction == 2:
+            insert_at = (len(remaining) + 1) // 2
             return remaining[:insert_at] + [display_called_tile] + remaining[insert_at:]
-        if called_from == 1:
+        if source_direction == 1:
             return remaining + [display_called_tile]
         return tiles
 
-    def draw_melds(self, y: int, x: int, melds: List[Meld], width: int) -> None:
+    def meld_display_tiles(self, meld: Meld, owner: int = 0) -> List[Tile]:
+        return self.arrange_called_tile(
+            meld.tiles,
+            meld.called_tile,
+            getattr(meld, "called_from", None),
+            owner,
+        )
+
+    def draw_melds(
+        self, y: int, x: int, melds: List[Meld], width: int, *, owner: int
+    ) -> None:
         if not melds:
             self.safe_addstr(y, x, self.t("none"))
             return
@@ -1680,7 +1667,12 @@ class Tui:
 
             called_tile = meld.called_tile
             called_marked = False
-            for tile in self.meld_display_tiles(meld):
+            for tile_index, tile in enumerate(self.meld_display_tiles(meld, owner)):
+                if tile_index:
+                    if cursor + 1 > max_x:
+                        return
+                    self.safe_addstr(y, cursor, " ")
+                    cursor += 1
                 label = self.tile_label(tile)
                 label_width = self.display_width(label)
                 if cursor + label_width > max_x:
