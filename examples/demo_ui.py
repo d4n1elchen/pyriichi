@@ -203,6 +203,12 @@ COLOR_HONORS = 4
 COLOR_BORDER = 6
 COLOR_DIM = 7
 COLOR_ALERT = 8
+COLOR_ACTION_CHI = 9
+COLOR_ACTION_PON = 10
+COLOR_ACTION_KAN = 11
+COLOR_ACTION_WIN = 12
+COLOR_ACTION_RIICHI = 13
+COLOR_ACTION_PASS = 14
 
 
 @dataclass
@@ -214,6 +220,15 @@ class Settings:
     def __post_init__(self):
         if self.ruleset is None:
             self.ruleset = RulesetConfig.standard()
+
+
+@dataclass
+class ActionOption:
+    action: GameAction
+    tile: Optional[Tile] = None
+    sequence: Optional[List[Tile]] = None
+    meld_tiles: Optional[List[Tile]] = None
+    called_tile: Optional[Tile] = None
 
 
 class Tui:
@@ -229,6 +244,8 @@ class Tui:
         self.selected_action_index: Optional[int] = None
         self.active_sequences: List[List[Tile]] = []
         self.selected_sequence_index: Optional[int] = None
+        self.active_options: List[ActionOption] = []
+        self.selected_option_index: Optional[int] = None
         self.selected_tile_index: Optional[int] = None
         self.selection_tiles: Optional[List[Tile]] = None
         self.last_round_result: Optional[ActionResult] = None
@@ -336,22 +353,31 @@ class Tui:
         curses.init_pair(COLOR_BORDER, curses.COLOR_GREEN, -1)
         curses.init_pair(COLOR_DIM, curses.COLOR_BLUE, -1)
         curses.init_pair(COLOR_ALERT, curses.COLOR_MAGENTA, -1)
+        curses.init_pair(COLOR_ACTION_CHI, curses.COLOR_CYAN, -1)
+        curses.init_pair(COLOR_ACTION_PON, curses.COLOR_YELLOW, -1)
+        curses.init_pair(COLOR_ACTION_KAN, curses.COLOR_MAGENTA, -1)
+        curses.init_pair(COLOR_ACTION_WIN, curses.COLOR_RED, -1)
+        curses.init_pair(COLOR_ACTION_RIICHI, curses.COLOR_GREEN, -1)
+        curses.init_pair(COLOR_ACTION_PASS, curses.COLOR_BLUE, -1)
 
     def color(self, color_pair: int, extra: int = 0) -> int:
         if not self.has_colors:
             return extra
         return curses.color_pair(color_pair) | extra
 
-    def tile_attr(self, tile: Optional[Tile], hidden: bool = False) -> int:
+    def tile_attr(
+        self, tile: Optional[Tile], hidden: bool = False, *, bold: bool = True
+    ) -> int:
+        extra = curses.A_BOLD if bold else 0
         if hidden or tile is None:
-            return self.color(COLOR_DIM, curses.A_BOLD)
+            return self.color(COLOR_DIM, extra)
         if tile.suit == Suit.MANZU:
-            return self.color(COLOR_MANZU, curses.A_BOLD)
+            return self.color(COLOR_MANZU, extra)
         if tile.suit == Suit.PINZU:
-            return self.color(COLOR_PINZU, curses.A_BOLD)
+            return self.color(COLOR_PINZU, extra)
         if tile.suit == Suit.SOUZU:
-            return self.color(COLOR_SOUZU, curses.A_BOLD)
-        return self.color(COLOR_HONORS, curses.A_BOLD)
+            return self.color(COLOR_SOUZU, extra)
+        return self.color(COLOR_HONORS, extra)
 
     def main_menu(self) -> None:
         while self.running:
@@ -541,6 +567,8 @@ class Tui:
         self.selected_action_index = None
         self.active_sequences = []
         self.selected_sequence_index = None
+        self.active_options = []
+        self.selected_option_index = None
         self.selected_tile_index = None
         self.last_round_result = None
         self.last_winners = []
@@ -618,25 +646,7 @@ class Tui:
                 return None
             return self.execute_human_action(player, GameAction.DISCARD, tile)
 
-        action = self.choose_action(actions)
-        if action is None:
-            return None
-
-        tile = None
-        kwargs = {}
-        if action in {GameAction.DISCARD, GameAction.DECLARE_RIICHI}:
-            tile = self.choose_tile_from_hand(player, action, actions)
-            if tile is None:
-                return None
-        elif action in {GameAction.KAN, GameAction.DECLARE_ANKAN}:
-            tile = self.choose_kan_tile(player, action)
-        elif action == GameAction.CHI:
-            sequence = self.choose_chi_sequence(player)
-            if sequence is None:
-                return None
-            kwargs["sequence"] = sequence
-
-        return self.execute_human_action(player, action, tile, **kwargs)
+        return self.choose_turn_option(player, actions)
 
     def execute_human_action(
         self,
@@ -653,6 +663,160 @@ class Tui:
         except ValueError as exc:
             self.set_status(f"{self.t('invalid')}: {exc}")
             return None
+
+    def choose_turn_option(
+        self, player: int, actions: List[GameAction]
+    ) -> Optional[ActionResult]:
+        assert self.engine is not None
+        hand = self.engine.get_hand(player)
+        discard_tiles = []
+        if GameAction.DISCARD in actions:
+            discard_tiles = self.sorted_tiles_for_display(
+                hand.tiles, hand.last_drawn_tile
+            )
+
+        self.active_actions = actions
+        self.active_options = self.build_action_options(player, actions)
+        self.selection_tiles = discard_tiles or None
+        selected_index = 0
+        total_options = len(self.active_options) + len(discard_tiles)
+        if total_options == 0:
+            self.clear_selection()
+            return None
+
+        self.set_status(self.t("select_action"))
+
+        def sync_selection() -> None:
+            if selected_index < len(self.active_options):
+                self.selected_option_index = selected_index
+                self.selected_tile_index = None
+            else:
+                self.selected_option_index = None
+                self.selected_tile_index = selected_index - len(self.active_options)
+
+        sync_selection()
+        while True:
+            self.render()
+            key = self.stdscr.getch()
+            if key in (ord("q"), 27):
+                self.stop()
+                self.clear_selection()
+                return None
+            if key in (curses.KEY_LEFT, ord("h")):
+                selected_index = max(0, selected_index - 1)
+                sync_selection()
+            elif key in (curses.KEY_RIGHT, ord("l")):
+                selected_index = min(total_options - 1, selected_index + 1)
+                sync_selection()
+            elif key in (curses.KEY_UP, ord("k")):
+                if discard_tiles and selected_index >= len(self.active_options):
+                    selected_index = 0
+                    sync_selection()
+            elif key in (curses.KEY_DOWN, ord("j")):
+                if discard_tiles and selected_index < len(self.active_options):
+                    selected_index = len(self.active_options)
+                    sync_selection()
+            elif ord("1") <= key <= ord("9") and discard_tiles:
+                index = key - ord("1")
+                if index < len(discard_tiles):
+                    tile = discard_tiles[index]
+                    self.clear_selection()
+                    return self.execute_human_action(player, GameAction.DISCARD, tile)
+            elif key in (curses.KEY_ENTER, 10, 13):
+                if selected_index < len(self.active_options):
+                    option = self.active_options[selected_index]
+                    self.clear_selection()
+                    return self.execute_action_option(player, option, actions)
+
+                tile = discard_tiles[selected_index - len(self.active_options)]
+                self.clear_selection()
+                return self.execute_human_action(player, GameAction.DISCARD, tile)
+
+    def execute_action_option(
+        self, player: int, option: ActionOption, actions: List[GameAction]
+    ) -> Optional[ActionResult]:
+        kwargs = {}
+        if option.sequence is not None:
+            kwargs["sequence"] = option.sequence
+        if option.action == GameAction.DECLARE_RIICHI:
+            tile = self.choose_tile_from_hand(player, option.action, actions)
+            if tile is None:
+                return None
+            return self.execute_human_action(player, option.action, tile)
+        return self.execute_human_action(player, option.action, option.tile, **kwargs)
+
+    def build_action_options(
+        self, player: int, actions: List[GameAction]
+    ) -> List[ActionOption]:
+        assert self.engine is not None
+        options = []
+        last_discard = self.engine.get_last_discard()
+        hand = self.engine.get_hand(player)
+
+        for action in actions:
+            if action == GameAction.DISCARD:
+                continue
+            if action == GameAction.CHI and last_discard is not None:
+                for sequence in self.engine.get_available_chi_sequences(player):
+                    meld_tiles = sorted(sequence + [last_discard])
+                    options.append(
+                        ActionOption(
+                            action=action,
+                            tile=last_discard,
+                            sequence=sequence,
+                            meld_tiles=meld_tiles,
+                            called_tile=last_discard,
+                        )
+                    )
+            elif action == GameAction.PON and last_discard is not None:
+                hand_tiles = [tile for tile in hand.tiles if tile == last_discard][:2]
+                options.append(
+                    ActionOption(
+                        action=action,
+                        tile=last_discard,
+                        meld_tiles=sorted(hand_tiles + [last_discard]),
+                        called_tile=last_discard,
+                    )
+                )
+            elif action in {GameAction.KAN, GameAction.DECLARE_ANKAN}:
+                options.extend(self.build_kan_options(player, action))
+            else:
+                options.append(ActionOption(action=action, tile=last_discard))
+        return options
+
+    def build_kan_options(
+        self, player: int, action: GameAction
+    ) -> List[ActionOption]:
+        assert self.engine is not None
+        hand = self.engine.get_hand(player)
+        last_discard = self.engine.get_last_discard()
+        options = []
+
+        if action == GameAction.KAN:
+            if player != self.engine.get_current_player() and last_discard is not None:
+                candidates = hand.can_kan(last_discard)
+            else:
+                candidates = [
+                    meld
+                    for meld in hand.can_kan(None)
+                    if meld.type == MeldType.OPEN_KAN and meld.called_tile is not None
+                ]
+        else:
+            candidates = [
+                meld for meld in hand.can_kan(None) if meld.type == MeldType.CLOSED_KAN
+            ]
+
+        for meld in candidates:
+            tile = meld.called_tile or (meld.tiles[0] if meld.tiles else None)
+            options.append(
+                ActionOption(
+                    action=action,
+                    tile=tile,
+                    meld_tiles=meld.tiles,
+                    called_tile=meld.called_tile,
+                )
+            )
+        return options
 
     def choose_action(self, actions: List[GameAction]) -> Optional[GameAction]:
         self.active_actions = actions
@@ -714,6 +878,8 @@ class Tui:
         self.selected_action_index = None
         self.active_sequences = []
         self.selected_sequence_index = None
+        self.active_options = []
+        self.selected_option_index = None
         self.selected_tile_index = None
         self.selection_tiles = None
 
@@ -1025,23 +1191,95 @@ class Tui:
             self.safe_addstr(y, cursor, label, attr)
             cursor += label_width + 1
 
+    def action_attr(self, action: GameAction, selected: bool = False) -> int:
+        color_pair = {
+            GameAction.CHI: COLOR_ACTION_CHI,
+            GameAction.PON: COLOR_ACTION_PON,
+            GameAction.KAN: COLOR_ACTION_KAN,
+            GameAction.DECLARE_ANKAN: COLOR_ACTION_KAN,
+            GameAction.RON: COLOR_ACTION_WIN,
+            GameAction.TSUMO: COLOR_ACTION_WIN,
+            GameAction.DECLARE_RIICHI: COLOR_ACTION_RIICHI,
+            GameAction.PASS: COLOR_ACTION_PASS,
+        }.get(action, COLOR_ALERT)
+        extra = curses.A_BOLD
+        if selected:
+            extra |= curses.A_REVERSE
+        return self.color(color_pair, extra)
+
+    def action_option_width(self, option: ActionOption) -> int:
+        if option.meld_tiles:
+            label = self.action_text(option.action)
+            return (
+                self.display_width(label)
+                + 1
+                + sum(
+                    self.display_width(self.tile_label(tile))
+                    for tile in option.meld_tiles
+                )
+            )
+        return self.display_width(f"[{self.action_text(option.action)}]")
+
+    def draw_action_option(
+        self, y: int, x: int, option: ActionOption, selected: bool
+    ) -> int:
+        if not option.meld_tiles:
+            label = f"[{self.action_text(option.action)}]"
+            self.safe_addstr(y, x, label, self.action_attr(option.action, selected))
+            return self.display_width(label)
+
+        cursor = x
+        action_label = self.action_text(option.action)
+        self.safe_addstr(
+            y, cursor, action_label, self.action_attr(option.action, selected)
+        )
+        cursor += self.display_width(action_label) + 1
+        called_marked = False
+        for tile in option.meld_tiles:
+            label = self.tile_label(tile)
+            is_called_tile = tile is option.called_tile
+            if (
+                not is_called_tile
+                and not called_marked
+                and option.called_tile is not None
+                and tile == option.called_tile
+            ):
+                is_called_tile = True
+            if is_called_tile:
+                called_marked = True
+            attr = self.tile_attr(tile, bold=is_called_tile)
+            if is_called_tile:
+                attr |= curses.A_UNDERLINE
+            if selected:
+                attr |= curses.A_REVERSE
+            self.safe_addstr(y, cursor, label, attr)
+            cursor += self.display_width(label)
+        return cursor - x
+
     def draw_action_row(self, y: int, x: int, width: int) -> None:
-        if not self.active_actions or self.selected_action_index is None:
-            return
+        if not self.active_options:
+            if not self.active_actions or self.selected_action_index is None:
+                return
+            self.active_options = [
+                ActionOption(action=action) for action in self.active_actions
+            ]
+            self.selected_option_index = self.selected_action_index
 
         self.safe_addstr(y, x, f"{self.t('select_action')}:")
         cursor = x + self.display_width(self.t("select_action")) + 2
         max_x = x + width
-        for index, action in enumerate(self.active_actions):
-            label = f"[{self.action_text(action)}]"
-            label_width = self.display_width(label)
+        for index, option in enumerate(self.active_options):
+            label_width = self.action_option_width(option)
             if cursor + label_width > max_x:
-                remaining = len(self.active_actions) - index
+                remaining = len(self.active_options) - index
                 if remaining > 0:
                     self.safe_addstr(y, cursor, f"+{remaining}")
                 return
-            attr = curses.A_REVERSE if index == self.selected_action_index else 0
-            self.safe_addstr(y, cursor, label, attr)
+            selected = (
+                self.selected_option_index is not None
+                and index == self.selected_option_index
+            )
+            self.draw_action_option(y, cursor, option, selected)
             cursor += label_width + 1
 
     def draw_sequence_row(self, y: int, x: int, width: int) -> None:
@@ -1069,7 +1307,8 @@ class Tui:
         waiting_players = set(self.engine.waiting_for_actions)
         is_self_turn = waiting_players == {0} and self.engine.get_current_player() == 0
         has_interrupt_action = not is_self_turn and (
-            bool(self.active_sequences)
+            bool(self.active_options)
+            or bool(self.active_sequences)
             or any(
                 action
                 in {
@@ -1096,6 +1335,7 @@ class Tui:
     def draw_trigger_row(self, y: int, x: int, width: int) -> None:
         if not (
             self.active_actions
+            or self.active_options
             or self.active_sequences
             or self.selected_tile_index is not None
         ):
@@ -1160,10 +1400,9 @@ class Tui:
                 selected_index=self.selected_tile_index if player == 0 else None,
             )
         self.safe_addstr(y + 2, x + 2, f"{self.t('melds')}:")
-        self.safe_addstr(y + 2, x + 10, self.melds_text(hand.melds)[: width - 12])
+        self.draw_melds(y + 2, x + 10, hand.melds, width - 12)
         if player == 0:
             self.draw_action_row(y + 3, x + 2, width - 4)
-            self.draw_sequence_row(y + 3, x + 2, width - 4)
             self.draw_trigger_row(y + 4, x + 2, width - 4)
 
     def player_score_text(self, player: int, *, compact: bool = False) -> str:
@@ -1383,11 +1622,9 @@ class Tui:
             selected_index=self.selected_tile_index,
         )
         self.draw_action_row(base_y + 2, 4, 74)
-        self.draw_sequence_row(base_y + 2, 4, 74)
         self.draw_trigger_row(base_y + 3, 4, 74)
-        self.safe_addstr(
-            base_y + 4, 4, f"{self.t('melds')}: {self.melds_text(hand.melds)}"
-        )
+        self.safe_addstr(base_y + 4, 4, f"{self.t('melds')}:")
+        self.draw_melds(base_y + 4, 12, hand.melds, 66)
         self.safe_addstr(
             base_y + 5,
             4,
@@ -1399,8 +1636,73 @@ class Tui:
             return self.t("none")
         return " ".join(self.tile_label(tile, mark_dora=mark_dora) for tile in tiles)
 
+    def meld_display_tiles(self, meld: Meld) -> List[Tile]:
+        called_tile = meld.called_tile
+        called_from = getattr(meld, "called_from", None)
+        if called_tile is None or called_from is None:
+            return meld.tiles
+
+        tiles = meld.tiles
+        remaining = []
+        removed_called_tile = None
+        for tile in tiles:
+            if removed_called_tile is None and (
+                tile is called_tile or tile == called_tile
+            ):
+                removed_called_tile = tile
+            else:
+                remaining.append(tile)
+
+        display_called_tile = removed_called_tile or called_tile
+        if called_from == 3:
+            return [display_called_tile] + remaining
+        if called_from == 2:
+            insert_at = min(2 if len(remaining) == 3 else 1, len(remaining))
+            return remaining[:insert_at] + [display_called_tile] + remaining[insert_at:]
+        if called_from == 1:
+            return remaining + [display_called_tile]
+        return tiles
+
+    def draw_melds(self, y: int, x: int, melds: List[Meld], width: int) -> None:
+        if not melds:
+            self.safe_addstr(y, x, self.t("none"))
+            return
+
+        cursor = x
+        max_x = x + width
+        for meld_index, meld in enumerate(melds):
+            if meld_index:
+                separator = " / "
+                if cursor + self.display_width(separator) > max_x:
+                    return
+                self.safe_addstr(y, cursor, separator, curses.A_DIM)
+                cursor += self.display_width(separator)
+
+            called_tile = meld.called_tile
+            called_marked = False
+            for tile in self.meld_display_tiles(meld):
+                label = self.tile_label(tile)
+                label_width = self.display_width(label)
+                if cursor + label_width > max_x:
+                    return
+                is_called_tile = tile is called_tile
+                if (
+                    not is_called_tile
+                    and not called_marked
+                    and called_tile is not None
+                    and tile == called_tile
+                ):
+                    is_called_tile = True
+                if is_called_tile:
+                    called_marked = True
+                attr = self.tile_attr(tile, bold=is_called_tile)
+                if is_called_tile:
+                    attr |= curses.A_UNDERLINE
+                self.safe_addstr(y, cursor, label, attr)
+                cursor += label_width
+
     def meld_text(self, meld: Meld) -> str:
-        return self.tiles_text(meld.tiles)
+        return self.tiles_text(self.meld_display_tiles(meld))
 
     def melds_text(self, melds: List[Meld]) -> str:
         if not melds:

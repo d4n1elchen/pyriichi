@@ -871,7 +871,7 @@ class RuleEngine:
         discarder = self._last_discarded_player
         self._remove_last_discard(discarder, tile_to_claim)
 
-        meld = hand.pon(tile_to_claim)
+        meld = hand.pon(tile_to_claim, called_from=discarder)
         result.meld = meld
         result.called_action = GameAction.PON
         result.called_tile = tile_to_claim
@@ -914,7 +914,7 @@ class RuleEngine:
         discarder = self._last_discarded_player
         self._remove_last_discard(discarder, tile_to_claim)
 
-        meld = hand.chi(tile_to_claim, sequence)
+        meld = hand.chi(tile_to_claim, sequence, called_from=discarder)
         result.meld = meld
         result.called_action = GameAction.CHI
         result.called_tile = tile_to_claim
@@ -1042,7 +1042,7 @@ class RuleEngine:
                 self._pending_kan_tile = None
                 return result
 
-        meld = hand.kan(tile)
+        meld = hand.kan(tile, called_from=responsible_player)
         if responsible_player is not None and meld.type == MeldType.OPEN_KAN:
             self._update_pao_responsibility(player, responsible_player, meld)
         self._kan_count += 1

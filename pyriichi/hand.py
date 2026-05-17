@@ -105,7 +105,11 @@ class Meld:
     """Meld."""
 
     def __init__(
-        self, meld_type: MeldType, tiles: List[Tile], called_tile: Optional[Tile] = None
+        self,
+        meld_type: MeldType,
+        tiles: List[Tile],
+        called_tile: Optional[Tile] = None,
+        called_from: Optional[int] = None,
     ):
         """
         Initialize Meld.
@@ -114,6 +118,7 @@ class Meld:
             meld_type (MeldType): Meld type.
             tiles (List[Tile]): List of tiles in the meld.
             called_tile (Optional[Tile]): The called tile (required for chi/pon).
+            called_from (Optional[int]): Player who discarded the called tile.
 
         Raises:
             ValueError: If tile count is invalid.
@@ -128,6 +133,7 @@ class Meld:
         self._type = meld_type
         self._tiles = sorted(tiles)
         self._called_tile = called_tile
+        self._called_from = called_from
 
     @property
     def type(self) -> MeldType:
@@ -140,6 +146,10 @@ class Meld:
     @property
     def called_tile(self) -> Optional[Tile]:
         return self._called_tile
+
+    @property
+    def called_from(self) -> Optional[int]:
+        return self._called_from
 
     def is_concealed(self) -> bool:
         return self._type == MeldType.CLOSED_KAN
@@ -272,13 +282,16 @@ class Hand:
 
         return results
 
-    def chi(self, tile: Tile, sequence: List[Tile]) -> Meld:
+    def chi(
+        self, tile: Tile, sequence: List[Tile], called_from: Optional[int] = None
+    ) -> Meld:
         """
         Execute chi.
 
         Args:
             tile (Tile): The tile being called.
             sequence (List[Tile]): Two tiles from hand (forming a sequence with the called tile).
+            called_from (Optional[int]): Player who discarded the called tile.
 
         Returns:
             Meld: Created Meld object.
@@ -293,7 +306,9 @@ class Hand:
             self._tiles.remove(t)
 
         all_tiles = sequence + [tile]
-        meld = Meld(MeldType.CHI_MELD, all_tiles, called_tile=tile)
+        meld = Meld(
+            MeldType.CHI_MELD, all_tiles, called_tile=tile, called_from=called_from
+        )
         self._melds.append(meld)
         self._tile_counts_cache = None
         self._tenpai_discards = self.calculate_tenpai_discards()
@@ -314,12 +329,13 @@ class Hand:
         count = self._tiles.count(tile)
         return count >= 2
 
-    def pon(self, tile: Tile) -> Meld:
+    def pon(self, tile: Tile, called_from: Optional[int] = None) -> Meld:
         """
         Execute pon.
 
         Args:
             tile (Tile): The tile being called.
+            called_from (Optional[int]): Player who discarded the called tile.
 
         Returns:
             Meld: Created Meld object.
@@ -341,7 +357,9 @@ class Hand:
             self._tiles.remove(t)
 
         meld_tiles = tiles_to_remove + [tile]
-        meld = Meld(MeldType.PON_MELD, meld_tiles, called_tile=tile)
+        meld = Meld(
+            MeldType.PON_MELD, meld_tiles, called_tile=tile, called_from=called_from
+        )
         self._melds.append(meld)
         self._tile_counts_cache = None
         self._tenpai_discards = self.calculate_tenpai_discards()
@@ -374,7 +392,12 @@ class Hand:
                 ):
                     kan_tiles = meld.tiles + [meld.called_tile]
                     results.append(
-                        Meld(MeldType.OPEN_KAN, kan_tiles, called_tile=meld.called_tile)
+                        Meld(
+                            MeldType.OPEN_KAN,
+                            kan_tiles,
+                            called_tile=meld.called_tile,
+                            called_from=meld.called_from,
+                        )
                     )
         elif self._tiles.count(tile) == 3:
             kan_tiles = []
@@ -400,12 +423,13 @@ class Hand:
 
         return results
 
-    def kan(self, tile: Optional[Tile]) -> Meld:
+    def kan(self, tile: Optional[Tile], called_from: Optional[int] = None) -> Meld:
         """
         Execute kan.
 
         Args:
             tile (Optional[Tile]): The tile being called (required for open_kan, None for closed_kan/open_kan).
+            called_from (Optional[int]): Player who discarded the called tile.
 
         Returns:
             Meld: Created Meld object.
@@ -419,6 +443,13 @@ class Hand:
 
         # Use the first possible kan combination
         meld = possible_kan[0]
+        if called_from is not None and meld.type == MeldType.OPEN_KAN:
+            meld = Meld(
+                meld.type,
+                meld.tiles,
+                called_tile=meld.called_tile,
+                called_from=called_from,
+            )
 
         if meld.type == MeldType.CLOSED_KAN:
             for t in meld.tiles:
@@ -433,6 +464,12 @@ class Hand:
                         existing_meld.type == MeldType.PON_MELD
                         and existing_meld.called_tile == called_tile
                     ):
+                        meld = Meld(
+                            meld.type,
+                            meld.tiles,
+                            called_tile=meld.called_tile,
+                            called_from=existing_meld.called_from,
+                        )
                         self._melds.remove(existing_meld)
                         self._tiles.remove(called_tile)
                         break
@@ -444,6 +481,12 @@ class Hand:
                             existing_meld.type == MeldType.PON_MELD
                             and existing_meld.called_tile == tile
                         ):
+                            meld = Meld(
+                                meld.type,
+                                meld.tiles,
+                                called_tile=meld.called_tile,
+                                called_from=existing_meld.called_from,
+                            )
                             self._melds.remove(existing_meld)
                             self._tiles.remove(tile)
                             added_to_existing_pon = True
