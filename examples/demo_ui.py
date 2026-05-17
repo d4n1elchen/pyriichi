@@ -1105,37 +1105,10 @@ class Tui:
         labels_width = sum(self.display_width(self.tile_label(tile)) for tile in tiles)
         return labels_width + len(tiles) - 1
 
-    def draw_tile_column(
-        self,
-        y: int,
-        x: int,
-        tiles: List[Tile],
-        max_height: int,
-        *,
-        cell_width: int = 11,
-    ) -> None:
-        if max_height <= 0:
-            return
-        for index, tile in enumerate(tiles):
-            column = index // max_height
-            row = index % max_height
-            label = self.tile_label(tile)
-            self.safe_addstr(
-                y + row,
-                x + column * cell_width,
-                label,
-                self.tile_attr(tile),
-            )
-
     def draw_discard_river_row(
         self, y: int, x: int, tiles: List[Tile], width: int, rows: int = 3
     ) -> None:
         self.draw_discard_grid(y, x, tiles[-18:], width, rows)
-
-    def draw_discard_river_column(
-        self, y: int, x: int, tiles: List[Tile], height: int
-    ) -> None:
-        self.draw_tile_column(y, x, tiles[-18:], min(6, height))
 
     def draw_player_panel(
         self,
@@ -1217,8 +1190,22 @@ class Tui:
 
     def draw_table_discards(self, center_y: int, center_x: int) -> None:
         assert self.engine is not None
+        _, screen_width = self.stdscr.getmaxyx()
         center_height = 9
         center_width = 30
+        side_gap = 6
+        side_width = min(
+            48,
+            max(
+                24,
+                min(
+                    center_x - side_gap - 2,
+                    screen_width - (center_x + center_width + side_gap) - 2,
+                ),
+            ),
+        )
+        left_x = max(2, center_x - side_gap - side_width)
+        right_x = center_x + center_width + side_gap
         top_width = 72
         top_x = center_x + (center_width - top_width) // 2
         dora = self.tiles_text(
@@ -1237,26 +1224,25 @@ class Tui:
         )
         self.add_centered(center_y - 1, top_x, top_width, f"{self.t('dora')}: {dora}")
 
-        self.safe_addstr(
-            center_y, center_x - 24, f"P3 {self.t('discards')}", curses.A_DIM
-        )
-        self.draw_discard_river_column(
-            center_y + 1,
-            center_x - 24,
-            self.engine.get_hand(3).discards,
-            center_height - 2,
-        )
-        self.safe_addstr(
+        self.add_centered(
             center_y,
-            center_x + center_width + 3,
+            left_x,
+            side_width,
+            f"P3 {self.t('discards')}",
+            curses.A_DIM,
+        )
+        self.draw_discard_river_row(
+            center_y + 1, left_x, self.engine.get_hand(3).discards, side_width
+        )
+        self.add_centered(
+            center_y,
+            right_x,
+            side_width,
             f"P1 {self.t('discards')}",
             curses.A_DIM,
         )
-        self.draw_discard_river_column(
-            center_y + 1,
-            center_x + center_width + 3,
-            self.engine.get_hand(1).discards,
-            center_height - 2,
+        self.draw_discard_river_row(
+            center_y + 1, right_x, self.engine.get_hand(1).discards, side_width
         )
 
         self.add_centered(
