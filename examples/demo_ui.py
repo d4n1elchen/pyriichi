@@ -206,6 +206,7 @@ COLOR_ACTION_KAN = 11
 COLOR_ACTION_WIN = 12
 COLOR_ACTION_RIICHI = 13
 COLOR_ACTION_PASS = 14
+ACTION_POPUP_MS = 1600
 
 
 @dataclass
@@ -658,7 +659,7 @@ class Tui:
             result = self.engine.execute_action(player, action, tile, **kwargs)
             self.set_status(f"P{player}: {self.action_text(action)}")
             if result.riichi:
-                self.show_riichi_popup(player)
+                self.show_action_popup(player, GameAction.DECLARE_RIICHI, tile)
             return result
         except ValueError as exc:
             self.set_status(f"{self.t('invalid')}: {exc}")
@@ -1019,7 +1020,7 @@ class Tui:
                 raise
         self.set_status(f"P{player}: {self.action_text(action)}")
         if result.riichi:
-            self.show_riichi_popup(player)
+            self.show_action_popup(player, GameAction.DECLARE_RIICHI, tile)
         return result
 
     def build_public_info(self) -> PublicInfo:
@@ -1035,6 +1036,7 @@ class Tui:
 
     def process_result(self, result: ActionResult) -> None:
         assert self.engine is not None
+        self.show_result_action_popup(result)
         if result.chombo:
             self.set_status(f"{self.t('chombo')}: P{result.chombo_player}")
         if result.rinshan_win:
@@ -1154,22 +1156,56 @@ class Tui:
             self.safe_addstr(y + 1 + index, x + 2, line)
         self.safe_addstr(y + box_height - 2, x + 2, self.t("next_round"), curses.A_BOLD)
 
-    def show_riichi_popup(self, player: int) -> None:
+    def show_result_action_popup(self, result: ActionResult) -> None:
+        assert self.engine is not None
+        if result.called_action:
+            self.show_action_popup(
+                self.engine.get_current_player(),
+                result.called_action,
+                result.called_tile,
+            )
+        elif result.kan:
+            self.show_action_popup(self.engine.get_current_player(), GameAction.KAN)
+        elif result.closed_kan:
+            self.show_action_popup(
+                self.engine.get_current_player(), GameAction.DECLARE_ANKAN
+            )
+        elif result.winners:
+            for winner in result.winners:
+                win_result = result.win_results.get(winner)
+                score = getattr(win_result, "score_result", None)
+                action = (
+                    GameAction.TSUMO
+                    if score is not None and score.is_tsumo
+                    else GameAction.RON
+                )
+                self.show_action_popup(winner, action)
+
+    def show_action_popup(
+        self, player: int, action: GameAction, tile: Optional[Tile] = None
+    ) -> None:
         assert self.engine is not None
         self.render()
         height, width = self.stdscr.getmaxyx()
-        title = self.action_text(GameAction.DECLARE_RIICHI)
+        title = self.action_text(action)
         state = self.engine.game_state
         wind = getattr(state.seat_winds[player], self.settings.language)
         line = f"P{player} {wind}"
-        box_width = max(24, self.display_width(line) + 8)
-        box_height = 5
+        lines = [line]
+        if tile is not None:
+            lines.append(self.tile_label(tile))
+        content_width = max(self.display_width(line) for line in lines)
+        box_width = max(24, content_width + 8)
+        box_height = len(lines) + 4
         y = max(1, (height - box_height) // 2)
         x = max(2, (width - box_width) // 2)
         self.draw_box(y, x, box_height, box_width, title)
-        self.add_centered(y + 2, x + 1, box_width - 2, line, curses.A_BOLD)
+        for index, popup_line in enumerate(lines):
+            self.add_centered(
+                y + 2 + index, x + 1, box_width - 2, popup_line, curses.A_BOLD
+            )
         self.stdscr.refresh()
-        curses.napms(850)
+        curses.napms(ACTION_POPUP_MS)
 
     def draw_box(
         self, y: int, x: int, height: int, width: int, title: str = ""
