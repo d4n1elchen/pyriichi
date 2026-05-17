@@ -436,9 +436,21 @@ class Hand:
                         self._tiles.remove(called_tile)
                         break
             else:
-                for t in meld.tiles:
-                    if t in self._tiles:
-                        self._tiles.remove(t)
+                added_to_existing_pon = False
+                if self._tiles.count(tile) == 1:
+                    for existing_meld in self._melds:
+                        if (
+                            existing_meld.type == MeldType.PON_MELD
+                            and existing_meld.called_tile == tile
+                        ):
+                            self._melds.remove(existing_meld)
+                            self._tiles.remove(tile)
+                            added_to_existing_pon = True
+                            break
+                if not added_to_existing_pon:
+                    for t in meld.tiles:
+                        if t in self._tiles:
+                            self._tiles.remove(t)
 
         self._melds.append(meld)
         self._tile_counts_cache = None

@@ -151,8 +151,8 @@ class TestKanBehavior(RuleEngineTestMixin):
         with pytest.raises(ValueError):
             self.engine.execute_action(current_player, GameAction.KAN, tile=None)
 
-    def test_execute_action_kan_no_tile(self):
-        """Test open_kan without specifying tile."""
+    def test_execute_action_add_kan_no_tile(self):
+        """Test added kan without specifying tile."""
         self._init_game()
         current_player = self.engine.get_current_player()
         hand = self.engine.get_hand(current_player)
@@ -169,8 +169,11 @@ class TestKanBehavior(RuleEngineTestMixin):
         )
 
         assert self._has_action(current_player, GameAction.KAN)
-        with pytest.raises(ValueError, match="明槓必須指定被槓的牌"):
-            self.engine.execute_action(current_player, GameAction.KAN, tile=None)
+        assert not self._has_action(current_player, GameAction.DECLARE_ANKAN)
+        result = self.engine.execute_action(current_player, GameAction.KAN, tile=None)
+
+        assert result.kan is True
+        assert hand.melds[0].type == MeldType.OPEN_KAN
 
     def test_execute_action_kan_rinshan_win(self):
         """Test rinshan after open_kan."""
@@ -178,15 +181,16 @@ class TestKanBehavior(RuleEngineTestMixin):
 
         kan_tile = Tile(Suit.MANZU, 1)
         ten_tile = Tile(Suit.PINZU, 4)
-        _set_hand(self.engine, 0, "111234567m1234p")
+        _set_hand(self.engine, 1, "111234567m1234p")
         self.engine._current_player = 0
         self.engine._last_discarded_tile = kan_tile
-        self.engine._last_discarded_player = 1
+        self.engine._last_discarded_player = 0
+        self.engine.get_hand(0)._discards.append(kan_tile)
         _set_rinshan_tile(self.engine, ten_tile)
-        _set_waiting_turn_actions(self.engine, 0)
+        self.engine._waiting_for_actions = self.engine._check_interrupts(kan_tile, 0)
 
-        assert self._has_action(0, GameAction.KAN)
-        result = self.engine.execute_action(0, GameAction.KAN, tile=kan_tile)
+        assert self._has_action(1, GameAction.KAN)
+        result = self.engine.execute_action(1, GameAction.KAN, tile=kan_tile)
 
         assert result.rinshan_tile is not None
         assert result.rinshan_win is not None
@@ -224,8 +228,9 @@ class TestKanBehavior(RuleEngineTestMixin):
         _set_hand(self.engine, 1, "23456m12344789p")
         _set_waiting_turn_actions(self.engine, 0)
 
-        assert self._has_action(0, GameAction.DECLARE_ANKAN)
-        result = self.engine.execute_action(0, GameAction.DECLARE_ANKAN)
+        assert self._has_action(0, GameAction.KAN)
+        assert not self._has_action(0, GameAction.DECLARE_ANKAN)
+        result = self.engine.execute_action(0, GameAction.KAN, tile=kan_tile)
 
         assert result.chankan is True
         assert result.winners is not None
@@ -243,16 +248,18 @@ class TestKanBehavior(RuleEngineTestMixin):
         """Test kan triggers suukan_sanra."""
         self._init_game()
 
-        player = self.engine.get_current_player()
+        discarded_player = self.engine.get_current_player()
+        player = (discarded_player + 1) % self.engine.get_num_players()
         kan_tile = Tile(Suit.MANZU, 6)
         _set_hand(self.engine, player, "1112345666788m")
         self.engine._last_discarded_tile = kan_tile
-        self.engine._last_discarded_player = (
-            player + 1
-        ) % self.engine.get_num_players()
+        self.engine._last_discarded_player = discarded_player
+        self.engine.get_hand(discarded_player)._discards.append(kan_tile)
         self.engine._kan_count = 3
         _prepare_exhausted_kan_wall(self.engine, Tile(Suit.PINZU, 1))
-        _set_waiting_turn_actions(self.engine, player)
+        self.engine._waiting_for_actions = self.engine._check_interrupts(
+            kan_tile, discarded_player
+        )
 
         result = self.engine.execute_action(player, GameAction.KAN, tile=kan_tile)
 

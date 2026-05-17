@@ -233,9 +233,9 @@ class TestRiichi(RuleEngineTestMixin):
         self.engine._hands[3] = Hand(parse_tiles("111123456789m1p"))
 
         # Force update actions
+        self.engine._current_player = 3
         self.engine._waiting_for_actions = {}
         self.engine._waiting_for_actions[3] = self.engine._calculate_turn_actions(3)
-        self.engine._current_player = 3
 
         assert GameAction.DECLARE_ANKAN in self.engine.get_available_actions(3)
         result = self.engine.execute_action(3, GameAction.DECLARE_ANKAN)

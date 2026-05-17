@@ -380,7 +380,7 @@ class TestRyuukyoku(RuleEngineTestMixin):
         self._init_game()
         _prepare_fourth_kan_chankan(self.engine)
 
-        result = self.engine.execute_action(0, GameAction.DECLARE_ANKAN)
+        result = self.engine.execute_action(0, GameAction.KAN)
         assert result.chankan is True
         assert self.engine._kan_count == 3
         assert self.engine.check_ryuukyoku() is None

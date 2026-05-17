@@ -405,7 +405,8 @@ class RuleEngine:
 
         # open_kan on another player's discard
         if (
-            self._last_discarded_tile is not None
+            player != self._current_player
+            and self._last_discarded_tile is not None
             and self._last_discarded_player is not None
             and (
                 self._last_discarded_player != player
@@ -424,8 +425,13 @@ class RuleEngine:
         return False
 
     def _can_declare_ankan(self, player: int) -> bool:
+        if player != self._current_player:
+            return False
+
         hand = self._hands[player]
-        possible_kans = hand.can_kan(None)
+        possible_kans = [
+            meld for meld in hand.can_kan(None) if meld.type == MeldType.CLOSED_KAN
+        ]
 
         if not possible_kans:
             return False
@@ -979,11 +985,30 @@ class RuleEngine:
         result = ActionResult()
         hand = self._hands[player]
 
-        # If tile is None, try to use the last discarded for open_kan.
+        is_add_kan = False
+
         if tile is None:
-            if self._last_discarded_tile is None:
+            if player != self._current_player and self._last_discarded_tile is not None:
+                tile = self._last_discarded_tile
+            elif player == self._current_player:
+                add_kan_candidates = [
+                    meld
+                    for meld in hand.can_kan(None)
+                    if meld.type == MeldType.OPEN_KAN and meld.called_tile is not None
+                ]
+                if not add_kan_candidates:
+                    raise ValueError("明槓必須指定被槓的牌")
+                tile = add_kan_candidates[0].called_tile
+                is_add_kan = True
+            else:
                 raise ValueError("明槓必須指定被槓的牌")
-            tile = self._last_discarded_tile
+        elif player == self._current_player:
+            is_add_kan = any(
+                meld.type == MeldType.OPEN_KAN
+                and meld.called_tile is not None
+                and meld.called_tile == tile
+                for meld in hand.can_kan(None)
+            )
 
         responsible_player = None
 
@@ -1002,6 +1027,14 @@ class RuleEngine:
             # Clear last discard state
             self._last_discarded_tile = None
             self._last_discarded_player = None
+
+        if is_add_kan:
+            self._pending_kan_tile = (player, tile)
+            if chankan_winners := self._check_chankan(player, tile):
+                result.chankan = True
+                result.winners = chankan_winners
+                self._pending_kan_tile = None
+                return result
 
         meld = hand.kan(tile)
         if responsible_player is not None and meld.type == MeldType.OPEN_KAN:
@@ -1024,7 +1057,9 @@ class RuleEngine:
         result = ActionResult()
         hand = self._hands[player]
 
-        candidates = hand.can_kan(None)
+        candidates = [
+            meld for meld in hand.can_kan(None) if meld.type == MeldType.CLOSED_KAN
+        ]
         if not candidates:
             raise ValueError("手牌無法暗槓")
 
@@ -1047,19 +1082,6 @@ class RuleEngine:
         else:
             # If no tile was specified and multiple choices exist, use the first one.
             selected = candidates[0]
-        is_add_kan = (
-            selected.type == MeldType.OPEN_KAN and selected.called_tile is not None
-        )
-
-        if is_add_kan:
-            kan_tile = selected.tiles[0]
-            self._pending_kan_tile = (player, kan_tile)
-            if chankan_winners := self._check_chankan(player, kan_tile):
-                result.chankan = True
-                result.winners = chankan_winners
-                self._pending_kan_tile = None
-                return result
-
         # Use the selected tiles for kan.
         meld = hand.kan(selected.tiles[0])
         if meld:

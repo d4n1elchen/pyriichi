@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 # Allow running this example directly from a source checkout.
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from pyriichi.hand import Hand, Meld
+from pyriichi.hand import Hand, Meld, MeldType
 from pyriichi.player import DefensivePlayer, PublicInfo, RandomPlayer, SimplePlayer
 from pyriichi.rules import ActionResult, GameAction, GamePhase, RuleEngine
 from pyriichi.rules_config import RenhouPolicy, RulesetConfig
@@ -765,17 +765,31 @@ class Tui:
 
     def choose_kan_tile(self, player: int, action: GameAction) -> Optional[Tile]:
         assert self.engine is not None
-        if action == GameAction.KAN and self.engine.get_last_discard() is not None:
+        if (
+            action == GameAction.KAN
+            and player != self.engine.get_current_player()
+            and self.engine.get_last_discard() is not None
+        ):
             return self.engine.get_last_discard()
 
         candidates = self.engine.get_hand(player).can_kan(None)
+        if action == GameAction.KAN:
+            candidates = [
+                meld
+                for meld in candidates
+                if meld.type == MeldType.OPEN_KAN and meld.called_tile is not None
+            ]
+        elif action == GameAction.DECLARE_ANKAN:
+            candidates = [
+                meld for meld in candidates if meld.type == MeldType.CLOSED_KAN
+            ]
         if not candidates:
             return None
         labels = [self.tiles_text(meld.tiles) for meld in candidates]
         choice = self.choose(self.t("select_tile"), labels)
         if choice is None:
             return None
-        return candidates[choice].tiles[0]
+        return candidates[choice].called_tile or candidates[choice].tiles[0]
 
     def choose_chi_sequence(self, player: int) -> Optional[List[Tile]]:
         assert self.engine is not None
@@ -1052,16 +1066,21 @@ class Tui:
     def action_trigger_text(self) -> Optional[str]:
         if self.engine is None:
             return None
-        has_interrupt_action = bool(self.active_sequences) or any(
-            action
-            in {
-                GameAction.CHI,
-                GameAction.PON,
-                GameAction.KAN,
-                GameAction.RON,
-                GameAction.PASS,
-            }
-            for action in self.active_actions
+        waiting_players = set(self.engine.waiting_for_actions)
+        is_self_turn = waiting_players == {0} and self.engine.get_current_player() == 0
+        has_interrupt_action = not is_self_turn and (
+            bool(self.active_sequences)
+            or any(
+                action
+                in {
+                    GameAction.CHI,
+                    GameAction.PON,
+                    GameAction.KAN,
+                    GameAction.RON,
+                    GameAction.PASS,
+                }
+                for action in self.active_actions
+            )
         )
         if has_interrupt_action:
             tile = self.engine.get_last_discard()

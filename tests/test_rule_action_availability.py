@@ -43,29 +43,28 @@ class TestActionAvailability(RuleEngineTestMixin):
     def test_get_available_actions_kan(self):
         """Test if open_kan is available"""
         self._init_game()
-        current_player = self.engine.get_current_player()
+        discarded_player = self.engine.get_current_player()
+        caller = (discarded_player + 1) % self.engine.get_num_players()
         # 111m 234m 567m 12p 3p 4p
-        self.engine._hands[current_player] = Hand(parse_tiles("111m234m567m1234p"))
+        self.engine._hands[caller] = Hand(parse_tiles("111m234m567m1234p"))
         self.engine._last_discarded_tile = Tile(Suit.MANZU, 1)
-        self.engine._last_discarded_player = (
-            current_player + 1
-        ) % self.engine.get_num_players()
+        self.engine._last_discarded_player = discarded_player
 
         # Force update actions
-        self.engine._waiting_for_actions[current_player] = (
-            self.engine._calculate_turn_actions(current_player)
+        self.engine._waiting_for_actions = self.engine._check_interrupts(
+            self.engine._last_discarded_tile, discarded_player
         )
 
-        assert self._has_action(current_player, GameAction.KAN)
+        assert self._has_action(caller, GameAction.KAN)
         # Modify last discard to make kan unavailable
         self.engine._last_discarded_tile = Tile(Suit.MANZU, 9)
 
         # Force update actions again
-        self.engine._waiting_for_actions[current_player] = (
-            self.engine._calculate_turn_actions(current_player)
+        self.engine._waiting_for_actions = self.engine._check_interrupts(
+            self.engine._last_discarded_tile, discarded_player
         )
 
-        assert not self._has_action(current_player, GameAction.KAN)
+        assert not self._has_action(caller, GameAction.KAN)
 
     def test_get_available_actions_declare_ankan(self):
         """Test if declare_ankan is available"""
