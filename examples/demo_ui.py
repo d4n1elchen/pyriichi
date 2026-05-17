@@ -1679,17 +1679,22 @@ class Tui:
         scores = "  ".join(f"P{i}: {score}" for i, score in enumerate(state.scores))
         self.safe_addstr(1, max(2, width - len(scores) - 3), scores)
 
+        margin_x = 2
         side_width = 31
-        table_width = min(130, width - (side_width + 8) * 2)
-        table_x = (width - table_width) // 2
+        side_gap = 2
+        bottom_panel_height = 7
         table_y = 8
-        table_height = min(24, height - table_y - 10)
+        bottom_y = height - bottom_panel_height - 1
+        table_height = bottom_y - table_y - 1
+        left_panel_x = margin_x
+        right_panel_x = width - side_width - margin_x
+        table_x = left_panel_x + side_width + side_gap
+        table_width = right_panel_x - table_x - side_gap
         top_panel_y = table_y - 5
-        bottom_y = table_y + table_height + 1
         center_width = 30
         center_height = 9
         center_x = (width - center_width) // 2
-        center_y = table_y + 7
+        center_y = table_y + max(5, (table_height - center_height) // 2)
 
         self.draw_player_panel(
             2, top_panel_y, table_x, 4, table_width, hidden=True
@@ -1698,7 +1703,7 @@ class Tui:
         self.draw_player_panel(
             3,
             table_y,
-            table_x - side_width - 2,
+            left_panel_x,
             table_height,
             side_width,
             hidden=True,
@@ -1706,7 +1711,7 @@ class Tui:
         self.draw_player_panel(
             1,
             table_y,
-            table_x + table_width + 2,
+            right_panel_x,
             table_height,
             side_width,
             hidden=True,
