@@ -685,7 +685,12 @@ class Tui:
         self.active_actions = actions
         self.active_options = self.build_action_options(player, actions)
         self.selection_tiles = discard_tiles or None
+        tile_index = self.default_tile_selection_index(
+            discard_tiles, hand.last_drawn_tile
+        )
         selected_index = 0
+        if not self.active_options and discard_tiles:
+            selected_index = tile_index
         total_options = len(self.active_options) + len(discard_tiles)
         if total_options == 0:
             self.clear_selection()
@@ -721,7 +726,7 @@ class Tui:
                     sync_selection()
             elif key in (curses.KEY_DOWN, ord("j")):
                 if discard_tiles and selected_index < len(self.active_options):
-                    selected_index = len(self.active_options)
+                    selected_index = len(self.active_options) + tile_index
                     sync_selection()
             elif ord("1") <= key <= ord("9") and discard_tiles:
                 index = key - ord("1")
@@ -913,8 +918,10 @@ class Tui:
         candidates = self.sorted_tiles_for_display(candidates, hand.last_drawn_tile)
         self.active_actions = actions or [action]
         self.selection_tiles = candidates
-        candidate_index = 0
-        self.selected_tile_index = 0
+        candidate_index = self.default_tile_selection_index(
+            candidates, hand.last_drawn_tile
+        )
+        self.selected_tile_index = candidate_index
         self.set_status(self.t("select_tile"))
 
         while True:
@@ -1094,6 +1101,11 @@ class Tui:
             lines.append(
                 f"{self.t('hand')}: {self.tiles_text(self.win_hand_tiles(winner, win_result))}"
             )
+            melds = self.engine.get_hand(winner).melds
+            if melds:
+                lines.append(
+                    f"{self.t('melds')}: {self.melds_text(melds, owner=winner)}"
+                )
             for yaku_result in win_result.yaku:
                 lines.append(f"  {self.yaku_summary_text(yaku_result)}")
             listed_han = sum(yaku_result.han for yaku_result in win_result.yaku)
@@ -1121,6 +1133,22 @@ class Tui:
         if winning_tile is not None and all(tile is not winning_tile for tile in tiles):
             tiles.append(winning_tile)
         return self.sorted_tiles_for_display(tiles, winning_tile)
+
+    @staticmethod
+    def default_tile_selection_index(
+        tiles: List[Tile], incoming_tile: Optional[Tile]
+    ) -> int:
+        if not tiles:
+            return 0
+        if incoming_tile is None:
+            return 0
+        for index, tile in enumerate(tiles):
+            if tile is incoming_tile:
+                return index
+        for index, tile in enumerate(tiles):
+            if tile == incoming_tile:
+                return index
+        return 0
 
     def yaku_summary_text(self, yaku_result) -> str:
         name = getattr(yaku_result.yaku, self.settings.language)
@@ -1690,7 +1718,9 @@ class Tui:
                 curses.A_BOLD,
             )
             self.safe_addstr(
-                y + 1, 4, f"{self.t('melds')}: {self.melds_text(hand.melds)}"
+                y + 1,
+                4,
+                f"{self.t('melds')}: {self.melds_text(hand.melds, owner=player)}",
             )
             self.safe_addstr(
                 y + 2,
@@ -1812,13 +1842,15 @@ class Tui:
                 self.safe_addstr(y, cursor, label, attr)
                 cursor += label_width
 
-    def meld_text(self, meld: Meld) -> str:
-        return "".join(self.tile_label(tile) for tile in self.meld_display_tiles(meld))
+    def meld_text(self, meld: Meld, owner: int = 0) -> str:
+        return "".join(
+            self.tile_label(tile) for tile in self.meld_display_tiles(meld, owner)
+        )
 
-    def melds_text(self, melds: List[Meld]) -> str:
+    def melds_text(self, melds: List[Meld], owner: int = 0) -> str:
         if not melds:
             return self.t("none")
-        return " / ".join(self.meld_text(meld) for meld in melds)
+        return " / ".join(self.meld_text(meld, owner) for meld in melds)
 
 
 def main() -> None:
