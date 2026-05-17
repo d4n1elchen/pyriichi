@@ -1371,6 +1371,7 @@ class Tui:
         *,
         first_index: int,
         riichi_index: Optional[int],
+        trigger_index: Optional[int] = None,
     ) -> None:
         cursor = x
         for offset, tile in enumerate(tiles):
@@ -1381,6 +1382,8 @@ class Tui:
             attr = self.tile_attr(tile)
             if riichi_index is not None and first_index + offset == riichi_index:
                 attr |= curses.A_REVERSE | curses.A_UNDERLINE
+            if trigger_index is not None and first_index + offset == trigger_index:
+                attr |= curses.A_REVERSE | curses.A_BOLD
             self.safe_addstr(y, cursor, label, attr)
             cursor += label_width + 1
 
@@ -1413,6 +1416,20 @@ class Tui:
             )
         return self.display_width(f"[{self.action_text(option.action)}]")
 
+    @staticmethod
+    def called_tile_index(
+        tiles: List[Tile], called_tile: Optional[Tile]
+    ) -> Optional[int]:
+        if called_tile is None:
+            return None
+        for index, tile in enumerate(tiles):
+            if tile is called_tile:
+                return index
+        for index, tile in enumerate(tiles):
+            if tile == called_tile:
+                return index
+        return None
+
     def draw_action_option(
         self, y: int, x: int, option: ActionOption, selected: bool
     ) -> int:
@@ -1430,9 +1447,13 @@ class Tui:
         space_attr = self.action_attr(option.action, selected) if selected else 0
         self.safe_addstr(y, cursor, " ", space_attr)
         cursor += 1
-        for tile in option.meld_tiles:
+        called_index = self.called_tile_index(option.meld_tiles, option.called_tile)
+        for tile_index, tile in enumerate(option.meld_tiles):
             label = self.tile_label(tile)
-            attr = self.tile_attr(tile, bold=False)
+            is_called_tile = tile_index == called_index
+            attr = self.tile_attr(tile, bold=is_called_tile)
+            if is_called_tile:
+                attr |= curses.A_UNDERLINE
             if selected:
                 attr |= curses.A_REVERSE
             self.safe_addstr(y, cursor, label, attr)
@@ -1513,6 +1534,7 @@ class Tui:
         rows: int = 3,
         *,
         riichi_index: Optional[int] = None,
+        trigger_index: Optional[int] = None,
     ) -> None:
         visible_tiles = tiles[-18:]
         first_index = max(0, len(tiles) - len(visible_tiles))
@@ -1532,6 +1554,7 @@ class Tui:
                 width - row_offset,
                 first_index=first_index + start,
                 riichi_index=riichi_index,
+                trigger_index=trigger_index,
             )
 
     def draw_player_panel(
@@ -1654,10 +1677,27 @@ class Tui:
             f"{self.t('kyoutaku')} {state.riichi_sticks}",
             f"{self.t('wall')} {self.engine.get_wall_remaining()}",
         ]
-        info_y = middle_y - 2
+        info_y = middle_y - 1
         for offset, line in enumerate(info_lines):
             attr = curses.A_BOLD if offset == 0 else curses.A_NORMAL
             self.safe_addstr(info_y + offset, info_x, line[:info_width], attr)
+
+    def action_trigger_discard_index(self, player: int) -> Optional[int]:
+        assert self.engine is not None
+        if not self.active_options:
+            return None
+
+        discards = self.engine.get_hand(player).discards
+        for option in self.active_options:
+            if option.called_from != player or option.called_tile is None:
+                continue
+            for index in range(len(discards) - 1, -1, -1):
+                if discards[index] is option.called_tile:
+                    return index
+            for index in range(len(discards) - 1, -1, -1):
+                if discards[index] == option.called_tile:
+                    return index
+        return None
 
     def draw_table_discards(
         self, center_y: int, center_x: int, table_x: int, table_width: int
@@ -1695,6 +1735,7 @@ class Tui:
             hand2.discards,
             top_width,
             riichi_index=hand2.riichi_discard_index,
+            trigger_index=self.action_trigger_discard_index(2),
         )
         self.add_centered(center_y - 1, top_x, top_width, f"{self.t('dora')}: {dora}")
 
@@ -1712,6 +1753,7 @@ class Tui:
             hand3.discards,
             side_width,
             riichi_index=hand3.riichi_discard_index,
+            trigger_index=self.action_trigger_discard_index(3),
         )
         self.add_centered(
             center_y,
@@ -1727,6 +1769,7 @@ class Tui:
             hand1.discards,
             side_width,
             riichi_index=hand1.riichi_discard_index,
+            trigger_index=self.action_trigger_discard_index(1),
         )
 
         self.add_centered(
@@ -1743,6 +1786,7 @@ class Tui:
             hand0.discards,
             top_width,
             riichi_index=hand0.riichi_discard_index,
+            trigger_index=self.action_trigger_discard_index(0),
         )
 
     def draw_status_panel(self, y: int, x: int, width: int) -> None:
