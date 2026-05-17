@@ -971,7 +971,7 @@ class RuleEngine:
         discard_result = self._handle_discard(player, tile, **kwargs)
 
         # Execute riichi.
-        hand.set_riichi(True)
+        hand.set_riichi(True, turn=len(hand.discards) - 1)
         self._game_state.add_riichi_stick()
         self._game_state.update_score(player, -1000)
         self._riichi_ippatsu[player] = True

@@ -102,6 +102,7 @@ class TestRiichi(RuleEngineTestMixin):
         assert self.engine._riichi_ippatsu[current_player]
         assert self.engine._game_state.scores[current_player] == initial_score - 1000
         assert self.engine._game_state.riichi_sticks == 1
+        assert self.engine.get_hand(current_player).riichi_discard_index == 0
 
     def test_riichi_declaration_discard_ron_reverts_riichi_stick(self):
         """Test ron on a riichi declaration discard reverts the declaration."""

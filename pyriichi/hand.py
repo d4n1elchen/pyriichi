@@ -235,6 +235,8 @@ class Hand:
         last_tile = self._discards[-1]
         if last_tile != tile:
             raise HandError("last_discard_mismatch")
+        if self._riichi_turn == len(self._discards) - 1:
+            self._riichi_turn = None
         self._discards.pop()
 
     def total_tile_count(self) -> int:
@@ -526,6 +528,11 @@ class Hand:
     def is_riichi(self) -> bool:
         """Is riichi"""
         return self._is_riichi
+
+    @property
+    def riichi_discard_index(self) -> Optional[int]:
+        """Get the discard index of the riichi declaration tile."""
+        return self._riichi_turn
 
     @property
     def tenpai_discards(self) -> List[Tile]:

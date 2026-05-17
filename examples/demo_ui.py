@@ -1211,14 +1211,15 @@ class Tui:
         if tile is not None:
             lines.append(self.tile_label(tile))
         content_width = max(self.display_width(line) for line in lines)
-        box_width = max(24, content_width + 8)
-        box_height = len(lines) + 4
+        box_width = min(width - 4, max(40, content_width + 16))
+        box_height = min(height - 4, max(11, len(lines) + 6))
         y = max(1, (height - box_height) // 2)
         x = max(2, (width - box_width) // 2)
         self.draw_box(y, x, box_height, box_width, title)
+        first_line_y = y + max(2, (box_height - len(lines)) // 2)
         for index, popup_line in enumerate(lines):
             self.add_centered(
-                y + 2 + index, x + 1, box_width - 2, popup_line, curses.A_BOLD
+                first_line_y + index, x + 1, box_width - 2, popup_line, curses.A_BOLD
             )
         self.stdscr.refresh()
         curses.napms(ACTION_POPUP_MS)
@@ -1266,6 +1267,28 @@ class Tui:
             attr = self.tile_attr(tile, hidden)
             if selected_index == index:
                 attr |= curses.A_REVERSE
+            self.safe_addstr(y, cursor, label, attr)
+            cursor += label_width + 1
+
+    def draw_river_tile_row(
+        self,
+        y: int,
+        x: int,
+        tiles: List[Tile],
+        max_width: int,
+        *,
+        first_index: int,
+        riichi_index: Optional[int],
+    ) -> None:
+        cursor = x
+        for offset, tile in enumerate(tiles):
+            label = self.tile_label(tile)
+            label_width = self.display_width(label)
+            if cursor + label_width > x + max_width:
+                return
+            attr = self.tile_attr(tile)
+            if riichi_index is not None and first_index + offset == riichi_index:
+                attr |= curses.A_REVERSE | curses.A_UNDERLINE
             self.safe_addstr(y, cursor, label, attr)
             cursor += label_width + 1
 
@@ -1402,9 +1425,34 @@ class Tui:
         return labels_width + len(tiles) - 1
 
     def draw_discard_river_row(
-        self, y: int, x: int, tiles: List[Tile], width: int, rows: int = 3
+        self,
+        y: int,
+        x: int,
+        tiles: List[Tile],
+        width: int,
+        rows: int = 3,
+        *,
+        riichi_index: Optional[int] = None,
     ) -> None:
-        self.draw_discard_grid(y, x, tiles[-18:], width, rows)
+        visible_tiles = tiles[-18:]
+        first_index = max(0, len(tiles) - len(visible_tiles))
+        per_row = 6
+        for row in range(rows):
+            start = row * per_row
+            if start >= len(visible_tiles):
+                return
+            row_tiles = visible_tiles[start : start + per_row]
+            row_width = self.tile_row_width(row_tiles)
+            row_offset = max(0, (width - row_width) // 2)
+            row_x = x + row_offset
+            self.draw_river_tile_row(
+                y + row,
+                row_x,
+                row_tiles,
+                width - row_offset,
+                first_index=first_index + start,
+                riichi_index=riichi_index,
+            )
 
     def draw_player_panel(
         self,
@@ -1513,8 +1561,13 @@ class Tui:
             f"P2 {self.t('discards')}",
             curses.A_DIM,
         )
+        hand2 = self.engine.get_hand(2)
         self.draw_discard_river_row(
-            center_y - 4, top_x, self.engine.get_hand(2).discards, top_width
+            center_y - 4,
+            top_x,
+            hand2.discards,
+            top_width,
+            riichi_index=hand2.riichi_discard_index,
         )
         self.add_centered(center_y - 1, top_x, top_width, f"{self.t('dora')}: {dora}")
 
@@ -1525,8 +1578,13 @@ class Tui:
             f"P3 {self.t('discards')}",
             curses.A_DIM,
         )
+        hand3 = self.engine.get_hand(3)
         self.draw_discard_river_row(
-            center_y + 1, left_x, self.engine.get_hand(3).discards, side_width
+            center_y + 1,
+            left_x,
+            hand3.discards,
+            side_width,
+            riichi_index=hand3.riichi_discard_index,
         )
         self.add_centered(
             center_y,
@@ -1535,8 +1593,13 @@ class Tui:
             f"P1 {self.t('discards')}",
             curses.A_DIM,
         )
+        hand1 = self.engine.get_hand(1)
         self.draw_discard_river_row(
-            center_y + 1, right_x, self.engine.get_hand(1).discards, side_width
+            center_y + 1,
+            right_x,
+            hand1.discards,
+            side_width,
+            riichi_index=hand1.riichi_discard_index,
         )
 
         self.add_centered(
@@ -1546,11 +1609,13 @@ class Tui:
             f"P0 {self.t('discards')}",
             curses.A_DIM,
         )
+        hand0 = self.engine.get_hand(0)
         self.draw_discard_river_row(
             center_y + center_height + 2,
             top_x,
-            self.engine.get_hand(0).discards,
+            hand0.discards,
             top_width,
+            riichi_index=hand0.riichi_discard_index,
         )
 
     def draw_status_panel(self, y: int, x: int, width: int) -> None:
