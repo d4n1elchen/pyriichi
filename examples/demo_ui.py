@@ -381,10 +381,10 @@ class Tui:
     def main_menu(self) -> None:
         while self.running:
             options = [
+                (self.t("start"), self.play_game),
                 (self.t("language"), self.configure_language),
                 (self.t("difficulty"), self.configure_difficulty),
                 (self.t("rules"), self.configure_rules),
-                (self.t("start"), self.play_game),
                 (self.t("quit"), self.stop),
             ]
             choice = self.choose(self.t("title"), [label for label, _ in options])
