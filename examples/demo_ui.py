@@ -948,6 +948,28 @@ class Tui:
         self.selected_tile_index = None
         self.selection_tiles = None
 
+    @staticmethod
+    def selectable_tile_indices(
+        display_tiles: List[Tile], candidates: List[Tile]
+    ) -> List[int]:
+        if not candidates:
+            return list(range(len(display_tiles)))
+        candidate_set = set(candidates)
+        return [
+            index for index, tile in enumerate(display_tiles) if tile in candidate_set
+        ]
+
+    @staticmethod
+    def default_selectable_position(
+        display_tiles: List[Tile],
+        selectable_indices: List[int],
+        incoming_tile: Optional[Tile],
+    ) -> int:
+        incoming_index = Tui.incoming_tile_index(display_tiles, incoming_tile)
+        if incoming_index in selectable_indices:
+            return selectable_indices.index(incoming_index)
+        return 0
+
     def choose_tile_from_hand(
         self,
         player: int,
@@ -956,18 +978,24 @@ class Tui:
     ) -> Optional[Tile]:
         assert self.engine is not None
         hand = self.engine.get_hand(player)
-        candidates = (
-            hand.tenpai_discards if action == GameAction.DECLARE_RIICHI else hand.tiles
-        )
+        is_riichi_discard = action == GameAction.DECLARE_RIICHI
+        candidates = hand.tenpai_discards if is_riichi_discard else hand.tiles
         if not candidates:
             candidates = hand.tiles
-        candidates = self.sorted_tiles_for_display(candidates, hand.last_drawn_tile)
-        self.active_actions = actions or [action]
-        self.selection_tiles = candidates
-        candidate_index = self.default_tile_selection_index(
-            candidates, hand.last_drawn_tile
+        display_tiles = (
+            self.sorted_hand_tiles(hand)
+            if is_riichi_discard
+            else self.sorted_tiles_for_display(candidates, hand.last_drawn_tile)
         )
-        self.selected_tile_index = candidate_index
+        selectable_indices = self.selectable_tile_indices(display_tiles, candidates)
+        if not selectable_indices:
+            selectable_indices = list(range(len(display_tiles)))
+        self.active_actions = actions or [action]
+        self.selection_tiles = display_tiles
+        candidate_index = self.default_selectable_position(
+            display_tiles, selectable_indices, hand.last_drawn_tile
+        )
+        self.selected_tile_index = selectable_indices[candidate_index]
         self.set_status(self.t("select_tile"))
 
         while True:
@@ -981,21 +1009,21 @@ class Tui:
                 self.clear_selection()
                 return None
             if key in (curses.KEY_LEFT, ord("h")):
-                candidate_index = (candidate_index - 1) % len(candidates)
-                self.selected_tile_index = candidate_index
+                candidate_index = (candidate_index - 1) % len(selectable_indices)
+                self.selected_tile_index = selectable_indices[candidate_index]
             elif key in (curses.KEY_RIGHT, ord("l")):
-                candidate_index = (candidate_index + 1) % len(candidates)
-                self.selected_tile_index = candidate_index
+                candidate_index = (candidate_index + 1) % len(selectable_indices)
+                self.selected_tile_index = selectable_indices[candidate_index]
             elif ord("1") <= key <= ord("9"):
                 index = key - ord("1")
-                if index < len(candidates):
-                    candidate_index = index
-                    self.selected_tile_index = candidate_index
-                    tile = candidates[index]
+                if index in selectable_indices:
+                    candidate_index = selectable_indices.index(index)
+                    self.selected_tile_index = index
+                    tile = display_tiles[index]
                     self.clear_selection()
                     return tile
             elif key in (curses.KEY_ENTER, 10, 13):
-                tile = candidates[candidate_index]
+                tile = display_tiles[selectable_indices[candidate_index]]
                 self.clear_selection()
                 return tile
 
