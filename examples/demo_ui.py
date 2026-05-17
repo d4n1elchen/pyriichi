@@ -817,7 +817,10 @@ class Tui:
                     for concrete_sequence in self.concrete_chi_sequences(
                         hand, sequence
                     ):
-                        meld_tiles = sorted(concrete_sequence + [last_discard])
+                        meld_tiles = sorted(
+                            concrete_sequence + [last_discard],
+                            key=self.tile_display_sort_key,
+                        )
                         options.append(
                             ActionOption(
                                 action=action,
@@ -834,7 +837,10 @@ class Tui:
                     ActionOption(
                         action=action,
                         tile=last_discard,
-                        meld_tiles=sorted(hand_tiles + [last_discard]),
+                        meld_tiles=sorted(
+                            hand_tiles + [last_discard],
+                            key=self.tile_display_sort_key,
+                        ),
                         called_tile=last_discard,
                         called_from=last_discard_player,
                     )
@@ -940,6 +946,16 @@ class Tui:
                 return action
 
     @staticmethod
+    def tile_display_sort_key(tile: Tile) -> tuple[int, int, bool]:
+        suit_order = {
+            Suit.MANZU: 0,
+            Suit.PINZU: 1,
+            Suit.SOUZU: 2,
+            Suit.HONORS: 3,
+        }
+        return (suit_order[tile.suit], tile.rank, tile.is_red_dora)
+
+    @staticmethod
     def sorted_tiles_for_display(
         tiles: List[Tile], incoming_tile: Optional[Tile] = None
     ) -> List[Tile]:
@@ -960,7 +976,7 @@ class Tui:
                         pinned_tile = display_tiles.pop(index)
                         break
 
-        display_tiles.sort()
+        display_tiles.sort(key=Tui.tile_display_sort_key)
         if pinned_tile is not None:
             display_tiles.append(pinned_tile)
         return display_tiles
