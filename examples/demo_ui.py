@@ -718,10 +718,10 @@ class Tui:
                 self.clear_selection()
                 return None
             if key in (curses.KEY_LEFT, ord("h")):
-                selected_index = max(0, selected_index - 1)
+                selected_index = (selected_index - 1) % total_options
                 sync_selection()
             elif key in (curses.KEY_RIGHT, ord("l")):
-                selected_index = min(total_options - 1, selected_index + 1)
+                selected_index = (selected_index + 1) % total_options
                 sync_selection()
             elif key in (curses.KEY_UP, ord("k")):
                 if discard_tiles and selected_index >= len(self.active_options):
@@ -935,10 +935,10 @@ class Tui:
                 self.clear_selection()
                 return None
             if key in (curses.KEY_LEFT, ord("h")):
-                candidate_index = max(0, candidate_index - 1)
+                candidate_index = (candidate_index - 1) % len(candidates)
                 self.selected_tile_index = candidate_index
             elif key in (curses.KEY_RIGHT, ord("l")):
-                candidate_index = min(len(candidates) - 1, candidate_index + 1)
+                candidate_index = (candidate_index + 1) % len(candidates)
                 self.selected_tile_index = candidate_index
             elif ord("1") <= key <= ord("9"):
                 index = key - ord("1")
