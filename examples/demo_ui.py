@@ -1682,7 +1682,7 @@ class Tui:
         left_x = x + 2
         right_x = x + width - side_width - 2
         info_x = x + width // 2 - 4
-        info_width = max(8, right_x - info_x - 1)
+        info_width = max(8, right_x - info_x - 3)
 
         self.draw_center_score_block(
             y + 1, x + 1, width - 2, 2, align="center"
@@ -1705,7 +1705,7 @@ class Tui:
             f"{self.t('kyoutaku')} {state.riichi_sticks}",
             f"{self.t('wall')} {self.engine.get_wall_remaining()}",
         ]
-        info_y = middle_y - 1
+        info_y = middle_y - 2
         for offset, line in enumerate(info_lines):
             attr = curses.A_BOLD if offset == 0 else curses.A_NORMAL
             self.safe_addstr(info_y + offset, info_x, line[:info_width], attr)
@@ -1731,8 +1731,8 @@ class Tui:
         self, center_y: int, center_x: int, table_x: int, table_width: int
     ) -> None:
         assert self.engine is not None
-        center_height = 11
-        center_width = 48
+        center_height = 12
+        center_width = 56
         side_gap = 6
         table_inner_x = table_x + 2
         table_inner_right = table_x + table_width - 2
@@ -1856,8 +1856,8 @@ class Tui:
         table_x = left_panel_x + side_width + side_gap
         table_width = right_panel_x - table_x - side_gap
         top_panel_y = table_y - 5
-        center_width = 48
-        center_height = 11
+        center_width = 56
+        center_height = 12
         center_x = (width - center_width) // 2
         center_y = table_y + max(5, (table_height - center_height) // 2)
 
