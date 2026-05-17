@@ -657,6 +657,8 @@ class Tui:
         try:
             result = self.engine.execute_action(player, action, tile, **kwargs)
             self.set_status(f"P{player}: {self.action_text(action)}")
+            if result.riichi:
+                self.show_riichi_popup(player)
             return result
         except ValueError as exc:
             self.set_status(f"{self.t('invalid')}: {exc}")
@@ -1016,6 +1018,8 @@ class Tui:
             else:
                 raise
         self.set_status(f"P{player}: {self.action_text(action)}")
+        if result.riichi:
+            self.show_riichi_popup(player)
         return result
 
     def build_public_info(self) -> PublicInfo:
@@ -1149,6 +1153,23 @@ class Tui:
         for index, line in enumerate(lines[:max_lines]):
             self.safe_addstr(y + 1 + index, x + 2, line)
         self.safe_addstr(y + box_height - 2, x + 2, self.t("next_round"), curses.A_BOLD)
+
+    def show_riichi_popup(self, player: int) -> None:
+        assert self.engine is not None
+        self.render()
+        height, width = self.stdscr.getmaxyx()
+        title = self.action_text(GameAction.DECLARE_RIICHI)
+        state = self.engine.game_state
+        wind = getattr(state.seat_winds[player], self.settings.language)
+        line = f"P{player} {wind}"
+        box_width = max(24, self.display_width(line) + 8)
+        box_height = 5
+        y = max(1, (height - box_height) // 2)
+        x = max(2, (width - box_width) // 2)
+        self.draw_box(y, x, box_height, box_width, title)
+        self.add_centered(y + 2, x + 1, box_width - 2, line, curses.A_BOLD)
+        self.stdscr.refresh()
+        curses.napms(850)
 
     def draw_box(
         self, y: int, x: int, height: int, width: int, title: str = ""
@@ -1437,7 +1458,7 @@ class Tui:
             center_y - 5,
             top_x,
             top_width,
-            f"{self.t('discards')} P2",
+            f"P2 {self.t('discards')}",
             curses.A_DIM,
         )
         self.draw_discard_river_row(
