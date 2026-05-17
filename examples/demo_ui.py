@@ -973,8 +973,10 @@ class Tui:
         attr = self.color(COLOR_BORDER)
         horizontal = "─" * max(0, width - 2)
         self.safe_addstr(y, x, f"┌{horizontal}┐", attr)
+        fill = " " * max(0, width - 2)
         for row in range(1, height - 1):
             self.safe_addstr(y + row, x, "│", attr)
+            self.safe_addstr(y + row, x + 1, fill)
             self.safe_addstr(y + row, x + width - 1, "│", attr)
         self.safe_addstr(y + height - 1, x, f"└{horizontal}┘", attr)
         if title:
