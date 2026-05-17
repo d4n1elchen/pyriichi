@@ -33,6 +33,7 @@ TEXT = {
         "select_tile": "Select tile",
         "select_sequence": "Select chi sequence",
         "round": "Round",
+        "table": "Table",
         "dealer": "Dealer",
         "honba": "Honba",
         "kyoutaku": "Deposit",
@@ -81,6 +82,7 @@ TEXT = {
         "select_tile": "牌を選択",
         "select_sequence": "チーの順子を選択",
         "round": "局",
+        "table": "卓",
         "dealer": "親",
         "honba": "本場",
         "kyoutaku": "供託",
@@ -129,6 +131,7 @@ TEXT = {
         "select_tile": "選擇牌",
         "select_sequence": "選擇吃牌順子",
         "round": "局",
+        "table": "牌桌",
         "dealer": "莊家",
         "honba": "本場",
         "kyoutaku": "供託",
@@ -1138,17 +1141,22 @@ class Tui:
     def default_tile_selection_index(
         tiles: List[Tile], incoming_tile: Optional[Tile]
     ) -> int:
-        if not tiles:
-            return 0
-        if incoming_tile is None:
-            return 0
+        index = Tui.incoming_tile_index(tiles, incoming_tile)
+        return 0 if index is None else index
+
+    @staticmethod
+    def incoming_tile_index(
+        tiles: List[Tile], incoming_tile: Optional[Tile]
+    ) -> Optional[int]:
+        if not tiles or incoming_tile is None:
+            return None
         for index, tile in enumerate(tiles):
             if tile is incoming_tile:
                 return index
         for index, tile in enumerate(tiles):
             if tile == incoming_tile:
                 return index
-        return 0
+        return None
 
     def yaku_summary_text(self, yaku_result) -> str:
         name = getattr(yaku_result.yaku, self.settings.language)
@@ -1279,10 +1287,17 @@ class Tui:
         hidden: bool = False,
         indexed: bool = False,
         selected_index: Optional[int] = None,
+        gap_before_index: Optional[int] = None,
     ) -> None:
         cursor = x
         visible_tiles = tiles
         for index, tile in enumerate(visible_tiles):
+            if (
+                gap_before_index is not None
+                and index == gap_before_index
+                and cursor > x
+            ):
+                cursor += 1
             label = self.tile_label(tile, hidden)
             if indexed:
                 label = f"{index + 1:02d}{label}"
@@ -1492,6 +1507,9 @@ class Tui:
             self.draw_tile_row(y + 1, x + 2, hand.tiles, width - 4, hidden=True)
         else:
             display_tiles = self.selection_tiles or self.sorted_hand_tiles(hand)
+            gap_before_index = self.incoming_tile_index(
+                display_tiles, hand.last_drawn_tile
+            )
             self.draw_tile_row(
                 y + 1,
                 x + 2,
@@ -1499,6 +1517,7 @@ class Tui:
                 width - 4,
                 indexed=True,
                 selected_index=self.selected_tile_index if player == 0 else None,
+                gap_before_index=gap_before_index,
             )
         self.safe_addstr(y + 2, x + 2, f"{self.t('melds')}:")
         self.draw_melds(y + 2, x + 10, hand.melds, width - 12, owner=player)
@@ -1546,32 +1565,30 @@ class Tui:
             self.player_score_text(0, compact=True),
         )
 
-    def draw_table_discards(self, center_y: int, center_x: int) -> None:
+    def draw_table_discards(
+        self, center_y: int, center_x: int, table_x: int, table_width: int
+    ) -> None:
         assert self.engine is not None
-        _, screen_width = self.stdscr.getmaxyx()
         center_height = 9
         center_width = 30
         side_gap = 6
-        side_width = min(
-            48,
-            max(
-                24,
-                min(
-                    center_x - side_gap - 2,
-                    screen_width - (center_x + center_width + side_gap) - 2,
-                ),
-            ),
+        table_inner_x = table_x + 2
+        table_inner_right = table_x + table_width - 2
+        side_available = min(
+            center_x - side_gap - table_inner_x,
+            table_inner_right - (center_x + center_width + side_gap),
         )
-        left_x = max(2, center_x - side_gap - side_width)
+        side_width = max(18, min(42, side_available))
+        left_x = center_x - side_gap - side_width
         right_x = center_x + center_width + side_gap
-        top_width = 72
+        top_width = min(72, table_width - 4)
         top_x = center_x + (center_width - top_width) // 2
         dora = self.tiles_text(
             self.engine.get_revealed_dora_indicators(), mark_dora=False
         )
 
         self.add_centered(
-            center_y - 5,
+            center_y - 6,
             top_x,
             top_width,
             f"P2 {self.t('discards')}",
@@ -1579,7 +1596,7 @@ class Tui:
         )
         hand2 = self.engine.get_hand(2)
         self.draw_discard_river_row(
-            center_y - 4,
+            center_y - 5,
             top_x,
             hand2.discards,
             top_width,
@@ -1650,7 +1667,7 @@ class Tui:
         assert self.engine is not None
         self.stdscr.erase()
         height, width = self.stdscr.getmaxyx()
-        if height < 34 or width < 110:
+        if height < 44 or width < 170:
             self.render_compact()
             self.stdscr.refresh()
             return
@@ -1662,26 +1679,47 @@ class Tui:
         scores = "  ".join(f"P{i}: {score}" for i, score in enumerate(state.scores))
         self.safe_addstr(1, max(2, width - len(scores) - 3), scores)
 
-        top_width = min(78, width - 36)
-        top_x = (width - top_width) // 2
-        self.draw_player_panel(2, 3, top_x, 4, top_width, hidden=True)
-
         side_width = 31
-        self.draw_player_panel(3, 8, 2, 4, side_width, hidden=True)
-        self.draw_player_panel(1, 8, width - side_width - 2, 4, side_width, hidden=True)
-
+        table_width = min(130, width - (side_width + 8) * 2)
+        table_x = (width - table_width) // 2
+        table_y = 8
+        table_height = min(24, height - table_y - 10)
+        top_panel_y = table_y - 5
+        bottom_y = table_y + table_height + 1
         center_width = 30
         center_height = 9
         center_x = (width - center_width) // 2
-        center_y = max(12, min((height - center_height) // 2, height - 22))
-        self.draw_table_discards(center_y, center_x)
+        center_y = table_y + 7
+
+        self.draw_player_panel(
+            2, top_panel_y, table_x, 4, table_width, hidden=True
+        )
+
+        self.draw_player_panel(
+            3,
+            table_y,
+            table_x - side_width - 2,
+            table_height,
+            side_width,
+            hidden=True,
+        )
+        self.draw_player_panel(
+            1,
+            table_y,
+            table_x + table_width + 2,
+            table_height,
+            side_width,
+            hidden=True,
+        )
+
+        self.draw_box(table_y, table_x, table_height, table_width, self.t("table"))
+        self.draw_table_discards(center_y, center_x, table_x, table_width)
         self.draw_center_table(center_y, center_x, center_height, center_width)
         self.draw_status_panel(3, 3, 32)
 
-        bottom_y = height - 8
         if self.status:
             self.safe_addstr(bottom_y - 1, 4, self.status, curses.A_BOLD)
-        self.draw_player_panel(0, bottom_y, 2, 7, width - 4, hidden=False)
+        self.draw_player_panel(0, bottom_y, table_x, 7, table_width, hidden=False)
         self.stdscr.refresh()
 
     def render_compact(self) -> None:
