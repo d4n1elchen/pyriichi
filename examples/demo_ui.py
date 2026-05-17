@@ -1338,21 +1338,9 @@ class Tui:
         space_attr = self.action_attr(option.action, selected) if selected else 0
         self.safe_addstr(y, cursor, " ", space_attr)
         cursor += 1
-        display_tiles = self.arrange_called_tile(
-            option.meld_tiles,
-            option.called_tile,
-            option.called_from,
-            owner=0,
-        )
-        called_index = self.called_tile_slot(
-            len(display_tiles), option.called_from, owner=0
-        )
-        for index, tile in enumerate(display_tiles):
+        for tile in option.meld_tiles:
             label = self.tile_label(tile)
-            is_called_tile = index == called_index
-            attr = self.tile_attr(tile, bold=is_called_tile)
-            if is_called_tile:
-                attr |= curses.A_UNDERLINE
+            attr = self.tile_attr(tile, bold=False)
             if selected:
                 attr |= curses.A_REVERSE
             self.safe_addstr(y, cursor, label, attr)
