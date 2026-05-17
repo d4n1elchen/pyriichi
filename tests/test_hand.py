@@ -45,6 +45,20 @@ class TestHand:
         assert hand.discards[0] is normal_five
         assert not hand.discards[0].is_red_dora
 
+    def test_chi_prefers_exact_red_five_tile(self):
+        """Test chi uses the selected physical red five."""
+        red_five = Tile(Suit.MANZU, 5, is_red_dora=True)
+        normal_five = Tile(Suit.MANZU, 5)
+        six = Tile(Suit.MANZU, 6)
+        called_tile = Tile(Suit.MANZU, 7)
+        hand = Hand([normal_five, red_five, six])
+
+        meld = hand.chi(called_tile, [red_five, six])
+
+        assert meld.tiles[0] is red_five
+        assert hand.tiles == [normal_five]
+        assert hand.tiles[0].is_red_dora is False
+
     def test_standard_winning_hand(self):
         """Test standard winning hand."""
         tiles = parse_tiles("111m222m333m44p55p")

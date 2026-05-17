@@ -305,7 +305,7 @@ class Hand:
             raise HandError("cannot_chi_tile")
 
         for t in sequence:
-            self._tiles.remove(t)
+            self._remove_tile_instance(t)
 
         all_tiles = sequence + [tile]
         meld = Meld(
@@ -316,6 +316,13 @@ class Hand:
         self._tenpai_discards = self.calculate_tenpai_discards()
         self._last_drawn_tile = None
         return meld
+
+    def _remove_tile_instance(self, tile: Tile) -> None:
+        for index, current_tile in enumerate(self._tiles):
+            if current_tile is tile:
+                self._tiles.pop(index)
+                return
+        self._tiles.remove(tile)
 
     def can_pon(self, tile: Tile) -> bool:
         """

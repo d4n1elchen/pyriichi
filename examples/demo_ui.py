@@ -814,17 +814,20 @@ class Tui:
                 continue
             if action == GameAction.CHI and last_discard is not None:
                 for sequence in self.engine.get_available_chi_sequences(player):
-                    meld_tiles = sorted(sequence + [last_discard])
-                    options.append(
-                        ActionOption(
-                            action=action,
-                            tile=last_discard,
-                            sequence=sequence,
-                            meld_tiles=meld_tiles,
-                            called_tile=last_discard,
-                            called_from=last_discard_player,
+                    for concrete_sequence in self.concrete_chi_sequences(
+                        hand, sequence
+                    ):
+                        meld_tiles = sorted(concrete_sequence + [last_discard])
+                        options.append(
+                            ActionOption(
+                                action=action,
+                                tile=last_discard,
+                                sequence=concrete_sequence,
+                                meld_tiles=meld_tiles,
+                                called_tile=last_discard,
+                                called_from=last_discard_player,
+                            )
                         )
-                    )
             elif action == GameAction.PON and last_discard is not None:
                 hand_tiles = [tile for tile in hand.tiles if tile == last_discard][:2]
                 options.append(
@@ -841,6 +844,34 @@ class Tui:
             else:
                 options.append(ActionOption(action=action, tile=last_discard))
         return options
+
+    def concrete_chi_sequences(
+        self, hand: Hand, sequence: List[Tile]
+    ) -> List[List[Tile]]:
+        variant_groups = [
+            self.matching_hand_tile_variants(hand.tiles, tile) for tile in sequence
+        ]
+        if any(not group for group in variant_groups):
+            return [sequence]
+
+        concrete_sequences: List[List[Tile]] = []
+        for first_tile in variant_groups[0]:
+            for second_tile in variant_groups[1]:
+                if first_tile is second_tile:
+                    continue
+                concrete_sequences.append([first_tile, second_tile])
+        return concrete_sequences or [sequence]
+
+    @staticmethod
+    def matching_hand_tile_variants(hand_tiles: List[Tile], target: Tile) -> List[Tile]:
+        variants = []
+        seen_red_states = set()
+        for tile in hand_tiles:
+            if tile != target or tile.is_red_dora in seen_red_states:
+                continue
+            seen_red_states.add(tile.is_red_dora)
+            variants.append(tile)
+        return sorted(variants, key=lambda tile: tile.is_red_dora)
 
     def build_kan_options(
         self, player: int, action: GameAction
