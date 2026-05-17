@@ -1400,6 +1400,7 @@ class Tui:
         first_index: int,
         riichi_index: Optional[int],
         trigger_index: Optional[int] = None,
+        match_tile: Optional[Tile] = None,
     ) -> None:
         cursor = x
         for offset, tile in enumerate(tiles):
@@ -1412,6 +1413,8 @@ class Tui:
                 attr |= curses.A_REVERSE | curses.A_UNDERLINE
             if trigger_index is not None and first_index + offset == trigger_index:
                 attr |= curses.A_REVERSE | curses.A_BOLD
+            if self.is_same_tile_type(tile, match_tile):
+                attr |= curses.A_UNDERLINE
             self.safe_addstr(y, cursor, label, attr)
             cursor += label_width + 1
 
@@ -1563,6 +1566,7 @@ class Tui:
         *,
         riichi_index: Optional[int] = None,
         trigger_index: Optional[int] = None,
+        match_tile: Optional[Tile] = None,
     ) -> None:
         visible_tiles = tiles[-18:]
         first_index = max(0, len(tiles) - len(visible_tiles))
@@ -1583,6 +1587,7 @@ class Tui:
                 first_index=first_index + start,
                 riichi_index=riichi_index,
                 trigger_index=trigger_index,
+                match_tile=match_tile,
             )
 
     def draw_player_panel(
@@ -1727,6 +1732,23 @@ class Tui:
                     return index
         return None
 
+    @staticmethod
+    def is_same_tile_type(tile: Optional[Tile], other: Optional[Tile]) -> bool:
+        if tile is None or other is None:
+            return False
+        return tile.suit == other.suit and tile.rank == other.rank
+
+    def selected_discard_match_tile(self) -> Optional[Tile]:
+        assert self.engine is not None
+        if self.selected_tile_index is None:
+            return None
+
+        hand = self.engine.get_hand(0)
+        display_tiles = self.selection_tiles or self.sorted_hand_tiles(hand)
+        if 0 <= self.selected_tile_index < len(display_tiles):
+            return display_tiles[self.selected_tile_index]
+        return None
+
     def draw_table_discards(
         self, center_y: int, center_x: int, table_x: int, table_width: int
     ) -> None:
@@ -1745,6 +1767,7 @@ class Tui:
         right_x = center_x + center_width + side_gap
         top_width = min(72, table_width - 4)
         top_x = center_x + (center_width - top_width) // 2
+        match_tile = self.selected_discard_match_tile()
         dora = self.tiles_text(
             self.engine.get_revealed_dora_indicators(), mark_dora=False
         )
@@ -1764,6 +1787,7 @@ class Tui:
             top_width,
             riichi_index=hand2.riichi_discard_index,
             trigger_index=self.action_trigger_discard_index(2),
+            match_tile=match_tile,
         )
         self.add_centered(center_y - 1, top_x, top_width, f"{self.t('dora')}: {dora}")
 
@@ -1782,6 +1806,7 @@ class Tui:
             side_width,
             riichi_index=hand3.riichi_discard_index,
             trigger_index=self.action_trigger_discard_index(3),
+            match_tile=match_tile,
         )
         self.add_centered(
             center_y,
@@ -1798,6 +1823,7 @@ class Tui:
             side_width,
             riichi_index=hand1.riichi_discard_index,
             trigger_index=self.action_trigger_discard_index(1),
+            match_tile=match_tile,
         )
 
         self.add_centered(
@@ -1815,6 +1841,7 @@ class Tui:
             top_width,
             riichi_index=hand0.riichi_discard_index,
             trigger_index=self.action_trigger_discard_index(0),
+            match_tile=match_tile,
         )
 
     def draw_status_panel(self, y: int, x: int, width: int) -> None:
