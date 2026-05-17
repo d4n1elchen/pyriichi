@@ -1723,7 +1723,12 @@ class Tui:
         self.draw_status_panel(3, 3, 32)
 
         if self.status:
-            self.safe_addstr(bottom_y - 1, 4, self.status, curses.A_BOLD)
+            self.safe_addstr(
+                bottom_y - 1,
+                table_x,
+                self.status[:table_width],
+                curses.A_BOLD,
+            )
         self.draw_player_panel(0, bottom_y, table_x, 7, table_width, hidden=False)
         self.stdscr.refresh()
 
