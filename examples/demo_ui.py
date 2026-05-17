@@ -1534,6 +1534,42 @@ class Tui:
             return f"{dealer}{wind} P{player} {state.scores[player]}"
         return f"{dealer}P{player} {wind} {state.scores[player]}"
 
+    def center_score_lines(self, player: int) -> List[str]:
+        assert self.engine is not None
+        state = self.engine.game_state
+        hand = self.engine.get_hand(player)
+        wind = getattr(state.seat_winds[player], self.settings.language)[:1]
+        flags = []
+        if state.dealer == player:
+            flags.append("D")
+        if hand.is_riichi:
+            flags.append("R")
+        status = f" [{''.join(flags)}]" if flags else ""
+        return [f"P{player} {wind}{status}", str(state.scores[player])]
+
+    def draw_center_score_block(
+        self,
+        y: int,
+        x: int,
+        width: int,
+        player: int,
+        *,
+        align: str = "left",
+    ) -> None:
+        lines = self.center_score_lines(player)
+        for offset, line in enumerate(lines):
+            if align == "center":
+                self.add_centered(y + offset, x, width, line)
+            elif align == "right":
+                line_width = self.display_width(line)
+                self.safe_addstr(
+                    y + offset,
+                    x + max(0, width - line_width),
+                    line[:width],
+                )
+            else:
+                self.safe_addstr(y + offset, x, line[:width])
+
     def draw_center_table(self, y: int, x: int, height: int, width: int) -> None:
         assert self.engine is not None
         state = self.engine.game_state
@@ -1541,36 +1577,45 @@ class Tui:
         title = (
             f"{getattr(state.round_wind, self.settings.language)} {state.round_number}"
         )
-        counters = f"{self.t('honba')} {state.honba}   {self.t('kyoutaku')} {state.riichi_sticks}"
-        wall = f"{self.t('wall')} {self.engine.get_wall_remaining()}"
-        dealer = f"{self.t('dealer')} P{state.dealer}"
-        self.add_centered(
-            y + 1, x + 1, width - 2, self.player_score_text(2, compact=True)
+        middle_y = y + height // 2
+        side_width = 12
+        left_x = x + 2
+        right_x = x + width - side_width - 2
+        info_x = x + width // 2 - 4
+        info_width = max(8, right_x - info_x - 1)
+
+        self.draw_center_score_block(
+            y + 1, x + 1, width - 2, 2, align="center"
         )
-        self.safe_addstr(y + 3, x + 2, self.player_score_text(3, compact=True))
-        p1 = self.player_score_text(1, compact=True)
-        self.safe_addstr(
-            y + 3,
-            x + max(2, width - self.display_width(p1) - 2),
-            p1,
+        self.draw_center_score_block(middle_y - 1, left_x, side_width, 3)
+        self.draw_center_score_block(
+            middle_y - 1, right_x, side_width, 1, align="right"
         )
-        self.add_centered(y + 4, x + 1, width - 2, title, curses.A_BOLD)
-        self.add_centered(y + 5, x + 1, width - 2, counters)
-        self.add_centered(y + 6, x + 1, width - 2, wall)
-        self.add_centered(y + 7, x + 1, width - 2, dealer)
-        self.add_centered(
-            y + height - 2,
+        self.draw_center_score_block(
+            y + height - 3,
             x + 1,
             width - 2,
-            self.player_score_text(0, compact=True),
+            0,
+            align="center",
         )
+
+        info_lines = [
+            title,
+            f"{self.t('honba')} {state.honba}",
+            f"{self.t('kyoutaku')} {state.riichi_sticks}",
+            f"{self.t('wall')} {self.engine.get_wall_remaining()}",
+        ]
+        info_y = middle_y - 2
+        for offset, line in enumerate(info_lines):
+            attr = curses.A_BOLD if offset == 0 else curses.A_NORMAL
+            self.safe_addstr(info_y + offset, info_x, line[:info_width], attr)
 
     def draw_table_discards(
         self, center_y: int, center_x: int, table_x: int, table_width: int
     ) -> None:
         assert self.engine is not None
-        center_height = 9
-        center_width = 30
+        center_height = 11
+        center_width = 48
         side_gap = 6
         table_inner_x = table_x + 2
         table_inner_right = table_x + table_width - 2
@@ -1691,8 +1736,8 @@ class Tui:
         table_x = left_panel_x + side_width + side_gap
         table_width = right_panel_x - table_x - side_gap
         top_panel_y = table_y - 5
-        center_width = 30
-        center_height = 9
+        center_width = 48
+        center_height = 11
         center_x = (width - center_width) // 2
         center_y = table_y + max(5, (table_height - center_height) // 2)
 
