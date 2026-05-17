@@ -28,7 +28,7 @@ TEXT = {
         "normal": "Normal - simple AI",
         "hard": "Hard - defensive AI",
         "help_menu": "Up/Down: move  Enter: select  q: quit",
-        "help_game": "Arrows: move  Enter: select  q: quit",
+        "help_game": "Arrows: move  Enter: select  r: new game  q: menu",
         "select_action": "Select action",
         "select_tile": "Select tile",
         "select_sequence": "Select chi sequence",
@@ -77,7 +77,7 @@ TEXT = {
         "normal": "普通 - シンプルAI",
         "hard": "難しい - 守備AI",
         "help_menu": "上下: 移動  Enter: 決定  q: 終了",
-        "help_game": "左右/上下: 移動  Enter: 決定  q: 終了",
+        "help_game": "左右/上下: 移動  Enter: 決定  r: 新規対局  q: メニュー",
         "select_action": "行動を選択",
         "select_tile": "牌を選択",
         "select_sequence": "チーの順子を選択",
@@ -126,7 +126,7 @@ TEXT = {
         "normal": "普通 - 簡單AI",
         "hard": "困難 - 防守AI",
         "help_menu": "上下: 移動  Enter: 選擇  q: 離開",
-        "help_game": "方向鍵: 移動  Enter: 選擇  q: 離開",
+        "help_game": "方向鍵: 移動  Enter: 選擇  r: 新遊戲  q: 選單",
         "select_action": "選擇動作",
         "select_tile": "選擇牌",
         "select_sequence": "選擇吃牌順子",
@@ -258,6 +258,7 @@ class Tui:
         self.selection_tiles: Optional[List[Tile]] = None
         self.last_round_result: Optional[ActionResult] = None
         self.last_winners: List[int] = []
+        self.game_command: Optional[str] = None
 
     def t(self, key: str) -> str:
         return TEXT[self.settings.language][key]
@@ -405,6 +406,21 @@ class Tui:
     def stop(self) -> None:
         self.running = False
 
+    def request_menu(self) -> None:
+        self.game_command = "menu"
+
+    def request_restart(self) -> None:
+        self.game_command = "restart"
+
+    def handle_game_shortcut(self, key: int) -> bool:
+        if key == ord("q"):
+            self.request_menu()
+            return True
+        if key == ord("r"):
+            self.request_restart()
+            return True
+        return False
+
     def choose(
         self, title: str, options: List[str], selected: int = 0
     ) -> Optional[int]:
@@ -442,7 +458,10 @@ class Tui:
             key = self.stdscr.getch()
             if key in (ord("q"), 27):
                 if overlay:
-                    self.stop()
+                    self.request_menu()
+                return None
+            if overlay and key == ord("r"):
+                self.request_restart()
                 return None
             if key in (curses.KEY_UP, ord("k")):
                 index = (index - 1) % len(options)
@@ -565,55 +584,74 @@ class Tui:
         ruleset.allow_triple_ron = next_mode == "triple_ron"
 
     def play_game(self) -> None:
-        self.engine = RuleEngine(num_players=4)
-        self.engine.start_game()
-        self.engine.game_state._ruleset = self.settings.ruleset
-        ai_cls = DIFFICULTIES[self.settings.difficulty]
-        self.players = [None] + [ai_cls(f"CPU {i}") for i in range(1, 4)]
-        self.status = ""
-        self.active_actions = []
-        self.selected_action_index = None
-        self.active_sequences = []
-        self.selected_sequence_index = None
-        self.active_options = []
-        self.selected_option_index = None
-        self.selected_tile_index = None
-        self.last_round_result = None
-        self.last_winners = []
-        self.start_next_round()
+        while self.running:
+            self.game_command = None
+            self.engine = RuleEngine(num_players=4)
+            self.engine.start_game()
+            self.engine.game_state._ruleset = self.settings.ruleset
+            ai_cls = DIFFICULTIES[self.settings.difficulty]
+            self.players = [None] + [ai_cls(f"CPU {i}") for i in range(1, 4)]
+            self.status = ""
+            self.active_actions = []
+            self.selected_action_index = None
+            self.active_sequences = []
+            self.selected_sequence_index = None
+            self.active_options = []
+            self.selected_option_index = None
+            self.selected_tile_index = None
+            self.last_round_result = None
+            self.last_winners = []
+            self.start_next_round()
 
-        while self.running and self.engine.get_phase() != GamePhase.ENDED:
-            if self.engine.get_phase() in {GamePhase.WINNING, GamePhase.RYUUKYOKU}:
-                if not self.end_round_prompt():
-                    return
-                continue
-
-            if self.engine.get_phase() != GamePhase.PLAYING:
-                break
-
-            if not self.engine.waiting_for_actions:
-                ryuukyoku = self.engine.handle_ryuukyoku()
-                if ryuukyoku.ryuukyoku:
-                    self.last_round_result = ActionResult(ryuukyoku=ryuukyoku)
-                    self.set_status(self.ryuukyoku_text(ryuukyoku.ryuukyoku_type))
+            while (
+                self.running
+                and self.game_command is None
+                and self.engine.get_phase() != GamePhase.ENDED
+            ):
+                if self.engine.get_phase() in {
+                    GamePhase.WINNING,
+                    GamePhase.RYUUKYOKU,
+                }:
+                    if not self.end_round_prompt():
+                        break
                     continue
-                break
 
-            player = next(iter(self.engine.waiting_for_actions))
-            if player == 0:
-                result = self.human_turn(player)
-            else:
-                result = self.ai_turn(player)
+                if self.engine.get_phase() != GamePhase.PLAYING:
+                    break
 
-            if result is not None:
-                self.process_result(result)
+                if not self.engine.waiting_for_actions:
+                    ryuukyoku = self.engine.handle_ryuukyoku()
+                    if ryuukyoku.ryuukyoku:
+                        self.last_round_result = ActionResult(ryuukyoku=ryuukyoku)
+                        self.set_status(self.ryuukyoku_text(ryuukyoku.ryuukyoku_type))
+                        continue
+                    break
 
-        if not self.running:
+                player = next(iter(self.engine.waiting_for_actions))
+                if player == 0:
+                    result = self.human_turn(player)
+                else:
+                    result = self.ai_turn(player)
+
+                if result is not None:
+                    self.process_result(result)
+
+            if self.game_command == "restart":
+                continue
+            if not self.running:
+                return
+            if self.game_command == "menu":
+                self.engine = None
+                self.game_command = None
+                return
+
+            self.render()
+            self.safe_addstr(1, 2, self.t("game_over"), curses.A_BOLD)
+            key = self.stdscr.getch()
+            if key == ord("r"):
+                continue
+            self.engine = None
             return
-
-        self.render()
-        self.safe_addstr(1, 2, self.t("game_over"), curses.A_BOLD)
-        self.stdscr.getch()
 
     def start_next_round(self) -> None:
         assert self.engine is not None
@@ -634,8 +672,7 @@ class Tui:
         self.stdscr.refresh()
         while True:
             key = self.stdscr.getch()
-            if key == ord("q"):
-                self.stop()
+            if self.handle_game_shortcut(key):
                 return False
             if key in (curses.KEY_ENTER, 10, 13):
                 if self.engine.get_phase() == GamePhase.WINNING:
@@ -713,8 +750,11 @@ class Tui:
         while True:
             self.render()
             key = self.stdscr.getch()
-            if key in (ord("q"), 27):
-                self.stop()
+            if self.handle_game_shortcut(key):
+                self.clear_selection()
+                return None
+            if key == 27:
+                self.request_menu()
                 self.clear_selection()
                 return None
             if key in (curses.KEY_LEFT, ord("h")):
@@ -848,8 +888,11 @@ class Tui:
         while True:
             self.render()
             key = self.stdscr.getch()
-            if key in (ord("q"), 27):
-                self.stop()
+            if self.handle_game_shortcut(key):
+                self.clear_selection()
+                return None
+            if key == 27:
+                self.request_menu()
                 self.clear_selection()
                 return None
             if key in (curses.KEY_LEFT, curses.KEY_UP, ord("h"), ord("k")):
@@ -930,8 +973,11 @@ class Tui:
         while True:
             self.render()
             key = self.stdscr.getch()
-            if key in (ord("q"), 27):
-                self.stop()
+            if self.handle_game_shortcut(key):
+                self.clear_selection()
+                return None
+            if key == 27:
+                self.request_menu()
                 self.clear_selection()
                 return None
             if key in (curses.KEY_LEFT, ord("h")):
@@ -993,8 +1039,11 @@ class Tui:
         while True:
             self.render()
             key = self.stdscr.getch()
-            if key in (ord("q"), 27):
-                self.stop()
+            if self.handle_game_shortcut(key):
+                self.clear_selection()
+                return None
+            if key == 27:
+                self.request_menu()
                 self.clear_selection()
                 return None
             if key in (curses.KEY_LEFT, curses.KEY_UP, ord("h"), ord("k")):
@@ -1720,7 +1769,6 @@ class Tui:
         state = self.engine.game_state
         title = f" {self.t('title')} "
         self.safe_addstr(0, 2, title, self.color(COLOR_BORDER, curses.A_BOLD))
-        self.safe_addstr(1, 2, self.t("help_game"), curses.A_DIM)
         scores = "  ".join(f"P{i}: {score}" for i, score in enumerate(state.scores))
         self.safe_addstr(1, max(2, width - len(scores) - 3), scores)
 
@@ -1767,13 +1815,22 @@ class Tui:
         self.draw_center_table(center_y, center_x, center_height, center_width)
         self.draw_status_panel(3, 3, 32)
 
+        shortcut_hint = self.t("help_game")
+        shortcut_width = self.display_width(shortcut_hint)
+        prompt_width = max(0, table_width - shortcut_width - 2)
         if self.status:
             self.safe_addstr(
                 bottom_y - 1,
                 table_x,
-                self.status[:table_width],
+                self.status[:prompt_width],
                 curses.A_BOLD,
             )
+        self.safe_addstr(
+            bottom_y - 1,
+            table_x + max(0, table_width - shortcut_width),
+            shortcut_hint,
+            curses.A_DIM,
+        )
         self.draw_player_panel(0, bottom_y, table_x, 7, table_width, hidden=False)
         self.stdscr.refresh()
 
