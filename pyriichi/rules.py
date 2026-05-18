@@ -120,6 +120,27 @@ class ActionResult:
     chombo_player: Optional[int] = None
 
 
+@dataclass
+class TenpaiWait:
+    """Wait tile information after a discard."""
+
+    tile: Tile
+    remaining: int
+
+
+@dataclass
+class TenpaiHint:
+    """Tenpai hint after a candidate discard."""
+
+    waits: List[TenpaiWait]
+    furiten: bool
+
+    @property
+    def machi_tiles(self) -> List[Tile]:
+        """Get machi tiles from wait entries."""
+        return [wait.tile for wait in self.waits]
+
+
 class RuleEngine:
     """Rule Engine"""
 
@@ -206,6 +227,7 @@ class RuleEngine:
         self._current_player = self._game_state.dealer
         self._last_discarded_tile = None
         self._last_discarded_player = None
+        self._last_drawn_tile = None
 
         self._riichi_ippatsu = {}
         self._riichi_ippatsu_discard = {}
@@ -732,6 +754,7 @@ class RuleEngine:
         drawn_tile = self._tile_set.draw()
         if drawn_tile:
             hand.add_tile(drawn_tile)
+            self._last_drawn_tile = (player, drawn_tile)
             result.drawn_tile = drawn_tile
         if self._tile_set.is_exhausted():
             result.is_last_tile = True
@@ -823,6 +846,7 @@ class RuleEngine:
 
             result.discarded = True
             hand.reset_last_drawn_tile()  # Clear last drawn tile after discard
+            self._last_drawn_tile = None
 
             # Check if other players can call or ron
             interrupts = self._check_interrupts(tile, player)
@@ -1991,6 +2015,97 @@ class RuleEngine:
             bool: Whether the tile is revealed dora.
         """
         return any(tile == dora_tile for dora_tile in self.get_revealed_dora_tiles())
+
+    def get_tenpai_hint_after_discard(
+        self, player: int, discard_tile: Tile
+    ) -> Optional[TenpaiHint]:
+        """
+        Get tenpai waits after a candidate discard.
+
+        Args:
+            player: Player position.
+            discard_tile: Candidate discard tile.
+
+        Returns:
+            Tenpai hint with waits and remaining visible counts, or None if the
+            discard does not leave the hand in tenpai.
+        """
+        if not (0 <= player < self._num_players):
+            raise RuleError(
+                "player_position_out_of_range",
+                {"max_player": self._num_players - 1},
+            )
+
+        temp_hand = self._copy_hand_for_tenpai_hint(self._hands[player])
+        if not temp_hand.discard(discard_tile):
+            return None
+
+        machi_tiles = sorted(temp_hand.get_machi_tiles())
+        if not machi_tiles:
+            return None
+
+        waits = [
+            TenpaiWait(
+                tile=machi_tile,
+                remaining=self._remaining_tile_count_after_discard(
+                    player, temp_hand, machi_tile
+                ),
+            )
+            for machi_tile in machi_tiles
+        ]
+        furiten = self._is_furiten_for_hint(player, temp_hand, machi_tiles)
+        return TenpaiHint(waits=waits, furiten=furiten)
+
+    def _copy_hand_for_tenpai_hint(self, hand: Hand) -> Hand:
+        temp_hand = Hand(hand.tiles)
+        temp_hand._melds = hand.melds
+        temp_hand._discards = hand.discards
+        temp_hand._is_riichi = hand.is_riichi
+        temp_hand._riichi_turn = hand.riichi_discard_index
+        return temp_hand
+
+    def _remaining_tile_count_after_discard(
+        self, player: int, temp_hand: Hand, target_tile: Tile
+    ) -> int:
+        return max(0, 4 - self._visible_tile_type_count(player, temp_hand, target_tile))
+
+    def _visible_tile_type_count(
+        self, player: int, temp_hand: Hand, target_tile: Tile
+    ) -> int:
+        visible_tiles: List[Tile] = []
+        for current_player in range(self._num_players):
+            hand = temp_hand if current_player == player else self._hands[current_player]
+            if current_player == player:
+                visible_tiles.extend(hand.tiles)
+            visible_tiles.extend(hand.discards)
+            for meld in hand.melds:
+                visible_tiles.extend(meld.tiles)
+        visible_tiles.extend(self.get_revealed_dora_indicators())
+        return sum(
+            1 for tile in visible_tiles if self._same_tile_type(tile, target_tile)
+        )
+
+    def _is_furiten_for_hint(
+        self, player: int, temp_hand: Hand, machi_tiles: List[Tile]
+    ) -> bool:
+        return (
+            self._is_discard_furiten_for_hand(temp_hand, machi_tiles)
+            or self.check_furiten_temp(player)
+            or self.check_furiten_riichi(player)
+        )
+
+    def _is_discard_furiten_for_hand(
+        self, hand: Hand, machi_tiles: List[Tile]
+    ) -> bool:
+        return any(
+            self._same_tile_type(discard, machi_tile)
+            for discard in hand.discards
+            for machi_tile in machi_tiles
+        )
+
+    @staticmethod
+    def _same_tile_type(tile: Tile, other: Tile) -> bool:
+        return tile.suit == other.suit and tile.rank == other.rank
 
     def get_available_chi_sequences(self, player: int) -> List[List[Tile]]:
         """

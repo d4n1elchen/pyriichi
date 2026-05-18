@@ -77,6 +77,39 @@ class TestActionAvailability(RuleEngineTestMixin):
 
         assert self._has_action(0, GameAction.DECLARE_ANKAN)
 
+    def test_drawn_open_winning_hand_can_tsumo(self):
+        """Test tsumo is available after drawing a winning tile for an open hand."""
+        self._init_game()
+        player = 0
+        winning_tile = Tile(Suit.HONORS, 6)
+        hand = Hand(parse_tiles("123m555z6z"))
+        hand._melds.append(
+            Meld(
+                MeldType.PON_MELD,
+                [Tile(Suit.HONORS, 7)] * 3,
+                called_tile=Tile(Suit.HONORS, 7),
+                called_from=1,
+            )
+        )
+        hand._melds.append(
+            Meld(
+                MeldType.CHI_MELD,
+                [Tile(Suit.MANZU, 7), Tile(Suit.MANZU, 8), Tile(Suit.MANZU, 9)],
+                called_tile=Tile(Suit.MANZU, 7),
+                called_from=3,
+            )
+        )
+        self.engine._hands[player] = hand
+        self.engine._current_player = player
+        assert self.engine.tileset is not None
+        self.engine.tileset._tiles = [winning_tile]
+
+        result = self.engine._handle_draw(player)
+
+        assert self.engine._last_drawn_tile == (player, winning_tile)
+        assert GameAction.TSUMO in result.waiting_for[player]
+        assert GameAction.TSUMO in self.engine.get_available_actions(player)
+
     def test_get_available_actions_draw_requires_current_player(self):
         """Test Draw is only available to current player"""
         self._init_game()

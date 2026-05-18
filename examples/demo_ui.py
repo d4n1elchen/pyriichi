@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from pyriichi.hand import Hand, Meld, MeldType
 from pyriichi.player import DefensivePlayer, PublicInfo, RandomPlayer, SimplePlayer
-from pyriichi.rules import ActionResult, GameAction, GamePhase, RuleEngine
+from pyriichi.rules import ActionResult, GameAction, GamePhase, RuleEngine, TenpaiHint
 from pyriichi.rules_config import RenhouPolicy, RulesetConfig
 from pyriichi.tiles import Suit, Tile
 
@@ -64,6 +64,8 @@ TEXT = {
         "none": "None",
         "yes": "on",
         "no": "off",
+        "tenpai": "Tenpai",
+        "furiten": "Furiten",
     },
     "ja": {
         "title": "PyRiichi TUI",
@@ -113,6 +115,8 @@ TEXT = {
         "none": "なし",
         "yes": "有効",
         "no": "無効",
+        "tenpai": "テンパイ",
+        "furiten": "フリテン",
     },
     "zh": {
         "title": "PyRiichi TUI",
@@ -162,6 +166,8 @@ TEXT = {
         "none": "無",
         "yes": "開",
         "no": "關",
+        "tenpai": "聽牌",
+        "furiten": "振聽",
     },
 }
 
@@ -1687,6 +1693,7 @@ class Tui:
         self.draw_melds(y + 2, x + 10, hand.melds, width - 12, owner=player)
         if player == 0:
             self.draw_action_row(y + 3, x + 2, width - 4)
+            self.draw_tenpai_hint(y + 4, x + 2, width - 4)
 
     def player_score_text(self, player: int, *, compact: bool = False) -> str:
         assert self.engine is not None
@@ -1807,6 +1814,46 @@ class Tui:
         if 0 <= self.selected_tile_index < len(display_tiles):
             return display_tiles[self.selected_tile_index]
         return None
+
+    def selected_tenpai_hint(self) -> Optional[TenpaiHint]:
+        assert self.engine is not None
+        if self.selected_tile_index is None:
+            return None
+        if not (
+            GameAction.DISCARD in self.active_actions
+            or GameAction.DECLARE_RIICHI in self.active_actions
+        ):
+            return None
+
+        hand = self.engine.get_hand(0)
+        display_tiles = self.selection_tiles or self.sorted_hand_tiles(hand)
+        if not (0 <= self.selected_tile_index < len(display_tiles)):
+            return None
+
+        return self.engine.get_tenpai_hint_after_discard(
+            0, display_tiles[self.selected_tile_index]
+        )
+
+    def format_tenpai_hint(self, hint: TenpaiHint) -> str:
+        if hint.furiten:
+            waits = " ".join(self.tile_label(wait.tile) for wait in hint.waits)
+            return f"{self.t('tenpai')}: {self.t('furiten')} {waits}"
+
+        waits = " ".join(
+            f"{self.tile_label(wait.tile)}{wait.remaining}" for wait in hint.waits
+        )
+        return f"{self.t('tenpai')}: {waits}"
+
+    def draw_tenpai_hint(self, y: int, x: int, width: int) -> None:
+        hint = self.selected_tenpai_hint()
+        if hint is None:
+            return
+        self.safe_addstr(
+            y,
+            x,
+            self.format_tenpai_hint(hint),
+            self.color(COLOR_ACTION_RIICHI, curses.A_BOLD),
+        )
 
     def draw_table_discards(
         self, center_y: int, center_x: int, table_x: int, table_width: int
@@ -2045,10 +2092,11 @@ class Tui:
             selected_index=self.selected_tile_index,
         )
         self.draw_action_row(base_y + 2, 4, 74)
-        self.safe_addstr(base_y + 3, 4, f"{self.t('melds')}:")
-        self.draw_melds(base_y + 3, 12, hand.melds, 66, owner=0)
+        self.draw_tenpai_hint(base_y + 3, 4, 74)
+        self.safe_addstr(base_y + 4, 4, f"{self.t('melds')}:")
+        self.draw_melds(base_y + 4, 12, hand.melds, 66, owner=0)
         self.safe_addstr(
-            base_y + 4,
+            base_y + 5,
             4,
             f"{self.t('discards')}: {self.tiles_text(hand.discards[-24:])}",
         )
