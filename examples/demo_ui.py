@@ -3,7 +3,7 @@ import os
 import sys
 import unicodedata
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 # Allow running this example directly from a source checkout.
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -723,21 +723,30 @@ class Tui:
         assert self.engine is not None
         hand = self.engine.get_hand(player)
         discard_tiles = []
+        discard_selectable_indices: List[int] = []
         if GameAction.DISCARD in actions:
-            discard_tiles = self.sorted_tiles_for_display(
-                hand.tiles, hand.last_drawn_tile
+            discard_candidates = self.discard_candidates(hand, GameAction.DISCARD)
+            discard_tiles = (
+                self.sorted_hand_tiles(hand)
+                if self.should_show_full_hand_for_selection(hand, GameAction.DISCARD)
+                else self.sorted_tiles_for_display(
+                    discard_candidates, hand.last_drawn_tile
+                )
+            )
+            discard_selectable_indices = self.selectable_tile_indices(
+                discard_tiles, discard_candidates
             )
 
         self.active_actions = actions
         self.active_options = self.build_action_options(player, actions)
         self.selection_tiles = discard_tiles or None
-        tile_index = self.default_tile_selection_index(
-            discard_tiles, hand.last_drawn_tile
+        tile_choice_index = self.default_selectable_position(
+            discard_tiles, discard_selectable_indices, hand.last_drawn_tile
         )
         selected_index = 0
-        if not self.active_options and discard_tiles:
-            selected_index = tile_index
-        total_options = len(self.active_options) + len(discard_tiles)
+        if not self.active_options and discard_selectable_indices:
+            selected_index = tile_choice_index
+        total_options = len(self.active_options) + len(discard_selectable_indices)
         if total_options == 0:
             self.clear_selection()
             return None
@@ -750,7 +759,9 @@ class Tui:
                 self.selected_tile_index = None
             else:
                 self.selected_option_index = None
-                self.selected_tile_index = selected_index - len(self.active_options)
+                self.selected_tile_index = discard_selectable_indices[
+                    selected_index - len(self.active_options)
+                ]
 
         sync_selection()
         while True:
@@ -770,16 +781,22 @@ class Tui:
                 selected_index = (selected_index + 1) % total_options
                 sync_selection()
             elif key in (curses.KEY_UP, ord("k")):
-                if discard_tiles and selected_index >= len(self.active_options):
+                if (
+                    discard_selectable_indices
+                    and selected_index >= len(self.active_options)
+                ):
                     selected_index = 0
                     sync_selection()
             elif key in (curses.KEY_DOWN, ord("j")):
-                if discard_tiles and selected_index < len(self.active_options):
-                    selected_index = len(self.active_options) + tile_index
+                if (
+                    discard_selectable_indices
+                    and selected_index < len(self.active_options)
+                ):
+                    selected_index = len(self.active_options) + tile_choice_index
                     sync_selection()
-            elif ord("1") <= key <= ord("9") and discard_tiles:
+            elif ord("1") <= key <= ord("9") and discard_selectable_indices:
                 index = key - ord("1")
-                if index < len(discard_tiles):
+                if index in discard_selectable_indices:
                     tile = discard_tiles[index]
                     self.clear_selection()
                     return self.execute_human_action(player, GameAction.DISCARD, tile)
@@ -789,7 +806,11 @@ class Tui:
                     self.clear_selection()
                     return self.execute_action_option(player, option, actions)
 
-                tile = discard_tiles[selected_index - len(self.active_options)]
+                tile = discard_tiles[
+                    discard_selectable_indices[
+                        selected_index - len(self.active_options)
+                    ]
+                ]
                 self.clear_selection()
                 return self.execute_human_action(player, GameAction.DISCARD, tile)
 
@@ -1007,10 +1028,30 @@ class Tui:
     ) -> List[int]:
         if not candidates:
             return list(range(len(display_tiles)))
-        candidate_set = set(candidates)
+        candidate_keys = {Tui.tile_selection_key(tile) for tile in candidates}
         return [
-            index for index, tile in enumerate(display_tiles) if tile in candidate_set
+            index
+            for index, tile in enumerate(display_tiles)
+            if Tui.tile_selection_key(tile) in candidate_keys
         ]
+
+    @staticmethod
+    def tile_selection_key(tile: Tile) -> Tuple[Suit, int, bool]:
+        return (tile.suit, tile.rank, tile.is_red_dora)
+
+    @staticmethod
+    def discard_candidates(hand: Hand, action: GameAction) -> List[Tile]:
+        if action == GameAction.DECLARE_RIICHI:
+            return hand.tenpai_discards
+        if action == GameAction.DISCARD and hand.is_riichi:
+            return [hand.last_drawn_tile] if hand.last_drawn_tile else []
+        return hand.tiles
+
+    @staticmethod
+    def should_show_full_hand_for_selection(hand: Hand, action: GameAction) -> bool:
+        return action == GameAction.DECLARE_RIICHI or (
+            action == GameAction.DISCARD and hand.is_riichi
+        )
 
     @staticmethod
     def default_selectable_position(
@@ -1031,13 +1072,13 @@ class Tui:
     ) -> Optional[Tile]:
         assert self.engine is not None
         hand = self.engine.get_hand(player)
-        is_riichi_discard = action == GameAction.DECLARE_RIICHI
-        candidates = hand.tenpai_discards if is_riichi_discard else hand.tiles
+        candidates = self.discard_candidates(hand, action)
         if not candidates:
-            candidates = hand.tiles
+            self.clear_selection()
+            return None
         display_tiles = (
             self.sorted_hand_tiles(hand)
-            if is_riichi_discard
+            if self.should_show_full_hand_for_selection(hand, action)
             else self.sorted_tiles_for_display(candidates, hand.last_drawn_tile)
         )
         selectable_indices = self.selectable_tile_indices(display_tiles, candidates)

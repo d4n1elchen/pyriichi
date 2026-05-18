@@ -27,7 +27,7 @@
 - Riichi requires tenpai after the declaration discard.
 - The player must pay one Riichi Stick.
 - The declaration must meet the ruleset's remaining-wall requirement; the standard configuration requires at least four live wall tiles.
-- After riichi, the player must discard the drawn tile unless a legal closed kan is allowed.
+- After riichi, the player must discard the drawn tile unless a legal closed kan is allowed. The engine must reject any other discard, and player-facing UIs should only allow the drawn tile to be selected.
 - After riichi, closed kan is legal only when it does not change machi tiles.
 
 ## Ippatsu Interruption

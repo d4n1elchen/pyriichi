@@ -306,6 +306,53 @@ class TestRiichi(RuleEngineTestMixin):
         # Should succeed
         self.engine._handle_discard(0, drawn_tile)
 
+    def test_riichi_discard_requires_tracked_drawn_tile(self):
+        """Test riichi discard is rejected if no drawn tile is tracked."""
+        self._init_game()
+        hand = self.engine.get_hand(0)
+        hand._is_riichi = True
+        hand._tiles = parse_tiles("123m456p789s1122z")
+        hand.reset_last_drawn_tile()
+
+        with pytest.raises(ValueError, match="立直後只能打出剛摸到的牌"):
+            self.engine._handle_discard(0, Tile(Suit.MANZU, 1))
+
+    def test_riichi_discard_requires_drawn_red_dora_variant(self):
+        """Test riichi discard must match the drawn red_dora variant."""
+        self._init_game()
+        hand = self.engine.get_hand(0)
+        hand._is_riichi = True
+        normal_five = Tile(Suit.MANZU, 5)
+        red_five = Tile(Suit.MANZU, 5, is_red_dora=True)
+        hand._tiles = parse_tiles("123m46p789s1122z")
+        hand._tiles.append(normal_five)
+        hand.add_tile(red_five)
+
+        with pytest.raises(ValueError, match="立直後只能打出剛摸到的牌"):
+            self.engine._handle_discard(0, normal_five)
+
+        self.engine._handle_discard(0, red_five)
+
+    def test_riichi_closed_kan_preserves_rinshan_tile_as_discard(self):
+        """Test riichi closed_kan leaves only the rinshan tile discardable."""
+        self._init_game()
+        hand = self.engine.get_hand(0)
+        hand._is_riichi = True
+        hand._tiles = parse_tiles("111456m789p23s77z")
+        drawn_tile = Tile(Suit.MANZU, 1)
+        rinshan_tile = Tile(Suit.HONORS, 5)
+        hand.add_tile(drawn_tile)
+        assert self.engine.tileset is not None
+        self.engine.tileset._rinshan_tiles = [rinshan_tile]
+
+        result = self.engine._handle_declare_ankan(0, drawn_tile)
+
+        assert result.rinshan_tile == rinshan_tile
+        assert hand.last_drawn_tile == rinshan_tile
+        with pytest.raises(ValueError, match="立直後只能打出剛摸到的牌"):
+            self.engine._handle_discard(0, Tile(Suit.PINZU, 7))
+        self.engine._handle_discard(0, rinshan_tile)
+
     def test_closed_kan_allowed_if_wait_unchanged(self):
         """Test declare_ankan allowed if machi is unchanged after riichi"""
         self._init_game()

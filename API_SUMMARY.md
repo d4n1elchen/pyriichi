@@ -76,12 +76,31 @@ Game rule engine.
 - `get_phase()`: get the game phase.
 - `get_available_actions(player)`: get the player's available actions.
 - `execute_action(player, action, tile=None, **kwargs)`: execute an action.
-- `check_win(player, winning_tile, is_tsumo=False, **kwargs)`: check a win.
+- `check_win(player, winning_tile, is_chankan=False, is_rinshan=False)`: check a win.
 - `check_ryuukyoku()`: check ryuukyoku.
 - `get_hand(player)`: get a player's hand.
 - `get_discards(player)`: get a player's discards.
 - `get_game_state()`: get the game state.
+- `get_last_discard()`: get the latest unprocessed discard.
+- `get_num_players()`: get the number of players.
+- `get_wall_remaining()`: get the number of live-wall tiles remaining.
+- `get_revealed_dora_indicators()`: get visible dora indicators.
+- `get_revealed_dora_tiles()`: get the dora tiles corresponding to visible indicators.
+- `is_revealed_dora_tile(tile)`: check whether a tile is currently dora.
+- `get_available_chi_sequences(player)`: get available chi sequences against the latest discard.
+- `get_tenpai_hint_after_discard(player, discard_tile)`: preview waits, remaining tile counts, and furiten status after a candidate discard.
 - `waiting_for_actions`: property containing players currently waiting for responses and their available actions.
+
+#### `TenpaiHint`
+Discard-to-tenpai preview result.
+- `waits`: list of `TenpaiWait` entries.
+- `furiten`: whether the resulting tenpai state is furiten.
+- `machi_tiles`: convenience property returning only the wait tiles.
+
+#### `TenpaiWait`
+Wait entry for a tenpai hint.
+- `tile`: machi tile.
+- `remaining`: number of unseen copies based on visible tiles.
 
 #### `ActionResult`
 Action execution result.
@@ -272,6 +291,27 @@ while engine.get_phase() == GamePhase.PLAYING:
         break
 ```
 
+## Tenpai Hint Example
+
+```python
+from pyriichi.rules import RuleEngine
+from pyriichi.tiles import Suit, Tile
+
+engine = RuleEngine(num_players=4)
+engine.start_game()
+engine.start_round()
+engine.deal()
+
+player = engine.get_current_player()
+hint = engine.get_tenpai_hint_after_discard(player, Tile(Suit.MANZU, 5))
+
+if hint:
+    for wait in hint.waits:
+        print(f"Wait: {wait.tile}, remaining: {wait.remaining}")
+    if hint.furiten:
+        print("Furiten")
+```
+
 ## Detailed Documentation
 
 For rule requirements, see `rules/README.md`. For canonical terminology, see `GLOSSARY.md`.
@@ -279,4 +319,4 @@ For rule requirements, see `rules/README.md`. For canonical terminology, see `GL
 ## Examples
 
 - `examples/basic_usage.py`: basic game-flow example.
-- `examples/demo_ui.py`: terminal game UI with language, difficulty, and ruleset configuration.
+- `examples/demo_ui.py`: terminal game UI with language, difficulty, ruleset configuration, action popups, and tenpai hints.

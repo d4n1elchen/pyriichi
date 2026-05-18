@@ -61,4 +61,5 @@
 
 - Determine whether the current hand is tenpai.
 - List all machi tiles.
+- Preview whether a candidate discard leaves tenpai, including machi tiles, visible remaining counts, and furiten status.
 - Preserve correct behavior for standard hands, Chiitoitsu, and Kokushi Musou.

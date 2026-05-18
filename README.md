@@ -215,6 +215,27 @@ if hand.is_winning_hand(winning_tile):
         print("First winning combination:", winning_combination)
 ```
 
+### Rule Engine Hints
+
+```python
+from pyriichi import RuleEngine, Suit, Tile
+
+engine = RuleEngine(num_players=4)
+engine.start_game()
+engine.start_round()
+engine.deal()
+
+player = engine.get_current_player()
+discard_tile = Tile(Suit.MANZU, 5)
+hint = engine.get_tenpai_hint_after_discard(player, discard_tile)
+
+if hint:
+    waits = ", ".join(f"{wait.tile}: {wait.remaining}" for wait in hint.waits)
+    print(f"Tenpai waits after discard: {waits}")
+    if hint.furiten:
+        print("This discard leaves the hand furiten.")
+```
+
 ### Calls
 
 ```python
@@ -499,7 +520,7 @@ p2 = DefensivePlayer("Defender")
 - ✅ Game flow control: dealing and turn management.
 - ✅ Game state management: Round Number, winds, and scores.
 - ✅ Winning-hand detection algorithm for standard and special shapes.
-- ✅ Tenpai detection.
+- ✅ Tenpai detection and discard-to-tenpai hint helpers.
 - ✅ Chi, pon, and kan operations.
 - ✅ Yaku detection system, including all standard yaku and yakuman.
 - ✅ Score calculation system: fu, han, and points.
@@ -529,7 +550,7 @@ p2 = DefensivePlayer("Defender")
 See the `examples/` directory for more complete examples:
 
 - `basic_usage.py` - Basic usage example.
-- `demo_ui.py` - Terminal game UI with language, difficulty, and ruleset configuration.
+- `demo_ui.py` - Terminal game UI with language, difficulty, ruleset configuration, action popups, and tenpai hints.
 
 Run the terminal UI from a source checkout:
 

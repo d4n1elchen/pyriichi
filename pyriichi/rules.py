@@ -823,10 +823,12 @@ class RuleEngine:
 
         hand = self._hands[player]
 
-        # After riichi, can only discard the drawn tile (unless declare_ankan, but declare_ankan is handled in _handle_kan)
+        # After riichi, can only discard the drawn tile.
         if hand.is_riichi:
-            if hand.last_drawn_tile and tile != hand.last_drawn_tile:
+            drawn_tile = hand.last_drawn_tile
+            if drawn_tile is None or not self._same_tile_variant(tile, drawn_tile):
                 raise RuleError("riichi_must_discard_drawn_tile")
+            tile = drawn_tile
 
         if hand.discard(tile):
             # Record discard and handle related effects (but do not advance turn)
@@ -1128,7 +1130,6 @@ class RuleEngine:
         self._draw_rinshan_tile(player, result, kan_type=kan_type)
         if self._pending_kan_tile:
             self._pending_kan_tile = None
-        hand.reset_last_drawn_tile()  # Clear the last drawn tile after kan.
 
         result.closed_kan = True
         return result
@@ -2106,6 +2107,14 @@ class RuleEngine:
     @staticmethod
     def _same_tile_type(tile: Tile, other: Tile) -> bool:
         return tile.suit == other.suit and tile.rank == other.rank
+
+    @staticmethod
+    def _same_tile_variant(tile: Tile, other: Tile) -> bool:
+        return (
+            tile.suit == other.suit
+            and tile.rank == other.rank
+            and tile.is_red_dora == other.is_red_dora
+        )
 
     def get_available_chi_sequences(self, player: int) -> List[List[Tile]]:
         """

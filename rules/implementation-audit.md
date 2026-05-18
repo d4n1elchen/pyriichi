@@ -13,10 +13,10 @@ Audit method: manual traceability review from each rule document item to impleme
 | Tile set and notation | Met | Met | Standard tile set composition, Red Dora notation, sorting, draw/deal, rinshan draw, dora indicator wrapping, and compact parsing are covered. |
 | Initial deal and round setup | Met | Met | Dealer-aware deal sizes and dealer-current-player setup are covered. |
 | Hand operations | Met | Met | Draw, discard, chi, pon, open kan, closed kan, open-kan upgrade, and meld validation are covered. |
-| Winning-hand detection | Met | Met | Standard hands, open meld hands, kan hands, Chiitoitsu, Kokushi Musou, thirteen-sided Kokushi, tenpai, and machi listing are covered. |
+| Winning-hand detection | Met | Met | Standard hands, open meld hands, kan hands, Chiitoitsu, Kokushi Musou, thirteen-sided Kokushi, tenpai, machi listing, and discard-to-tenpai hints are covered. |
 | Action availability and priority | Met | Met | Basic availability, call execution, ron-over-call priority, pon-over-chi priority, and Sancha Ron action availability are covered. |
 | Multiple ron rules | Met | Met | Head Bump, Double Ron, Triple Ron, Sancha Ron, furiten filtering, and multi-ron settlement are covered. |
-| Riichi action rules | Met | Met | Closed-hand/tenpai requirements, declaration payment, kyoutaku increment, declaration discard, declaration-discard ron rollback, remaining-wall rule, post-riichi discard lock, closed-kan wait preservation, invalid-riichi handling, and ippatsu interruption are covered. |
+| Riichi action rules | Met | Met | Closed-hand/tenpai requirements, declaration payment, kyoutaku increment, declaration discard, declaration-discard ron rollback, remaining-wall rule, post-riichi drawn-tile discard lock, closed-kan wait preservation, invalid-riichi handling, and ippatsu interruption are covered. |
 | Ippatsu | Met | Met | Interruption by chi, pon, kan, and closed kan is covered, including the disabled interruption ruleset variant. |
 | Furiten | Met | Met | Genbutsu, temp furiten, riichi furiten, furiten tsumo, and multi-machi furiten are covered. |
 | Kan and rinshan flow | Met | Met | Open kan, closed kan, rinshan, chankan, kan dora indicator counting, fourth-kan ryuukyoku, and fourth-kan win exceptions are covered with the engine's immediate kan-dora-count convention. |
