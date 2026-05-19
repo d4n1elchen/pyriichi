@@ -222,6 +222,7 @@ COLOR_ACTION_WIN = 12
 COLOR_ACTION_RIICHI = 13
 COLOR_ACTION_PASS = 14
 ACTION_POPUP_MS = 1600
+INCOMING_TILE_EXTRA_GAP = 2
 
 
 @dataclass
@@ -1480,7 +1481,7 @@ class Tui:
                 and index == gap_before_index
                 and cursor > x
             ):
-                cursor += 1
+                cursor += INCOMING_TILE_EXTRA_GAP
             label = self.tile_label(tile, hidden)
             if indexed:
                 label = f"{index + 1:02d}{label}"
@@ -1517,7 +1518,7 @@ class Tui:
                 and index == gap_before_index
                 and cursor > x
             ):
-                cursor += 1
+                cursor += INCOMING_TILE_EXTRA_GAP
             label = self.tile_label(tile, hidden)
             if indexed:
                 label = f"{index + 1:02d}{label}"
@@ -2206,6 +2207,9 @@ class Tui:
         hand = self.engine.get_hand(0)
         self.safe_addstr(y, content_x, f"P0 {self.t('hand')}:", curses.A_BOLD)
         display_tiles = self.selection_tiles or self.sorted_hand_tiles(hand)
+        gap_before_index = self.incoming_tile_index(
+            display_tiles, hand.last_drawn_tile
+        )
         rows = self.draw_wrapped_tile_rows(
             y + 1,
             indent_x,
@@ -2213,6 +2217,7 @@ class Tui:
             content_width,
             indexed=True,
             selected_index=self.selected_tile_index,
+            gap_before_index=gap_before_index,
         )
         y += 1 + rows
         self.draw_action_row(y, indent_x, content_width)

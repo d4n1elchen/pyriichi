@@ -69,6 +69,21 @@ class TestDemoUi:
         assert "+1" not in drawn_text
         assert "14[五筒]" in drawn_text
 
+    def test_hand_rows_add_extra_space_before_incoming_tile(self):
+        """Test incoming tile is visually separated from the sorted hand."""
+        tui = object.__new__(Tui)
+        tui.stdscr = FakeScreen()
+        tui.engine = None
+        tui.has_colors = False
+        tiles = [Tile(Suit.MANZU, 1), Tile(Suit.MANZU, 2)]
+
+        tui.draw_tile_row(0, 0, tiles, 80, indexed=True, gap_before_index=1)
+
+        first = tui.stdscr.calls[0]
+        second = tui.stdscr.calls[1]
+        first_width = tui.display_width(first[2])
+        assert second[1] - first[1] - first_width == 3
+
     def test_compact_view_pins_status_and_shortcuts_to_bottom(self):
         """Test compact view keeps interactive hints visible at the bottom."""
         screen = FakeScreen()
