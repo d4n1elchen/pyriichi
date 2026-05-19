@@ -146,31 +146,9 @@ class RulesetConfig:
 
     @classmethod
     def standard(cls) -> "RulesetConfig":
-        """
-        Create standard competitive ruleset configuration.
+        """Create standard competitive ruleset configuration.
 
-        Returns:
-            RulesetConfig: Standard competitive ruleset configuration.
+        Field defaults on this class already encode the standard ruleset, so
+        this is just a named alias for ``RulesetConfig()``.
         """
-        return cls(
-            renhou_policy=RenhouPolicy.TWO_HAN,
-            pinfu_require_ryanmen=True,
-            ippatsu_interrupt_on_meld_or_kan=True,
-            open_tanyao_enabled=True,
-            abortive_draw_dealer_continues=True,
-            chanta_enabled=True,
-            chanta_open_han=1,
-            chanta_closed_han=2,
-            junchan_open_han=2,
-            junchan_closed_han=3,
-            suuankou_tanki_double=True,
-            kokushi_musou_juusanmen_double=True,
-            pure_chuuren_poutou_double=True,
-            kiriage_mangan=False,
-            tobi_enabled=True,
-            west_round_extension=True,
-            return_score=30000,
-            agari_yame=True,
-            chombo_penalty_enabled=True,
-            riichi_min_remaining_tiles=4,
-        )
+        return cls()

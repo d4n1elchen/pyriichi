@@ -233,7 +233,9 @@ class SimplePlayer(BasePlayer):
                     5 - abs(tile.rank - 5)
                 )  # 5 is highest score (35), 1/9 is 26 (but already captured by terminal)
 
-            # Add randomness
+            # Jitter to break ties between tiles in the same priority bucket
+            # (e.g. multiple honors), so the player doesn't always pick the
+            # first one encountered.
             score += random.randint(0, 5)
 
             if score < min_score:
