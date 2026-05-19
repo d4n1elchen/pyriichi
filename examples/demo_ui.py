@@ -2119,7 +2119,7 @@ class Tui:
 
     def render_compact(self) -> None:
         assert self.engine is not None
-        _, width = self.stdscr.getmaxyx()
+        height, width = self.stdscr.getmaxyx()
         state = self.engine.game_state
         dora = self.tiles_text(
             self.engine.get_revealed_dora_indicators(), mark_dora=False
@@ -2137,14 +2137,11 @@ class Tui:
             f"{self.t('dora')}: {dora}"
         )
         self.safe_addstr(0, content_x, header, curses.A_BOLD)
-        self.safe_addstr(1, content_x, self.t("help_game"), curses.A_DIM)
-        if self.status:
-            self.safe_addstr(2, content_x, self.status, curses.A_BOLD)
 
         scores = "  ".join(f"P{i}: {score}" for i, score in enumerate(state.scores))
-        self.safe_addstr(3, content_x, f"{self.t('scores')}: {scores}")
+        self.safe_addstr(1, content_x, f"{self.t('scores')}: {scores}")
 
-        y = 5
+        y = 3
         for player in range(1, 4):
             hand = self.engine.get_hand(player)
             self.safe_addstr(
@@ -2199,6 +2196,24 @@ class Tui:
             y,
             indent_x,
             f"{self.t('discards')}: {self.tiles_text(hand.discards[-24:])}",
+        )
+
+        shortcut_hint = self.t("help_game")
+        shortcut_width = self.display_width(shortcut_hint)
+        status_width = max(0, width - shortcut_width - content_x - 4)
+        bottom_y = max(0, height - 1)
+        if self.status:
+            self.safe_addstr(
+                bottom_y,
+                content_x,
+                self.status[:status_width],
+                curses.A_BOLD,
+            )
+        self.safe_addstr(
+            bottom_y,
+            max(content_x, width - shortcut_width - 2),
+            shortcut_hint,
+            curses.A_DIM,
         )
 
     def tiles_text(self, tiles: List[Tile], *, mark_dora: bool = True) -> str:

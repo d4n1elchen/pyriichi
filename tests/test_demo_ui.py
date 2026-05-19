@@ -3,6 +3,7 @@
 from examples.demo_ui import Tui
 from pyriichi.hand import Hand
 from pyriichi.tiles import Suit, Tile
+from tests.helpers import initialized_engine
 
 
 class FakeScreen:
@@ -65,3 +66,16 @@ class TestDemoUi:
         assert rows > 1
         assert "+1" not in drawn_text
         assert "14[五筒]" in drawn_text
+
+    def test_compact_view_pins_status_and_shortcuts_to_bottom(self):
+        """Test compact view keeps interactive hints visible at the bottom."""
+        screen = FakeScreen()
+        tui = Tui(screen)
+        tui.engine = initialized_engine()
+        tui.status = "Select tile"
+
+        tui.render_compact()
+
+        bottom_text = " ".join(call[2] for call in screen.calls if call[0] == 39)
+        assert "Select tile" in bottom_text
+        assert "Arrows: move" in bottom_text
