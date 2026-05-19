@@ -250,8 +250,15 @@ class TestKanBehavior(RuleEngineTestMixin):
 
         discarded_player = self.engine.get_current_player()
         player = (discarded_player + 1) % self.engine.get_num_players()
+        num_players = self.engine.get_num_players()
         kan_tile = Tile(Suit.MANZU, 6)
         _set_hand(self.engine, player, "1112345666788m")
+        # Pin non-acting hands so they can't compete for the call and defer
+        # KAN resolution (the discarding dealer's hand is left as-dealt).
+        _set_no_response_hands(
+            self.engine,
+            [(player + offset) % num_players for offset in (1, 2)],
+        )
         self.engine._last_discarded_tile = kan_tile
         self.engine._last_discarded_player = discarded_player
         self.engine.get_hand(discarded_player)._discards.append(kan_tile)
