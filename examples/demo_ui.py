@@ -1565,6 +1565,40 @@ class Tui:
             self.safe_addstr(y, cursor, label, attr)
             cursor += label_width + 1
 
+    def draw_compact_discards(
+        self, y: int, x: int, player: int, width: int, *, limit: int = 18
+    ) -> int:
+        assert self.engine is not None
+        hand = self.engine.get_hand(player)
+        prefix = f"{self.t('discards')}: "
+        prefix_width = self.display_width(prefix)
+        self.safe_addstr(y, x, prefix)
+
+        visible_tiles = hand.discards[-limit:]
+        if not visible_tiles:
+            self.safe_addstr(y, x + prefix_width, self.t("none"))
+            return 1
+
+        per_row = 6
+        first_index = max(0, len(hand.discards) - len(visible_tiles))
+        row_x = x + prefix_width
+        row_width = max(1, width - prefix_width)
+        match_tile = self.selected_discard_match_tile()
+        trigger_index = self.action_trigger_discard_index(player)
+
+        for row, start in enumerate(range(0, len(visible_tiles), per_row)):
+            self.draw_river_tile_row(
+                y + row,
+                row_x,
+                visible_tiles[start : start + per_row],
+                row_width,
+                first_index=first_index + start,
+                riichi_index=hand.riichi_discard_index,
+                trigger_index=trigger_index,
+                match_tile=match_tile,
+            )
+        return max(1, (len(visible_tiles) + per_row - 1) // per_row)
+
     def action_attr(self, action: GameAction, selected: bool = False) -> int:
         color_pair = {
             GameAction.CHI: COLOR_ACTION_CHI,
@@ -2166,12 +2200,8 @@ class Tui:
                 f"{self.t('melds')}: {self.melds_text(hand.melds, owner=player)}",
             )
             y += 1
-            self.safe_addstr(
-                y,
-                indent_x,
-                f"{self.t('discards')}: {self.tiles_text(hand.discards[-18:])}",
-            )
-            y += 2
+            y += self.draw_compact_discards(y, indent_x, player, content_width)
+            y += 1
 
         hand = self.engine.get_hand(0)
         self.safe_addstr(y, content_x, f"P0 {self.t('hand')}:", curses.A_BOLD)
@@ -2192,11 +2222,7 @@ class Tui:
         self.safe_addstr(y, indent_x, f"{self.t('melds')}:")
         self.draw_melds(y, indent_x + 8, hand.melds, max(12, content_width - 8), owner=0)
         y += 1
-        self.safe_addstr(
-            y,
-            indent_x,
-            f"{self.t('discards')}: {self.tiles_text(hand.discards[-24:])}",
-        )
+        self.draw_compact_discards(y, indent_x, 0, content_width, limit=24)
 
         shortcut_hint = self.t("help_game")
         shortcut_width = self.display_width(shortcut_hint)

@@ -1,5 +1,7 @@
 """Tests for the demo TUI helpers."""
 
+import curses
+
 from examples.demo_ui import Tui
 from pyriichi.hand import Hand
 from pyriichi.tiles import Suit, Tile
@@ -79,3 +81,22 @@ class TestDemoUi:
         bottom_text = " ".join(call[2] for call in screen.calls if call[0] == 39)
         assert "Select tile" in bottom_text
         assert "Arrows: move" in bottom_text
+
+    def test_compact_discards_use_river_tile_effects(self):
+        """Test compact discards preserve river styling such as riichi marks."""
+        screen = FakeScreen()
+        tui = Tui(screen)
+        tui.engine = initialized_engine()
+        hand = tui.engine.get_hand(1)
+        hand._discards = [Tile(Suit.MANZU, 1)]
+        hand._riichi_turn = 0
+
+        tui.render_compact()
+
+        riichi_discard_attrs = [
+            attr for _, _, text, attr in screen.calls if text == "[一萬]"
+        ]
+        assert any(
+            attr & curses.A_UNDERLINE and attr & curses.A_REVERSE
+            for attr in riichi_discard_attrs
+        )
