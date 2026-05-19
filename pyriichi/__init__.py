@@ -4,7 +4,7 @@ PyRiichi - Python riichi mahjong engine
 Complete implementation of riichi mahjong rule engine.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 # Core Classes
 from pyriichi.errors import (
