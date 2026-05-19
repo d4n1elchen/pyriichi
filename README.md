@@ -1,6 +1,6 @@
 # PyRiichi - Python Riichi Mahjong Engine
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 A full-featured Python Japanese riichi mahjong game engine with rule implementation, yaku detection, score calculation, and game-flow management.
@@ -560,7 +560,7 @@ python examples/demo_ui.py
 
 ## System Requirements
 
-- Python 3.8 to 3.12, officially supported versions.
+- Python 3.9 to 3.13, officially supported versions.
 - Core features have no external dependencies.
 
 ## Development and Testing
