@@ -1496,6 +1496,47 @@ class Tui:
             self.safe_addstr(y, cursor, label, attr)
             cursor += label_width + 1
 
+    def draw_wrapped_tile_rows(
+        self,
+        y: int,
+        x: int,
+        tiles: List[Tile],
+        max_width: int,
+        *,
+        hidden: bool = False,
+        indexed: bool = False,
+        selected_index: Optional[int] = None,
+        gap_before_index: Optional[int] = None,
+        max_rows: Optional[int] = None,
+    ) -> int:
+        row = 0
+        cursor = x
+        for index, tile in enumerate(tiles):
+            if (
+                gap_before_index is not None
+                and index == gap_before_index
+                and cursor > x
+            ):
+                cursor += 1
+            label = self.tile_label(tile, hidden)
+            if indexed:
+                label = f"{index + 1:02d}{label}"
+            label_width = self.display_width(label)
+            if cursor > x and cursor + label_width > x + max_width:
+                row += 1
+                if max_rows is not None and row >= max_rows:
+                    remaining = len(tiles) - index
+                    if remaining > 0:
+                        self.safe_addstr(y + row - 1, cursor, f"+{remaining}")
+                    return max(1, row)
+                cursor = x
+            attr = self.tile_attr(tile, hidden)
+            if selected_index == index:
+                attr |= curses.A_REVERSE
+            self.safe_addstr(y + row, cursor, label, attr)
+            cursor += label_width + 1
+        return row + 1 if tiles else 0
+
     def draw_river_tile_row(
         self,
         y: int,
@@ -2078,10 +2119,14 @@ class Tui:
 
     def render_compact(self) -> None:
         assert self.engine is not None
+        _, width = self.stdscr.getmaxyx()
         state = self.engine.game_state
         dora = self.tiles_text(
             self.engine.get_revealed_dora_indicators(), mark_dora=False
         )
+        content_x = 2
+        indent_x = 4
+        content_width = max(20, width - indent_x - 2)
         wall = self.engine.get_wall_remaining()
         header = (
             f"{self.t('round')}: {getattr(state.round_wind, self.settings.language)} {state.round_number}  "
@@ -2091,54 +2136,68 @@ class Tui:
             f"{self.t('wall')}: {wall}  "
             f"{self.t('dora')}: {dora}"
         )
-        self.safe_addstr(0, 2, header, curses.A_BOLD)
-        self.safe_addstr(1, 2, self.t("help_game"), curses.A_DIM)
+        self.safe_addstr(0, content_x, header, curses.A_BOLD)
+        self.safe_addstr(1, content_x, self.t("help_game"), curses.A_DIM)
         if self.status:
-            self.safe_addstr(2, 2, self.status, curses.A_BOLD)
+            self.safe_addstr(2, content_x, self.status, curses.A_BOLD)
 
         scores = "  ".join(f"P{i}: {score}" for i, score in enumerate(state.scores))
-        self.safe_addstr(3, 2, f"{self.t('scores')}: {scores}")
+        self.safe_addstr(3, content_x, f"{self.t('scores')}: {scores}")
 
+        y = 5
         for player in range(1, 4):
-            y = 5 + (player - 1) * 4
             hand = self.engine.get_hand(player)
             self.safe_addstr(
                 y,
-                2,
+                content_x,
                 f"P{player} {'(dealer)' if state.dealer == player else ''}: "
                 f"{len(hand.tiles)} tiles",
                 curses.A_BOLD,
             )
-            self.safe_addstr(
+            rows = self.draw_wrapped_tile_rows(
                 y + 1,
-                4,
+                indent_x,
+                hand.tiles,
+                content_width,
+                hidden=True,
+                max_rows=2,
+            )
+            y += 1 + rows
+            self.safe_addstr(
+                y,
+                indent_x,
                 f"{self.t('melds')}: {self.melds_text(hand.melds, owner=player)}",
             )
+            y += 1
             self.safe_addstr(
-                y + 2,
-                4,
+                y,
+                indent_x,
                 f"{self.t('discards')}: {self.tiles_text(hand.discards[-18:])}",
             )
+            y += 2
 
         hand = self.engine.get_hand(0)
-        base_y = 18
-        self.safe_addstr(base_y, 2, f"P0 {self.t('hand')}:", curses.A_BOLD)
+        self.safe_addstr(y, content_x, f"P0 {self.t('hand')}:", curses.A_BOLD)
         display_tiles = self.selection_tiles or self.sorted_hand_tiles(hand)
-        self.draw_tile_row(
-            base_y + 1,
-            4,
+        rows = self.draw_wrapped_tile_rows(
+            y + 1,
+            indent_x,
             display_tiles,
-            74,
+            content_width,
             indexed=True,
             selected_index=self.selected_tile_index,
         )
-        self.draw_action_row(base_y + 2, 4, 74)
-        self.draw_tenpai_hint(base_y + 3, 4, 74)
-        self.safe_addstr(base_y + 4, 4, f"{self.t('melds')}:")
-        self.draw_melds(base_y + 4, 12, hand.melds, 66, owner=0)
+        y += 1 + rows
+        self.draw_action_row(y, indent_x, content_width)
+        y += 1
+        self.draw_tenpai_hint(y, indent_x, content_width)
+        y += 1
+        self.safe_addstr(y, indent_x, f"{self.t('melds')}:")
+        self.draw_melds(y, indent_x + 8, hand.melds, max(12, content_width - 8), owner=0)
+        y += 1
         self.safe_addstr(
-            base_y + 5,
-            4,
+            y,
+            indent_x,
             f"{self.t('discards')}: {self.tiles_text(hand.discards[-24:])}",
         )
 

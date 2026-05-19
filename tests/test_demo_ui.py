@@ -5,6 +5,17 @@ from pyriichi.hand import Hand
 from pyriichi.tiles import Suit, Tile
 
 
+class FakeScreen:
+    def __init__(self):
+        self.calls = []
+
+    def getmaxyx(self):
+        return (40, 120)
+
+    def addstr(self, y, x, text, attr=0):
+        self.calls.append((y, x, text, attr))
+
+
 class TestDemoUi:
     """Tests for non-curses TUI helper behavior."""
 
@@ -37,3 +48,20 @@ class TestDemoUi:
             normal_five,
             red_five,
         ]
+
+    def test_wrapped_tile_rows_show_all_tiles_without_overflow_marker(self):
+        """Test wrapped tile rows draw every tile when max_rows is unlimited."""
+        tui = object.__new__(Tui)
+        tui.stdscr = FakeScreen()
+        tui.engine = None
+        tui.has_colors = False
+        tiles = [Tile(Suit.MANZU, rank) for rank in range(1, 10)] + [
+            Tile(Suit.PINZU, rank) for rank in range(1, 6)
+        ]
+
+        rows = tui.draw_wrapped_tile_rows(0, 0, tiles, 40, indexed=True)
+
+        drawn_text = "".join(call[2] for call in tui.stdscr.calls)
+        assert rows > 1
+        assert "+1" not in drawn_text
+        assert "14[五筒]" in drawn_text
